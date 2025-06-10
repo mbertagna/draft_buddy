@@ -1,0 +1,4962 @@
+{
+    "draft_order": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        10,
+        9,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+    ],
+    "picks": [],
+    "teams": {
+        "1": {
+            "team_id": 1,
+            "roster": []
+        },
+        "2": {
+            "team_id": 2,
+            "roster": []
+        },
+        "3": {
+            "team_id": 3,
+            "roster": []
+        },
+        "4": {
+            "team_id": 4,
+            "roster": []
+        },
+        "5": {
+            "team_id": 5,
+            "roster": []
+        },
+        "6": {
+            "team_id": 6,
+            "roster": []
+        },
+        "7": {
+            "team_id": 7,
+            "roster": []
+        },
+        "8": {
+            "team_id": 8,
+            "roster": []
+        },
+        "9": {
+            "team_id": 9,
+            "roster": []
+        },
+        "10": {
+            "team_id": 10,
+            "roster": []
+        }
+    },
+    "available_players": [
+        {
+            "player_id": "0033280",
+            "name": "Christian McCaffrey",
+            "position": "RB",
+            "projected_points": 24.04,
+            "adp": 1.0
+        },
+        {
+            "player_id": "0036358",
+            "name": "CeeDee Lamb",
+            "position": "WR",
+            "projected_points": 22.010810810810813,
+            "adp": 2.6
+        },
+        {
+            "player_id": "0033040",
+            "name": "Tyreek Hill",
+            "position": "WR",
+            "projected_points": 22.83428571428572,
+            "adp": 3.2
+        },
+        {
+            "player_id": "0038542",
+            "name": "Bijan Robinson",
+            "position": "RB",
+            "projected_points": 15.01764705882353,
+            "adp": 5.0
+        },
+        {
+            "player_id": "0038120",
+            "name": "Breece Hall",
+            "position": "RB",
+            "projected_points": 17.525000000000002,
+            "adp": 5.4
+        },
+        {
+            "player_id": "0036963",
+            "name": "Amon-Ra St. Brown",
+            "position": "WR",
+            "projected_points": 19.888571428571428,
+            "adp": 6.2
+        },
+        {
+            "player_id": "0036900",
+            "name": "Ja'Marr Chase",
+            "position": "WR",
+            "projected_points": 18.916774193548385,
+            "adp": 6.6
+        },
+        {
+            "player_id": "0036322",
+            "name": "Justin Jefferson",
+            "position": "WR",
+            "projected_points": 22.58857142857143,
+            "adp": 7.0
+        },
+        {
+            "player_id": "0034844",
+            "name": "Saquon Barkley",
+            "position": "RB",
+            "projected_points": 17.509375000000002,
+            "adp": 9.2
+        },
+        {
+            "player_id": "0035676",
+            "name": "A.J. Brown",
+            "position": "WR",
+            "projected_points": 17.805405405405406,
+            "adp": 10.2
+        },
+        {
+            "player_id": "0036223",
+            "name": "Jonathan Taylor",
+            "position": "RB",
+            "projected_points": 14.847619047619048,
+            "adp": 10.4
+        },
+        {
+            "player_id": "0037740",
+            "name": "Garrett Wilson",
+            "position": "WR",
+            "projected_points": 13.055882352941175,
+            "adp": 12.4
+        },
+        {
+            "player_id": "0039139",
+            "name": "Jahmyr Gibbs",
+            "position": "RB",
+            "projected_points": 16.605555555555554,
+            "adp": 12.8
+        },
+        {
+            "player_id": "0039075",
+            "name": "Puka Nacua",
+            "position": "WR",
+            "projected_points": 19.744444444444444,
+            "adp": 14.2
+        },
+        {
+            "player_id": "0037840",
+            "name": "Kyren Williams",
+            "position": "RB",
+            "projected_points": 14.833333333333334,
+            "adp": 16.0
+        },
+        {
+            "player_id": "0039849",
+            "name": "Marvin Harrison",
+            "position": "WR",
+            "projected_points": 17.111999999999995,
+            "adp": 16.8
+        },
+        {
+            "player_id": "0036973",
+            "name": "Travis Etienne",
+            "position": "RB",
+            "projected_points": 14.988888888888887,
+            "adp": 17.4
+        },
+        {
+            "player_id": "0032764",
+            "name": "Derrick Henry",
+            "position": "RB",
+            "projected_points": 18.103636363636365,
+            "adp": 18.0
+        },
+        {
+            "player_id": "0037197",
+            "name": "Isiah Pacheco",
+            "position": "RB",
+            "projected_points": 12.221052631578948,
+            "adp": 20.2
+        },
+        {
+            "player_id": "0031381",
+            "name": "Davante Adams",
+            "position": "WR",
+            "projected_points": 18.644117647058824,
+            "adp": 22.0
+        },
+        {
+            "player_id": "0034857",
+            "name": "Josh Allen",
+            "position": "QB",
+            "projected_points": 28.85297297297297,
+            "adp": 24.2
+        },
+        {
+            "player_id": "0030506",
+            "name": "Travis Kelce",
+            "position": "TE",
+            "projected_points": 18.6,
+            "adp": 25.2
+        },
+        {
+            "player_id": "0037238",
+            "name": "Drake London",
+            "position": "WR",
+            "projected_points": 10.969090909090909,
+            "adp": 25.6
+        },
+        {
+            "player_id": "0037239",
+            "name": "Chris Olave",
+            "position": "WR",
+            "projected_points": 14.629032258064516,
+            "adp": 26.2
+        },
+        {
+            "player_id": "0039040",
+            "name": "De'Von Achane",
+            "position": "RB",
+            "projected_points": 17.641666666666666,
+            "adp": 27.4
+        },
+        {
+            "player_id": "0035700",
+            "name": "Josh Jacobs",
+            "position": "RB",
+            "projected_points": 17.88,
+            "adp": 28.2
+        },
+        {
+            "player_id": "0036554",
+            "name": "Nico Collins",
+            "position": "WR",
+            "projected_points": 15.04814814814815,
+            "adp": 28.2
+        },
+        {
+            "player_id": "0033873",
+            "name": "Patrick Mahomes",
+            "position": "QB",
+            "projected_points": 26.047000000000004,
+            "adp": 29.0
+        },
+        {
+            "player_id": "0037248",
+            "name": "James Cook",
+            "position": "RB",
+            "projected_points": 10.356756756756756,
+            "adp": 31.0
+        },
+        {
+            "player_id": "0031408",
+            "name": "Mike Evans",
+            "position": "WR",
+            "projected_points": 16.680000000000003,
+            "adp": 31.2
+        },
+        {
+            "player_id": "0036389",
+            "name": "Jalen Hurts",
+            "position": "QB",
+            "projected_points": 26.328333333333333,
+            "adp": 31.2
+        },
+        {
+            "player_id": "0037256",
+            "name": "Rachaad White",
+            "position": "RB",
+            "projected_points": 12.702777777777778,
+            "adp": 31.6
+        },
+        {
+            "player_id": "0039065",
+            "name": "Sam LaPorta",
+            "position": "TE",
+            "projected_points": 14.345,
+            "adp": 31.8
+        },
+        {
+            "player_id": "0035719",
+            "name": "Deebo Samuel Sr.",
+            "position": "WR",
+            "projected_points": 14.638235294117647,
+            "adp": 32.0
+        },
+        {
+            "player_id": "0036261",
+            "name": "Brandon Aiyuk",
+            "position": "WR",
+            "projected_points": 14.046153846153844,
+            "adp": 34.0
+        },
+        {
+            "player_id": "0036252",
+            "name": "Michael Pittman",
+            "position": "WR",
+            "projected_points": 15.115625,
+            "adp": 34.6
+        },
+        {
+            "player_id": "0033908",
+            "name": "Cooper Kupp",
+            "position": "WR",
+            "projected_points": 18.204545454545453,
+            "adp": 34.8
+        },
+        {
+            "player_id": "0034796",
+            "name": "Lamar Jackson",
+            "position": "QB",
+            "projected_points": 24.332,
+            "adp": 37.2
+        },
+        {
+            "player_id": "0033897",
+            "name": "Joe Mixon",
+            "position": "RB",
+            "projected_points": 16.200000000000003,
+            "adp": 38.6
+        },
+        {
+            "player_id": "0033906",
+            "name": "Alvin Kamara",
+            "position": "RB",
+            "projected_points": 16.09642857142857,
+            "adp": 39.6
+        },
+        {
+            "player_id": "0035640",
+            "name": "DK Metcalf",
+            "position": "WR",
+            "projected_points": 14.876470588235296,
+            "adp": 41.2
+        },
+        {
+            "player_id": "0038134",
+            "name": "Kenneth Walker III",
+            "position": "RB",
+            "projected_points": 13.983870967741936,
+            "adp": 41.4
+        },
+        {
+            "player_id": "0036613",
+            "name": "Jaylen Waddle",
+            "position": "WR",
+            "projected_points": 15.12121212121212,
+            "adp": 42.6
+        },
+        {
+            "player_id": "0031588",
+            "name": "Stefon Diggs",
+            "position": "WR",
+            "projected_points": 18.1972972972973,
+            "adp": 43.0
+        },
+        {
+            "player_id": "0034827",
+            "name": "DJ Moore",
+            "position": "WR",
+            "projected_points": 15.076470588235296,
+            "adp": 43.6
+        },
+        {
+            "player_id": "0036912",
+            "name": "DeVonta Smith",
+            "position": "WR",
+            "projected_points": 15.47837837837838,
+            "adp": 44.0
+        },
+        {
+            "player_id": "0034753",
+            "name": "Mark Andrews",
+            "position": "TE",
+            "projected_points": 12.988888888888887,
+            "adp": 45.8
+        },
+        {
+            "player_id": "0037744",
+            "name": "Trey McBride",
+            "position": "TE",
+            "projected_points": 9.576923076923077,
+            "adp": 46.4
+        },
+        {
+            "player_id": "0039337",
+            "name": "Malik Nabers",
+            "position": "WR",
+            "projected_points": 15.625865624660802,
+            "adp": 48.6
+        },
+        {
+            "player_id": "0039163",
+            "name": "C.J. Stroud",
+            "position": "QB",
+            "projected_points": 21.99882352941177,
+            "adp": 48.6
+        },
+        {
+            "player_id": "0038933",
+            "name": "Dalton Kincaid",
+            "position": "TE",
+            "projected_points": 9.705555555555556,
+            "adp": 53.6
+        },
+        {
+            "player_id": "0033553",
+            "name": "James Conner",
+            "position": "RB",
+            "projected_points": 16.026923076923076,
+            "adp": 56.0
+        },
+        {
+            "player_id": "0033288",
+            "name": "George Kittle",
+            "position": "TE",
+            "projected_points": 12.694594594594594,
+            "adp": 56.6
+        },
+        {
+            "player_id": "0031544",
+            "name": "Amari Cooper",
+            "position": "WR",
+            "projected_points": 15.633333333333333,
+            "adp": 56.8
+        },
+        {
+            "player_id": "0039164",
+            "name": "Anthony Richardson",
+            "position": "QB",
+            "projected_points": 19.67,
+            "adp": 57.6
+        },
+        {
+            "player_id": "0033293",
+            "name": "Aaron Jones",
+            "position": "RB",
+            "projected_points": 15.406666666666668,
+            "adp": 59.2
+        },
+        {
+            "player_id": "0037247",
+            "name": "George Pickens",
+            "position": "WR",
+            "projected_points": 11.508571428571427,
+            "adp": 59.6
+        },
+        {
+            "player_id": "0036275",
+            "name": "D'Andre Swift",
+            "position": "RB",
+            "projected_points": 13.225806451612904,
+            "adp": 60.6
+        },
+        {
+            "player_id": "0036442",
+            "name": "Joe Burrow",
+            "position": "QB",
+            "projected_points": 23.50689655172414,
+            "adp": 61.8
+        },
+        {
+            "player_id": "0035685",
+            "name": "David Montgomery",
+            "position": "RB",
+            "projected_points": 13.263636363636364,
+            "adp": 61.8
+        },
+        {
+            "player_id": "0036410",
+            "name": "Tee Higgins",
+            "position": "WR",
+            "projected_points": 14.217241379310344,
+            "adp": 62.2
+        },
+        {
+            "player_id": "0039064",
+            "name": "Zay Flowers",
+            "position": "WR",
+            "projected_points": 13.411111111111111,
+            "adp": 63.2
+        },
+        {
+            "player_id": "0036970",
+            "name": "Kyle Pitts",
+            "position": "TE",
+            "projected_points": 7.885185185185185,
+            "adp": 64.2
+        },
+        {
+            "player_id": "0038977",
+            "name": "Tank Dell",
+            "position": "WR",
+            "projected_points": 17.4,
+            "adp": 65.0
+        },
+        {
+            "player_id": "0033881",
+            "name": "Evan Engram",
+            "position": "TE",
+            "projected_points": 12.322222222222225,
+            "adp": 65.0
+        },
+        {
+            "player_id": "0038040",
+            "name": "Zamir White",
+            "position": "RB",
+            "projected_points": 3.6208333333333336,
+            "adp": 66.6
+        },
+        {
+            "player_id": "0036875",
+            "name": "Rhamondre Stevenson",
+            "position": "RB",
+            "projected_points": 13.820689655172414,
+            "adp": 66.6
+        },
+        {
+            "player_id": "0039067",
+            "name": "Rashee Rice",
+            "position": "WR",
+            "projected_points": 14.01,
+            "adp": 67.6
+        },
+        {
+            "player_id": "0033077",
+            "name": "Dak Prescott",
+            "position": "QB",
+            "projected_points": 24.284375,
+            "adp": 68.4
+        },
+        {
+            "player_id": "0035228",
+            "name": "Kyler Murray",
+            "position": "QB",
+            "projected_points": 21.15157894736842,
+            "adp": 70.2
+        },
+        {
+            "player_id": "0036893",
+            "name": "Najee Harris",
+            "position": "RB",
+            "projected_points": 12.433142857142858,
+            "adp": 70.8
+        },
+        {
+            "player_id": "0036264",
+            "name": "Jordan Love",
+            "position": "QB",
+            "projected_points": 19.460869565217397,
+            "adp": 71.4
+        },
+        {
+            "player_id": "0035659",
+            "name": "Terry McLaurin",
+            "position": "WR",
+            "projected_points": 13.15294117647059,
+            "adp": 71.6
+        },
+        {
+            "player_id": "0034837",
+            "name": "Calvin Ridley",
+            "position": "WR",
+            "projected_points": 14.229411764705883,
+            "adp": 74.4
+        },
+        {
+            "player_id": "0031687",
+            "name": "Raheem Mostert",
+            "position": "RB",
+            "projected_points": 14.125,
+            "adp": 74.6
+        },
+        {
+            "player_id": "0034775",
+            "name": "Christian Kirk",
+            "position": "WR",
+            "projected_points": 14.54709677419355,
+            "adp": 74.6
+        },
+        {
+            "player_id": "0033921",
+            "name": "Chris Godwin",
+            "position": "WR",
+            "projected_points": 13.857142857142858,
+            "adp": 76.2
+        },
+        {
+            "player_id": "0030279",
+            "name": "Keenan Allen",
+            "position": "WR",
+            "projected_points": 20.040000000000003,
+            "adp": 79.4
+        },
+        {
+            "player_id": "0036997",
+            "name": "Javonte Williams",
+            "position": "RB",
+            "projected_points": 11.06,
+            "adp": 81.2
+        },
+        {
+            "player_id": "0038041",
+            "name": "Jake Ferguson",
+            "position": "TE",
+            "projected_points": 8.906666666666666,
+            "adp": 81.6
+        },
+        {
+            "player_id": "0035261",
+            "name": "Tony Pollard",
+            "position": "RB",
+            "projected_points": 14.586111111111112,
+            "adp": 81.8
+        },
+        {
+            "player_id": "0033885",
+            "name": "David Njoku",
+            "position": "TE",
+            "projected_points": 11.790322580645162,
+            "adp": 84.2
+        },
+        {
+            "player_id": "0039146",
+            "name": "Jayden Reed",
+            "position": "WR",
+            "projected_points": 12.7,
+            "adp": 87.2
+        },
+        {
+            "player_id": "0035216",
+            "name": "Diontae Johnson",
+            "position": "WR",
+            "projected_points": 11.23225806451613,
+            "adp": 88.2
+        },
+        {
+            "player_id": "0039877",
+            "name": "Xavier Worthy",
+            "position": "WR",
+            "projected_points": 13.522817544688555,
+            "adp": 90.0
+        },
+        {
+            "player_id": "0033699",
+            "name": "Austin Ekeler",
+            "position": "RB",
+            "projected_points": 18.29375,
+            "adp": 91.0
+        },
+        {
+            "player_id": "0037834",
+            "name": "Brock Purdy",
+            "position": "QB",
+            "projected_points": 19.528387096774196,
+            "adp": 91.8
+        },
+        {
+            "player_id": "0037746",
+            "name": "Brian Robinson",
+            "position": "RB",
+            "projected_points": 11.733333333333334,
+            "adp": 92.6
+        },
+        {
+            "player_id": "0037228",
+            "name": "Jaylen Warren",
+            "position": "RB",
+            "projected_points": 8.914705882352942,
+            "adp": 92.6
+        },
+        {
+            "player_id": "0035250",
+            "name": "Devin Singletary",
+            "position": "RB",
+            "projected_points": 10.89837837837838,
+            "adp": 94.4
+        },
+        {
+            "player_id": "0036251",
+            "name": "Zack Moss",
+            "position": "RB",
+            "projected_points": 9.003703703703703,
+            "adp": 98.0
+        },
+        {
+            "player_id": "0039861",
+            "name": "Rome Odunze",
+            "position": "WR",
+            "projected_points": 15.118304125593282,
+            "adp": 98.4
+        },
+        {
+            "player_id": "0038543",
+            "name": "Jaxon Smith-Njigba",
+            "position": "WR",
+            "projected_points": 8.811764705882354,
+            "adp": 99.8
+        },
+        {
+            "player_id": "0039032",
+            "name": "Tyjae Spears",
+            "position": "RB",
+            "projected_points": 9.047058823529412,
+            "adp": 100.2
+        },
+        {
+            "player_id": "0039338",
+            "name": "Brock Bowers",
+            "position": "TE",
+            "projected_points": 11.816917562724012,
+            "adp": 100.6
+        },
+        {
+            "player_id": "0034791",
+            "name": "Nick Chubb",
+            "position": "RB",
+            "projected_points": 17.289473684210527,
+            "adp": 100.8
+        },
+        {
+            "player_id": "0039344",
+            "name": "Jonathon Brooks",
+            "position": "RB",
+            "projected_points": 17.454399671052634,
+            "adp": 101.4
+        },
+        {
+            "player_id": "0038124",
+            "name": "Christian Watson",
+            "position": "WR",
+            "projected_points": 11.136,
+            "adp": 102.2
+        },
+        {
+            "player_id": "0039871",
+            "name": "Jayden Daniels",
+            "position": "QB",
+            "projected_points": 23.971471788439803,
+            "adp": 102.6
+        },
+        {
+            "player_id": "0039867",
+            "name": "Keon Coleman",
+            "position": "WR",
+            "projected_points": 12.94954642097803,
+            "adp": 104.6
+        },
+        {
+            "player_id": "0039868",
+            "name": "Ladd McConkey",
+            "position": "WR",
+            "projected_points": 12.642065404475046,
+            "adp": 105.4
+        },
+        {
+            "player_id": "0030564",
+            "name": "DeAndre Hopkins",
+            "position": "WR",
+            "projected_points": 15.011538461538462,
+            "adp": 107.6
+        },
+        {
+            "player_id": "0029597",
+            "name": "Justin Tucker",
+            "position": "K",
+            "projected_points": 9.16216216216216,
+            "adp": 108.4
+        },
+        {
+            "player_id": "0039869",
+            "name": "Caleb Williams",
+            "position": "QB",
+            "projected_points": 24.20662715517241,
+            "adp": 109.0
+        },
+        {
+            "player_id": "0034351",
+            "name": "Dallas Goedert",
+            "position": "TE",
+            "projected_points": 11.056666666666668,
+            "adp": 109.6
+        },
+        {
+            "player_id": "0035662",
+            "name": "Marquise Brown",
+            "position": "WR",
+            "projected_points": 11.748,
+            "adp": 110.2
+        },
+        {
+            "player_id": "0038994",
+            "name": "Jordan Addison",
+            "position": "WR",
+            "projected_points": 13.370588235294118,
+            "adp": 110.4
+        },
+        {
+            "player_id": "0038597",
+            "name": "Chase Brown",
+            "position": "RB",
+            "projected_points": 5.35,
+            "adp": 111.2
+        },
+        {
+            "player_id": "0033303",
+            "name": "Harrison Butker",
+            "position": "K",
+            "projected_points": 8.837837837837839,
+            "adp": 112.2
+        },
+        {
+            "player_id": "0034348",
+            "name": "Courtland Sutton",
+            "position": "WR",
+            "projected_points": 11.374193548387098,
+            "adp": 112.4
+        },
+        {
+            "player_id": "0037267",
+            "name": "Jerome Ford",
+            "position": "RB",
+            "projected_points": 11.38,
+            "adp": 113.0
+        },
+        {
+            "player_id": "0033045",
+            "name": "Ezekiel Elliott",
+            "position": "RB",
+            "projected_points": 10.888235294117647,
+            "adp": 113.2
+        },
+        {
+            "player_id": "0037692",
+            "name": "Brandon Aubrey",
+            "position": "K",
+            "projected_points": 10.055555555555555,
+            "adp": 113.4
+        },
+        {
+            "player_id": "0034184",
+            "name": "Gus Edwards",
+            "position": "RB",
+            "projected_points": 9.03448275862069,
+            "adp": 113.6
+        },
+        {
+            "player_id": "0036212",
+            "name": "Tua Tagovailoa",
+            "position": "QB",
+            "projected_points": 21.02387096774193,
+            "adp": 115.8
+        },
+        {
+            "player_id": "0033106",
+            "name": "Jared Goff",
+            "position": "QB",
+            "projected_points": 20.78918918918919,
+            "adp": 116.0
+        },
+        {
+            "player_id": "0039862",
+            "name": "Brian Thomas",
+            "position": "WR",
+            "projected_points": 14.044063021316031,
+            "adp": 116.2
+        },
+        {
+            "player_id": "0037240",
+            "name": "Jameson Williams",
+            "position": "WR",
+            "projected_points": 5.976190476190476,
+            "adp": 120.2
+        },
+        {
+            "player_id": "0034383",
+            "name": "Dalton Schultz",
+            "position": "TE",
+            "projected_points": 10.541176470588235,
+            "adp": 125.6
+        },
+        {
+            "player_id": "0035229",
+            "name": "T.J. Hockenson",
+            "position": "TE",
+            "projected_points": 14.22121212121212,
+            "adp": 126.4
+        },
+        {
+            "player_id": "0039738",
+            "name": "Blake Corum",
+            "position": "RB",
+            "projected_points": 10.4406162464986,
+            "adp": 128.0
+        },
+        {
+            "player_id": "0036971",
+            "name": "Trevor Lawrence",
+            "position": "QB",
+            "projected_points": 20.221714285714285,
+            "adp": 129.4
+        },
+        {
+            "player_id": "0036355",
+            "name": "Justin Herbert",
+            "position": "QB",
+            "projected_points": 20.75935483870968,
+            "adp": 130.8
+        },
+        {
+            "player_id": "0037261",
+            "name": "Khalil Shakir",
+            "position": "WR",
+            "projected_points": 6.5600000000000005,
+            "adp": 132.0
+        },
+        {
+            "player_id": "0036555",
+            "name": "Chuba Hubbard",
+            "position": "RB",
+            "projected_points": 9.593103448275862,
+            "adp": 132.4
+        },
+        {
+            "player_id": "0036158",
+            "name": "J.K. Dobbins",
+            "position": "RB",
+            "projected_points": 11.94,
+            "adp": 132.4
+        },
+        {
+            "player_id": "0039866",
+            "name": "Trey Benson",
+            "position": "RB",
+            "projected_points": 13.743321142459076,
+            "adp": 133.6
+        },
+        {
+            "player_id": "0036894",
+            "name": "Pat Freiermuth",
+            "position": "TE",
+            "projected_points": 8.911111111111111,
+            "adp": 135.4
+        },
+        {
+            "player_id": "0023459",
+            "name": "Aaron Rodgers",
+            "position": "QB",
+            "projected_points": 16.177777777777777,
+            "adp": 136.2
+        },
+        {
+            "player_id": "0032211",
+            "name": "Tyler Lockett",
+            "position": "WR",
+            "projected_points": 13.547058823529412,
+            "adp": 139.4
+        },
+        {
+            "player_id": "0033702",
+            "name": "Younghoe Koo",
+            "position": "K",
+            "projected_points": 8.205882352941176,
+            "adp": 140.0
+        },
+        {
+            "player_id": "0036290",
+            "name": "Cole Kmet",
+            "position": "TE",
+            "projected_points": 10.35625,
+            "adp": 141.0
+        },
+        {
+            "player_id": "0037816",
+            "name": "Romeo Doubs",
+            "position": "WR",
+            "projected_points": 9.95,
+            "adp": 142.0
+        },
+        {
+            "player_id": "0029604",
+            "name": "Kirk Cousins",
+            "position": "QB",
+            "projected_points": 22.58230769230769,
+            "adp": 142.6
+        },
+        {
+            "player_id": "0033282",
+            "name": "Curtis Samuel",
+            "position": "WR",
+            "projected_points": 10.196969696969695,
+            "adp": 143.6
+        },
+        {
+            "player_id": "0034960",
+            "name": "Jakobi Meyers",
+            "position": "WR",
+            "projected_points": 13.596,
+            "adp": 143.6
+        },
+        {
+            "player_id": "0036407",
+            "name": "Jerry Jeudy",
+            "position": "WR",
+            "projected_points": 11.451612903225806,
+            "adp": 143.8
+        },
+        {
+            "player_id": "0033787",
+            "name": "Jake Elliott",
+            "position": "K",
+            "projected_points": 8.108108108108109,
+            "adp": 145.4
+        },
+        {
+            "player_id": "0039165",
+            "name": "Zach Charbonnet",
+            "position": "RB",
+            "projected_points": 6.63125,
+            "adp": 147.4
+        },
+        {
+            "player_id": "0032726",
+            "name": "Ka'imi Fairbairn",
+            "position": "K",
+            "projected_points": 8.258064516129032,
+            "adp": 149.0
+        },
+        {
+            "player_id": "0036854",
+            "name": "Evan McPherson",
+            "position": "K",
+            "projected_points": 7.722222222222222,
+            "adp": 149.2
+        },
+        {
+            "player_id": "0033536",
+            "name": "Mike Williams",
+            "position": "WR",
+            "projected_points": 15.10625,
+            "adp": 149.8
+        },
+        {
+            "player_id": "0026498",
+            "name": "Matthew Stafford",
+            "position": "QB",
+            "projected_points": 18.4064,
+            "adp": 150.6
+        },
+        {
+            "player_id": "0036139",
+            "name": "Rico Dowdle",
+            "position": "RB",
+            "projected_points": 5.764705882352941,
+            "adp": 150.8
+        },
+        {
+            "player_id": "0036988",
+            "name": "Josh Palmer",
+            "position": "WR",
+            "projected_points": 10.855555555555556,
+            "adp": 151.4
+        },
+        {
+            "player_id": "0038562",
+            "name": "Jake Moody",
+            "position": "K",
+            "projected_points": 7.9,
+            "adp": 156.6
+        },
+        {
+            "player_id": "0037263",
+            "name": "Tyler Allgeier",
+            "position": "RB",
+            "projected_points": 9.181818181818182,
+            "adp": 156.8
+        },
+        {
+            "player_id": "0037276",
+            "name": "Ty Chandler",
+            "position": "RB",
+            "projected_points": 7.571428571428571,
+            "adp": 160.8
+        },
+        {
+            "player_id": "0030035",
+            "name": "Adam Thielen",
+            "position": "WR",
+            "projected_points": 12.228571428571428,
+            "adp": 161.0
+        },
+        {
+            "player_id": "0038794",
+            "name": "Jaleel McLaughlin",
+            "position": "RB",
+            "projected_points": 6.235294117647059,
+            "adp": 162.0
+        },
+        {
+            "player_id": "0033537",
+            "name": "Deshaun Watson",
+            "position": "QB",
+            "projected_points": 16.698333333333334,
+            "adp": 163.8
+        },
+        {
+            "player_id": "0034855",
+            "name": "Baker Mayfield",
+            "position": "QB",
+            "projected_points": 17.549032258064514,
+            "adp": 166.6
+        },
+        {
+            "player_id": "0037224",
+            "name": "Cameron Dicker",
+            "position": "K",
+            "projected_points": 8.827586206896552,
+            "adp": 166.8
+        },
+        {
+            "player_id": "0036196",
+            "name": "Gabe Davis",
+            "position": "WR",
+            "projected_points": 11.415151515151514,
+            "adp": 168.8
+        },
+        {
+            "player_id": "0031236",
+            "name": "Brandin Cooks",
+            "position": "WR",
+            "projected_points": 11.203333333333337,
+            "adp": 169.2
+        },
+        {
+            "player_id": "0039875",
+            "name": "Jaylen Wright",
+            "position": "RB",
+            "projected_points": 6.715286195286195,
+            "adp": 169.8
+        },
+        {
+            "player_id": "0039144",
+            "name": "Luke Musgrave",
+            "position": "TE",
+            "projected_points": 7.215384615384616,
+            "adp": 169.8
+        },
+        {
+            "player_id": "0039858",
+            "name": "Adonai Mitchell",
+            "position": "WR",
+            "projected_points": 9.918112449799196,
+            "adp": 170.6
+        },
+        {
+            "player_id": "0036328",
+            "name": "Antonio Gibson",
+            "position": "RB",
+            "projected_points": 9.461290322580645,
+            "adp": 173.8
+        },
+        {
+            "player_id": "0039342",
+            "name": "Xavier Legette",
+            "position": "WR",
+            "projected_points": 13.10686746987952,
+            "adp": 178.6
+        },
+        {
+            "player_id": "0037838",
+            "name": "Isaiah Likely",
+            "position": "TE",
+            "projected_points": 7.255172413793104,
+            "adp": 180.2
+        },
+        {
+            "player_id": "0034270",
+            "name": "Tyler Conklin",
+            "position": "TE",
+            "projected_points": 7.488235294117647,
+            "adp": 182.0
+        },
+        {
+            "player_id": "0038393",
+            "name": "Dontayvion Wicks",
+            "position": "WR",
+            "projected_points": 7.66235294117647,
+            "adp": 182.2
+        },
+        {
+            "player_id": "0036309",
+            "name": "Darnell Mooney",
+            "position": "WR",
+            "projected_points": 7.216,
+            "adp": 183.2
+        },
+        {
+            "player_id": "0036162",
+            "name": "Tyler Bass",
+            "position": "K",
+            "projected_points": 7.918918918918919,
+            "adp": 183.4
+        },
+        {
+            "player_id": "0039859",
+            "name": "Ja'Lynn Polk",
+            "position": "WR",
+            "projected_points": 11.74147505577867,
+            "adp": 184.2
+        },
+        {
+            "player_id": "0039732",
+            "name": "Bo Nix",
+            "position": "QB",
+            "projected_points": 21.849248656839784,
+            "adp": 184.6
+        },
+        {
+            "player_id": "0037545",
+            "name": "Rashid Shaheed",
+            "position": "WR",
+            "projected_points": 9.81153846153846,
+            "adp": 187.6
+        },
+        {
+            "player_id": "0039361",
+            "name": "Bucky Irving",
+            "position": "RB",
+            "projected_points": 6.229785247432307,
+            "adp": 191.0
+        },
+        {
+            "player_id": "0036906",
+            "name": "Khalil Herbert",
+            "position": "RB",
+            "projected_points": 9.692,
+            "adp": 192.2
+        },
+        {
+            "player_id": "0030565",
+            "name": "Geno Smith",
+            "position": "QB",
+            "projected_points": 20.244242424242422,
+            "adp": 192.4
+        },
+        {
+            "player_id": "0039152",
+            "name": "Will Levis",
+            "position": "QB",
+            "projected_points": 13.335555555555556,
+            "adp": 195.4
+        },
+        {
+            "player_id": "0031492",
+            "name": "Jason Myers",
+            "position": "K",
+            "projected_points": 8.942857142857143,
+            "adp": 196.4
+        },
+        {
+            "player_id": "0034794",
+            "name": "Jason Sanders",
+            "position": "K",
+            "projected_points": 7.888888888888889,
+            "adp": 199.4
+        },
+        {
+            "player_id": "0038621",
+            "name": "Demario Douglas",
+            "position": "WR",
+            "projected_points": 7.6571428571428575,
+            "adp": 203.0
+        },
+        {
+            "player_id": "0031280",
+            "name": "Derek Carr",
+            "position": "QB",
+            "projected_points": 17.94375,
+            "adp": 218.0
+        },
+        {
+            "player_id": "0030061",
+            "name": "Zach Ertz",
+            "position": "TE",
+            "projected_points": 9.841176470588236,
+            "adp": 224.6
+        },
+        {
+            "player_id": "0033357",
+            "name": "Taysom Hill",
+            "position": "QB",
+            "projected_points": 9.3225,
+            "adp": 164.5
+        },
+        {
+            "player_id": "0029621",
+            "name": "Greg Zuerlein",
+            "position": "K",
+            "projected_points": 8.774193548387096,
+            "adp": 181.8
+        },
+        {
+            "player_id": "0039811",
+            "name": "MarShawn Lloyd",
+            "position": "RB",
+            "projected_points": 9.650793103448276,
+            "adp": 182.0
+        },
+        {
+            "player_id": "0037525",
+            "name": "Jordan Mason",
+            "position": "RB",
+            "projected_points": 4.316666666666666,
+            "adp": 187.5
+        },
+        {
+            "player_id": "0033090",
+            "name": "Hunter Henry",
+            "position": "TE",
+            "projected_points": 7.717241379310345,
+            "adp": 193.0
+        },
+        {
+            "player_id": "0039794",
+            "name": "Braelon Allen",
+            "position": "RB",
+            "projected_points": 5.728518518518519,
+            "adp": 198.5
+        },
+        {
+            "player_id": "0038997",
+            "name": "Josh Downs",
+            "position": "WR",
+            "projected_points": 9.41764705882353,
+            "adp": 200.5
+        },
+        {
+            "player_id": "0034161",
+            "name": "Daniel Carlson",
+            "position": "K",
+            "projected_points": 8.65625,
+            "adp": 200.8
+        },
+        {
+            "player_id": "0035269",
+            "name": "Matt Gay",
+            "position": "K",
+            "projected_points": 8.205882352941176,
+            "adp": 201.0
+        },
+        {
+            "player_id": "0031203",
+            "name": "Cairo Santos",
+            "position": "K",
+            "projected_points": 7.666666666666667,
+            "adp": 202.0
+        },
+        {
+            "player_id": "0039860",
+            "name": "Ray Davis",
+            "position": "RB",
+            "projected_points": 6.150641503572538,
+            "adp": 205.5
+        },
+        {
+            "player_id": "0039150",
+            "name": "Bryce Young",
+            "position": "QB",
+            "projected_points": 11.27375,
+            "adp": 216.5
+        },
+        {
+            "player_id": "0039384",
+            "name": "Tyrone Tracy",
+            "position": "RB",
+            "projected_points": 3.615162037037037,
+            "adp": 217.0
+        },
+        {
+            "player_id": "0036945",
+            "name": "Justin Fields",
+            "position": "QB",
+            "projected_points": 21.648571428571422,
+            "adp": 221.0
+        },
+        {
+            "player_id": "0038559",
+            "name": "Michael Wilson",
+            "position": "WR",
+            "projected_points": 8.807692307692308,
+            "adp": 226.3
+        },
+        {
+            "player_id": "0029263",
+            "name": "Russell Wilson",
+            "position": "QB",
+            "projected_points": 19.08866666666667,
+            "adp": 226.3
+        },
+        {
+            "player_id": "0033858",
+            "name": "Jonnu Smith",
+            "position": "TE",
+            "projected_points": 6.637037037037037,
+            "adp": 227.3
+        },
+        {
+            "player_id": "0036919",
+            "name": "Kenneth Gainwell",
+            "position": "RB",
+            "projected_points": 6.167027027027027,
+            "adp": 229.3
+        },
+        {
+            "player_id": "0036360",
+            "name": "Clyde Edwards-Helaire",
+            "position": "RB",
+            "projected_points": 6.082758620689655,
+            "adp": 231.5
+        },
+        {
+            "player_id": "0034829",
+            "name": "Mike Gesicki",
+            "position": "TE",
+            "projected_points": 5.245454545454545,
+            "adp": 236.5
+        },
+        {
+            "player_id": "0034869",
+            "name": "Sam Darnold",
+            "position": "QB",
+            "projected_points": 8.10625,
+            "adp": 249.0
+        },
+        {
+            "player_id": "0038129",
+            "name": "Cade Otton",
+            "position": "TE",
+            "projected_points": 7.690909090909091,
+            "adp": 196.0
+        },
+        {
+            "player_id": "0037741",
+            "name": "Jahan Dotson",
+            "position": "WR",
+            "projected_points": 9.013793103448275,
+            "adp": 201.0
+        },
+        {
+            "player_id": "0039391",
+            "name": "Kimani Vidal",
+            "position": "RB",
+            "projected_points": 2.98,
+            "adp": 207.3
+        },
+        {
+            "player_id": "0035689",
+            "name": "Dawson Knox",
+            "position": "TE",
+            "projected_points": 7.658620689655172,
+            "adp": 212.3
+        },
+        {
+            "player_id": "0038544",
+            "name": "Quentin Johnston",
+            "position": "WR",
+            "projected_points": 5.529411764705882,
+            "adp": 212.7
+        },
+        {
+            "player_id": "0037258",
+            "name": "Dameon Pierce",
+            "position": "RB",
+            "projected_points": 9.225925925925926,
+            "adp": 215.0
+        },
+        {
+            "player_id": "0039810",
+            "name": "Jermaine Burton",
+            "position": "WR",
+            "projected_points": 7.574530120481928,
+            "adp": 215.3
+        },
+        {
+            "player_id": "0039864",
+            "name": "Ben Sinnott",
+            "position": "TE",
+            "projected_points": 7.649926680972818,
+            "adp": 215.7
+        },
+        {
+            "player_id": "0039739",
+            "name": "Roman Wilson",
+            "position": "WR",
+            "projected_points": 7.272472289156624,
+            "adp": 215.7
+        },
+        {
+            "player_id": "0039404",
+            "name": "Will Reichard",
+            "position": "K",
+            "projected_points": 9.22876447876448,
+            "adp": 220.3
+        },
+        {
+            "player_id": "0039325",
+            "name": "Carson Steele",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 225.7
+        },
+        {
+            "player_id": "0039851",
+            "name": "Drake Maye",
+            "position": "QB",
+            "projected_points": 23.736316421707176,
+            "adp": 226.7
+        },
+        {
+            "player_id": "0034972",
+            "name": "Alexander Mattison",
+            "position": "RB",
+            "projected_points": 6.552941176470589,
+            "adp": 228.7
+        },
+        {
+            "player_id": "0038905",
+            "name": "Blake Grupe",
+            "position": "K",
+            "projected_points": 8.411764705882353,
+            "adp": 231.0
+        },
+        {
+            "player_id": "0036550",
+            "name": "Rashod Bateman",
+            "position": "WR",
+            "projected_points": 6.134782608695652,
+            "adp": 232.0
+        },
+        {
+            "player_id": "0039355",
+            "name": "Luke McCaffrey",
+            "position": "WR",
+            "projected_points": 6.33663380795911,
+            "adp": 233.7
+        },
+        {
+            "player_id": "0038976",
+            "name": "Marvin Mims Jr.",
+            "position": "WR",
+            "projected_points": 4.78,
+            "adp": 233.7
+        },
+        {
+            "player_id": "0038555",
+            "name": "Tank Bigsby",
+            "position": "RB",
+            "projected_points": 1.907692307692308,
+            "adp": 235.0
+        },
+        {
+            "player_id": "0034975",
+            "name": "Justice Hill",
+            "position": "RB",
+            "projected_points": 5.365625,
+            "adp": 236.7
+        },
+        {
+            "player_id": "0039409",
+            "name": "Cam Little",
+            "position": "K",
+            "projected_points": 6.225378787878788,
+            "adp": 236.7
+        },
+        {
+            "player_id": "0038117",
+            "name": "Wan'Dale Robinson",
+            "position": "WR",
+            "projected_points": 8.942857142857143,
+            "adp": 237.3
+        },
+        {
+            "player_id": "0039857",
+            "name": "Troy Franklin",
+            "position": "WR",
+            "projected_points": 6.211180722891567,
+            "adp": 239.0
+        },
+        {
+            "player_id": "0039021",
+            "name": "Roschon Johnson",
+            "position": "RB",
+            "projected_points": 6.806666666666667,
+            "adp": 244.3
+        },
+        {
+            "player_id": "0035710",
+            "name": "Daniel Jones",
+            "position": "QB",
+            "projected_points": 17.858333333333334,
+            "adp": 246.7
+        },
+        {
+            "player_id": "0035644",
+            "name": "Noah Fant",
+            "position": "TE",
+            "projected_points": 6.190625,
+            "adp": 248.0
+        },
+        {
+            "player_id": "0039356",
+            "name": "Ja'Tavion Sanders",
+            "position": "TE",
+            "projected_points": 4.690660330302184,
+            "adp": 249.0
+        },
+        {
+            "player_id": "0033009",
+            "name": "Tyler Boyd",
+            "position": "WR",
+            "projected_points": 9.328333333333331,
+            "adp": 250.7
+        },
+        {
+            "player_id": "0033948",
+            "name": "Jamaal Williams",
+            "position": "RB",
+            "projected_points": 9.756666666666666,
+            "adp": 253.7
+        },
+        {
+            "player_id": "0038454",
+            "name": "Keaton Mitchell",
+            "position": "RB",
+            "projected_points": 10.414285714285716,
+            "adp": 254.3
+        },
+        {
+            "player_id": "0039373",
+            "name": "Audric Estime",
+            "position": "RB",
+            "projected_points": 4.703819444444444,
+            "adp": 257.0
+        },
+        {
+            "player_id": "0036244",
+            "name": "Colby Parkinson",
+            "position": "TE",
+            "projected_points": 4.665517241379311,
+            "adp": 257.7
+        },
+        {
+            "player_id": "0039746",
+            "name": "Will Shipley",
+            "position": "RB",
+            "projected_points": 6.176370656370656,
+            "adp": 258.7
+        },
+        {
+            "player_id": "0037252",
+            "name": "Greg Dulcich",
+            "position": "TE",
+            "projected_points": 7.633333333333334,
+            "adp": 259.0
+        },
+        {
+            "player_id": "0036040",
+            "name": "Juwan Johnson",
+            "position": "TE",
+            "projected_points": 8.020689655172413,
+            "adp": 262.3
+        },
+        {
+            "player_id": "0037666",
+            "name": "Jalen Tolbert",
+            "position": "WR",
+            "projected_points": 4.0,
+            "adp": 263.7
+        },
+        {
+            "player_id": "0035500",
+            "name": "Greg Dortch",
+            "position": "WR",
+            "projected_points": 9.13,
+            "adp": 265.3
+        },
+        {
+            "player_id": "0032775",
+            "name": "Demarcus Robinson",
+            "position": "WR",
+            "projected_points": 8.25,
+            "adp": 266.7
+        },
+        {
+            "player_id": "0035535",
+            "name": "Darius Slayton",
+            "position": "WR",
+            "projected_points": 9.278125,
+            "adp": 270.0
+        },
+        {
+            "player_id": "0033526",
+            "name": "Samaje Perine",
+            "position": "RB",
+            "projected_points": 8.047222222222222,
+            "adp": 271.3
+        },
+        {
+            "player_id": "0039066",
+            "name": "Michael Mayer",
+            "position": "TE",
+            "projected_points": 5.95,
+            "adp": 271.7
+        },
+        {
+            "player_id": "0030098",
+            "name": "Dustin Hopkins",
+            "position": "K",
+            "projected_points": 9.15,
+            "adp": 159.5
+        },
+        {
+            "player_id": "0036913",
+            "name": "Kadarius Toney",
+            "position": "WR",
+            "projected_points": 5.268000000000001,
+            "adp": 282.7
+        },
+        {
+            "player_id": "0031136",
+            "name": "Chris Boswell",
+            "position": "K",
+            "projected_points": 7.533333333333333,
+            "adp": 186.5
+        },
+        {
+            "player_id": "0039856",
+            "name": "Ricky Pearsall",
+            "position": "WR",
+            "projected_points": 13.228986534372783,
+            "adp": 187.5
+        },
+        {
+            "player_id": "0039415",
+            "name": "Brenden Rice",
+            "position": "WR",
+            "projected_points": 1.7000000000000002,
+            "adp": 293.3
+        },
+        {
+            "player_id": "0039792",
+            "name": "Devontez Walker",
+            "position": "WR",
+            "projected_points": 5.907707831325301,
+            "adp": 294.3
+        },
+        {
+            "player_id": "0039870",
+            "name": "Malachi Corley",
+            "position": "WR",
+            "projected_points": 8.809036689745408,
+            "adp": 199.5
+        },
+        {
+            "player_id": "0039863",
+            "name": "Michael Penix",
+            "position": "QB",
+            "projected_points": 22.455567279875385,
+            "adp": 302.3
+        },
+        {
+            "player_id": "0038396",
+            "name": "Eric Gray",
+            "position": "RB",
+            "projected_points": 2.6,
+            "adp": 306.0
+        },
+        {
+            "player_id": "0039751",
+            "name": "Jordan Whittington",
+            "position": "WR",
+            "projected_points": 2.2615593803786576,
+            "adp": 307.7
+        },
+        {
+            "player_id": "0031610",
+            "name": "Darren Waller",
+            "position": "TE",
+            "projected_points": 9.9,
+            "adp": 213.5
+        },
+        {
+            "player_id": "0039407",
+            "name": "Dylan Laube",
+            "position": "RB",
+            "projected_points": 1.8930995475113124,
+            "adp": 310.0
+        },
+        {
+            "player_id": "0029822",
+            "name": "Brandon McManus",
+            "position": "K",
+            "projected_points": 7.852941176470588,
+            "adp": 311.3
+        },
+        {
+            "player_id": "0036984",
+            "name": "Trey Sermon",
+            "position": "RB",
+            "projected_points": 2.466666666666667,
+            "adp": 316.0
+        },
+        {
+            "player_id": "0031235",
+            "name": "Odell Beckham Jr.",
+            "position": "WR",
+            "projected_points": 7.36875,
+            "adp": 225.0
+        },
+        {
+            "player_id": "0026858",
+            "name": "Graham Gano",
+            "position": "K",
+            "projected_points": 7.222222222222222,
+            "adp": 227.0
+        },
+        {
+            "player_id": "0032569",
+            "name": "Wil Lutz",
+            "position": "K",
+            "projected_points": 7.0606060606060606,
+            "adp": 230.0
+        },
+        {
+            "player_id": "0039853",
+            "name": "Javon Baker",
+            "position": "WR",
+            "projected_points": 6.033434187879338,
+            "adp": 323.7
+        },
+        {
+            "player_id": "0036637",
+            "name": "Noah Gray",
+            "position": "TE",
+            "projected_points": 4.0475,
+            "adp": 239.5
+        },
+        {
+            "player_id": "0038551",
+            "name": "Kendre Miller",
+            "position": "RB",
+            "projected_points": 6.185714285714285,
+            "adp": 243.5
+        },
+        {
+            "player_id": "0033857",
+            "name": "JuJu Smith-Schuster",
+            "position": "WR",
+            "projected_points": 9.04,
+            "adp": 245.5
+        },
+        {
+            "player_id": "0039876",
+            "name": "Malik Washington",
+            "position": "WR",
+            "projected_points": 3.45233505450373,
+            "adp": 331.0
+        },
+        {
+            "player_id": "0038115",
+            "name": "Daniel Bellinger",
+            "position": "TE",
+            "projected_points": 5.253846153846154,
+            "adp": 331.7
+        },
+        {
+            "player_id": "0035289",
+            "name": "Gardner Minshew",
+            "position": "QB",
+            "projected_points": 12.582727272727272,
+            "adp": 253.0
+        },
+        {
+            "player_id": "0039062",
+            "name": "Jonathan Mingo",
+            "position": "WR",
+            "projected_points": 5.653333333333333,
+            "adp": 340.3
+        },
+        {
+            "player_id": "0034386",
+            "name": "Justin Watson",
+            "position": "WR",
+            "projected_points": 4.434210526315789,
+            "adp": 264.0
+        },
+        {
+            "player_id": "0038996",
+            "name": "Tucker Kraft",
+            "position": "TE",
+            "projected_points": 7.658333333333334,
+            "adp": 264.0
+        },
+        {
+            "player_id": "0034419",
+            "name": "Braxton Berrios",
+            "position": "WR",
+            "projected_points": 4.05448275862069,
+            "adp": 267.0
+        },
+        {
+            "player_id": "0039750",
+            "name": "Joshua Karty",
+            "position": "K",
+            "projected_points": 7.635416666666667,
+            "adp": 269.5
+        },
+        {
+            "player_id": "0035243",
+            "name": "Miles Sanders",
+            "position": "RB",
+            "projected_points": 9.483333333333334,
+            "adp": 270.5
+        },
+        {
+            "player_id": "0039228",
+            "name": "Louis Rees-Zammit",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 270.5
+        },
+        {
+            "player_id": "0039855",
+            "name": "Jalen McMillan",
+            "position": "WR",
+            "projected_points": 6.662908184461983,
+            "adp": 275.5
+        },
+        {
+            "player_id": "0037801",
+            "name": "KaVontae Turpin",
+            "position": "WR",
+            "projected_points": 3.616666666666666,
+            "adp": 279.0
+        },
+        {
+            "player_id": "0036259",
+            "name": "Jauan Jennings",
+            "position": "WR",
+            "projected_points": 5.413333333333333,
+            "adp": 280.0
+        },
+        {
+            "player_id": "0038090",
+            "name": "Skyy Moore",
+            "position": "WR",
+            "projected_points": 3.8833333333333337,
+            "adp": 280.5
+        },
+        {
+            "player_id": "0038752",
+            "name": "Jake Bobo",
+            "position": "WR",
+            "projected_points": 4.064285714285715,
+            "adp": 281.0
+        },
+        {
+            "player_id": "0038938",
+            "name": "Jalin Hyatt",
+            "position": "WR",
+            "projected_points": 4.869230769230769,
+            "adp": 282.5
+        },
+        {
+            "player_id": "0034830",
+            "name": "Hayden Hurst",
+            "position": "TE",
+            "projected_points": 7.156000000000001,
+            "adp": 287.0
+        },
+        {
+            "player_id": "0038402",
+            "name": "Anders Carlson",
+            "position": "K",
+            "projected_points": 6.631578947368421,
+            "adp": 287.5
+        },
+        {
+            "player_id": "0035192",
+            "name": "Joey Slye",
+            "position": "K",
+            "projected_points": 6.151515151515151,
+            "adp": 288.0
+        },
+        {
+            "player_id": "0036626",
+            "name": "Dyami Brown",
+            "position": "WR",
+            "projected_points": 3.5380000000000003,
+            "adp": 290.5
+        },
+        {
+            "player_id": "0038102",
+            "name": "Kenny Pickett",
+            "position": "QB",
+            "projected_points": 11.5224,
+            "adp": 290.5
+        },
+        {
+            "player_id": "0034798",
+            "name": "Durham Smythe",
+            "position": "TE",
+            "projected_points": 4.4,
+            "adp": 292.0
+        },
+        {
+            "player_id": "0036096",
+            "name": "J.J. Taylor",
+            "position": "RB",
+            "projected_points": 2.7,
+            "adp": 293.0
+        },
+        {
+            "player_id": "0038563",
+            "name": "Tre Tucker",
+            "position": "WR",
+            "projected_points": 5.523076923076923,
+            "adp": 293.5
+        },
+        {
+            "player_id": "0038579",
+            "name": "Aidan O'Connell",
+            "position": "QB",
+            "projected_points": 13.62,
+            "adp": 295.0
+        },
+        {
+            "player_id": "0038622",
+            "name": "Deuce Vaughn",
+            "position": "RB",
+            "projected_points": 2.5,
+            "adp": 295.5
+        },
+        {
+            "player_id": "0038619",
+            "name": "Andrei Iosivas",
+            "position": "WR",
+            "projected_points": 5.622222222222223,
+            "adp": 298.5
+        },
+        {
+            "player_id": "0036980",
+            "name": "Elijah Moore",
+            "position": "WR",
+            "projected_points": 7.206451612903226,
+            "adp": 301.0
+        },
+        {
+            "player_id": "0033925",
+            "name": "D'Onta Foreman",
+            "position": "RB",
+            "projected_points": 9.488,
+            "adp": 302.0
+        },
+        {
+            "player_id": "0034521",
+            "name": "Allen Lazard",
+            "position": "WR",
+            "projected_points": 8.496428571428572,
+            "adp": 303.0
+        },
+        {
+            "player_id": "0038558",
+            "name": "Darnell Washington",
+            "position": "TE",
+            "projected_points": 1.4555555555555555,
+            "adp": 305.0
+        },
+        {
+            "player_id": "0033949",
+            "name": "Joshua Dobbs",
+            "position": "QB",
+            "projected_points": 16.9,
+            "adp": 307.0
+        },
+        {
+            "player_id": "0033110",
+            "name": "Tyler Higbee",
+            "position": "TE",
+            "projected_points": 8.140625,
+            "adp": 371.7
+        },
+        {
+            "player_id": "0038547",
+            "name": "Luke Schoonmaker",
+            "position": "TE",
+            "projected_points": 2.35,
+            "adp": 308.5
+        },
+        {
+            "player_id": "0038097",
+            "name": "Cade York",
+            "position": "K",
+            "projected_points": 6.705882352941177,
+            "adp": 309.5
+        },
+        {
+            "player_id": "0039363",
+            "name": "Isaac Guerendo",
+            "position": "RB",
+            "projected_points": 6.092121776949363,
+            "adp": 310.0
+        },
+        {
+            "player_id": "0039359",
+            "name": "Cade Stover",
+            "position": "TE",
+            "projected_points": 4.016258941344779,
+            "adp": 313.5
+        },
+        {
+            "player_id": "0038612",
+            "name": "A.T. Perry",
+            "position": "WR",
+            "projected_points": 7.575,
+            "adp": 314.0
+        },
+        {
+            "player_id": "0033891",
+            "name": "Zay Jones",
+            "position": "WR",
+            "projected_points": 11.737037037037036,
+            "adp": 314.5
+        },
+        {
+            "player_id": "0032950",
+            "name": "Carson Wentz",
+            "position": "QB",
+            "projected_points": 18.991111111111117,
+            "adp": 315.5
+        },
+        {
+            "player_id": "0036345",
+            "name": "K.J. Osborn",
+            "position": "WR",
+            "projected_points": 8.836363636363638,
+            "adp": 315.5
+        },
+        {
+            "player_id": "0026158",
+            "name": "Joe Flacco",
+            "position": "QB",
+            "projected_points": 19.55090909090909,
+            "adp": 317.5
+        },
+        {
+            "player_id": "0037304",
+            "name": "Connor Heyward",
+            "position": "TE",
+            "projected_points": 3.85,
+            "adp": 320.0
+        },
+        {
+            "player_id": "0039824",
+            "name": "Jared Wiley",
+            "position": "TE",
+            "projected_points": 3.9165780196198656,
+            "adp": 320.5
+        },
+        {
+            "player_id": "0036556",
+            "name": "Brevin Jordan",
+            "position": "TE",
+            "projected_points": 4.615,
+            "adp": 326.0
+        },
+        {
+            "player_id": "0031345",
+            "name": "Jimmy Garoppolo",
+            "position": "QB",
+            "projected_points": 15.493333333333332,
+            "adp": 328.5
+        },
+        {
+            "player_id": "0036754",
+            "name": "Brock Wright",
+            "position": "TE",
+            "projected_points": 4.345454545454546,
+            "adp": 331.5
+        },
+        {
+            "player_id": "0038567",
+            "name": "Chad Ryland",
+            "position": "K",
+            "projected_points": 4.4375,
+            "adp": 332.0
+        },
+        {
+            "player_id": "0037013",
+            "name": "Zach Wilson",
+            "position": "QB",
+            "projected_points": 12.040952380952382,
+            "adp": 332.5
+        },
+        {
+            "player_id": "0039847",
+            "name": "Theo Johnson",
+            "position": "TE",
+            "projected_points": 4.415314085056575,
+            "adp": 333.0
+        },
+        {
+            "player_id": "0033307",
+            "name": "Kendrick Bourne",
+            "position": "WR",
+            "projected_points": 7.970833333333334,
+            "adp": 334.0
+        },
+        {
+            "player_id": "0034279",
+            "name": "Equanimeous St. Brown",
+            "position": "WR",
+            "projected_points": 3.519047619047619,
+            "adp": 334.5
+        },
+        {
+            "player_id": "0034450",
+            "name": "Greg Joseph",
+            "position": "K",
+            "projected_points": 6.914285714285715,
+            "adp": 334.5
+        },
+        {
+            "player_id": "0033943",
+            "name": "Josh Reynolds",
+            "position": "WR",
+            "projected_points": 8.383870967741936,
+            "adp": 334.5
+        },
+        {
+            "player_id": "0038476",
+            "name": "Tommy DeVito",
+            "position": "QB",
+            "projected_points": 12.171111111111111,
+            "adp": 343.5
+        },
+        {
+            "player_id": "0038941",
+            "name": "Tyler Scott",
+            "position": "WR",
+            "projected_points": 2.761538461538462,
+            "adp": 349.0
+        },
+        {
+            "player_id": "0037012",
+            "name": "Trey Lance",
+            "position": "QB",
+            "projected_points": 6.23,
+            "adp": 357.5
+        },
+        {
+            "player_id": "0023853",
+            "name": "Matt Prater",
+            "position": "K",
+            "projected_points": 7.586206896551724,
+            "adp": 217.0
+        },
+        {
+            "player_id": "0033662",
+            "name": "Cooper Rush",
+            "position": "QB",
+            "projected_points": 4.66,
+            "adp": 359.0
+        },
+        {
+            "player_id": "0039376",
+            "name": "Spencer Rattler",
+            "position": "QB",
+            "projected_points": 11.516137267759564,
+            "adp": 361.0
+        },
+        {
+            "player_id": "0035249",
+            "name": "Josh Oliver",
+            "position": "TE",
+            "projected_points": 3.952,
+            "adp": 363.0
+        },
+        {
+            "player_id": "0035045",
+            "name": "D.J. Montgomery",
+            "position": "WR",
+            "projected_points": 7.300000000000001,
+            "adp": 364.0
+        },
+        {
+            "player_id": "0035973",
+            "name": "Patrick Taylor",
+            "position": "RB",
+            "projected_points": 2.4266666666666667,
+            "adp": 364.5
+        },
+        {
+            "player_id": "0039041",
+            "name": "Elijah Higgins",
+            "position": "TE",
+            "projected_points": 4.033333333333333,
+            "adp": 365.0
+        },
+        {
+            "player_id": "0039236",
+            "name": "Johnny Wilson",
+            "position": "WR",
+            "projected_points": 3.412530120481927,
+            "adp": 367.0
+        },
+        {
+            "player_id": "0039074",
+            "name": "Davis Allen",
+            "position": "TE",
+            "projected_points": 6.0600000000000005,
+            "adp": 367.0
+        },
+        {
+            "player_id": "0033217",
+            "name": "Mo Alie-Cox",
+            "position": "TE",
+            "projected_points": 3.814814814814815,
+            "adp": 368.5
+        },
+        {
+            "player_id": "0035358",
+            "name": "Chase McLaughlin",
+            "position": "K",
+            "projected_points": 8.5,
+            "adp": 237.0
+        },
+        {
+            "player_id": "0039684",
+            "name": "Michael Wiley",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 238.0
+        },
+        {
+            "player_id": "0033589",
+            "name": "David Moore",
+            "position": "WR",
+            "projected_points": 4.6375,
+            "adp": 371.0
+        },
+        {
+            "player_id": "0025565",
+            "name": "Nick Folk",
+            "position": "K",
+            "projected_points": 7.823529411764706,
+            "adp": 242.0
+        },
+        {
+            "player_id": "0037614",
+            "name": "John Metchie III",
+            "position": "WR",
+            "projected_points": 2.7,
+            "adp": 371.5
+        },
+        {
+            "player_id": "0030431",
+            "name": "Robert Woods",
+            "position": "WR",
+            "projected_points": 6.584375,
+            "adp": 373.0
+        },
+        {
+            "player_id": "0039238",
+            "name": "Michael Pratt",
+            "position": "QB",
+            "projected_points": 0.7140000000000003,
+            "adp": 522.0
+        },
+        {
+            "player_id": "0038152",
+            "name": "Lucas Havrisik",
+            "position": "K",
+            "projected_points": 6.888888888888889,
+            "adp": 399.0
+        },
+        {
+            "player_id": "0038416",
+            "name": "Tyson Bagent",
+            "position": "QB",
+            "projected_points": 11.852,
+            "adp": 380.0
+        },
+        {
+            "player_id": "0036422",
+            "name": "Adam Trautman",
+            "position": "TE",
+            "projected_points": 3.753571428571429,
+            "adp": 381.0
+        },
+        {
+            "player_id": "0038720",
+            "name": "Julian Hill",
+            "position": "TE",
+            "projected_points": 1.4666666666666668,
+            "adp": 382.0
+        },
+        {
+            "player_id": "0038598",
+            "name": "Jaren Hall",
+            "position": "QB",
+            "projected_points": 0.706666666666667,
+            "adp": 510.5
+        },
+        {
+            "player_id": "0039796",
+            "name": "Rasheen Ali",
+            "position": "RB",
+            "projected_points": 3.631216931216931,
+            "adp": 382.5
+        },
+        {
+            "player_id": "0034115",
+            "name": "Jeff Wilson",
+            "position": "RB",
+            "projected_points": 8.074074074074074,
+            "adp": 384.5
+        },
+        {
+            "player_id": "0039437",
+            "name": "Cornelius Johnson",
+            "position": "WR",
+            "projected_points": 0.8200000000000001,
+            "adp": 269.0
+        },
+        {
+            "player_id": "0039801",
+            "name": "Devin Leary",
+            "position": "QB",
+            "projected_points": 2.580922131147541,
+            "adp": 583.5
+        },
+        {
+            "player_id": "0038647",
+            "name": "Ronnie Bell",
+            "position": "WR",
+            "projected_points": 3.85,
+            "adp": 386.0
+        },
+        {
+            "player_id": "0034613",
+            "name": "Tanner Hudson",
+            "position": "TE",
+            "projected_points": 5.7444444444444445,
+            "adp": 387.5
+        },
+        {
+            "player_id": "0039230",
+            "name": "Dante Miller",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 536.0
+        },
+        {
+            "player_id": "0039397",
+            "name": "Tejhaun Palmer",
+            "position": "WR",
+            "projected_points": 3.181701807228916,
+            "adp": 276.0
+        },
+        {
+            "player_id": "0037091",
+            "name": "Bo Melton",
+            "position": "WR",
+            "projected_points": 9.916666666666666,
+            "adp": 389.0
+        },
+        {
+            "player_id": "0032392",
+            "name": "Austin Hooper",
+            "position": "TE",
+            "projected_points": 4.418181818181819,
+            "adp": 389.5
+        },
+        {
+            "player_id": "0034646",
+            "name": "Brandon Powell",
+            "position": "WR",
+            "projected_points": 4.024137931034483,
+            "adp": 389.5
+        },
+        {
+            "player_id": "0038573",
+            "name": "Derius Davis",
+            "position": "WR",
+            "projected_points": 2.2642857142857147,
+            "adp": 520.5
+        },
+        {
+            "player_id": "0037429",
+            "name": "Raheem Blackshear",
+            "position": "RB",
+            "projected_points": 3.45,
+            "adp": 410.5
+        },
+        {
+            "player_id": "0030578",
+            "name": "Cordarrelle Patterson",
+            "position": "RB",
+            "projected_points": 7.664,
+            "adp": 281.0
+        },
+        {
+            "player_id": "0033895",
+            "name": "Gerald Everett",
+            "position": "TE",
+            "projected_points": 8.919354838709678,
+            "adp": 284.0
+        },
+        {
+            "player_id": "0039747",
+            "name": "Ainias Smith",
+            "position": "WR",
+            "projected_points": 4.143895582329318,
+            "adp": 394.0
+        },
+        {
+            "player_id": "0037506",
+            "name": "Cole Fotheringham",
+            "position": "TE",
+            "projected_points": 1.6,
+            "adp": 570.5
+        },
+        {
+            "player_id": "0031585",
+            "name": "MyCole Pruitt",
+            "position": "TE",
+            "projected_points": 4.2631578947368425,
+            "adp": 427.0
+        },
+        {
+            "player_id": "0039793",
+            "name": "A.J. Barner",
+            "position": "TE",
+            "projected_points": 4.039100321888412,
+            "adp": 395.0
+        },
+        {
+            "player_id": "0038041",
+            "name": "Jake Ferguson",
+            "position": "TE",
+            "projected_points": 8.906666666666666,
+            "adp": 291.0
+        },
+        {
+            "player_id": "0037569",
+            "name": "Peyton Hendershot",
+            "position": "TE",
+            "projected_points": 2.9562500000000003,
+            "adp": 396.0
+        },
+        {
+            "player_id": "0039451",
+            "name": "Isaiah Williams",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 413.0
+        },
+        {
+            "player_id": "0037387",
+            "name": "Jalen Virgil",
+            "position": "WR",
+            "projected_points": 3.875,
+            "adp": 292.0
+        },
+        {
+            "player_id": "0037086",
+            "name": "Grant Calcaterra",
+            "position": "TE",
+            "projected_points": 3.0,
+            "adp": 414.0
+        },
+        {
+            "player_id": "0034173",
+            "name": "Eddy Pineiro",
+            "position": "K",
+            "projected_points": 7.625,
+            "adp": 298.0
+        },
+        {
+            "player_id": "0036415",
+            "name": "Van Jefferson",
+            "position": "WR",
+            "projected_points": 5.008333333333334,
+            "adp": 299.0
+        },
+        {
+            "player_id": "0035341",
+            "name": "Trenton Irwin",
+            "position": "WR",
+            "projected_points": 6.176190476190476,
+            "adp": 400.0
+        },
+        {
+            "player_id": "0037132",
+            "name": "Britain Covey",
+            "position": "WR",
+            "projected_points": 4.1,
+            "adp": 415.5
+        },
+        {
+            "player_id": "0031690",
+            "name": "Eric Tomlinson",
+            "position": "TE",
+            "projected_points": 3.6125,
+            "adp": 550.0
+        },
+        {
+            "player_id": "0033439",
+            "name": "Pharaoh Brown",
+            "position": "TE",
+            "projected_points": 3.84375,
+            "adp": 402.0
+        },
+        {
+            "player_id": "0037327",
+            "name": "Skylar Thompson",
+            "position": "QB",
+            "projected_points": 4.07,
+            "adp": 505.5
+        },
+        {
+            "player_id": "0032464",
+            "name": "Kalif Raymond",
+            "position": "WR",
+            "projected_points": 6.290909090909091,
+            "adp": 304.0
+        },
+        {
+            "player_id": "0032128",
+            "name": "Chris Conley",
+            "position": "WR",
+            "projected_points": 3.4285714285714284,
+            "adp": 403.5
+        },
+        {
+            "player_id": "0039462",
+            "name": "Peter LeBlanc",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 310.0
+        },
+        {
+            "player_id": "0036425",
+            "name": "DeeJay Dallas",
+            "position": "RB",
+            "projected_points": 2.713636363636364,
+            "adp": 409.5
+        },
+        {
+            "player_id": "0034764",
+            "name": "Michael Gallup",
+            "position": "WR",
+            "projected_points": 6.912121212121213,
+            "adp": 311.0
+        },
+        {
+            "player_id": "0038640",
+            "name": "Jalen Brooks",
+            "position": "WR",
+            "projected_points": 4.133333333333334,
+            "adp": 428.5
+        },
+        {
+            "player_id": "0033246",
+            "name": "Johnny Mundt",
+            "position": "TE",
+            "projected_points": 3.539130434782609,
+            "adp": 407.5
+        },
+        {
+            "player_id": "0027973",
+            "name": "Andy Dalton",
+            "position": "QB",
+            "projected_points": 15.1175,
+            "adp": 410.0
+        },
+        {
+            "player_id": "0034577",
+            "name": "Kyle Allen",
+            "position": "QB",
+            "projected_points": 2.33,
+            "adp": 410.0
+        },
+        {
+            "player_id": "0036972",
+            "name": "Mac Jones",
+            "position": "QB",
+            "projected_points": 13.2192,
+            "adp": 418.5
+        },
+        {
+            "player_id": "0038465",
+            "name": "Malik Heath",
+            "position": "WR",
+            "projected_points": 2.7916666666666665,
+            "adp": 412.0
+        },
+        {
+            "player_id": "0032434",
+            "name": "Brandon Allen",
+            "position": "QB",
+            "projected_points": 0.78,
+            "adp": 413.0
+        },
+        {
+            "player_id": "0039364",
+            "name": "Sione Vaki",
+            "position": "RB",
+            "projected_points": 5.770166561248155,
+            "adp": 442.5
+        },
+        {
+            "player_id": "0037837",
+            "name": "Calvin Austin III",
+            "position": "WR",
+            "projected_points": 4.026666666666666,
+            "adp": 326.0
+        },
+        {
+            "player_id": "0037664",
+            "name": "Alec Pierce",
+            "position": "WR",
+            "projected_points": 6.384848484848486,
+            "adp": 414.5
+        },
+        {
+            "player_id": "0037168",
+            "name": "Armani Rogers",
+            "position": "TE",
+            "projected_points": 2.8000000000000003,
+            "adp": 522.5
+        },
+        {
+            "player_id": "0037175",
+            "name": "Anthony Brown",
+            "position": "QB",
+            "projected_points": 2.79,
+            "adp": 432.0
+        },
+        {
+            "player_id": "0039521",
+            "name": "Xavier Weaver",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 474.5
+        },
+        {
+            "player_id": "0031549",
+            "name": "Nelson Agholor",
+            "position": "WR",
+            "projected_points": 5.91875,
+            "adp": 332.0
+        },
+        {
+            "player_id": "0026300",
+            "name": "Josh Johnson",
+            "position": "QB",
+            "projected_points": 0.9300000000000002,
+            "adp": 446.5
+        },
+        {
+            "player_id": "0033119",
+            "name": "Jacoby Brissett",
+            "position": "QB",
+            "projected_points": 13.9675,
+            "adp": 333.0
+        },
+        {
+            "player_id": "0038394",
+            "name": "Will Mallory",
+            "position": "TE",
+            "projected_points": 3.5181818181818185,
+            "adp": 417.5
+        },
+        {
+            "player_id": "0036233",
+            "name": "Donovan Peoples-Jones",
+            "position": "WR",
+            "projected_points": 6.641379310344828,
+            "adp": 336.0
+        },
+        {
+            "player_id": "0039686",
+            "name": "Colson Yankoff",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 418.5
+        },
+        {
+            "player_id": "0038576",
+            "name": "Charlie Jones",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 439.5
+        },
+        {
+            "player_id": "0033555",
+            "name": "Mack Hollins",
+            "position": "WR",
+            "projected_points": 7.702307692307693,
+            "adp": 419.0
+        },
+        {
+            "player_id": "0034364",
+            "name": "Jordan Akins",
+            "position": "TE",
+            "projected_points": 5.167857142857143,
+            "adp": 420.0
+        },
+        {
+            "player_id": "0031503",
+            "name": "Jameis Winston",
+            "position": "QB",
+            "projected_points": 7.764444444444444,
+            "adp": 421.0
+        },
+        {
+            "player_id": "0038128",
+            "name": "Malik Willis",
+            "position": "QB",
+            "projected_points": 2.488888888888889,
+            "adp": 521.0
+        },
+        {
+            "player_id": "0036816",
+            "name": "Riley Patterson",
+            "position": "K",
+            "projected_points": 7.0588235294117645,
+            "adp": 422.0
+        },
+        {
+            "player_id": "0037742",
+            "name": "Treylon Burks",
+            "position": "WR",
+            "projected_points": 6.55,
+            "adp": 347.0
+        },
+        {
+            "player_id": "0037299",
+            "name": "Keaontay Ingram",
+            "position": "RB",
+            "projected_points": 1.8882352941176472,
+            "adp": 349.0
+        },
+        {
+            "player_id": "0038391",
+            "name": "Sean Clifford",
+            "position": "QB",
+            "projected_points": 0.64,
+            "adp": 550.5
+        },
+        {
+            "player_id": "0026143",
+            "name": "Matt Ryan",
+            "position": "QB",
+            "projected_points": 15.773333333333332,
+            "adp": 350.0
+        },
+        {
+            "player_id": "0035537",
+            "name": "Ty Johnson",
+            "position": "RB",
+            "projected_points": 4.431578947368421,
+            "adp": 354.0
+        },
+        {
+            "player_id": "0035567",
+            "name": "Craig Reynolds",
+            "position": "RB",
+            "projected_points": 5.269230769230769,
+            "adp": 356.0
+        },
+        {
+            "player_id": "0037292",
+            "name": "Andrew Ogletree",
+            "position": "TE",
+            "projected_points": 3.5700000000000003,
+            "adp": 441.0
+        },
+        {
+            "player_id": "0037291",
+            "name": "Jalen Nailor",
+            "position": "WR",
+            "projected_points": 5.542857142857143,
+            "adp": 443.0
+        },
+        {
+            "player_id": "0035631",
+            "name": "Drew Sample",
+            "position": "TE",
+            "projected_points": 3.25625,
+            "adp": 486.0
+        },
+        {
+            "player_id": "0037077",
+            "name": "Sam Howell",
+            "position": "QB",
+            "projected_points": 18.322222222222223,
+            "adp": 361.0
+        },
+        {
+            "player_id": "0035594",
+            "name": "Travis Homer",
+            "position": "RB",
+            "projected_points": 4.788888888888889,
+            "adp": 485.5
+        },
+        {
+            "player_id": "0037745",
+            "name": "Velus Jones Jr.",
+            "position": "WR",
+            "projected_points": 2.5842105263157897,
+            "adp": 442.5
+        },
+        {
+            "player_id": "0039410",
+            "name": "Ryan Flournoy",
+            "position": "WR",
+            "projected_points": 2.095829471733086,
+            "adp": 462.5
+        },
+        {
+            "player_id": "0037112",
+            "name": "Jake Tonges",
+            "position": "TE",
+            "projected_points": 0.0,
+            "adp": 532.0
+        },
+        {
+            "player_id": "0036849",
+            "name": "Tutu Atwell",
+            "position": "WR",
+            "projected_points": 7.014814814814815,
+            "adp": 370.0
+        },
+        {
+            "player_id": "0036534",
+            "name": "Shane Zylstra",
+            "position": "TE",
+            "projected_points": 5.125,
+            "adp": 372.0
+        },
+        {
+            "player_id": "0037216",
+            "name": "Justyn Ross",
+            "position": "WR",
+            "projected_points": 2.26,
+            "adp": 375.0
+        },
+        {
+            "player_id": "0036860",
+            "name": "Jake Funk",
+            "position": "RB",
+            "projected_points": 3.2,
+            "adp": 445.5
+        },
+        {
+            "player_id": "0038797",
+            "name": "Emanuel Wilson",
+            "position": "RB",
+            "projected_points": 2.9285714285714284,
+            "adp": 380.0
+        },
+        {
+            "player_id": "0032104",
+            "name": "Ameer Abdullah",
+            "position": "RB",
+            "projected_points": 3.2793103448275867,
+            "adp": 381.0
+        },
+        {
+            "player_id": "0034860",
+            "name": "Dante Pettis",
+            "position": "WR",
+            "projected_points": 4.6571428571428575,
+            "adp": 594.5
+        },
+        {
+            "player_id": "0036898",
+            "name": "Davis Mills",
+            "position": "QB",
+            "projected_points": 11.484761904761903,
+            "adp": 528.5
+        },
+        {
+            "player_id": "0039449",
+            "name": "James Turner",
+            "position": "K",
+            "projected_points": 7.181818181818182,
+            "adp": 385.0
+        },
+        {
+            "player_id": "0037654",
+            "name": "Tucker Fisk",
+            "position": "TE",
+            "projected_points": 1.9,
+            "adp": 565.0
+        },
+        {
+            "player_id": "0035264",
+            "name": "Jarrett Stidham",
+            "position": "QB",
+            "projected_points": 16.656,
+            "adp": 386.0
+        },
+        {
+            "player_id": "0036423",
+            "name": "Albert Okwuegbunam",
+            "position": "TE",
+            "projected_points": 3.642857142857143,
+            "adp": 514.5
+        },
+        {
+            "player_id": "0039471",
+            "name": "Frank Gore",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 387.0
+        },
+        {
+            "player_id": "0039797",
+            "name": "Jordan Travis",
+            "position": "QB",
+            "projected_points": 9.354229508196722,
+            "adp": 556.0
+        },
+        {
+            "player_id": "0039649",
+            "name": "Brayden Narveson",
+            "position": "K",
+            "projected_points": 7.181818181818182,
+            "adp": 388.0
+        },
+        {
+            "player_id": "0035189",
+            "name": "Matthew Wright",
+            "position": "K",
+            "projected_points": 9.428571428571429,
+            "adp": 389.0
+        },
+        {
+            "player_id": "0037004",
+            "name": "Hunter Long",
+            "position": "TE",
+            "projected_points": 0.0,
+            "adp": 534.5
+        },
+        {
+            "player_id": "0035934",
+            "name": "Trishton Jackson",
+            "position": "WR",
+            "projected_points": 2.45,
+            "adp": 448.5
+        },
+        {
+            "player_id": "0034928",
+            "name": "Steven Sims",
+            "position": "WR",
+            "projected_points": 2.642857142857143,
+            "adp": 391.0
+        },
+        {
+            "player_id": "0038108",
+            "name": "Bailey Zappe",
+            "position": "QB",
+            "projected_points": 9.487142857142857,
+            "adp": 462.0
+        },
+        {
+            "player_id": "0039379",
+            "name": "Jamari Thrash",
+            "position": "WR",
+            "projected_points": 4.1,
+            "adp": 476.5
+        },
+        {
+            "player_id": "0037286",
+            "name": "Kevin Harris",
+            "position": "RB",
+            "projected_points": 3.611111111111111,
+            "adp": 397.0
+        },
+        {
+            "player_id": "0035298",
+            "name": "Scott Miller",
+            "position": "WR",
+            "projected_points": 4.07,
+            "adp": 509.5
+        },
+        {
+            "player_id": "0038389",
+            "name": "Israel Abanikanda",
+            "position": "RB",
+            "projected_points": 3.0500000000000003,
+            "adp": 401.0
+        },
+        {
+            "player_id": "0039052",
+            "name": "Trey Palmer",
+            "position": "WR",
+            "projected_points": 6.021052631578947,
+            "adp": 402.0
+        },
+        {
+            "player_id": "0038608",
+            "name": "Kayshon Boutte",
+            "position": "WR",
+            "projected_points": 1.3,
+            "adp": 580.5
+        },
+        {
+            "player_id": "0039573",
+            "name": "Blake Watson",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 562.5
+        },
+        {
+            "player_id": "0034054",
+            "name": "River Cracraft",
+            "position": "WR",
+            "projected_points": 4.24,
+            "adp": 494.5
+        },
+        {
+            "player_id": "0039229",
+            "name": "Charlie Smyth",
+            "position": "K",
+            "projected_points": 7.181818181818182,
+            "adp": 406.0
+        },
+        {
+            "player_id": "0038618",
+            "name": "Xavier Hutchinson",
+            "position": "WR",
+            "projected_points": 2.0615384615384618,
+            "adp": 580.5
+        },
+        {
+            "player_id": "0037451",
+            "name": "Rod Williams",
+            "position": "TE",
+            "projected_points": 0.0,
+            "adp": 577.0
+        },
+        {
+            "player_id": "0033869",
+            "name": "Mitchell Trubisky",
+            "position": "QB",
+            "projected_points": 11.546666666666669,
+            "adp": 455.5
+        },
+        {
+            "player_id": "0039603",
+            "name": "British Brooks",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 573.0
+        },
+        {
+            "player_id": "0033854",
+            "name": "Dare Ogunbowale",
+            "position": "RB",
+            "projected_points": 3.263157894736842,
+            "adp": 412.0
+        },
+        {
+            "player_id": "0034407",
+            "name": "Ray-Ray McCloud",
+            "position": "WR",
+            "projected_points": 3.965217391304348,
+            "adp": 413.0
+        },
+        {
+            "player_id": "0035639",
+            "name": "Parris Campbell",
+            "position": "WR",
+            "projected_points": 7.18,
+            "adp": 415.0
+        },
+        {
+            "player_id": "0035831",
+            "name": "James Robinson",
+            "position": "RB",
+            "projected_points": 7.716666666666666,
+            "adp": 532.0
+        },
+        {
+            "player_id": "0035100",
+            "name": "Jake Browning",
+            "position": "QB",
+            "projected_points": 19.38222222222222,
+            "adp": 416.0
+        },
+        {
+            "player_id": "0036630",
+            "name": "Tylan Wallace",
+            "position": "WR",
+            "projected_points": 1.342857142857143,
+            "adp": 464.5
+        },
+        {
+            "player_id": "0036876",
+            "name": "Kylen Granson",
+            "position": "TE",
+            "projected_points": 4.792857142857143,
+            "adp": 419.0
+        },
+        {
+            "player_id": "0037257",
+            "name": "David Bell",
+            "position": "WR",
+            "projected_points": 4.479166666666667,
+            "adp": 422.0
+        },
+        {
+            "player_id": "0039703",
+            "name": "Cody Schrader",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 462.0
+        },
+        {
+            "player_id": "0038809",
+            "name": "Ben Sims",
+            "position": "TE",
+            "projected_points": 1.9285714285714288,
+            "adp": 651.5
+        },
+        {
+            "player_id": "0038606",
+            "name": "Parker Washington",
+            "position": "WR",
+            "projected_points": 6.533333333333334,
+            "adp": 425.0
+        },
+        {
+            "player_id": "0038705",
+            "name": "Emari Demercado",
+            "position": "RB",
+            "projected_points": 6.663636363636363,
+            "adp": 430.0
+        },
+        {
+            "player_id": "0038738",
+            "name": "Hunter Luepke",
+            "position": "RB",
+            "projected_points": 2.1166666666666667,
+            "adp": 602.0
+        },
+        {
+            "player_id": "0034272",
+            "name": "Marquez Valdes-Scantling",
+            "position": "WR",
+            "projected_points": 6.0725,
+            "adp": 466.0
+        },
+        {
+            "player_id": "0033251",
+            "name": "Zach Pascal",
+            "position": "WR",
+            "projected_points": 1.933333333333333,
+            "adp": 506.5
+        },
+        {
+            "player_id": "0038935",
+            "name": "Brenton Strange",
+            "position": "TE",
+            "projected_points": 2.8999999999999995,
+            "adp": 491.5
+        },
+        {
+            "player_id": "0039392",
+            "name": "Jha'Quan Jackson",
+            "position": "WR",
+            "projected_points": 3.536310269650029,
+            "adp": 667.5
+        },
+        {
+            "player_id": "0033591",
+            "name": "Noah Brown",
+            "position": "WR",
+            "projected_points": 8.214285714285714,
+            "adp": 438.0
+        },
+        {
+            "player_id": "0033466",
+            "name": "Isaiah McKenzie",
+            "position": "WR",
+            "projected_points": 5.736000000000001,
+            "adp": 470.5
+        },
+        {
+            "player_id": "0035572",
+            "name": "Parker Hesse",
+            "position": "TE",
+            "projected_points": 1.9888888888888887,
+            "adp": 534.0
+        },
+        {
+            "player_id": "0035704",
+            "name": "Drew Lock",
+            "position": "QB",
+            "projected_points": 8.780000000000001,
+            "adp": 444.0
+        },
+        {
+            "player_id": "0033576",
+            "name": "Eric Saubert",
+            "position": "TE",
+            "projected_points": 2.857142857142857,
+            "adp": 510.5
+        },
+        {
+            "player_id": "0035329",
+            "name": "Donald Parham",
+            "position": "TE",
+            "projected_points": 5.74,
+            "adp": 445.0
+        },
+        {
+            "player_id": "0037805",
+            "name": "Jeremy Ruckert",
+            "position": "TE",
+            "projected_points": 2.7416666666666667,
+            "adp": 473.0
+        },
+        {
+            "player_id": "0035406",
+            "name": "Lil'Jordan Humphrey",
+            "position": "WR",
+            "projected_points": 3.6571428571428575,
+            "adp": 447.0
+        },
+        {
+            "player_id": "0036412",
+            "name": "KJ Hamler",
+            "position": "WR",
+            "projected_points": 4.3,
+            "adp": 447.0
+        },
+        {
+            "player_id": "0035215",
+            "name": "Deonte Harty",
+            "position": "WR",
+            "projected_points": 2.8125,
+            "adp": 537.5
+        },
+        {
+            "player_id": "0039386",
+            "name": "Bub Means",
+            "position": "WR",
+            "projected_points": 3.948840579710145,
+            "adp": 449.0
+        },
+        {
+            "player_id": "0036271",
+            "name": "Quez Watkins",
+            "position": "WR",
+            "projected_points": 5.2375,
+            "adp": 450.0
+        },
+        {
+            "player_id": "0033292",
+            "name": "Trent Taylor",
+            "position": "WR",
+            "projected_points": 1.5,
+            "adp": 515.0
+        },
+        {
+            "player_id": "0036842",
+            "name": "Kene Nwangwu",
+            "position": "RB",
+            "projected_points": 1.1333333333333335,
+            "adp": 453.0
+        },
+        {
+            "player_id": "0033958",
+            "name": "Nathan Peterman",
+            "position": "QB",
+            "projected_points": 2.465,
+            "adp": 515.5
+        },
+        {
+            "player_id": "0036924",
+            "name": "Michael Carter",
+            "position": "RB",
+            "projected_points": 5.961290322580646,
+            "adp": 454.0
+        },
+        {
+            "player_id": "0037539",
+            "name": "Lucas Krull",
+            "position": "TE",
+            "projected_points": 3.357142857142857,
+            "adp": 496.5
+        },
+        {
+            "player_id": "0037563",
+            "name": "Malik Davis",
+            "position": "RB",
+            "projected_points": 5.733333333333333,
+            "adp": 459.0
+        },
+        {
+            "player_id": "0037557",
+            "name": "Ronnie Rivers",
+            "position": "RB",
+            "projected_points": 3.75,
+            "adp": 461.0
+        },
+        {
+            "player_id": "0038979",
+            "name": "Cedric Tillman",
+            "position": "WR",
+            "projected_points": 4.0181818181818185,
+            "adp": 462.0
+        },
+        {
+            "player_id": "0039136",
+            "name": "Zach Evans",
+            "position": "RB",
+            "projected_points": 0.475,
+            "adp": 463.0
+        },
+        {
+            "player_id": "0036429",
+            "name": "Charlie Woerner",
+            "position": "TE",
+            "projected_points": 1.24,
+            "adp": 560.5
+        },
+        {
+            "player_id": "0038611",
+            "name": "Chris Rodriguez Jr.",
+            "position": "RB",
+            "projected_points": 4.737500000000001,
+            "adp": 464.0
+        },
+        {
+            "player_id": "0035645",
+            "name": "Gunner Olszewski",
+            "position": "WR",
+            "projected_points": 1.1,
+            "adp": 548.0
+        },
+        {
+            "player_id": "0038496",
+            "name": "Xavier Gipson",
+            "position": "WR",
+            "projected_points": 4.05,
+            "adp": 467.0
+        },
+        {
+            "player_id": "0038627",
+            "name": "Antoine Green",
+            "position": "WR",
+            "projected_points": 0.6,
+            "adp": 609.0
+        },
+        {
+            "player_id": "0038685",
+            "name": "Chris Brooks",
+            "position": "RB",
+            "projected_points": 3.5333333333333337,
+            "adp": 468.0
+        },
+        {
+            "player_id": "0039420",
+            "name": "Jaheim Bell",
+            "position": "TE",
+            "projected_points": 1.6844849785407727,
+            "adp": 484.5
+        },
+        {
+            "player_id": "0034365",
+            "name": "Ian Thomas",
+            "position": "TE",
+            "projected_points": 2.5650000000000004,
+            "adp": 529.5
+        },
+        {
+            "player_id": "0038951",
+            "name": "Sean Tucker",
+            "position": "RB",
+            "projected_points": 1.7333333333333334,
+            "adp": 469.0
+        },
+        {
+            "player_id": "0039424",
+            "name": "Devaughn Vele",
+            "position": "WR",
+            "projected_points": 1.5,
+            "adp": 631.0
+        },
+        {
+            "player_id": "0039393",
+            "name": "Jase McClellan",
+            "position": "RB",
+            "projected_points": 2.74162457912458,
+            "adp": 471.0
+        },
+        {
+            "player_id": "0036918",
+            "name": "Jacob Harris",
+            "position": "WR",
+            "projected_points": 1.6,
+            "adp": 575.0
+        },
+        {
+            "player_id": "0039589",
+            "name": "Kameron Johnson",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 473.0
+        },
+        {
+            "player_id": "0028118",
+            "name": "Tyrod Taylor",
+            "position": "QB",
+            "projected_points": 9.388333333333334,
+            "adp": 475.0
+        },
+        {
+            "player_id": "0035145",
+            "name": "Austin Seibert",
+            "position": "K",
+            "projected_points": 6.25,
+            "adp": 545.0
+        },
+        {
+            "player_id": "0035021",
+            "name": "Ashton Dulin",
+            "position": "WR",
+            "projected_points": 6.071428571428571,
+            "adp": 477.0
+        },
+        {
+            "player_id": "0039754",
+            "name": "Devin Culp",
+            "position": "TE",
+            "projected_points": 1.228,
+            "adp": 478.0
+        },
+        {
+            "player_id": "0031547",
+            "name": "DeVante Parker",
+            "position": "WR",
+            "projected_points": 7.132000000000001,
+            "adp": 479.0
+        },
+        {
+            "player_id": "0032268",
+            "name": "Marcus Mariota",
+            "position": "QB",
+            "projected_points": 16.021333333333335,
+            "adp": 480.0
+        },
+        {
+            "player_id": "0032134",
+            "name": "C.J. Uzomah",
+            "position": "TE",
+            "projected_points": 4.0,
+            "adp": 481.0
+        },
+        {
+            "player_id": "0036628",
+            "name": "John Bates",
+            "position": "TE",
+            "projected_points": 2.821739130434783,
+            "adp": 500.5
+        },
+        {
+            "player_id": "0036887",
+            "name": "Luke Farrell",
+            "position": "TE",
+            "projected_points": 2.8076923076923075,
+            "adp": 580.5
+        },
+        {
+            "player_id": "0038046",
+            "name": "Charlie Kolar",
+            "position": "TE",
+            "projected_points": 4.0,
+            "adp": 591.0
+        },
+        {
+            "player_id": "0036268",
+            "name": "Laviska Shenault Jr.",
+            "position": "WR",
+            "projected_points": 4.485714285714286,
+            "adp": 569.0
+        },
+        {
+            "player_id": "0034838",
+            "name": "Royce Freeman",
+            "position": "RB",
+            "projected_points": 5.015384615384615,
+            "adp": 491.0
+        },
+        {
+            "player_id": "0032398",
+            "name": "Chris Moore",
+            "position": "WR",
+            "projected_points": 6.213333333333334,
+            "adp": 531.5
+        },
+        {
+            "player_id": "0034771",
+            "name": "Mason Rudolph",
+            "position": "QB",
+            "projected_points": 13.264,
+            "adp": 541.5
+        },
+        {
+            "player_id": "0034159",
+            "name": "Will Dissly",
+            "position": "TE",
+            "projected_points": 4.707407407407408,
+            "adp": 496.0
+        },
+        {
+            "player_id": "0034414",
+            "name": "Boston Scott",
+            "position": "RB",
+            "projected_points": 3.230769230769231,
+            "adp": 497.0
+        },
+        {
+            "player_id": "0034487",
+            "name": "Trent Sherfield",
+            "position": "WR",
+            "projected_points": 4.111111111111111,
+            "adp": 498.0
+        },
+        {
+            "player_id": "0034981",
+            "name": "Foster Moreau",
+            "position": "TE",
+            "projected_points": 5.332000000000001,
+            "adp": 499.0
+        },
+        {
+            "player_id": "0038122",
+            "name": "Desmond Ridder",
+            "position": "QB",
+            "projected_points": 13.361052631578948,
+            "adp": 596.0
+        },
+        {
+            "player_id": "0035291",
+            "name": "Trayveon Williams",
+            "position": "RB",
+            "projected_points": 1.2722222222222224,
+            "adp": 500.0
+        },
+        {
+            "player_id": "0034970",
+            "name": "Irv Smith",
+            "position": "TE",
+            "projected_points": 5.333333333333333,
+            "adp": 502.0
+        },
+        {
+            "player_id": "0035208",
+            "name": "Olamide Zaccheaus",
+            "position": "WR",
+            "projected_points": 5.353571428571429,
+            "adp": 503.0
+        },
+        {
+            "player_id": "0036331",
+            "name": "Devin Duvernay",
+            "position": "WR",
+            "projected_points": 5.87,
+            "adp": 505.0
+        },
+        {
+            "player_id": "0036232",
+            "name": "Harrison Bryant",
+            "position": "TE",
+            "projected_points": 3.9321428571428574,
+            "adp": 506.0
+        },
+        {
+            "player_id": "0036020",
+            "name": "Salvon Ahmed",
+            "position": "RB",
+            "projected_points": 4.635714285714286,
+            "adp": 508.0
+        },
+        {
+            "player_id": "0036182",
+            "name": "Nick Westbrook-Ikhine",
+            "position": "WR",
+            "projected_points": 6.096428571428572,
+            "adp": 510.0
+        },
+        {
+            "player_id": "0036497",
+            "name": "Tim Jones",
+            "position": "WR",
+            "projected_points": 1.946153846153846,
+            "adp": 511.0
+        },
+        {
+            "player_id": "0036510",
+            "name": "Kenny Yeboah",
+            "position": "TE",
+            "projected_points": 2.4000000000000004,
+            "adp": 512.0
+        },
+        {
+            "player_id": "0037005",
+            "name": "Tommy Tremble",
+            "position": "TE",
+            "projected_points": 4.251851851851852,
+            "adp": 514.0
+        },
+        {
+            "player_id": "0037011",
+            "name": "Tre' McKitty",
+            "position": "TE",
+            "projected_points": 2.311111111111112,
+            "adp": 517.0
+        },
+        {
+            "player_id": "0039365",
+            "name": "Jacob Cowing",
+            "position": "WR",
+            "projected_points": 4.734431231419183,
+            "adp": 520.0
+        },
+        {
+            "player_id": "0036741",
+            "name": "Jack Stoll",
+            "position": "TE",
+            "projected_points": 2.24,
+            "adp": 521.0
+        },
+        {
+            "player_id": "0037306",
+            "name": "John FitzPatrick",
+            "position": "TE",
+            "projected_points": 2.2,
+            "adp": 522.0
+        },
+        {
+            "player_id": "0037282",
+            "name": "James Mitchell",
+            "position": "TE",
+            "projected_points": 3.31,
+            "adp": 524.0
+        },
+        {
+            "player_id": "0037120",
+            "name": "Tyler Goodson",
+            "position": "RB",
+            "projected_points": 3.016666666666667,
+            "adp": 525.0
+        },
+        {
+            "player_id": "0038098",
+            "name": "Pierre Strong",
+            "position": "RB",
+            "projected_points": 4.117647058823529,
+            "adp": 529.0
+        },
+        {
+            "player_id": "0037093",
+            "name": "Dareke Young",
+            "position": "WR",
+            "projected_points": 3.25,
+            "adp": 533.0
+        },
+        {
+            "player_id": "0039498",
+            "name": "Harrison Mevis",
+            "position": "K",
+            "projected_points": 7.181818181818182,
+            "adp": 536.0
+        },
+        {
+            "player_id": "0037382",
+            "name": "Brandon Johnson",
+            "position": "WR",
+            "projected_points": 6.4,
+            "adp": 537.0
+        },
+        {
+            "player_id": "0038583",
+            "name": "Dorian Thompson-Robinson",
+            "position": "QB",
+            "projected_points": 3.4428571428571426,
+            "adp": 544.0
+        },
+        {
+            "player_id": "0038589",
+            "name": "Josh Whyle",
+            "position": "TE",
+            "projected_points": 3.05,
+            "adp": 546.0
+        },
+        {
+            "player_id": "0039050",
+            "name": "Payne Durham",
+            "position": "TE",
+            "projected_points": 1.9428571428571428,
+            "adp": 550.0
+        },
+        {
+            "player_id": "0039576",
+            "name": "Spencer Shrader",
+            "position": "K",
+            "projected_points": 7.181818181818182,
+            "adp": 552.0
+        },
+        {
+            "player_id": "0031428",
+            "name": "Allen Robinson",
+            "position": "WR",
+            "projected_points": 5.773076923076923,
+            "adp": null
+        },
+        {
+            "player_id": "0039677",
+            "name": "Sam Hartman",
+            "position": "QB",
+            "projected_points": 6.647000000000001,
+            "adp": 565.0
+        },
+        {
+            "player_id": "0031941",
+            "name": "Jamison Crowder",
+            "position": "WR",
+            "projected_points": 4.536363636363637,
+            "adp": 567.0
+        },
+        {
+            "player_id": "0032208",
+            "name": "Phillip Dorsett",
+            "position": "WR",
+            "projected_points": 3.23125,
+            "adp": 568.0
+        },
+        {
+            "player_id": "0031484",
+            "name": "Chris Manhertz",
+            "position": "TE",
+            "projected_points": 1.38,
+            "adp": 569.0
+        },
+        {
+            "player_id": "0031800",
+            "name": "Taylor Heinicke",
+            "position": "QB",
+            "projected_points": 15.425714285714289,
+            "adp": 571.0
+        },
+        {
+            "player_id": "0032436",
+            "name": "Jeff Driskel",
+            "position": "QB",
+            "projected_points": 4.6450000000000005,
+            "adp": 573.0
+        },
+        {
+            "player_id": "0033936",
+            "name": "C.J. Beathard",
+            "position": "QB",
+            "projected_points": 2.246,
+            "adp": 575.0
+        },
+        {
+            "player_id": "0033319",
+            "name": "Nick Mullens",
+            "position": "QB",
+            "projected_points": 11.61111111111111,
+            "adp": 583.0
+        },
+        {
+            "player_id": "0033757",
+            "name": "Robert Tonyan",
+            "position": "TE",
+            "projected_points": 4.792857142857143,
+            "adp": 584.0
+        },
+        {
+            "player_id": "0034367",
+            "name": "Nyheim Hines",
+            "position": "RB",
+            "projected_points": 4.027777777777778,
+            "adp": 588.0
+        },
+        {
+            "player_id": "0034575",
+            "name": "David Wells",
+            "position": "TE",
+            "projected_points": 1.0,
+            "adp": 593.0
+        },
+        {
+            "player_id": "0034401",
+            "name": "Mike White",
+            "position": "QB",
+            "projected_points": 7.064000000000002,
+            "adp": 594.0
+        },
+        {
+            "player_id": "0034438",
+            "name": "Logan Woodside",
+            "position": "QB",
+            "projected_points": -0.3199999999999998,
+            "adp": 595.0
+        },
+        {
+            "player_id": "0034208",
+            "name": "Mike Boone",
+            "position": "RB",
+            "projected_points": 2.806666666666666,
+            "adp": 597.0
+        },
+        {
+            "player_id": "0034854",
+            "name": "KhaDarel Hodge",
+            "position": "WR",
+            "projected_points": 3.563636363636364,
+            "adp": 598.0
+        },
+        {
+            "player_id": "0034899",
+            "name": "John Wolford",
+            "position": "QB",
+            "projected_points": 8.4,
+            "adp": 599.0
+        },
+        {
+            "player_id": "0035311",
+            "name": "Myles Gaskin",
+            "position": "RB",
+            "projected_points": 4.7,
+            "adp": 600.0
+        },
+        {
+            "player_id": "0039271",
+            "name": "Jarveon Howard",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 601.0
+        },
+        {
+            "player_id": "0039256",
+            "name": "Riley Sharp",
+            "position": "TE",
+            "projected_points": 2.6975,
+            "adp": 602.0
+        },
+        {
+            "player_id": "0039244",
+            "name": "Chris Collier",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 604.0
+        },
+        {
+            "player_id": "0039308",
+            "name": "TaMerik Williams",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 606.0
+        },
+        {
+            "player_id": "0035222",
+            "name": "Zach Gentry",
+            "position": "TE",
+            "projected_points": 2.3000000000000003,
+            "adp": 608.0
+        },
+        {
+            "player_id": "0035624",
+            "name": "N'Keal Harry",
+            "position": "WR",
+            "projected_points": 4.1000000000000005,
+            "adp": 609.0
+        },
+        {
+            "player_id": "0039575",
+            "name": "Jason Bean",
+            "position": "QB",
+            "projected_points": 6.647000000000001,
+            "adp": 611.0
+        },
+        {
+            "player_id": "0034955",
+            "name": "Brett Rypien",
+            "position": "QB",
+            "projected_points": 4.8,
+            "adp": 612.0
+        },
+        {
+            "player_id": "0039464",
+            "name": "Austin Reed",
+            "position": "QB",
+            "projected_points": 6.647000000000001,
+            "adp": 615.0
+        },
+        {
+            "player_id": "0035282",
+            "name": "Easton Stick",
+            "position": "QB",
+            "projected_points": 14.712,
+            "adp": 616.0
+        },
+        {
+            "player_id": "0039306",
+            "name": "Dee Williams",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 617.0
+        },
+        {
+            "player_id": "0039529",
+            "name": "Nathaniel Peat",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 620.0
+        },
+        {
+            "player_id": "0039629",
+            "name": "Elijah Collins",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 624.0
+        },
+        {
+            "player_id": "0039657",
+            "name": "Casey Bauman",
+            "position": "QB",
+            "projected_points": 6.647000000000001,
+            "adp": 626.0
+        },
+        {
+            "player_id": "0039456",
+            "name": "John Rhys Plumlee",
+            "position": "QB",
+            "projected_points": 6.647000000000001,
+            "adp": 629.0
+        },
+        {
+            "player_id": "0035628",
+            "name": "D'Ernest Johnson",
+            "position": "RB",
+            "projected_points": 2.2333333333333334,
+            "adp": 630.0
+        },
+        {
+            "player_id": "0035993",
+            "name": "Tyler Huntley",
+            "position": "QB",
+            "projected_points": 9.825454545454546,
+            "adp": 633.0
+        },
+        {
+            "player_id": "0036165",
+            "name": "Isaiah Hodgins",
+            "position": "WR",
+            "projected_points": 7.56,
+            "adp": 635.0
+        },
+        {
+            "player_id": "0039874",
+            "name": "Jude McAtamney",
+            "position": "K",
+            "projected_points": 7.181818181818182,
+            "adp": 638.0
+        },
+        {
+            "player_id": "0035771",
+            "name": "Mitchell Wilcox",
+            "position": "TE",
+            "projected_points": 2.77,
+            "adp": 639.0
+        },
+        {
+            "player_id": "0036032",
+            "name": "Sean McKeon",
+            "position": "TE",
+            "projected_points": 0.775,
+            "adp": 641.0
+        },
+        {
+            "player_id": "0036439",
+            "name": "Tyrie Cleveland",
+            "position": "WR",
+            "projected_points": 1.6000000000000003,
+            "adp": 642.0
+        },
+        {
+            "player_id": "0036332",
+            "name": "Josiah Deguara",
+            "position": "TE",
+            "projected_points": 2.992307692307693,
+            "adp": 644.0
+        },
+        {
+            "player_id": "0036297",
+            "name": "Darrynton Evans",
+            "position": "RB",
+            "projected_points": 4.522222222222222,
+            "adp": 645.0
+        },
+        {
+            "player_id": "0039737",
+            "name": "Tip Reiman",
+            "position": "TE",
+            "projected_points": 5.469034334763945,
+            "adp": 646.0
+        },
+        {
+            "player_id": "0036254",
+            "name": "Collin Johnson",
+            "position": "WR",
+            "projected_points": 2.1,
+            "adp": 648.0
+        },
+        {
+            "player_id": "0036255",
+            "name": "Denzel Mims",
+            "position": "WR",
+            "projected_points": 3.288888888888889,
+            "adp": 652.0
+        },
+        {
+            "player_id": "0036269",
+            "name": "La'Mical Perine",
+            "position": "RB",
+            "projected_points": 7.000000000000001,
+            "adp": 653.0
+        },
+        {
+            "player_id": "0035924",
+            "name": "Jonathan Ward",
+            "position": "RB",
+            "projected_points": 2.1,
+            "adp": 654.0
+        },
+        {
+            "player_id": "0035806",
+            "name": "JaMycal Hasty",
+            "position": "RB",
+            "projected_points": 4.70625,
+            "adp": 657.0
+        },
+        {
+            "player_id": "0036059",
+            "name": "Tyler Mabry",
+            "position": "TE",
+            "projected_points": 7.7,
+            "adp": 659.0
+        },
+        {
+            "player_id": "0036247",
+            "name": "Freddie Swain",
+            "position": "WR",
+            "projected_points": 3.8,
+            "adp": 660.0
+        },
+        {
+            "player_id": "0036219",
+            "name": "Marquez Callaway",
+            "position": "WR",
+            "projected_points": 3.78,
+            "adp": 662.0
+        },
+        {
+            "player_id": "0036145",
+            "name": "Lawrence Cager",
+            "position": "TE",
+            "projected_points": 4.4,
+            "adp": 665.0
+        },
+        {
+            "player_id": "0036527",
+            "name": "DJ Turner",
+            "position": "WR",
+            "projected_points": 1.3,
+            "adp": 668.0
+        },
+        {
+            "player_id": "0036950",
+            "name": "Avery Williams",
+            "position": "RB",
+            "projected_points": 2.571428571428572,
+            "adp": 671.0
+        },
+        {
+            "player_id": "0036955",
+            "name": "Terrace Marshall Jr.",
+            "position": "WR",
+            "projected_points": 5.519047619047619,
+            "adp": 672.0
+        },
+        {
+            "player_id": "0036646",
+            "name": "Simi Fehoko",
+            "position": "WR",
+            "projected_points": 4.433333333333334,
+            "adp": 673.0
+        },
+        {
+            "player_id": "0036879",
+            "name": "Sam Ehlinger",
+            "position": "QB",
+            "projected_points": 10.405,
+            "adp": 675.0
+        },
+        {
+            "player_id": "0036862",
+            "name": "Ben Skowronek",
+            "position": "WR",
+            "projected_points": 4.470833333333334,
+            "adp": 679.0
+        },
+        {
+            "player_id": "0036635",
+            "name": "Ihmir Smith-Marsette",
+            "position": "WR",
+            "projected_points": 2.69,
+            "adp": 682.0
+        },
+        {
+            "player_id": "0036928",
+            "name": "Kyle Trask",
+            "position": "QB",
+            "projected_points": 0.2733333333333334,
+            "adp": 685.0
+        },
+        {
+            "player_id": "0036590",
+            "name": "Quintin Morris",
+            "position": "TE",
+            "projected_points": 3.4799999999999995,
+            "adp": 686.0
+        },
+        {
+            "player_id": "0036755",
+            "name": "Jaret Patterson",
+            "position": "RB",
+            "projected_points": 7.800000000000001,
+            "adp": 689.0
+        },
+        {
+            "player_id": "0036959",
+            "name": "Michael Bandy",
+            "position": "WR",
+            "projected_points": 2.7,
+            "adp": 690.0
+        },
+        {
+            "player_id": "0039259",
+            "name": "Dayton Wade",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 691.0
+        },
+        {
+            "player_id": "0039254",
+            "name": "Mike Rigerman",
+            "position": "TE",
+            "projected_points": 2.6975,
+            "adp": 692.0
+        },
+        {
+            "player_id": "0037085",
+            "name": "Tyler Badie",
+            "position": "RB",
+            "projected_points": 9.4,
+            "adp": 694.0
+        },
+        {
+            "player_id": "0037272",
+            "name": "Montrell Washington",
+            "position": "WR",
+            "projected_points": 0.8,
+            "adp": 698.0
+        },
+        {
+            "player_id": "0037098",
+            "name": "Samori Toure",
+            "position": "WR",
+            "projected_points": 3.083333333333333,
+            "adp": 699.0
+        },
+        {
+            "player_id": "0037617",
+            "name": "Hassan Haskins",
+            "position": "RB",
+            "projected_points": 3.7142857142857135,
+            "adp": 700.0
+        },
+        {
+            "player_id": "0039311",
+            "name": "Emani Bailey",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 702.0
+        },
+        {
+            "player_id": "0037265",
+            "name": "Snoop Conner",
+            "position": "RB",
+            "projected_points": 2.04,
+            "adp": 703.0
+        },
+        {
+            "player_id": "0039302",
+            "name": "Kobe Lewis",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 704.0
+        },
+        {
+            "player_id": "0039730",
+            "name": "Isaiah Wooden",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 705.0
+        },
+        {
+            "player_id": "0038092",
+            "name": "Erik Ezukanma",
+            "position": "WR",
+            "projected_points": 1.1666666666666667,
+            "adp": 707.0
+        },
+        {
+            "player_id": "0038104",
+            "name": "Tyquan Thornton",
+            "position": "WR",
+            "projected_points": 4.4523809523809526,
+            "adp": 709.0
+        },
+        {
+            "player_id": "0039316",
+            "name": "Baylor Cupp",
+            "position": "TE",
+            "projected_points": 2.6975,
+            "adp": 710.0
+        },
+        {
+            "player_id": "0039511",
+            "name": "Ahmarean Brown",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 712.0
+        },
+        {
+            "player_id": "0038045",
+            "name": "Isaiah Spiller",
+            "position": "RB",
+            "projected_points": 1.9571428571428573,
+            "adp": 713.0
+        },
+        {
+            "player_id": "0037827",
+            "name": "Tyrion Davis-Price",
+            "position": "RB",
+            "projected_points": 2.0,
+            "adp": 714.0
+        },
+        {
+            "player_id": "0037828",
+            "name": "Danny Gray",
+            "position": "WR",
+            "projected_points": 0.58,
+            "adp": 715.0
+        },
+        {
+            "player_id": "0039501",
+            "name": "Jack Plummer",
+            "position": "QB",
+            "projected_points": 6.647000000000001,
+            "adp": 718.0
+        },
+        {
+            "player_id": "0039872",
+            "name": "Thomas Yassmin",
+            "position": "TE",
+            "projected_points": 2.6975,
+            "adp": 720.0
+        },
+        {
+            "player_id": "0039314",
+            "name": "Phillip Brooks",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 723.0
+        },
+        {
+            "player_id": "0039299",
+            "name": "George Holani",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 724.0
+        },
+        {
+            "player_id": "0039648",
+            "name": "David Martin-Robinson",
+            "position": "TE",
+            "projected_points": 2.6975,
+            "adp": 727.0
+        },
+        {
+            "player_id": "0039695",
+            "name": "Jacob Warren",
+            "position": "TE",
+            "projected_points": 2.6975,
+            "adp": 728.0
+        },
+        {
+            "player_id": "0037594",
+            "name": "Julius Chestnut",
+            "position": "RB",
+            "projected_points": 2.766666666666667,
+            "adp": 729.0
+        },
+        {
+            "player_id": "0039701",
+            "name": "Terique Owens",
+            "position": "WR",
+            "projected_points": 2.9400000000000004,
+            "adp": 731.0
+        },
+        {
+            "player_id": "0039711",
+            "name": "Trey Knox",
+            "position": "TE",
+            "projected_points": 2.6975,
+            "adp": 733.0
+        },
+        {
+            "player_id": "0039678",
+            "name": "Austin Jones",
+            "position": "RB",
+            "projected_points": 3.32198275862069,
+            "adp": 734.0
+        },
+        {
+            "player_id": "0039534",
+            "name": "Carter Bradley",
+            "position": "QB",
+            "projected_points": 6.647000000000001,
+            "adp": 735.0
+        },
+        {
+            "player_id": "0037348",
+            "name": "Tanner Conner",
+            "position": "WR",
+            "projected_points": 0.0,
+            "adp": 738.0
+        },
+        {
+            "player_id": "0037355",
+            "name": "Braylon Sanders",
+            "position": "WR",
+            "projected_points": 0.8500000000000001,
+            "adp": 739.0
+        },
+        {
+            "player_id": "0037410",
+            "name": "Jashaun Corbin",
+            "position": "RB",
+            "projected_points": 4.3,
+            "adp": 740.0
+        },
+        {
+            "player_id": "0039577",
+            "name": "Kedon Slovis",
+            "position": "QB",
+            "projected_points": 6.647000000000001,
+            "adp": 741.0
+        },
+        {
+            "player_id": "0037487",
+            "name": "Deven Thompkins",
+            "position": "WR",
+            "projected_points": 3.00625,
+            "adp": 744.0
+        },
+        {
+            "player_id": "0038147",
+            "name": "Daylen Baldwin",
+            "position": "WR",
+            "projected_points": 4.5,
+            "adp": 747.0
+        },
+        {
+            "player_id": "0037708",
+            "name": "Maurice Alexander",
+            "position": "WR",
+            "projected_points": 1.7000000000000002,
+            "adp": 748.0
+        },
+        {
+            "player_id": "0038149",
+            "name": "Josh Ali",
+            "position": "WR",
+            "projected_points": 0.0,
+            "adp": 749.0
+        },
+        {
+            "player_id": "0038582",
+            "name": "Clayton Tune",
+            "position": "QB",
+            "projected_points": 1.2466666666666666,
+            "adp": 762.0
+        },
+        {
+            "player_id": "0039798",
+            "name": "Isaiah Davis",
+            "position": "RB",
+            "projected_points": 3.272131478120589,
+            "adp": 767.0
+        },
+        {
+            "player_id": "0038492",
+            "name": "Jason Brownlee",
+            "position": "WR",
+            "projected_points": 4.15,
+            "adp": 768.0
+        },
+        {
+            "player_id": "0038678",
+            "name": "Jordan Mims",
+            "position": "RB",
+            "projected_points": 0.0,
+            "adp": 772.0
+        },
+        {
+            "player_id": "0038891",
+            "name": "Shedrick Jackson",
+            "position": "WR",
+            "projected_points": 0.0,
+            "adp": 773.0
+        },
+        {
+            "player_id": "0038783",
+            "name": "Nate Adkins",
+            "position": "TE",
+            "projected_points": 1.55,
+            "adp": 776.0
+        },
+        {
+            "player_id": "0038667",
+            "name": "Elijah Cooks",
+            "position": "WR",
+            "projected_points": 3.4000000000000004,
+            "adp": 779.0
+        },
+        {
+            "player_id": "0038862",
+            "name": "Elijah Dotson",
+            "position": "RB",
+            "projected_points": 3.9,
+            "adp": 784.0
+        },
+        {
+            "player_id": "0038821",
+            "name": "Rakim Jarrett",
+            "position": "WR",
+            "projected_points": 1.6666666666666667,
+            "adp": 785.0
+        },
+        {
+            "player_id": "0039394",
+            "name": "Casey Washington",
+            "position": "WR",
+            "projected_points": 3.376706827309239,
+            "adp": 790.0
+        },
+        {
+            "player_id": "0039814",
+            "name": "Erick All",
+            "position": "TE",
+            "projected_points": 4.27673860812781,
+            "adp": 791.0
+        },
+        {
+            "player_id": "0039399",
+            "name": "Tanner McLachlan",
+            "position": "TE",
+            "projected_points": 2.715545779685265,
+            "adp": 792.0
+        },
+        {
+            "player_id": "0039405",
+            "name": "Jawhar Jordan",
+            "position": "RB",
+            "projected_points": 1.971428571428572,
+            "adp": 795.0
+        },
+        {
+            "player_id": "0039385",
+            "name": "Keilan Robinson",
+            "position": "RB",
+            "projected_points": 3.589506172839506,
+            "adp": 796.0
+        },
+        {
+            "player_id": "0032394",
+            "name": "Nick Vannett",
+            "position": "TE",
+            "projected_points": 2.1333333333333333,
+            "adp": 802.0
+        },
+        {
+            "player_id": "0032792",
+            "name": "Nate Sudfeld",
+            "position": "QB",
+            "projected_points": -0.2,
+            "adp": 803.0
+        },
+        {
+            "player_id": "0038558",
+            "name": "Darnell Washington",
+            "position": "TE",
+            "projected_points": 1.4555555555555555,
+            "adp": 804.0
+        },
+        {
+            "player_id": "0034073",
+            "name": "Ross Dwelley",
+            "position": "TE",
+            "projected_points": 3.616666666666667,
+            "adp": 815.0
+        },
+        {
+            "player_id": "0034104",
+            "name": "Cam Sims",
+            "position": "WR",
+            "projected_points": 1.4083333333333334,
+            "adp": 816.0
+        },
+        {
+            "player_id": "0034177",
+            "name": "Tim Boyle",
+            "position": "QB",
+            "projected_points": 2.505,
+            "adp": 819.0
+        },
+        {
+            "player_id": "0035544",
+            "name": "Tom Kennedy",
+            "position": "WR",
+            "projected_points": 4.42,
+            "adp": 825.0
+        },
+        {
+            "player_id": "0036133",
+            "name": "James Proche",
+            "position": "WR",
+            "projected_points": 1.3555555555555556,
+            "adp": 827.0
+        },
+        {
+            "player_id": "0035876",
+            "name": "Andre Baccellia",
+            "position": "WR",
+            "projected_points": 2.3,
+            "adp": 829.0
+        },
+        {
+            "player_id": "0035891",
+            "name": "Cody White",
+            "position": "WR",
+            "projected_points": 1.2,
+            "adp": 830.0
+        },
+        {
+            "player_id": "0035860",
+            "name": "Tony Jones",
+            "position": "RB",
+            "projected_points": 4.733333333333333,
+            "adp": 833.0
+        },
+        {
+            "player_id": "0036387",
+            "name": "Jalen Reagor",
+            "position": "WR",
+            "projected_points": 2.6,
+            "adp": 835.0
+        },
+        {
+            "player_id": "0036176",
+            "name": "Mason Kinsey",
+            "position": "WR",
+            "projected_points": 1.4500000000000002,
+            "adp": 838.0
+        },
+        {
+            "player_id": "0036652",
+            "name": "Racey McMath",
+            "position": "WR",
+            "projected_points": 1.6,
+            "adp": 847.0
+        },
+        {
+            "player_id": "0036858",
+            "name": "Jalen Camp",
+            "position": "WR",
+            "projected_points": 1.7000000000000002,
+            "adp": 848.0
+        },
+        {
+            "player_id": "0036569",
+            "name": "Gary Brightwell",
+            "position": "RB",
+            "projected_points": 3.466666666666667,
+            "adp": 851.0
+        },
+        {
+            "player_id": "0036877",
+            "name": "Jaelon Darden",
+            "position": "WR",
+            "projected_points": 1.6000000000000003,
+            "adp": 853.0
+        },
+        {
+            "player_id": "0037475",
+            "name": "Stone Smartt",
+            "position": "TE",
+            "projected_points": 2.546666666666667,
+            "adp": 855.0
+        },
+        {
+            "player_id": "0038632",
+            "name": "Colton Dowell",
+            "position": "WR",
+            "projected_points": 0.65,
+            "adp": 857.0
+        },
+        {
+            "player_id": "0038397",
+            "name": "Evan Hull",
+            "position": "RB",
+            "projected_points": 1.7000000000000002,
+            "adp": 858.0
+        },
+        {
+            "player_id": "0039816",
+            "name": "Anthony Gould",
+            "position": "WR",
+            "projected_points": 4.47812248995984,
+            "adp": 899.0
+        },
+        {
+            "player_id": "0039231",
+            "name": "Patrick Murtagh",
+            "position": "TE",
+            "projected_points": 2.6975,
+            "adp": 900.0
+        }
+    ],
+    "current_pick_overall": 1,
+    "status": "In Progress",
+    "config": {
+        "num_teams": 10,
+        "roster_structure": {
+            "QB": 1,
+            "RB": 2,
+            "WR": 3,
+            "TE": 1,
+            "FLEX": 2
+        },
+        "bench_maxes": {
+            "QB": 1,
+            "RB": 3,
+            "WR": 3,
+            "TE": 1
+        }
+    }
+}

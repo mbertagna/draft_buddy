@@ -4,10 +4,10 @@ import numpy as np
 from collections import defaultdict
 import math
 import random
-from typing import Optional, Dict, List, Tuple # Added List, Tuple for _try_select_player_for_team return type
+from typing import Optional, Dict, List, Tuple
 
 from config import Config
-from data_utils import load_player_data, Player
+from ml_core.data_utils import load_player_data, Player
 
 class FantasyFootballDraftEnv(gym.Env):
     """
@@ -548,3 +548,52 @@ class FantasyFootballDraftEnv(gym.Env):
     def close(self):
         """Clean up resources."""
         pass
+
+    def get_legal_actions(self) -> np.ndarray:
+        """
+        Checks the current roster of the agent's team and returns a boolean numpy array
+        indicating which actions (i.e., drafting which position) are legal.
+        
+        Returns:
+            np.ndarray: A boolean array of shape (4,) for [QB, RB, WR, TE].
+                        True means the action is legal, False means it is not.
+        """
+        agent_roster = self.teams_rosters[self.agent_team_id]
+        legal_actions = np.zeros(self.action_space.n, dtype=bool)
+
+        for action_idx, pos in self.action_to_position.items():
+            # Check if there are any players of this position left to draft
+            has_player_available = any(
+                p.player_id in self.available_players_ids and p.position == pos 
+                for p in self.all_players_data
+            )
+            if not has_player_available:
+                legal_actions[action_idx] = False
+                continue
+
+            # Check for roster space
+            current_pos_count = agent_roster.get(pos, 0)
+            max_pos_count = self.config.ROSTER_STRUCTURE.get(pos, 0) + self.config.BENCH_MAXES.get(pos, 0)
+            
+            has_pos_room = current_pos_count < max_pos_count
+            
+            # Check for FLEX room if applicable
+            has_flex_room = False
+            if pos in ['RB', 'WR', 'TE']:
+                current_flex_count = agent_roster.get('FLEX', 0)
+                max_flex_count = self.config.ROSTER_STRUCTURE.get('FLEX', 0)
+                has_flex_room = current_flex_count < max_flex_count
+            
+            if has_pos_room or has_flex_room:
+                legal_actions[action_idx] = True
+            else:
+                legal_actions[action_idx] = False
+                
+        # If all actions are illegal for some reason, we can't draft anything.
+        # This might happen if roster is full but draft isn't "done".
+        # In this case, the agent must learn to have ended the draft earlier.
+        # For now, if no action is legal, we return all False.
+        if not np.any(legal_actions):
+             return np.zeros(self.action_space.n, dtype=bool)
+
+        return legal_actions

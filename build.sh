@@ -1,8 +1,10 @@
 #!/bin/bash
 
-# Define your Docker image name
 IMAGE_NAME="fantasy-football-ai"
 TAG="latest"
+
+echo "Building Docker image: ${IMAGE_NAME}:${TAG}"
+docker build -t "${IMAGE_NAME}:${TAG}" .
 
 echo "Building Docker image: ${IMAGE_NAME}:${TAG}"
 

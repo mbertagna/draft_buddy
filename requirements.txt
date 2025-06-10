@@ -3,3 +3,6 @@ numpy
 torch
 gym
 matplotlib
+fastapi
+uvicorn
+python-multipart

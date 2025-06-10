@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAFT BUDDY</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DRAFT BUDDY</h1>
+        </header>
+        <main class="dashboard">
+            <div class="left-column">
+                <h2>Available Players</h2>
+                <div class="filters">
+                    <input type="text" id="search-bar" placeholder="Search by name...">
+                    <div id="position-filters">
+                        <span>Filter by Position:</span>
+                        <label><input type="checkbox" value="QB"> QB</label>
+                        <label><input type="checkbox" value="RB"> RB</label>
+                        <label><input type="checkbox" value="WR"> WR</label>
+                        <label><input type="checkbox" value="TE"> TE</label>
+                    </div>
+                </div>
+                <div id="player-list" class="player-list-container">
+                    </div>
+            </div>
+            <div class="right-column">
+                <div id="control-panel" class="control-panel">
+                    <h3>Draft Control</h3>
+                    <div id="current-pick-info">Loading...</div>
+                    <div id="agent-suggestion"></div>
+                    <div id="team-buttons"></div>
+                    <div class="action-buttons">
+                        <button id="undo-btn">Undo Last Pick</button>
+                        <button id="export-btn">Download as CSV</button>
+                    </div>
+                </div>
+                <div id="team-rosters" class="team-rosters-container">
+                    <h3>Team Rosters</h3>
+                    <div id="rosters-view"></div>
+                </div>
+                 <div id="draft-summary" class="draft-summary-container">
+                    <h3>Drafted Positions</h3>
+                    <div id="summary-view"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+/* style.css */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7f9;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+header h1 {
+    text-align: center;
+    color: #2c3e50;
+}
+
+.dashboard {
+    display: flex;
+    gap: 20px;
+}
+
+.left-column {
+    flex: 3;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.right-column {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.filters {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#search-bar {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.player-list-container {
+    height: 70vh;
+    overflow-y: auto;
+    border: 1px solid #eee;
+}
+
+.player-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+}
+
+.player-item:hover {
+    background-color: #e8f4f8;
+}
+
+.player-item .position {
+    font-weight: bold;
+    width: 50px;
+}
+.player-item .name {
+    flex-grow: 1;
+}
+.player-item .points {
+    width: 80px;
+    text-align: right;
+}
+
+.control-panel, .team-rosters-container, .draft-summary-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#team-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 15px 0;
+}
+
+.team-btn {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.team-btn.highlight {
+    background-color: #3498db;
+    color: white;
+    border-color: #2980b9;
+    font-weight: bold;
+}
+
+.action-buttons button {
+    padding: 10px 15px;
+    border: none;
+    background-color: #e74c3c;
+    color: white;
+    cursor: pointer;
+    border-radius: 4px;
+}
+#export-btn {
+    background-color: #27ae60;
+}
+
+#rosters-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.roster-card {
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.roster-card h5 {
+    margin: 0 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+}
+
+.roster-card ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9em;
+}

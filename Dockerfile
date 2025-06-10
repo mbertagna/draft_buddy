@@ -1,19 +1,8 @@
 # Use an official Python runtime as a parent image
-# We choose a specific version (e.g., 3.10-slim-buster) for stability
 FROM python:3.10-slim-buster
 
 # Set the working directory in the container
 WORKDIR /app
-
-# Install system dependencies if needed (e.g., for some ML libraries)
-# For now, minimal additions. If you encounter errors later related to
-# dependencies like 'blas', 'lapack', etc., you might need to add:
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     build-essential \
-#     libblas-dev \
-#     liblapack-dev \
-#     gfortran \
-#     && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file into the container
 COPY requirements.txt .
@@ -22,18 +11,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of your application code into the container
-# This copies the entire 'your_project' content into '/app'
 COPY . .
 
-# Create the data, models, and logs directories if they don't exist
-# These directories are created by config.py, but explicit creation here
-# ensures they are present even if config.py isn't run directly during image build
-RUN mkdir -p data models logs
+# Expose the port the app runs on
+EXPOSE 8000
 
-# Define environment variables (optional, but good practice)
-ENV PYTHONUNBUFFERED 1
-
-# Command to run your application
-# This is a placeholder. The 'run.sh' script will typically override this
-# with a specific command like 'python train.py'
-CMD ["python", "--version"]
+# Command to run your application's web server
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

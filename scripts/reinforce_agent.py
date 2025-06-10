@@ -3,7 +3,7 @@ import torch.optim as optim
 import numpy as np
 from typing import List, Tuple
 
-from policy_network import PolicyNetwork
+from ml_core.policy_network import PolicyNetwork
 from fantasy_draft_env import FantasyFootballDraftEnv # Import our environment
 from config import Config # Import our configuration
 
@@ -75,18 +75,16 @@ class ReinforceAgent:
                 state_tensor = torch.from_numpy(state).float()
 
                 # Sample an action from the policy
-                action, log_prob = self.policy_network.sample_action(state_tensor)
+                action, log_prob = self.select_action_with_masking(state_tensor)
 
-                # Take the action in the environment
                 next_state, reward, done, truncated, info = self.env.step(action)
 
-                # Store log probability and reward
                 self.episode_log_probs.append(log_prob)
                 self.episode_rewards.append(reward)
                 total_episode_reward += reward
 
                 state = next_state
-                episode_done = done or truncated # Consider truncated also as episode end
+                episode_done = done or truncated
 
             # --- 2. Calculate Returns ---
             returns = self._calculate_returns(self.episode_rewards)
