@@ -248,10 +248,6 @@ class FantasyFootballDraftEnv(gym.Env):
         num_rounds = math.ceil(total_picks_per_team) # Each team gets this many picks
         
         # Ensure sufficient players for the draft if possible.
-        # This is a basic check.
-        # Total players in dummy CSV: 20
-        # Total picks requested for full draft (10 teams * 17 players/team) = 170
-        # num_rounds will be 2 (floor(20/10)). So 20 total picks.
         if num_rounds * num_teams > len(self.all_players_data):
             num_rounds = math.floor(len(self.all_players_data) / num_teams)
             print(f"Warning: Not enough players for full draft. Reducing to {num_rounds} rounds ({num_rounds * num_teams} total picks).")
@@ -472,6 +468,15 @@ class FantasyFootballDraftEnv(gym.Env):
     def _simulate_competing_pick(self, team_id: int) -> Optional[Player]:
         roster_counts = self.teams_rosters[team_id]
         
+        # Get opponent's specific strategy, or fallback to default
+        opponent_strategy = self.config.OPPONENT_TEAM_STRATEGIES.get(
+            team_id, self.config.DEFAULT_OPPONENT_STRATEGY
+        )
+        logic = opponent_strategy['logic']
+        randomness_factor = opponent_strategy['randomness_factor']
+        suboptimal_strategy = opponent_strategy['suboptimal_strategy']
+        positional_priority = opponent_strategy['positional_priority'] # Used for HEURISTIC logic
+
         # Define positions that our environment and roster structure can handle.
         handled_positions = set(self.config.ROSTER_STRUCTURE.keys()) - {'FLEX'}
         flex_eligible_positions = {'RB', 'WR', 'TE'}
@@ -483,7 +488,6 @@ class FantasyFootballDraftEnv(gym.Env):
                                       if self.player_map[pid].position in all_draftable_positions]
 
         # Filter these further to only include players that the current team can actually draft
-        # (i.e., they have a roster spot for that position or FLEX)
         eligible_players_for_pick = []
         for player in available_players_filtered:
             if self._can_team_draft_position(team_id, player.position):
@@ -492,88 +496,87 @@ class FantasyFootballDraftEnv(gym.Env):
         if not eligible_players_for_pick:
             return None # No eligible player found for this team
 
-        # Determine the "best" pick based on the configured logic
-        best_pick_by_logic = None
-        if self.config.COMPETING_TEAM_LOGIC == 'ADP':
-            # Sort by ADP (ascending)
-            sorted_by_logic = sorted(eligible_players_for_pick, key=lambda p: p.adp)
-            best_pick_by_logic = sorted_by_logic[0] if sorted_by_logic else None
-        elif self.config.COMPETING_TEAM_LOGIC == 'HEURISTIC':
-            # Heuristic: Prioritize by position need and then projected points
-            
-            # Helper to get best player for a position among eligible
-            def get_best_for_pos(pos_list: List[str]):
-                for pos in pos_list:
-                    if roster_counts[pos] < self.config.ROSTER_STRUCTURE.get(pos, 0): # Check starting spots
-                        eligible = [p for p in eligible_players_for_pick if p.position == pos]
-                        if eligible: return sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
-                return None
+        # --- Determine the pick based on opponent's strategy ---
+        chosen_player = None
 
-            # 1. Attempt to fill core starting spots (QB, RB, WR, TE)
-            best_pick_by_logic = get_best_for_pos(['QB', 'RB', 'WR', 'TE'])
-            if best_pick_by_logic:
-                # Need to also check bench spots before returning if it's the *only* pick logic
-                # For heuristic, we prioritize starters, then bench, then flex.
-                # So if best_pick_by_logic was a starter, it's truly the "best"
-                pass 
-            
-            if not best_pick_by_logic: # If no starter spot filled, try bench
-                for pos in ['RB', 'WR', 'TE', 'QB']: # Prioritize valuable bench positions
-                    max_pos_count_total = self.config.ROSTER_STRUCTURE.get(pos, 0) + self.config.BENCH_MAXES.get(pos, 0)
-                    if roster_counts[pos] < max_pos_count_total:
-                        eligible = [p for p in eligible_players_for_pick if p.position == pos]
-                        if eligible:
-                            best_pick_by_logic = sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
-                            if best_pick_by_logic: break # Found a bench player
-            
-            if not best_pick_by_logic: # If no bench spot filled, try FLEX
-                if roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE['FLEX']:
-                     eligible_flex_players = [p for p in eligible_players_for_pick if p.position in ['RB', 'WR', 'TE']]
-                     if eligible_flex_players:
-                         best_pick_by_logic = sorted(eligible_flex_players, key=lambda p: p.projected_points, reverse=True)[0]
-
+        if logic == 'RANDOM':
+            # 'RANDOM' logic directly picks a random eligible player
+            chosen_player = random.choice(eligible_players_for_pick)
         else:
-            raise ValueError(f"Unknown competing team logic: {self.config.COMPETING_TEAM_LOGIC}")
-
-        if not best_pick_by_logic:
-            return None # Should not happen if eligible_players_for_pick was not empty
-
-        # Apply randomness
-        if random.random() < self.config.COMPETING_TEAM_RANDOMNESS_FACTOR:
-            # Make a suboptimal pick
-            if self.config.SUBOPTIMAL_PICK_STRATEGY == 'RANDOM_ELIGIBLE':
-                return random.choice(eligible_players_for_pick) # Pick any eligible player randomly
-            elif self.config.SUBOPTIMAL_PICK_STRATEGY == 'NEXT_BEST_ADP':
-                # Exclude the very best ADP player, then pick the next best
-                temp_list = sorted(eligible_players_for_pick, key=lambda p: p.adp)
-                if len(temp_list) > 1:
-                    return temp_list[1] # Return the second best ADP player
-                else:
-                    return temp_list[0] # Fallback to best if only one option
-            elif self.config.SUBOPTIMAL_PICK_STRATEGY == 'NEXT_BEST_HEURISTIC':
-                # This is more complex. For simplicity, let's say "next best heuristic"
-                # could mean picking the highest projected player for a less desired *filled* position,
-                # or a player slightly lower on the overall projected points list.
-                # For now, let's make it simple: if there are multiple options, pick one other than the best.
-                # A more advanced heuristic would involve a 'value over replacement' or similar.
+            # Determine the "best" pick based on the configured logic (ADP or HEURISTIC)
+            best_pick_by_logic = None
+            if logic == 'ADP':
+                # Sort by ADP (ascending)
+                sorted_by_logic = sorted(eligible_players_for_pick, key=lambda p: p.adp)
+                best_pick_by_logic = sorted_by_logic[0] if sorted_by_logic else None
+            elif logic == 'HEURISTIC':
+                # Heuristic: Prioritize by position need and then projected points, using custom priority
                 
-                # Simple "next best heuristic" - just pick a random *other* eligible player.
-                # This is similar to RANDOM_ELIGIBLE if many options, but could be refined.
-                # For now, if we have more than one eligible player, pick a random one that isn't the 'best'.
-                if len(eligible_players_for_pick) > 1:
-                    other_eligible = [p for p in eligible_players_for_pick if p != best_pick_by_logic]
-                    if other_eligible:
-                        return random.choice(other_eligible)
-                    else:
-                        return best_pick_by_logic # Fallback if no other options (e.g., all identical players)
-                else:
-                    return best_pick_by_logic # Fallback if only one option
+                # Helper to get best player for a position among eligible
+                def get_best_for_pos(pos_list: List[str]):
+                    for pos in pos_list:
+                        # Check starting spots for that position first
+                        if roster_counts[pos] < self.config.ROSTER_STRUCTURE.get(pos, 0): 
+                            eligible = [p for p in eligible_players_for_pick if p.position == pos]
+                            if eligible: return sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
+                    return None
+
+                # 1. Attempt to fill core starting spots based on positional_priority
+                best_pick_by_logic = get_best_for_pos(positional_priority)
+                
+                if not best_pick_by_logic: # If no starter spot filled, try bench
+                    for pos in positional_priority: # Use positional_priority for bench as well
+                        max_pos_count_total = self.config.ROSTER_STRUCTURE.get(pos, 0) + self.config.BENCH_MAXES.get(pos, 0)
+                        if roster_counts[pos] < max_pos_count_total:
+                            eligible = [p for p in eligible_players_for_pick if p.position == pos]
+                            if eligible:
+                                best_pick_by_logic = sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
+                                if best_pick_by_logic: break # Found a bench player
+                
+                if not best_pick_by_logic: # If no bench spot filled, try FLEX
+                    if roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE['FLEX']:
+                         eligible_flex_players = [p for p in eligible_players_for_pick if p.position in ['RB', 'WR', 'TE']]
+                         if eligible_flex_players:
+                             best_pick_by_logic = sorted(eligible_flex_players, key=lambda p: p.projected_points, reverse=True)[0]
+            
             else:
-                print(f"Warning: Unknown suboptimal pick strategy: {self.config.SUBOPTIMAL_PICK_STRATEGY}. Falling back to best pick.")
-                return best_pick_by_logic
-        else:
-            # Make the optimal pick based on the configured logic
-            return best_pick_by_logic
+                print(f"Warning: Unknown competing team logic: {logic}. Falling back to ADP.")
+                sorted_by_logic = sorted(eligible_players_for_pick, key=lambda p: p.adp)
+                best_pick_by_logic = sorted_by_logic[0] if sorted_by_logic else None
+
+            if not best_pick_by_logic:
+                return None # Should not happen if eligible_players_for_pick was not empty and logic is sound
+
+            # Apply randomness if not a 'RANDOM' logic
+            if random.random() < randomness_factor:
+                # Make a suboptimal pick
+                if suboptimal_strategy == 'RANDOM_ELIGIBLE':
+                    chosen_player = random.choice(eligible_players_for_pick)
+                elif suboptimal_strategy == 'NEXT_BEST_ADP':
+                    # Exclude the very best ADP player, then pick the next best
+                    temp_list = sorted(eligible_players_for_pick, key=lambda p: p.adp)
+                    if len(temp_list) > 1:
+                        chosen_player = temp_list[1] # Return the second best ADP player
+                    else:
+                        chosen_player = temp_list[0] # Fallback to best if only one option
+                elif suboptimal_strategy == 'NEXT_BEST_HEURISTIC':
+                    # This is a simplification: pick a random other eligible player.
+                    if len(eligible_players_for_pick) > 1:
+                        other_eligible = [p for p in eligible_players_for_pick if p != best_pick_by_logic]
+                        if other_eligible:
+                            chosen_player = random.choice(other_eligible)
+                        else:
+                            chosen_player = best_pick_by_logic # Fallback if no other distinct options
+                    else:
+                        chosen_player = best_pick_by_logic # Fallback if only one option
+                else:
+                    print(f"Warning: Unknown suboptimal pick strategy: {suboptimal_strategy}. Falling back to best pick.")
+                    chosen_player = best_pick_by_logic
+            else:
+                # Make the optimal pick based on the configured logic
+                chosen_player = best_pick_by_logic
+
+        return chosen_player
 
     def render(self):
         """

@@ -32,9 +32,47 @@ class Config:
         'WR': 3, # Max WRs on bench
         'TE': 1, # Max TEs on bench
     }
+    # These base values are now used only for agent's own settings, or as default if not overridden for opponents
     COMPETING_TEAM_LOGIC = 'HEURISTIC' # Options: 'ADP', 'HEURISTIC'
     COMPETING_TEAM_RANDOMNESS_FACTOR = 0.2 # Probability (0.0 to 1.0) of making a suboptimal pick
     SUBOPTIMAL_PICK_STRATEGY = 'NEXT_BEST_ADP' # How suboptimal picks are chosen. Options: 'RANDOM_ELIGIBLE', 'NEXT_BEST_ADP', 'NEXT_BEST_HEURISTIC'
+
+    # New: Opponent Personalities
+    # Define strategies for specific opponent teams.
+    # Team IDs are 1-indexed. Agent's team ID (AGENT_START_POSITION) should NOT be here.
+    # If a team_id is not specified here, it will use DEFAULT_OPPONENT_STRATEGY.
+    OPPONENT_TEAM_STRATEGIES = {
+        1: { # Example: A team that prioritizes ADP with some randomness, and focuses on RB/WR first
+            'logic': 'ADP',
+            'randomness_factor': 0.1,
+            'suboptimal_strategy': 'NEXT_BEST_ADP',
+            'positional_priority': ['RB', 'WR', 'QB', 'TE'] # Custom priority for heuristic logic
+        },
+        2: { # Example: A more heuristic team that likes QBs early
+            'logic': 'HEURISTIC',
+            'randomness_factor': 0.0, # Very deterministic
+            'suboptimal_strategy': 'NONE', # N/A if randomness is 0
+            'positional_priority': ['QB', 'RB', 'WR', 'TE']
+        },
+        3: { # Example: A very random team (might pick odd positions early)
+            'logic': 'RANDOM', # New 'RANDOM' logic that picks any eligible player
+            'randomness_factor': 1.0,
+            'suboptimal_strategy': 'RANDOM_ELIGIBLE',
+            'positional_priority': ['RB', 'WR', 'QB', 'TE'] # Irrelevant for 'RANDOM' logic but kept for consistency
+        },
+        # Add more teams here, e.g., teams 4-9
+        # 4: {'logic': 'HEURISTIC', 'randomness_factor': 0.3, 'suboptimal_strategy': 'RANDOM_ELIGIBLE', 'positional_priority': ['WR', 'RB', 'TE', 'QB']},
+        # etc.
+    }
+
+    # Default strategy for any opponent team not explicitly defined in OPPONENT_TEAM_STRATEGIES
+    DEFAULT_OPPONENT_STRATEGY = {
+        'logic': 'HEURISTIC',
+        'randomness_factor': 0.2,
+        'suboptimal_strategy': 'NEXT_BEST_ADP',
+        'positional_priority': ['RB', 'WR', 'QB', 'TE'] # Default human-like priority
+    }
+
 
     # --- Data Preprocessing Parameters ---
     # Configuration for mock ADP generation if 'adp' column is missing
@@ -111,16 +149,16 @@ class Config:
     'roster_full_RB': -40,
     'roster_full_WR': -40,
     'roster_full_TE': -50,
-    'no_players_available': -100, # Added this penalty key previously for completeness
+    'no_players_available': -5, # Added this penalty key previously for completeness
     'default_invalid': -50
     }
     # Flag to enable/disable invalid action penalties
     ENABLE_INVALID_ACTION_PENALTIES = True # Set to False for "simple reward mode"
 
     ENABLE_INTERMEDIATE_REWARD = True # True for small reward for valid picks
-    INTERMEDIATE_REWARD_MODE = 'PROPORTIONAL' # New: 'STATIC' or 'PROPORTIONAL'
+    INTERMEDIATE_REWARD_MODE = 'PROPORTIONAL' # 'STATIC' or 'PROPORTIONAL'
     INTERMEDIATE_REWARD_VALUE = 30 # Static reward for each successful valid pick if enabled and mode is 'STATIC'
-    PROPORTIONAL_REWARD_SCALING_FACTOR = 1 # New: Multiplier for projected points when mode is 'PROPORTIONAL'
+    PROPORTIONAL_REWARD_SCALING_FACTOR = 1 # Multiplier for projected points when mode is 'PROPORTIONAL'
 
 
     # Bonus for successfully drafting an entire team
