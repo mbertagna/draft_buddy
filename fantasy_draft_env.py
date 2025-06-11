@@ -210,8 +210,8 @@ class FantasyFootballDraftEnv(gym.Env):
             # Apply penalty only if ENABLE_INVALID_ACTION_PENALTIES is True.
             if self.config.ENABLE_INVALID_ACTION_PENALTIES:
                 penalty_key = f'roster_full_{selected_position}'
-                if not self._get_best_available_player_by_pos(selected_position): # This is already handled by _can_team_draft_position
-                    penalty_key = 'no_players_available' # If there are no players of this position globally
+                if not self._get_best_available_player_by_pos(selected_position):
+                    penalty_key = 'no_players_available'
                 reward += self.config.INVALID_ACTION_PENALTIES.get(penalty_key, self.config.INVALID_ACTION_PENALTIES['default_invalid'])
             
             done = True # Invalid action still ends the episode for safety/clarity
@@ -276,9 +276,26 @@ class FantasyFootballDraftEnv(gym.Env):
             if 'draft_complete' in info and self.config.BONUS_FOR_FULL_ROSTER > 0:
                 reward += self.config.BONUS_FOR_FULL_ROSTER
 
-            final_projected_points = sum(p.projected_points for p in self.teams_rosters[self.agent_team_id]['PLAYERS'])
-            reward += final_projected_points
-            info['final_score'] = final_projected_points
+            if self.config.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
+                starters, bench_players, flex_players = self._categorize_roster_by_slots(
+                    self.teams_rosters[self.agent_team_id]['PLAYERS'],
+                    self.config.ROSTER_STRUCTURE,
+                    self.config.BENCH_MAXES
+                )
+                starter_points = sum(p.projected_points for pos_list in starters.values() for p in pos_list)
+                bench_points = sum(p.projected_points for p in bench_players) # bench_players list includes flex players
+                
+                weighted_final_points = (starter_points * self.config.STARTER_POINTS_WEIGHT) + \
+                                        (bench_points * self.config.BENCH_POINTS_WEIGHT)
+                reward += weighted_final_points
+                info['final_score'] = weighted_final_points
+                info['raw_starter_points'] = starter_points
+                info['raw_bench_points'] = sum(p.projected_points for p in self.teams_rosters[self.agent_team_id]['PLAYERS']) - starter_points # For accurate bench points
+            else:
+                final_projected_points = sum(p.projected_points for p in self.teams_rosters[self.agent_team_id]['PLAYERS'])
+                reward += final_projected_points
+                info['final_score'] = final_projected_points
+
 
         # --- 5. Get Next State and Action Mask ---
         observation = self._get_state()
@@ -286,6 +303,49 @@ class FantasyFootballDraftEnv(gym.Env):
 
         return observation, reward, done, False, info
 
+    def _categorize_roster_by_slots(self, team_roster: List[Player], roster_structure: Dict, bench_maxes: Dict) -> Tuple[Dict[str, List[Player]], List[Player], List[Player]]:
+        """
+        Categorizes players into starters and bench based on roster structure and projected points.
+        This logic is similar to calculate_roster_scores but returns the actual player objects
+        in starter/bench categories.
+        """
+        starters = defaultdict(list) # {'QB': [player1], 'RB': [player2, player3], ...}
+        bench_players_list = [] # List of players on the bench (includes those that could be flex)
+        flex_players_list = [] # Players specifically filling flex spots
+
+        # Sort players by projected points (descending) for optimal placement
+        sorted_players = sorted(team_roster, key=lambda p: p.projected_points, reverse=True)
+
+        temp_pos_counts = defaultdict(int) # Tracks players in specific position slots (QB, RB, WR, TE)
+        current_flex_fill = 0 # Tracks players filling FLEX slots
+
+        for player in sorted_players:
+            pos = player.position
+            
+            # 1. Try to fill a primary starting spot
+            if temp_pos_counts[pos] < roster_structure.get(pos, 0):
+                starters[pos].append(player)
+                temp_pos_counts[pos] += 1
+            # 2. Try to fill a FLEX spot (only for RB/WR/TE)
+            elif pos in ['RB', 'WR', 'TE'] and current_flex_fill < roster_structure.get('FLEX', 0):
+                flex_players_list.append(player)
+                current_flex_fill += 1
+            # 3. Otherwise, the player goes to the bench
+            else:
+                bench_players_list.append(player)
+
+        # The total bench will include players not filling primary starters or explicit flex spots.
+        # It's cleaner to combine the non-starter players for the bench weight.
+        # For calculation of `bench_points`, we just need total points not in starters.
+        # The `calculate_roster_scores` function in simulate.py handles this correctly.
+        
+        # Here, `bench_players_list` contains players explicitly designated as bench,
+        # and `flex_players_list` contains players explicitly filling flex.
+        # For weighting, it's simplest to say: if it's not a starter, it's "bench" in terms of weight.
+        all_starters = [p for pos_list in starters.values() for p in pos_list]
+        all_non_starters = [p for p in team_roster if p not in all_starters]
+
+        return starters, all_non_starters, flex_players_list # Return starters dict, all non-starters list, and explicit flex list
 
     def _generate_snake_draft_order(self, num_teams, total_picks_per_team):
         """Generates a snake draft order for all picks."""

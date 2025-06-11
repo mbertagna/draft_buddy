@@ -61,7 +61,7 @@ class ReinforceAgent:
         print(f"Starting REINFORCE training for {self.config.TOTAL_EPISODES} episodes...")
         print(f"State features enabled: {self.config.ENABLED_STATE_FEATURES}")
         print(f"Learning Rate: {self.config.LEARNING_RATE}, Discount Factor: {self.config.DISCOUNT_FACTOR}")
-        print(f"Action Masking Enabled: {self.config.ENABLE_ACTION_MASKING}") # New print
+        print(f"Action Masking Enabled: {self.config.ENABLE_ACTION_MASKING}")
 
         for episode in range(1, self.config.TOTAL_EPISODES + 1):
             state, info = self.env.reset()
@@ -126,12 +126,17 @@ class ReinforceAgent:
             all_episode_rewards.append(total_episode_reward)
             all_policy_losses.append(policy_loss.item())
 
+            # Calculate actual (unweighted) final projected points for logging clarity
+            actual_final_projected_points = sum(
+                p.projected_points for p in self.env.teams_rosters[self.env.agent_team_id]['PLAYERS']
+            )
+
             if episode % 100 == 0:
                 print(f"Episode {episode}/{self.config.TOTAL_EPISODES} | "
-                      f"Total Reward: {total_episode_reward:.2f} | "
+                      f"Total Reward (Weighted): {total_episode_reward:.2f} | "
                       f"Policy Loss: {policy_loss.item():.4f} | "
                       f"Agent Roster Size: {len(self.env.teams_rosters[self.env.agent_team_id]['PLAYERS'])} "
-                      f"(Final Score: {info.get('final_score', 'N/A')})"
+                      f"| Actual Final Score (Unweighted): {actual_final_projected_points:.2f}" # Updated line
                      )
                 # self.env.render() # Optional: Render environment state periodically
 
