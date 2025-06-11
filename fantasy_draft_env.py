@@ -4,7 +4,7 @@ import numpy as np
 from collections import defaultdict
 import math
 import random
-from typing import Optional, Dict, List, Tuple # Added List, Tuple for _try_select_player_for_team return type
+from typing import Optional, Dict, List, Tuple
 
 from config import Config
 from data_utils import load_player_data, Player
@@ -63,7 +63,7 @@ class FantasyFootballDraftEnv(gym.Env):
         # --- Internal Game State (will be reset for each episode) ---
         self.available_players_ids = set() # Set of player_ids currently available
         self.teams_rosters = defaultdict(lambda: {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'FLEX': 0, 'PLAYERS': []}) # Tracks counts and actual players for each team
-        self.draft_order = [] # List of team_ids in draft order for current episode
+        self.draft_order = [] # List of team_id in draft order for current episode
         self.current_pick_idx = 0 # Index in self.draft_order
         self.current_pick_number = 0 # Global pick number (1-indexed)
         self.agent_team_id = self.config.AGENT_START_POSITION # Agent's unique ID (matches its start position)
@@ -141,6 +141,9 @@ class FantasyFootballDraftEnv(gym.Env):
             info['episode_ended_before_agent_first_pick'] = True
             # The agent will get a 0 reward for this episode if it couldn't make any picks.
 
+        # Add the action mask to info
+        info['action_mask'] = self.get_action_mask()
+
         return observation, info
 
     def step(self, action: int):
@@ -181,11 +184,15 @@ class FantasyFootballDraftEnv(gym.Env):
             # Update position counts
             self._update_roster_counts(self.agent_team_id, drafted_player)
 
+            # Apply intermediate reward based on configuration
             if self.config.ENABLE_INTERMEDIATE_REWARD:
-                # Change the following line:
-                reward += self.config.INTERMEDIATE_REWARD_VALUE
-                # TO THIS:
-                # reward += drafted_player.projected_points * 3
+                if self.config.INTERMEDIATE_REWARD_MODE == 'STATIC':
+                    reward += self.config.INTERMEDIATE_REWARD_VALUE
+                elif self.config.INTERMEDIATE_REWARD_MODE == 'PROPORTIONAL':
+                    reward += drafted_player.projected_points * self.config.PROPORTIONAL_REWARD_SCALING_FACTOR
+                else:
+                    print(f"Warning: Unknown INTERMEDIATE_REWARD_MODE: {self.config.INTERMEDIATE_REWARD_MODE}. No intermediate reward applied.")
+
 
         self.current_pick_idx += 1
         self.current_pick_number += 1
@@ -228,8 +235,9 @@ class FantasyFootballDraftEnv(gym.Env):
             reward += final_projected_points
             info['final_score'] = final_projected_points
 
-        # --- 5. Get Next State ---
+        # --- 5. Get Next State and Action Mask ---
         observation = self._get_state()
+        info['action_mask'] = self.get_action_mask()
 
         return observation, reward, done, False, info
 
@@ -367,12 +375,55 @@ class FantasyFootballDraftEnv(gym.Env):
                     best_player = player
         return best_player
 
+    def _can_team_draft_position(self, team_id: int, position: str) -> bool:
+        """
+        Checks if a team can draft a player of a given position, considering roster limits
+        and general availability of players of that position in the pool.
+        """
+        # First, check if there are any players of this position available in the pool
+        any_player_of_pos_available = any(
+            self.player_map[pid].position == position for pid in self.available_players_ids
+        )
+        if not any_player_of_pos_available:
+            return False
+
+        # Now, check if the specific team has room for this position
+        roster_counts = self.teams_rosters[team_id]
+        current_pos_count = roster_counts[position]
+        current_flex_count = roster_counts['FLEX']
+
+        max_pos_count = self.config.ROSTER_STRUCTURE.get(position, 0) + self.config.BENCH_MAXES.get(position, 0)
+        max_flex_count = self.config.ROSTER_STRUCTURE.get('FLEX', 0)
+
+        if current_pos_count < max_pos_count:
+            return True # Room in starting or bench roster for this position
+        elif position in ['RB', 'WR', 'TE'] and current_flex_count < max_flex_count:
+            return True # Room in FLEX spot for RB/WR/TE
+        
+        return False # No room for this position
+
+    def get_action_mask(self) -> np.ndarray:
+        """
+        Returns a boolean array representing the valid actions for the agent in the current state.
+        A value of True means the action is valid, False means it's invalid.
+        """
+        mask = np.zeros(self.action_space.n, dtype=bool)
+        
+        for action, position_choice in self.action_to_position.items():
+            if self._can_team_draft_position(self.agent_team_id, position_choice):
+                mask[action] = True
+        return mask
+
     def _try_select_player_for_team(self, team_id: int, position_choice: str, available_players_ids: set) -> Tuple[bool, Optional[Player]]:
         """
         Attempts to find and 'draft' the best player for a given position and team.
         Returns (True, player) if successful, (False, None) otherwise.
         Handles roster limits and player availability.
         """
+        # This function is called after action mask might have already validated.
+        # However, it still needs to perform its own checks in case it's called internally
+        # or if action masking is disabled.
+        
         # 1. Check if any players are available for the chosen position
         available_players_for_pos = [
             self.player_map[pid] for pid in available_players_ids
@@ -381,31 +432,9 @@ class FantasyFootballDraftEnv(gym.Env):
         if not available_players_for_pos:
             return False, None # No players of this position available at all
 
-        # 2. Check roster limits for the chosen position
-        current_pos_count = self.teams_rosters[team_id][position_choice]
-        current_flex_count = self.teams_rosters[team_id]['FLEX']
-
-        max_pos_count = self.config.ROSTER_STRUCTURE.get(position_choice, 0) + self.config.BENCH_MAXES.get(position_choice, 0)
-        max_flex_count = self.config.ROSTER_STRUCTURE.get('FLEX', 0)
-
-        # A player can fill:
-        # a) a direct starter spot for their position
-        # b) a bench spot for their position
-        # c) a FLEX spot (if RB/WR/TE) AND if primary + bench spots are full AND FLEX spots are available
-
-        has_room = False
-        if current_pos_count < self.config.ROSTER_STRUCTURE.get(position_choice, 0):
-            # Room in starting roster
-            has_room = True
-        elif current_pos_count < max_pos_count:
-            # Room in bench spots for this specific position
-            has_room = True
-        elif position_choice in ['RB', 'WR', 'TE'] and current_flex_count < max_flex_count:
-            # Room in FLEX spot
-            has_room = True
-
-        if not has_room:
-            return False, None # No room for this specific position, nor a FLEX spot if applicable
+        # 2. Check roster limits for the chosen position for this specific team
+        if not self._can_team_draft_position(team_id, position_choice):
+            return False, None
 
         # Find the best available player for the chosen position (highest projected points)
         best_player = None
@@ -418,7 +447,7 @@ class FantasyFootballDraftEnv(gym.Env):
         if best_player:
             return True, best_player
         else:
-            return False, None # Should not happen if available_players_for_pos is not empty and has_room is True
+            return False, None # Should not happen if available_players_for_pos is not empty and _can_team_draft_position is True
 
     def _update_roster_counts(self, team_id: int, player: Player):
         """Updates team's roster counts, including handling FLEX logic."""
@@ -444,73 +473,107 @@ class FantasyFootballDraftEnv(gym.Env):
         roster_counts = self.teams_rosters[team_id]
         
         # Define positions that our environment and roster structure can handle.
-        # This includes all positions defined in ROSTER_STRUCTURE (excluding FLEX as it's an action)
-        # plus positions that can fill FLEX.
-        handled_positions = set(self.config.ROSTER_STRUCTURE.keys()) - {'FLEX'} # e.g., {'QB', 'RB', 'WR', 'TE'}
-        flex_eligible_positions = {'RB', 'WR', 'TE'} # Positions that can fill FLEX spots
+        handled_positions = set(self.config.ROSTER_STRUCTURE.keys()) - {'FLEX'}
+        flex_eligible_positions = {'RB', 'WR', 'TE'}
         all_draftable_positions = handled_positions.union(flex_eligible_positions)
 
-        # Filter the available players to only include those with positions our logic can handle.
+        # Get all players that are available AND whose positions are handled by our logic
         available_players_filtered = [self.player_map[pid] 
                                       for pid in self.available_players_ids 
                                       if self.player_map[pid].position in all_draftable_positions]
 
+        # Filter these further to only include players that the current team can actually draft
+        # (i.e., they have a roster spot for that position or FLEX)
+        eligible_players_for_pick = []
+        for player in available_players_filtered:
+            if self._can_team_draft_position(team_id, player.position):
+                eligible_players_for_pick.append(player)
+        
+        if not eligible_players_for_pick:
+            return None # No eligible player found for this team
+
+        # Determine the "best" pick based on the configured logic
+        best_pick_by_logic = None
         if self.config.COMPETING_TEAM_LOGIC == 'ADP':
-            eligible_players_for_pick = []
-            for player in available_players_filtered: # Iterate only over filtered players
-                pos = player.position
-                current_pos_count = roster_counts[pos]
-                current_flex_count = roster_counts['FLEX']
-
-                max_pos_count = self.config.ROSTER_STRUCTURE.get(pos, 0) + self.config.BENCH_MAXES.get(pos, 0)
-                max_flex_count = self.config.ROSTER_STRUCTURE.get('FLEX', 0)
-
-                has_room = False
-                if current_pos_count < max_pos_count:
-                    has_room = True # Room in specific position's starter or bench slots
-                elif pos in ['RB', 'WR', 'TE'] and current_flex_count < max_flex_count:
-                    has_room = True # Room in a FLEX spot
-                
-                if has_room:
-                    eligible_players_for_pick.append(player)
-            
-            if eligible_players_for_pick:
-                # Pick the best ADP player among all eligible options that fit any slot
-                eligible_players_for_pick.sort(key=lambda p: p.adp)
-                return eligible_players_for_pick[0]
-            else:
-                return None # No eligible player found for this team
-
+            # Sort by ADP (ascending)
+            sorted_by_logic = sorted(eligible_players_for_pick, key=lambda p: p.adp)
+            best_pick_by_logic = sorted_by_logic[0] if sorted_by_logic else None
         elif self.config.COMPETING_TEAM_LOGIC == 'HEURISTIC':
-            # Heuristic strategy:
-            # Prioritize filling starting spots first, then bench, then flex,
-            # picking the highest projected player for that specific available spot.
+            # Heuristic: Prioritize by position need and then projected points
+            
+            # Helper to get best player for a position among eligible
+            def get_best_for_pos(pos_list: List[str]):
+                for pos in pos_list:
+                    if roster_counts[pos] < self.config.ROSTER_STRUCTURE.get(pos, 0): # Check starting spots
+                        eligible = [p for p in eligible_players_for_pick if p.position == pos]
+                        if eligible: return sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
+                return None
 
             # 1. Attempt to fill core starting spots (QB, RB, WR, TE)
-            for pos in ['QB', 'RB', 'WR', 'TE']: # Order of priority can be configured
-                if roster_counts[pos] < self.config.ROSTER_STRUCTURE.get(pos, 0):
-                    eligible_players_for_pos = sorted([p for p in available_players_filtered if p.position == pos], key=lambda p: p.projected_points, reverse=True)
-                    if eligible_players_for_pos:
-                        return eligible_players_for_pos[0] # Pick best available for starter spot
-
-            # 2. Then try to fill bench spots (QB, RB, WR, TE)
-            for pos in ['RB', 'WR', 'TE', 'QB']: # Prioritize valuable bench positions
-                max_pos_count_total = self.config.ROSTER_STRUCTURE.get(pos, 0) + self.config.BENCH_MAXES.get(pos, 0)
-                if roster_counts[pos] < max_pos_count_total:
-                    eligible_players_for_pos = sorted([p for p in available_players_filtered if p.position == pos], key=lambda p: p.projected_points, reverse=True)
-                    if eligible_players_for_pos:
-                        return eligible_players_for_pos[0] # Pick best available for bench spot
-
-            # 3. Finally, try to fill FLEX spots if available, with best RB/WR/TE
-            if roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE['FLEX']:
-                 eligible_flex_players = sorted([p for p in available_players_filtered if p.position in ['RB', 'WR', 'TE']], key=lambda p: p.projected_points, reverse=True)
-                 if eligible_flex_players:
-                     return eligible_flex_players[0] # Pick best available for FLEX
+            best_pick_by_logic = get_best_for_pos(['QB', 'RB', 'WR', 'TE'])
+            if best_pick_by_logic:
+                # Need to also check bench spots before returning if it's the *only* pick logic
+                # For heuristic, we prioritize starters, then bench, then flex.
+                # So if best_pick_by_logic was a starter, it's truly the "best"
+                pass 
             
-            return None # No viable pick found with heuristic for this team
+            if not best_pick_by_logic: # If no starter spot filled, try bench
+                for pos in ['RB', 'WR', 'TE', 'QB']: # Prioritize valuable bench positions
+                    max_pos_count_total = self.config.ROSTER_STRUCTURE.get(pos, 0) + self.config.BENCH_MAXES.get(pos, 0)
+                    if roster_counts[pos] < max_pos_count_total:
+                        eligible = [p for p in eligible_players_for_pick if p.position == pos]
+                        if eligible:
+                            best_pick_by_logic = sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
+                            if best_pick_by_logic: break # Found a bench player
+            
+            if not best_pick_by_logic: # If no bench spot filled, try FLEX
+                if roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE['FLEX']:
+                     eligible_flex_players = [p for p in eligible_players_for_pick if p.position in ['RB', 'WR', 'TE']]
+                     if eligible_flex_players:
+                         best_pick_by_logic = sorted(eligible_flex_players, key=lambda p: p.projected_points, reverse=True)[0]
 
         else:
             raise ValueError(f"Unknown competing team logic: {self.config.COMPETING_TEAM_LOGIC}")
+
+        if not best_pick_by_logic:
+            return None # Should not happen if eligible_players_for_pick was not empty
+
+        # Apply randomness
+        if random.random() < self.config.COMPETING_TEAM_RANDOMNESS_FACTOR:
+            # Make a suboptimal pick
+            if self.config.SUBOPTIMAL_PICK_STRATEGY == 'RANDOM_ELIGIBLE':
+                return random.choice(eligible_players_for_pick) # Pick any eligible player randomly
+            elif self.config.SUBOPTIMAL_PICK_STRATEGY == 'NEXT_BEST_ADP':
+                # Exclude the very best ADP player, then pick the next best
+                temp_list = sorted(eligible_players_for_pick, key=lambda p: p.adp)
+                if len(temp_list) > 1:
+                    return temp_list[1] # Return the second best ADP player
+                else:
+                    return temp_list[0] # Fallback to best if only one option
+            elif self.config.SUBOPTIMAL_PICK_STRATEGY == 'NEXT_BEST_HEURISTIC':
+                # This is more complex. For simplicity, let's say "next best heuristic"
+                # could mean picking the highest projected player for a less desired *filled* position,
+                # or a player slightly lower on the overall projected points list.
+                # For now, let's make it simple: if there are multiple options, pick one other than the best.
+                # A more advanced heuristic would involve a 'value over replacement' or similar.
+                
+                # Simple "next best heuristic" - just pick a random *other* eligible player.
+                # This is similar to RANDOM_ELIGIBLE if many options, but could be refined.
+                # For now, if we have more than one eligible player, pick a random one that isn't the 'best'.
+                if len(eligible_players_for_pick) > 1:
+                    other_eligible = [p for p in eligible_players_for_pick if p != best_pick_by_logic]
+                    if other_eligible:
+                        return random.choice(other_eligible)
+                    else:
+                        return best_pick_by_logic # Fallback if no other options (e.g., all identical players)
+                else:
+                    return best_pick_by_logic # Fallback if only one option
+            else:
+                print(f"Warning: Unknown suboptimal pick strategy: {self.config.SUBOPTIMAL_PICK_STRATEGY}. Falling back to best pick.")
+                return best_pick_by_logic
+        else:
+            # Make the optimal pick based on the configured logic
+            return best_pick_by_logic
 
     def render(self):
         """

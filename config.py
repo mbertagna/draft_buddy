@@ -33,6 +33,8 @@ class Config:
         'TE': 1, # Max TEs on bench
     }
     COMPETING_TEAM_LOGIC = 'HEURISTIC' # Options: 'ADP', 'HEURISTIC'
+    COMPETING_TEAM_RANDOMNESS_FACTOR = 0.2 # Probability (0.0 to 1.0) of making a suboptimal pick
+    SUBOPTIMAL_PICK_STRATEGY = 'NEXT_BEST_ADP' # How suboptimal picks are chosen. Options: 'RANDOM_ELIGIBLE', 'NEXT_BEST_ADP', 'NEXT_BEST_HEURISTIC'
 
     # --- Data Preprocessing Parameters ---
     # Configuration for mock ADP generation if 'adp' column is missing
@@ -47,7 +49,7 @@ class Config:
     }
 
     # --- Reinforcement Learning Parameters ---
-    TOTAL_EPISODES = 30000
+    TOTAL_EPISODES = 3000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
 
@@ -71,8 +73,8 @@ class Config:
         "rb_available_flag",
         "wr_available_flag",
         "te_available_flag",
-        "current_pick_number", # New: added
-        "agent_start_position", # New: added
+        "current_pick_number",
+        "agent_start_position",
     ]
     # Select which features to enable for the agent's state vector
     ENABLED_STATE_FEATURES = [
@@ -99,6 +101,9 @@ class Config:
     # State normalization method
     STATE_NORMALIZATION_METHOD = 'min_max' # Options: 'min_max', 'z_score', 'none'
 
+    # --- Action Masking Parameter ---
+    ENABLE_ACTION_MASKING = True # Set to True to enable action masking
+
     # --- Reward Function Parameters ---
     INVALID_ACTION_PENALTIES = {
     'already_drafted': -100, # Much smaller penalty
@@ -106,25 +111,27 @@ class Config:
     'roster_full_RB': -40,
     'roster_full_WR': -40,
     'roster_full_TE': -50,
-    'no_players_available': -5, # Added this penalty key previously for completeness
+    'no_players_available': -100, # Added this penalty key previously for completeness
     'default_invalid': -50
     }
-    # New: Flag to enable/disable invalid action penalties
+    # Flag to enable/disable invalid action penalties
     ENABLE_INVALID_ACTION_PENALTIES = True # Set to False for "simple reward mode"
 
-
     ENABLE_INTERMEDIATE_REWARD = True # True for small reward for valid picks
-    INTERMEDIATE_REWARD_VALUE = 30 # Reward for each successful valid pick if enabled
+    INTERMEDIATE_REWARD_MODE = 'PROPORTIONAL' # New: 'STATIC' or 'PROPORTIONAL'
+    INTERMEDIATE_REWARD_VALUE = 30 # Static reward for each successful valid pick if enabled and mode is 'STATIC'
+    PROPORTIONAL_REWARD_SCALING_FACTOR = 1 # New: Multiplier for projected points when mode is 'PROPORTIONAL'
 
-    # New: Bonus for successfully drafting an entire team
-    BONUS_FOR_FULL_ROSTER = 200 # A significant positive bonus (e.g., 100 or 200)
+
+    # Bonus for successfully drafting an entire team
+    BONUS_FOR_FULL_ROSTER = 0 # A significant positive bonus (e.g., 100 or 200)
 
     # --- Neural Network Architecture ---
     HIDDEN_DIM = 64
 
     # --- Simulation and Evaluation Parameters ---
     # Path to a trained model (.pth file) to load for simulation/evaluation
-    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "reinforce_policy_model_20250608_194848.pth") # REPLACE with your actual model path
+    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "reinforce_policy_model_20250611_034822.pth") # REPLACE with your actual model path
     NUM_SIMULATION_RUNS = 5 # How many times to run the draft simulation
 
     # You might want to temporarily override some env settings for simulation if different from training

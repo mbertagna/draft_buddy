@@ -61,9 +61,12 @@ class ReinforceAgent:
         print(f"Starting REINFORCE training for {self.config.TOTAL_EPISODES} episodes...")
         print(f"State features enabled: {self.config.ENABLED_STATE_FEATURES}")
         print(f"Learning Rate: {self.config.LEARNING_RATE}, Discount Factor: {self.config.DISCOUNT_FACTOR}")
+        print(f"Action Masking Enabled: {self.config.ENABLE_ACTION_MASKING}") # New print
 
         for episode in range(1, self.config.TOTAL_EPISODES + 1):
             state, info = self.env.reset()
+            current_action_mask = info.get('action_mask') # Get initial action mask
+            
             self.episode_log_probs = []
             self.episode_rewards = []
             episode_done = False
@@ -74,8 +77,12 @@ class ReinforceAgent:
                 # Convert numpy state to torch tensor
                 state_tensor = torch.from_numpy(state).float()
 
-                # Sample an action from the policy
-                action, log_prob = self.policy_network.sample_action(state_tensor)
+                # Sample an action from the policy, passing the action mask if enabled
+                if self.config.ENABLE_ACTION_MASKING:
+                    action, log_prob = self.policy_network.sample_action(state_tensor, action_mask=current_action_mask)
+                else:
+                    action, log_prob = self.policy_network.sample_action(state_tensor)
+
 
                 # Take the action in the environment
                 next_state, reward, done, truncated, info = self.env.step(action)
@@ -87,6 +94,7 @@ class ReinforceAgent:
 
                 state = next_state
                 episode_done = done or truncated # Consider truncated also as episode end
+                current_action_mask = info.get('action_mask') # Get updated action mask for next step
 
             # --- 2. Calculate Returns ---
             returns = self._calculate_returns(self.episode_rewards)

@@ -82,6 +82,7 @@ def simulate_drafts(config: Config, num_runs: int):
     Loads a trained agent and simulates multiple fantasy football drafts, logging all picks.
     """
     print(f"\n--- Starting {num_runs} Draft Simulations ---")
+    print(f"Action Masking Enabled (for agent): {config.ENABLE_ACTION_MASKING}") # New print
     
     # 1. Load the trained Policy Network
     # Need to know the input_dim and output_dim, which are from the environment/config
@@ -151,9 +152,15 @@ def simulate_drafts(config: Config, num_runs: int):
             if current_team_id == env.agent_team_id:
                 # Agent's turn: Use trained policy
                 state_for_agent = env._get_state() # Get the current state for the agent
+                current_action_mask = env.get_action_mask() # Get the action mask for the agent
+                
                 state_tensor = torch.from_numpy(state_for_agent).float().unsqueeze(0)
                 with torch.no_grad():
-                    action_probs = policy_network.get_action_probabilities(state_tensor)
+                    if config.ENABLE_ACTION_MASKING:
+                        action_probs = policy_network.get_action_probabilities(state_tensor, action_mask=current_action_mask)
+                    else:
+                        action_probs = policy_network.get_action_probabilities(state_tensor)
+                    
                     action_taken = torch.argmax(action_probs).item() # Greedy pick
 
                 is_valid, drafted_player_obj = env._try_select_player_for_team(
