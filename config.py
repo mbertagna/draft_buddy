@@ -60,6 +60,24 @@ class Config:
             'suboptimal_strategy': 'RANDOM_ELIGIBLE',
             'positional_priority': ['RB', 'WR', 'QB', 'TE'] # Irrelevant for 'RANDOM' logic but kept for consistency
         },
+        4: { # Example: A team that prioritizes ADP with some randomness, and focuses on RB/WR first
+            'logic': 'ADP',
+            'randomness_factor': 0.1,
+            'suboptimal_strategy': 'NEXT_BEST_ADP',
+            'positional_priority': ['WR', 'RB', 'QB', 'TE'] # Custom priority for heuristic logic
+        },
+        5: { # Example: A more heuristic team that likes QBs early
+            'logic': 'HEURISTIC',
+            'randomness_factor': 0.0, # Very deterministic
+            'suboptimal_strategy': 'NONE', # N/A if randomness is 0
+            'positional_priority': ['WR', 'RB', 'QB', 'TE']
+        },
+        6: { # Example: A very random team (might pick odd positions early)
+            'logic': 'RANDOM', # New 'RANDOM' logic that picks any eligible player
+            'randomness_factor': 1.0,
+            'suboptimal_strategy': 'RANDOM_ELIGIBLE',
+            'positional_priority': ['WR', 'RB', 'QB', 'TE'] # Irrelevant for 'RANDOM' logic but kept for consistency
+        },
         # Add more teams here, e.g., teams 4-9
         # 4: {'logic': 'HEURISTIC', 'randomness_factor': 0.3, 'suboptimal_strategy': 'RANDOM_ELIGIBLE', 'positional_priority': ['WR', 'RB', 'TE', 'QB']},
         # etc.
@@ -113,6 +131,15 @@ class Config:
         "te_available_flag",
         "current_pick_number",
         "agent_start_position",
+        # New features below
+        "second_best_available_qb_points", # New
+        "second_best_available_rb_points", # New
+        "second_best_available_wr_points", # New
+        "second_best_available_te_points", # New
+        "next_pick_opponent_qb_count", # New
+        "next_pick_opponent_rb_count", # New
+        "next_pick_opponent_wr_count", # New
+        "next_pick_opponent_te_count", # New
     ]
     # Select which features to enable for the agent's state vector
     ENABLED_STATE_FEATURES = [
@@ -135,6 +162,10 @@ class Config:
         "te_available_flag",
         "current_pick_number",
         "agent_start_position",
+        "second_best_available_rb_points", # Let's enable this one for RB cliff awareness
+        "second_best_available_wr_points", # Let's enable this one for WR cliff awareness
+        "next_pick_opponent_rb_count", # Critical for RB denial
+        "next_pick_opponent_wr_count", # Critical for WR denial
     ]
     # State normalization method
     STATE_NORMALIZATION_METHOD = 'min_max' # Options: 'min_max', 'z_score', 'none'
@@ -149,13 +180,13 @@ class Config:
     'roster_full_RB': -40,
     'roster_full_WR': -40,
     'roster_full_TE': -50,
-    'no_players_available': -5, # Added this penalty key previously for completeness
+    'no_players_available': -100, # Added this penalty key previously for completeness
     'default_invalid': -50
     }
     # Flag to enable/disable invalid action penalties
-    ENABLE_INVALID_ACTION_PENALTIES = True # Set to False for "simple reward mode"
+    ENABLE_INVALID_ACTION_PENALTIES = False # Set to False for "simple reward mode"
 
-    ENABLE_INTERMEDIATE_REWARD = True # True for small reward for valid picks
+    ENABLE_INTERMEDIATE_REWARD = False # True for small reward for valid picks
     INTERMEDIATE_REWARD_MODE = 'PROPORTIONAL' # 'STATIC' or 'PROPORTIONAL'
     INTERMEDIATE_REWARD_VALUE = 30 # Static reward for each successful valid pick if enabled and mode is 'STATIC'
     PROPORTIONAL_REWARD_SCALING_FACTOR = 1 # Multiplier for projected points when mode is 'PROPORTIONAL'
@@ -169,7 +200,7 @@ class Config:
 
     # --- Simulation and Evaluation Parameters ---
     # Path to a trained model (.pth file) to load for simulation/evaluation
-    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "reinforce_policy_model_20250611_034822.pth") # REPLACE with your actual model path
+    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "reinforce_policy_model_20250611_073210.pth") # REPLACE with your actual model path
     NUM_SIMULATION_RUNS = 5 # How many times to run the draft simulation
 
     # You might want to temporarily override some env settings for simulation if different from training

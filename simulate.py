@@ -82,7 +82,8 @@ def simulate_drafts(config: Config, num_runs: int):
     Loads a trained agent and simulates multiple fantasy football drafts, logging all picks.
     """
     print(f"\n--- Starting {num_runs} Draft Simulations ---")
-    print(f"Action Masking Enabled (for agent): {config.ENABLE_ACTION_MASKING}") # New print
+    print(f"Action Masking Enabled (for agent): {config.ENABLE_ACTION_MASKING}")
+    print(f"Opponent Personalities Enabled. Using specified strategies or default.") # New print
     
     # 1. Load the trained Policy Network
     # Need to know the input_dim and output_dim, which are from the environment/config
@@ -109,33 +110,19 @@ def simulate_drafts(config: Config, num_runs: int):
     # 2. Prepare Environment for Simulation
     env = FantasyFootballDraftEnv(config) # Main environment instance
 
-    # This loop will now run pick-by-pick directly, not using env.step's internal opponent simulation
     all_simulation_results = []
 
     for run_idx in range(num_runs):
         print(f"\n--- Simulation Run {run_idx + 1}/{num_runs} ---")
         
-        # Reset environment for a new draft. This also pre-simulates up to agent's first pick.
-        # We need the state *after* the initial reset, to be ready for the agent's pick.
-        state, info = env.reset() 
-        
-        # Ensure the draft log for this run starts with any picks made during env.reset() advance
-        # Note: env.reset() prints warnings about competing team failing to pick if needed.
-        
-        # We need a way to get the full log of picks *made so far* by env.reset()
-        # The current env.reset() does not expose this cleanly.
-        # To get the full draft log, we'll manually simulate pick by pick here instead
-        # of relying on env.reset() to advance. This is more explicit for logging.
-
-        # Re-reset and manage all picks in simulate.py for comprehensive logging
+        # Full reset of the environment state for a new draft run
         env.available_players_ids = {p.player_id for p in env.all_players_data}
         env.teams_rosters = defaultdict(lambda: {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'FLEX': 0, 'PLAYERS': []})
         env.current_pick_idx = 0
         env.current_pick_number = 1 
         
-        draft_order_for_run = env._generate_snake_draft_order(env.config.NUM_TEAMS, env.total_roster_size_per_team)
-        # Ensure draft_order_for_run is set for this simulation
-        env.draft_order = draft_order_for_run # Update env's internal draft order
+        # Generate draft order for this specific run
+        env.draft_order = env._generate_snake_draft_order(env.config.NUM_TEAMS, env.total_roster_size_per_team)
         
         draft_log = [] # To store details of each pick in this simulation
         
@@ -147,7 +134,7 @@ def simulate_drafts(config: Config, num_runs: int):
             
             current_team_id = env.draft_order[env.current_pick_idx]
             player_picked = None
-            action_taken = None # Store action for agent picks
+            action_taken_pos = 'N/A' # To log the intended position for agent's pick
 
             if current_team_id == env.agent_team_id:
                 # Agent's turn: Use trained policy
@@ -161,18 +148,21 @@ def simulate_drafts(config: Config, num_runs: int):
                     else:
                         action_probs = policy_network.get_action_probabilities(state_tensor)
                     
-                    action_taken = torch.argmax(action_probs).item() # Greedy pick
+                    action_chosen = torch.argmax(action_probs).item() # Greedy pick based on highest probability
+                    action_taken_pos = env.action_to_position[action_chosen]
 
                 is_valid, drafted_player_obj = env._try_select_player_for_team(
-                    current_team_id, env.action_to_position[action_taken], env.available_players_ids
+                    current_team_id, action_taken_pos, env.available_players_ids
                 )
                 if is_valid:
                     player_picked = drafted_player_obj
                 else:
-                    # Agent made an invalid pick. In simulation, we just log this and move on.
-                    # It doesn't get a penalty here, and the episode continues to fill up the roster.
-                    print(f"  Sim Warning: Agent (Team {current_team_id}) made an invalid pick at Pick {env.current_pick_number}. Attempted {env.action_to_position[action_taken]}.")
+                    # This case should ideally not happen if action masking is perfectly effective
+                    # and the agent picks the highest probability action from the masked distribution.
+                    # Log a warning, but the simulation will proceed to the next pick.
+                    print(f"  Sim Warning: Agent (Team {current_team_id}) made an invalid pick at Pick {env.current_pick_number}. Attempted {action_taken_pos}. This implies an issue with action masking or _try_select_player_for_team logic.")
                     # No player_picked, so no changes to rosters/available_players for this turn.
+                    # Continue loop to next pick, effectively a skipped pick for the agent.
 
             else:
                 # Competing team's turn: Use their configured logic
@@ -181,6 +171,7 @@ def simulate_drafts(config: Config, num_runs: int):
                     # If a competing team can't make a valid pick (e.g., no players left to fit needs)
                     print(f"  Sim Warning: Competing team {current_team_id} could not make a pick at Pick {env.current_pick_number}.")
                     # No player_picked, so no changes to rosters/available_players for this turn.
+                    # Continue loop to next pick, effectively a skipped pick for the opponent.
 
             # --- Log and Update Environment for the current pick ---
             if player_picked:
@@ -208,7 +199,7 @@ def simulate_drafts(config: Config, num_runs: int):
                     'position': 'N/A',
                     'projected_points': 0.0,
                     'adp': 0.0,
-                    'status': 'Skipped/Invalid Pick'
+                    'status': f'Skipped/Invalid Pick (Tried: {action_taken_pos if current_team_id == env.agent_team_id else "Opponent Logic"})'
                 })
 
             # Advance to the next pick in the draft order
@@ -300,9 +291,19 @@ def simulate_drafts(config: Config, num_runs: int):
             print(f"  Avg FLEX Points: {avg_flex:.1f}")
 
     if config.NUM_TEAMS > 1: # Only calculate average opponent if there are opponents
-        overall_avg_opponent_score /= (config.NUM_TEAMS - 1)
-        print(f"\nOverall Average Opponent Total Score (across all opponent teams and runs): {overall_avg_opponent_score:.1f}")
-    
+        # Calculate the average opponent score based on all opponent teams, excluding the agent's team
+        total_opponent_teams = config.NUM_TEAMS - 1
+        if total_opponent_teams > 0:
+            sum_of_opponent_scores = sum(
+                all_runs_team_scores[team_id]['combined_total'] for team_id in all_runs_team_scores
+                if team_id != config.AGENT_START_POSITION
+            )
+            overall_avg_opponent_score = sum_of_opponent_scores / (runs_count * total_opponent_teams)
+            print(f"\nOverall Average Opponent Total Score (across all opponent teams and runs): {overall_avg_opponent_score:.1f}")
+        else:
+            print("\nNo opponent teams to calculate overall average score.")
+            overall_avg_opponent_score = overall_avg_agent_score # Set to agent score for comparison if no opponents
+
     if overall_avg_agent_score > overall_avg_opponent_score:
         print("\nAgent's average score is HIGHER than opponents' average score. Good job!")
     elif overall_avg_agent_score < overall_avg_opponent_score:

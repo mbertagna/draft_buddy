@@ -6,8 +6,8 @@ TAG="latest"
 
 # Define the command to run inside the container
 # NOW we execute our main training script!
-COMMAND="python train.py"
-# COMMAND="python simulate.py"
+# COMMAND="python train.py"
+COMMAND="python simulate.py"
 
 echo "Running Docker container for ${IMAGE_NAME}:${TAG}"
 

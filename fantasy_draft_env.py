@@ -34,10 +34,10 @@ class FantasyFootballDraftEnv(gym.Env):
         # State Space: Dynamically determined by ENABLED_STATE_FEATURES
         self.state_features_map = {
             # Player availability info
-            "best_available_qb_points": self._get_best_available_qb_points,
-            "best_available_rb_points": self._get_best_available_rb_points,
-            "best_available_wr_points": self._get_best_available_wr_points,
-            "best_available_te_points": self._get_best_available_te_points,
+            "best_available_qb_points": lambda: self._get_kth_best_available_player_by_pos('QB', 1).projected_points if self._get_kth_best_available_player_by_pos('QB', 1) else 0,
+            "best_available_rb_points": lambda: self._get_kth_best_available_player_by_pos('RB', 1).projected_points if self._get_kth_best_available_player_by_pos('RB', 1) else 0,
+            "best_available_wr_points": lambda: self._get_kth_best_available_player_by_pos('WR', 1).projected_points if self._get_kth_best_available_player_by_pos('WR', 1) else 0,
+            "best_available_te_points": lambda: self._get_kth_best_available_player_by_pos('TE', 1).projected_points if self._get_kth_best_available_player_by_pos('TE', 1) else 0,
             "qb_available_flag": lambda: 1 if any(p.position == 'QB' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
             "rb_available_flag": lambda: 1 if any(p.position == 'RB' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
             "wr_available_flag": lambda: 1 if any(p.position == 'WR' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
@@ -56,6 +56,15 @@ class FantasyFootballDraftEnv(gym.Env):
             # Draft Progression Context
             "current_pick_number": lambda: self.current_pick_number,
             "agent_start_position": lambda: self.config.AGENT_START_POSITION,
+            # New features
+            "second_best_available_qb_points": lambda: self._get_kth_best_available_player_by_pos('QB', 2).projected_points if self._get_kth_best_available_player_by_pos('QB', 2) else 0,
+            "second_best_available_rb_points": lambda: self._get_kth_best_available_player_by_pos('RB', 2).projected_points if self._get_kth_best_available_player_by_pos('RB', 2) else 0,
+            "second_best_available_wr_points": lambda: self._get_kth_best_available_player_by_pos('WR', 2).projected_points if self._get_kth_best_available_player_by_pos('WR', 2) else 0,
+            "second_best_available_te_points": lambda: self._get_kth_best_available_player_by_pos('TE', 2).projected_points if self._get_kth_best_available_player_by_pos('TE', 2) else 0,
+            "next_pick_opponent_qb_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'QB'),
+            "next_pick_opponent_rb_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'RB'),
+            "next_pick_opponent_wr_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'WR'),
+            "next_pick_opponent_te_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'TE'),
         }
         self.observation_space_dim = len(config.ENABLED_STATE_FEATURES)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.observation_space_dim,), dtype=np.float32)
@@ -75,21 +84,57 @@ class FantasyFootballDraftEnv(gym.Env):
         # so this is complex. For now, ensure we don't overfill total_roster_size.
 
 
-    def _get_best_available_qb_points(self):
-        best_qb = self._get_best_available_player_by_pos('QB')
-        return best_qb.projected_points if best_qb else 0
+    def _get_kth_best_available_player_by_pos(self, position: str, k: int) -> Optional[Player]:
+        """
+        Returns the k-th best available player with the highest projected points for a given position.
+        Returns None if fewer than k players are available for that position.
+        """
+        eligible_players = []
+        for player_id in self.available_players_ids:
+            player = self.player_map[player_id]
+            if player.position == position:
+                eligible_players.append(player)
+        
+        if len(eligible_players) < k:
+            return None
+            
+        # Sort by projected points descending
+        eligible_players.sort(key=lambda p: p.projected_points, reverse=True)
+        return eligible_players[k-1] # k-1 because of 0-based indexing
 
-    def _get_best_available_rb_points(self):
-        best_rb = self._get_best_available_player_by_pos('RB')
-        return best_rb.projected_points if best_rb else 0
+    # The existing _get_best_available_qb_points, _get_best_available_rb_points, etc.
+    # will now use _get_kth_best_available_player_by_pos with k=1.
+    # The lambda functions in state_features_map already reflect this update.
 
-    def _get_best_available_wr_points(self):
-        best_wr = self._get_best_available_player_by_pos('WR')
-        return best_wr.projected_points if best_wr else 0
+    def _get_next_opponent_team_id(self) -> int:
+        """
+        Determines the ID of the team that will draft immediately after the agent.
+        Returns the agent's ID if it's the last pick in the round (or draft is effectively over).
+        """
+        # If the draft order is exhausted, or it's the last pick, there's no "next opponent"
+        if self.current_pick_idx + 1 >= len(self.draft_order):
+            return self.agent_team_id # Or some other neutral ID, agent's is fine for default counts
+        
+        # Find the next pick in the sequence that is not the agent's pick
+        next_pick_index = self.current_pick_idx + 1
+        while next_pick_index < len(self.draft_order):
+            next_team_id = self.draft_order[next_pick_index]
+            if next_team_id != self.agent_team_id:
+                return next_team_id
+            next_pick_index += 1
+        
+        # If no opponent is found after the agent's current turn in the remaining draft order
+        return self.agent_team_id # Fallback to agent's team id for count (implies no immediate opponent)
 
-    def _get_best_available_te_points(self):
-        best_te = self._get_best_available_player_by_pos('TE')
-        return best_te.projected_points if best_te else 0
+    def _get_opponent_roster_count(self, opponent_team_id: int, position: str) -> int:
+        """
+        Returns the current count of a specific position on the specified opponent's roster.
+        Returns 0 if the opponent_team_id is invalid or not found.
+        """
+        if opponent_team_id in self.teams_rosters:
+            return self.teams_rosters[opponent_team_id].get(position, 0)
+        return 0 # No roster information for this opponent_team_id
+
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None):
         super().reset(seed=seed)
@@ -165,8 +210,8 @@ class FantasyFootballDraftEnv(gym.Env):
             # Apply penalty only if ENABLE_INVALID_ACTION_PENALTIES is True.
             if self.config.ENABLE_INVALID_ACTION_PENALTIES:
                 penalty_key = f'roster_full_{selected_position}'
-                if not self._get_best_available_player_by_pos(selected_position):
-                    penalty_key = 'no_players_available'
+                if not self._get_best_available_player_by_pos(selected_position): # This is already handled by _can_team_draft_position
+                    penalty_key = 'no_players_available' # If there are no players of this position globally
                 reward += self.config.INVALID_ACTION_PENALTIES.get(penalty_key, self.config.INVALID_ACTION_PENALTIES['default_invalid'])
             
             done = True # Invalid action still ends the episode for safety/clarity
@@ -289,6 +334,8 @@ class FantasyFootballDraftEnv(gym.Env):
                 value = self.state_features_map[feature_name]()
                 state_values.append(value)
             else:
+                # This should ideally not happen if ENABLED_STATE_FEATURES is subset of ALL_STATE_FEATURES
+                # and all mappings are correctly defined.
                 print(f"Warning: Unknown state feature '{feature_name}' requested. Appending 0.")
                 state_values.append(0)
 
@@ -304,6 +351,8 @@ class FantasyFootballDraftEnv(gym.Env):
         return state_array
 
     def _normalize_min_max(self, state_array: np.ndarray) -> np.ndarray:
+        # These max values should be estimated based on your player data's expected ranges.
+        # It's good practice to run some data analysis to set these accurately.
         max_values = {
             "best_available_qb_points": 400.0, "best_available_rb_points": 350.0,
             "best_available_wr_points": 350.0, "best_available_te_points": 300.0,
@@ -320,6 +369,15 @@ class FantasyFootballDraftEnv(gym.Env):
             "wr_available_flag": 1.0, "te_available_flag": 1.0,
             "current_pick_number": len(self.draft_order) if self.draft_order else 1.0, # Max possible pick number
             "agent_start_position": float(self.config.NUM_TEAMS), # Max team number
+            # New features max values
+            "second_best_available_qb_points": 400.0, # Same max as best for now
+            "second_best_available_rb_points": 350.0, # Same max as best for now
+            "second_best_available_wr_points": 350.0, # Same max as best for now
+            "second_best_available_te_points": 300.0, # Same max as best for now
+            "next_pick_opponent_qb_count": self.config.ROSTER_STRUCTURE['QB'] + self.config.BENCH_MAXES['QB'],
+            "next_pick_opponent_rb_count": self.config.ROSTER_STRUCTURE['RB'] + self.config.BENCH_MAXES['RB'],
+            "next_pick_opponent_wr_count": self.config.ROSTER_STRUCTURE['WR'] + self.config.BENCH_MAXES['WR'],
+            "next_pick_opponent_te_count": self.config.ROSTER_STRUCTURE['TE'] + self.config.BENCH_MAXES['TE'],
         }
         min_values = {k: 0.0 for k in max_values}
         
@@ -358,18 +416,10 @@ class FantasyFootballDraftEnv(gym.Env):
         std[std == 0] = 1.0 # If std is 0, set to 1 to avoid error. Will result in 0 after subtraction.
         return (state_array - mean) / std
 
+    # Original _get_best_available_player_by_pos is now generalized by _get_kth_best_available_player_by_pos
     def _get_best_available_player_by_pos(self, position: str) -> Optional[Player]:
         """Returns the available player with the highest projected points for a given position."""
-        best_player = None
-        highest_points = -1
-
-        for player_id in self.available_players_ids:
-            player = self.player_map[player_id]
-            if player.position == position:
-                if player.projected_points > highest_points:
-                    highest_points = player.projected_points
-                    best_player = player
-        return best_player
+        return self._get_kth_best_available_player_by_pos(position, 1)
 
     def _can_team_draft_position(self, team_id: int, position: str) -> bool:
         """
@@ -513,7 +563,7 @@ class FantasyFootballDraftEnv(gym.Env):
                 # Heuristic: Prioritize by position need and then projected points, using custom priority
                 
                 # Helper to get best player for a position among eligible
-                def get_best_for_pos(pos_list: List[str]):
+                def get_best_for_pos_heuristic(pos_list: List[str]):
                     for pos in pos_list:
                         # Check starting spots for that position first
                         if roster_counts[pos] < self.config.ROSTER_STRUCTURE.get(pos, 0): 
@@ -522,10 +572,11 @@ class FantasyFootballDraftEnv(gym.Env):
                     return None
 
                 # 1. Attempt to fill core starting spots based on positional_priority
-                best_pick_by_logic = get_best_for_pos(positional_priority)
+                best_pick_by_logic = get_best_for_pos_heuristic(positional_priority)
                 
                 if not best_pick_by_logic: # If no starter spot filled, try bench
-                    for pos in positional_priority: # Use positional_priority for bench as well
+                    # Use positional_priority for bench as well, but check against total max
+                    for pos in positional_priority: 
                         max_pos_count_total = self.config.ROSTER_STRUCTURE.get(pos, 0) + self.config.BENCH_MAXES.get(pos, 0)
                         if roster_counts[pos] < max_pos_count_total:
                             eligible = [p for p in eligible_players_for_pick if p.position == pos]
