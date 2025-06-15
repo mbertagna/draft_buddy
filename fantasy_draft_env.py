@@ -4,10 +4,12 @@ import numpy as np
 from collections import defaultdict
 import math
 import random
+import torch # Import torch for loading models
 from typing import Optional, Dict, List, Tuple
 
 from config import Config
 from data_utils import load_player_data, Player
+from policy_network import PolicyNetwork # Import PolicyNetwork
 
 class FantasyFootballDraftEnv(gym.Env):
     """
@@ -79,10 +81,48 @@ class FantasyFootballDraftEnv(gym.Env):
 
         # Pre-calculate total roster size for done check
         self.total_roster_size_per_team = sum(self.config.ROSTER_STRUCTURE.values()) + sum(self.config.BENCH_MAXES.values())
-        # The sum of required spots plus bench spots for each position.
-        # Flex players reduce available flex slots but increase RB/WR/TE counts,
-        # so this is complex. For now, ensure we don't overfill total_roster_size.
 
+        # New: Load opponent models
+        self.opponent_models: Dict[int, PolicyNetwork] = {}
+        self._load_opponent_models()
+
+
+    def _load_opponent_models(self):
+        """
+        Loads trained PolicyNetwork models for opponents specified in config.
+        Only loads models for teams explicitly marked with 'AGENT_MODEL' logic.
+        """
+        input_dim = len(self.config.ENABLED_STATE_FEATURES)
+        output_dim = self.action_space.n
+
+        for team_id in range(1, self.config.NUM_TEAMS + 1):
+            if team_id == self.config.AGENT_START_POSITION:
+                continue # Skip loading a model for the agent's own team
+
+            opponent_strategy = self.config.OPPONENT_TEAM_STRATEGIES.get(
+                team_id, self.config.DEFAULT_OPPONENT_STRATEGY
+            )
+
+            if opponent_strategy['logic'] == 'AGENT_MODEL':
+                model_path_key = opponent_strategy.get('model_path_key')
+                if model_path_key and model_path_key in self.config.OPPONENT_MODEL_PATHS:
+                    model_path = self.config.OPPONENT_MODEL_PATHS[model_path_key]
+                    try:
+                        model = PolicyNetwork(input_dim, output_dim, self.config.HIDDEN_DIM)
+                        model.load_state_dict(torch.load(model_path))
+                        model.eval() # Set to evaluation mode
+                        self.opponent_models[team_id] = model
+                        print(f"Loaded agent model for opponent Team {team_id} from {model_path}")
+                    except FileNotFoundError:
+                        print(f"Warning: Opponent model not found at {model_path} for Team {team_id}. Falling back to DEFAULT_OPPONENT_STRATEGY.")
+                        # If model not found, revert this opponent to default heuristic
+                        self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
+                    except Exception as e:
+                        print(f"Error loading opponent model for Team {team_id} from {model_path}: {e}. Falling back to DEFAULT_OPPONENT_STRATEGY.")
+                        self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
+                else:
+                    print(f"Warning: 'model_path_key' missing or invalid for Team {team_id} configured as 'AGENT_MODEL'. Falling back to DEFAULT_OPPONENT_STRATEGY.")
+                    self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
 
     def _get_kth_best_available_player_by_pos(self, position: str, k: int) -> Optional[Player]:
         """
@@ -101,10 +141,6 @@ class FantasyFootballDraftEnv(gym.Env):
         # Sort by projected points descending
         eligible_players.sort(key=lambda p: p.projected_points, reverse=True)
         return eligible_players[k-1] # k-1 because of 0-based indexing
-
-    # The existing _get_best_available_qb_points, _get_best_available_rb_points, etc.
-    # will now use _get_kth_best_available_player_by_pos with k=1.
-    # The lambda functions in state_features_map already reflect this update.
 
     def _get_next_opponent_team_id(self) -> int:
         """
@@ -273,29 +309,93 @@ class FantasyFootballDraftEnv(gym.Env):
 
         # --- 4. Final Reward Calculation if Done ---
         if done:
-            if 'draft_complete' in info and self.config.BONUS_FOR_FULL_ROSTER > 0:
-                reward += self.config.BONUS_FOR_FULL_ROSTER
-
+            agent_final_weighted_score = 0
             if self.config.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
-                starters, bench_players, flex_players = self._categorize_roster_by_slots(
+                starters_dict, all_non_starters_list, _ = self._categorize_roster_by_slots(
                     self.teams_rosters[self.agent_team_id]['PLAYERS'],
                     self.config.ROSTER_STRUCTURE,
                     self.config.BENCH_MAXES
                 )
-                starter_points = sum(p.projected_points for pos_list in starters.values() for p in pos_list)
-                bench_points = sum(p.projected_points for p in bench_players) # bench_players list includes flex players
+                starter_points = sum(p.projected_points for pos_list in starters_dict.values() for p in pos_list)
+                bench_points = sum(p.projected_points for p in all_non_starters_list)
                 
-                weighted_final_points = (starter_points * self.config.STARTER_POINTS_WEIGHT) + \
-                                        (bench_points * self.config.BENCH_POINTS_WEIGHT)
-                reward += weighted_final_points
-                info['final_score'] = weighted_final_points
+                agent_final_weighted_score = (starter_points * self.config.STARTER_POINTS_WEIGHT) + \
+                                             (bench_points * self.config.BENCH_POINTS_WEIGHT)
                 info['raw_starter_points'] = starter_points
-                info['raw_bench_points'] = sum(p.projected_points for p in self.teams_rosters[self.agent_team_id]['PLAYERS']) - starter_points # For accurate bench points
+                info['raw_bench_points'] = bench_points
             else:
-                final_projected_points = sum(p.projected_points for p in self.teams_rosters[self.agent_team_id]['PLAYERS'])
-                reward += final_projected_points
-                info['final_score'] = final_projected_points
+                agent_final_weighted_score = sum(p.projected_points for p in self.teams_rosters[self.agent_team_id]['PLAYERS'])
+            
+            info['final_score_agent'] = agent_final_weighted_score # Store for info
 
+            # Apply bonus for full roster
+            if 'draft_complete' in info and self.config.BONUS_FOR_FULL_ROSTER > 0:
+                reward += self.config.BONUS_FOR_FULL_ROSTER
+
+            # --- Competitive Reward Logic ---
+            if self.config.ENABLE_COMPETITIVE_REWARD:
+                opponent_scores = []
+                for team_id, roster_data in self.teams_rosters.items():
+                    if team_id != self.agent_team_id:
+                        if self.config.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
+                            opp_starters_dict, opp_all_non_starters_list, _ = self._categorize_roster_by_slots(
+                                roster_data['PLAYERS'],
+                                self.config.ROSTER_STRUCTURE,
+                                self.config.BENCH_MAXES
+                            )
+                            opp_starter_points = sum(p.projected_points for pos_list in opp_starters_dict.values() for p in pos_list)
+                            opp_bench_points = sum(p.projected_points for p in opp_all_non_starters_list)
+                            opponent_score = (opp_starter_points * self.config.STARTER_POINTS_WEIGHT) + \
+                                             (opp_bench_points * self.config.BENCH_POINTS_WEIGHT)
+                        else:
+                            opponent_score = sum(p.projected_points for p in roster_data['PLAYERS'])
+                        opponent_scores.append(opponent_score)
+                
+                competitive_reward_component = 0 # Initialize competitive component
+                if not opponent_scores: # Handle case with no opponents (e.g., NUM_TEAMS = 1)
+                    info['competitive_mode'] = 'None (No Opponents)'
+                    # No competitive reward if there are no opponents
+                else:
+                    opponent_scores_np = np.array(opponent_scores)
+
+                    if self.config.COMPETITIVE_REWARD_MODE == 'MAX_OPPONENT_DIFFERENCE':
+                        max_opponent_score = np.max(opponent_scores_np)
+                        competitive_reward_component = agent_final_weighted_score - max_opponent_score
+                        info['competitive_mode'] = 'Max Opponent Difference'
+                        info['target_opponent_score'] = max_opponent_score # Log the specific score targeted
+                    elif self.config.COMPETITIVE_REWARD_MODE == 'AVG_OPPONENT_DIFFERENCE':
+                        avg_opponent_score = np.mean(opponent_scores_np)
+                        competitive_reward_component = agent_final_weighted_score - avg_opponent_score
+                        info['competitive_mode'] = 'Average Opponent Difference'
+                        info['target_opponent_score'] = avg_opponent_score # Log the specific score targeted
+                    elif self.config.COMPETITIVE_REWARD_MODE == 'NONE': # Explicitly handle NONE for competitive reward
+                        competitive_reward_component = 0
+                        info['competitive_mode'] = 'None'
+                    else: # Fallback for unknown competitive mode
+                        print(f"Warning: Unknown COMPETITIVE_REWARD_MODE: {self.config.COMPETITIVE_REWARD_MODE}. No competitive reward applied.")
+                        competitive_reward_component = 0
+                        info['competitive_mode'] = 'Unknown/Fallback'
+
+                    # Apply STD Deviation Penalty (if enabled and applicable)
+                    if self.config.ENABLE_OPPONENT_STD_DEV_PENALTY and len(opponent_scores_np) > 1:
+                        opponent_std_dev = np.std(opponent_scores_np)
+                        std_dev_penalty = opponent_std_dev * self.config.OPPONENT_STD_DEV_PENALTY_WEIGHT
+                        
+                        competitive_reward_component -= std_dev_penalty # Subtract penalty
+                        info['opponent_std_dev_applied'] = True
+                        info['opponent_std_dev'] = opponent_std_dev
+                        info['std_dev_penalty_amount'] = std_dev_penalty
+                    else:
+                        info['opponent_std_dev_applied'] = False
+
+                reward += competitive_reward_component
+            else:
+                # If competitive reward is NOT enabled, the base reward is simply the agent's score
+                reward += agent_final_weighted_score
+                info['competitive_mode'] = 'Disabled'
+                info['opponent_std_dev_applied'] = False
+                
+            info['final_reward_total'] = reward # The total reward given to the agent
 
         # --- 5. Get Next State and Action Mask ---
         observation = self._get_state()
@@ -305,47 +405,53 @@ class FantasyFootballDraftEnv(gym.Env):
 
     def _categorize_roster_by_slots(self, team_roster: List[Player], roster_structure: Dict, bench_maxes: Dict) -> Tuple[Dict[str, List[Player]], List[Player], List[Player]]:
         """
-        Categorizes players into starters and bench based on roster structure and projected points.
-        This logic is similar to calculate_roster_scores but returns the actual player objects
-        in starter/bench categories.
+        Categorizes players into starters, bench, and explicit flex players based on roster structure
+        and projected points. This is used for reward calculation.
+        Returns: (starters_dict, all_non_starters_list, flex_players_list)
         """
         starters = defaultdict(list) # {'QB': [player1], 'RB': [player2, player3], ...}
-        bench_players_list = [] # List of players on the bench (includes those that could be flex)
-        flex_players_list = [] # Players specifically filling flex spots
+        temp_flex_candidates = [] # Players that could potentially fill a FLEX spot
+        other_bench_players = [] # Players that go straight to the bench
 
         # Sort players by projected points (descending) for optimal placement
         sorted_players = sorted(team_roster, key=lambda p: p.projected_points, reverse=True)
 
         temp_pos_counts = defaultdict(int) # Tracks players in specific position slots (QB, RB, WR, TE)
-        current_flex_fill = 0 # Tracks players filling FLEX slots
-
+        
+        # First pass: Fill all direct starter spots
         for player in sorted_players:
             pos = player.position
-            
-            # 1. Try to fill a primary starting spot
             if temp_pos_counts[pos] < roster_structure.get(pos, 0):
                 starters[pos].append(player)
                 temp_pos_counts[pos] += 1
-            # 2. Try to fill a FLEX spot (only for RB/WR/TE)
-            elif pos in ['RB', 'WR', 'TE'] and current_flex_fill < roster_structure.get('FLEX', 0):
+            elif pos in ['RB', 'WR', 'TE']: # These can be flex or bench
+                temp_flex_candidates.append(player)
+            else: # QB, TE (if not filling starter and not flex eligible) or too many of any pos
+                other_bench_players.append(player)
+
+        # Second pass: Fill FLEX spots from the best available flex_candidates
+        flex_players_list = []
+        current_flex_fill = 0
+        
+        # Sort flex candidates by projected points to pick the best ones for FLEX
+        temp_flex_candidates.sort(key=lambda p: p.projected_points, reverse=True)
+
+        for player in temp_flex_candidates:
+            if current_flex_fill < roster_structure.get('FLEX', 0):
                 flex_players_list.append(player)
                 current_flex_fill += 1
-            # 3. Otherwise, the player goes to the bench
             else:
-                bench_players_list.append(player)
+                other_bench_players.append(player) # If not used for flex, move to general bench
 
-        # The total bench will include players not filling primary starters or explicit flex spots.
-        # It's cleaner to combine the non-starter players for the bench weight.
-        # For calculation of `bench_points`, we just need total points not in starters.
-        # The `calculate_roster_scores` function in simulate.py handles this correctly.
-        
-        # Here, `bench_players_list` contains players explicitly designated as bench,
-        # and `flex_players_list` contains players explicitly filling flex.
-        # For weighting, it's simplest to say: if it's not a starter, it's "bench" in terms of weight.
-        all_starters = [p for pos_list in starters.values() for p in pos_list]
-        all_non_starters = [p for p in team_roster if p not in all_starters]
+        # Finally, remaining direct bench players from first pass go to all_non_starters
+        # And any remaining flex candidates that didn't fit into a flex spot.
+        all_non_starters_list = other_bench_players + [p for p in temp_flex_candidates if p not in flex_players_list]
 
-        return starters, all_non_starters, flex_players_list # Return starters dict, all non-starters list, and explicit flex list
+        # Ensure all players are accounted for (for debugging)
+        # assert len(team_roster) == sum(len(lst) for lst in starters.values()) + len(all_non_starters_list)
+
+        return starters, all_non_starters_list, flex_players_list
+
 
     def _generate_snake_draft_order(self, num_teams, total_picks_per_team):
         """Generates a snake draft order for all picks."""
@@ -583,9 +689,6 @@ class FantasyFootballDraftEnv(gym.Env):
             team_id, self.config.DEFAULT_OPPONENT_STRATEGY
         )
         logic = opponent_strategy['logic']
-        randomness_factor = opponent_strategy['randomness_factor']
-        suboptimal_strategy = opponent_strategy['suboptimal_strategy']
-        positional_priority = opponent_strategy['positional_priority'] # Used for HEURISTIC logic
 
         # Define positions that our environment and roster structure can handle.
         handled_positions = set(self.config.ROSTER_STRUCTURE.keys()) - {'FLEX'}
@@ -598,6 +701,7 @@ class FantasyFootballDraftEnv(gym.Env):
                                       if self.player_map[pid].position in all_draftable_positions]
 
         # Filter these further to only include players that the current team can actually draft
+        # (i.e., they have a roster spot for that position or FLEX)
         eligible_players_for_pick = []
         for player in available_players_filtered:
             if self._can_team_draft_position(team_id, player.position):
@@ -609,83 +713,122 @@ class FantasyFootballDraftEnv(gym.Env):
         # --- Determine the pick based on opponent's strategy ---
         chosen_player = None
 
-        if logic == 'RANDOM':
+        if logic == 'AGENT_MODEL':
+            # Use a trained agent model for this opponent
+            if team_id in self.opponent_models:
+                opponent_model = self.opponent_models[team_id]
+                # Get the state from the perspective of this opponent team
+                # Temporarily set agent_team_id to this opponent's team_id to get its state features
+                original_agent_team_id = self.agent_team_id
+                self.agent_team_id = team_id
+                opponent_state = self._get_state()
+                # Get the action mask for this opponent team
+                opponent_action_mask = self.get_action_mask()
+                # Restore agent_team_id
+                self.agent_team_id = original_agent_team_id
+
+                state_tensor = torch.from_numpy(opponent_state).float().unsqueeze(0)
+                with torch.no_grad():
+                    # Opponent models should also respect action masking
+                    action_probs = opponent_model.get_action_probabilities(state_tensor, action_mask=opponent_action_mask)
+                    action_chosen = torch.argmax(action_probs).item() # Greedy pick for opponent agents
+
+                selected_position_by_opponent = self.action_to_position[action_chosen]
+                
+                # Attempt to pick the player chosen by the opponent agent
+                is_valid_pick_by_opponent, drafted_player_obj = self._try_select_player_for_team(
+                    team_id, selected_position_by_opponent, self.available_players_ids
+                )
+                if is_valid_pick_by_opponent:
+                    chosen_player = drafted_player_obj
+                else:
+                    # If the opponent model made an invalid pick (which should be rare with masking)
+                    # or there's an unforeseen edge case, fall back to a simple strategy.
+                    print(f"Warning: Opponent Team {team_id} (AGENT_MODEL) tried an invalid pick ({selected_position_by_opponent}). Falling back to ADP.")
+                    sorted_by_adp = sorted(eligible_players_for_pick, key=lambda p: p.adp)
+                    chosen_player = sorted_by_adp[0] if sorted_by_adp else None
+            else:
+                print(f"Warning: AGENT_MODEL requested for Team {team_id} but no model loaded. Falling back to DEFAULT_OPPONENT_STRATEGY.")
+                # Update strategy to prevent repeated warnings in this episode
+                self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
+                # Fallback to default heuristic for this turn
+                logic = self.config.DEFAULT_OPPONENT_STRATEGY['logic']
+                randomness_factor = self.config.DEFAULT_OPPONENT_STRATEGY['randomness_factor']
+                suboptimal_strategy = self.config.DEFAULT_OPPONENT_STRATEGY['suboptimal_strategy']
+                positional_priority = self.config.DEFAULT_OPPONENT_STRATEGY['positional_priority'] # Used for HEURISTIC logic
+                # Now proceed with the non-AGENT_MODEL logic as a fallback below
+
+        elif logic == 'RANDOM':
             # 'RANDOM' logic directly picks a random eligible player
             chosen_player = random.choice(eligible_players_for_pick)
-        else:
-            # Determine the "best" pick based on the configured logic (ADP or HEURISTIC)
+        elif logic == 'ADP' or logic == 'HEURISTIC':
+            # Determine the "best" pick based on the configured logic
             best_pick_by_logic = None
             if logic == 'ADP':
-                # Sort by ADP (ascending)
                 sorted_by_logic = sorted(eligible_players_for_pick, key=lambda p: p.adp)
                 best_pick_by_logic = sorted_by_logic[0] if sorted_by_logic else None
             elif logic == 'HEURISTIC':
                 # Heuristic: Prioritize by position need and then projected points, using custom priority
+                positional_priority = opponent_strategy['positional_priority'] # Ensure we use specific opponent's priority
                 
-                # Helper to get best player for a position among eligible
                 def get_best_for_pos_heuristic(pos_list: List[str]):
                     for pos in pos_list:
-                        # Check starting spots for that position first
                         if roster_counts[pos] < self.config.ROSTER_STRUCTURE.get(pos, 0): 
                             eligible = [p for p in eligible_players_for_pick if p.position == pos]
                             if eligible: return sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
                     return None
 
-                # 1. Attempt to fill core starting spots based on positional_priority
                 best_pick_by_logic = get_best_for_pos_heuristic(positional_priority)
                 
-                if not best_pick_by_logic: # If no starter spot filled, try bench
-                    # Use positional_priority for bench as well, but check against total max
+                if not best_pick_by_logic: 
                     for pos in positional_priority: 
                         max_pos_count_total = self.config.ROSTER_STRUCTURE.get(pos, 0) + self.config.BENCH_MAXES.get(pos, 0)
                         if roster_counts[pos] < max_pos_count_total:
                             eligible = [p for p in eligible_players_for_pick if p.position == pos]
                             if eligible:
                                 best_pick_by_logic = sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
-                                if best_pick_by_logic: break # Found a bench player
+                                if best_pick_by_logic: break 
                 
-                if not best_pick_by_logic: # If no bench spot filled, try FLEX
+                if not best_pick_by_logic:
                     if roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE['FLEX']:
                          eligible_flex_players = [p for p in eligible_players_for_pick if p.position in ['RB', 'WR', 'TE']]
                          if eligible_flex_players:
                              best_pick_by_logic = sorted(eligible_flex_players, key=lambda p: p.projected_points, reverse=True)[0]
             
-            else:
-                print(f"Warning: Unknown competing team logic: {logic}. Falling back to ADP.")
-                sorted_by_logic = sorted(eligible_players_for_pick, key=lambda p: p.adp)
-                best_pick_by_logic = sorted_by_logic[0] if sorted_by_logic else None
-
             if not best_pick_by_logic:
-                return None # Should not happen if eligible_players_for_pick was not empty and logic is sound
+                return None 
 
-            # Apply randomness if not a 'RANDOM' logic
+            randomness_factor = opponent_strategy['randomness_factor'] # Ensure we use specific opponent's randomness
+            suboptimal_strategy = opponent_strategy['suboptimal_strategy'] # Ensure we use specific opponent's suboptimal strategy
+
+            # Apply randomness
             if random.random() < randomness_factor:
-                # Make a suboptimal pick
                 if suboptimal_strategy == 'RANDOM_ELIGIBLE':
                     chosen_player = random.choice(eligible_players_for_pick)
                 elif suboptimal_strategy == 'NEXT_BEST_ADP':
-                    # Exclude the very best ADP player, then pick the next best
                     temp_list = sorted(eligible_players_for_pick, key=lambda p: p.adp)
                     if len(temp_list) > 1:
-                        chosen_player = temp_list[1] # Return the second best ADP player
+                        chosen_player = temp_list[1]
                     else:
-                        chosen_player = temp_list[0] # Fallback to best if only one option
+                        chosen_player = temp_list[0]
                 elif suboptimal_strategy == 'NEXT_BEST_HEURISTIC':
-                    # This is a simplification: pick a random other eligible player.
                     if len(eligible_players_for_pick) > 1:
                         other_eligible = [p for p in eligible_players_for_pick if p != best_pick_by_logic]
                         if other_eligible:
                             chosen_player = random.choice(other_eligible)
                         else:
-                            chosen_player = best_pick_by_logic # Fallback if no other distinct options
+                            chosen_player = best_pick_by_logic
                     else:
-                        chosen_player = best_pick_by_logic # Fallback if only one option
+                        chosen_player = best_pick_by_logic
                 else:
                     print(f"Warning: Unknown suboptimal pick strategy: {suboptimal_strategy}. Falling back to best pick.")
                     chosen_player = best_pick_by_logic
             else:
-                # Make the optimal pick based on the configured logic
                 chosen_player = best_pick_by_logic
+        else: # For safety, if logic is somehow neither defined nor AGENT_MODEL, fallback to ADP
+            print(f"Warning: Unknown competing team logic: {logic}. Falling back to ADP.")
+            sorted_by_adp = sorted(eligible_players_for_pick, key=lambda p: p.adp)
+            chosen_player = sorted_by_adp[0] if sorted_by_adp else None
 
         return chosen_player
 

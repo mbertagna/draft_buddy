@@ -50,37 +50,44 @@ class Config:
         },
         2: { # Example: A more heuristic team that likes QBs early
             'logic': 'HEURISTIC',
-            'randomness_factor': 0.2, # Very deterministic
-            'suboptimal_strategy': 'NEXT_BEST_HEURISTIC', # N/A if randomness is 0
+            'randomness_factor': 0.2,
+            'suboptimal_strategy': 'NEXT_BEST_HEURISTIC',
             'positional_priority': ['QB', 'RB', 'WR', 'TE']
         },
         3: { # Example: A very random team (might pick odd positions early)
-            'logic': 'RANDOM', # New 'RANDOM' logic that picks any eligible player
+            'logic': 'RANDOM',
             'randomness_factor': 0.5,
             'suboptimal_strategy': 'RANDOM_ELIGIBLE',
-            'positional_priority': ['RB', 'WR', 'QB', 'TE'] # Irrelevant for 'RANDOM' logic but kept for consistency
+            'positional_priority': ['RB', 'WR', 'QB', 'TE']
         },
-        4: { # Example: A team that prioritizes ADP with some randomness, and focuses on RB/WR first
+        4: { # Example: Another ADP team with higher randomness
             'logic': 'ADP',
             'randomness_factor': 0.3,
             'suboptimal_strategy': 'NEXT_BEST_ADP',
-            'positional_priority': ['WR', 'RB', 'QB', 'TE'] # Custom priority for heuristic logic
-        },
-        5: { # Example: A more heuristic team that likes QBs early
-            'logic': 'HEURISTIC',
-            'randomness_factor': 0.2, # Very deterministic
-            'suboptimal_strategy': 'NEXT_BEST_HEURISTIC', # N/A if randomness is 0
             'positional_priority': ['WR', 'RB', 'QB', 'TE']
         },
-        6: { # Example: A very random team (might pick odd positions early)
-            'logic': 'RANDOM', # New 'RANDOM' logic that picks any eligible player
+        5: { # Example: A heuristic team prioritizing WR/RB
+            'logic': 'HEURISTIC',
+            'randomness_factor': 0.1,
+            'suboptimal_strategy': 'NEXT_BEST_HEURISTIC',
+            'positional_priority': ['WR', 'RB', 'QB', 'TE']
+        },
+        6: { # Example: A random team with high randomness
+            'logic': 'RANDOM',
             'randomness_factor': 0.7,
             'suboptimal_strategy': 'RANDOM_ELIGIBLE',
-            'positional_priority': ['WR', 'RB', 'QB', 'TE'] # Irrelevant for 'RANDOM' logic but kept for consistency
+            'positional_priority': ['WR', 'RB', 'QB', 'TE']
         },
-        # Add more teams here, e.g., teams 4-9
-        # 4: {'logic': 'HEURISTIC', 'randomness_factor': 0.3, 'suboptimal_strategy': 'RANDOM_ELIGIBLE', 'positional_priority': ['WR', 'RB', 'TE', 'QB']},
-        # etc.
+        7: { # Example: An opponent using a trained agent model
+            'logic': 'AGENT_MODEL', # New logic for using a trained model
+            'model_path_key': 'opponent_model_1', # Key to look up in OPPONENT_MODEL_PATHS
+            # randomness_factor, suboptimal_strategy, positional_priority irrelevant here
+        },
+        8: { # Example: Another opponent using a different trained agent model
+            'logic': 'AGENT_MODEL',
+            'model_path_key': 'opponent_model_2',
+        },
+        # You can add more AGENT_MODEL opponents as needed
     }
 
     # Default strategy for any opponent team not explicitly defined in OPPONENT_TEAM_STRATEGIES
@@ -88,20 +95,27 @@ class Config:
         'logic': 'HEURISTIC',
         'randomness_factor': 0.2,
         'suboptimal_strategy': 'NEXT_BEST_ADP',
-        'positional_priority': ['RB', 'WR', 'QB', 'TE'] # Default human-like priority
+        'positional_priority': ['RB', 'WR', 'QB', 'TE']
+    }
+
+    # New: Paths to trained opponent models
+    # Each key should match a 'model_path_key' in OPPONENT_TEAM_STRATEGIES
+    OPPONENT_MODEL_PATHS = {
+        # IMPORTANT: Replace these with actual paths to your trained .pth files
+        'opponent_model_1': os.path.join(MODELS_DIR, "reinforce_policy_model_20250611_194128.pth"),
+        'opponent_model_2': os.path.join(MODELS_DIR, "reinforce_policy_model_20250612_010014.pth"), # Example
+        # Add more if you have more agent opponents
     }
 
 
     # --- Data Preprocessing Parameters ---
     # Configuration for mock ADP generation if 'adp' column is missing
     MOCK_ADP_CONFIG = {
-        'enabled': True, # Set to False if you want an error when adp is missing
+        'enabled': True,
         'weights': {
-            'projected_points': 1.0, # Higher weight means higher points => lower ADP
-            # Add other attributes here if available in CSV and you want to use them
-            # 'percentage_on_field': 0.5,
+            'projected_points': 1.0,
         },
-        'sort_order_ascending': False # True for lower values = lower ADP (e.g., age), False for higher values = lower ADP (e.g., points)
+        'sort_order_ascending': False
     }
 
     # --- Reinforcement Learning Parameters ---
@@ -110,7 +124,6 @@ class Config:
     DISCOUNT_FACTOR = 0.99 # Gamma
 
     # --- State Space Parameters ---
-    # A list of all potential state features. The env will use enabled_state_features.
     ALL_STATE_FEATURES = [
         "best_available_qb_points",
         "best_available_rb_points",
@@ -131,7 +144,6 @@ class Config:
         "te_available_flag",
         "current_pick_number",
         "agent_start_position",
-        # New features
         "second_best_available_qb_points",
         "second_best_available_rb_points",
         "second_best_available_wr_points",
@@ -141,12 +153,11 @@ class Config:
         "next_pick_opponent_wr_count",
         "next_pick_opponent_te_count",
     ]
-    # Select which features to enable for the agent's state vector
     ENABLED_STATE_FEATURES = [
         "best_available_qb_points",
         "best_available_rb_points",
         "best_available_wr_points",
-        "best_available_te_points",
+        "best_available_te_points", # Keep TE in here to make sure this is complete
         "current_roster_qb_count",
         "current_roster_rb_count",
         "current_roster_wr_count",
@@ -162,20 +173,23 @@ class Config:
         "te_available_flag",
         "current_pick_number",
         "agent_start_position",
+        "second_best_available_qb_points", # Adding this back for completeness in state features
         "second_best_available_rb_points",
         "second_best_available_wr_points",
+        "second_best_available_te_points", # Adding this back for completeness in state features
+        "next_pick_opponent_qb_count", # Adding this back for completeness in state features
         "next_pick_opponent_rb_count",
         "next_pick_opponent_wr_count",
+        "next_pick_opponent_te_count", # Adding this back for completeness in state features
     ]
-    # State normalization method
-    STATE_NORMALIZATION_METHOD = 'min_max' # Options: 'min_max', 'z_score', 'none'
+    STATE_NORMALIZATION_METHOD = 'min_max'
 
     # --- Action Masking Parameter ---
-    ENABLE_ACTION_MASKING = True # Set to True to enable action masking
+    ENABLE_ACTION_MASKING = True
 
     # --- Reward Function Parameters ---
     INVALID_ACTION_PENALTIES = {
-    'already_drafted': -100, # Much smaller penalty
+    'already_drafted': -100,
     'roster_full_QB': -50,
     'roster_full_RB': -40,
     'roster_full_WR': -40,
@@ -183,33 +197,31 @@ class Config:
     'no_players_available': -100,
     'default_invalid': -50
     }
-    # Flag to enable/disable invalid action penalties
     ENABLE_INVALID_ACTION_PENALTIES = False
 
-    ENABLE_INTERMEDIATE_REWARD = False # True for small reward for valid picks
-    INTERMEDIATE_REWARD_MODE = 'PROPORTIONAL' # 'STATIC' or 'PROPORTIONAL'
-    INTERMEDIATE_REWARD_VALUE = 30 # Static reward for each successful valid pick if enabled and mode is 'STATIC'
-    PROPORTIONAL_REWARD_SCALING_FACTOR = 1 # Multiplier for projected points when mode is 'PROPORTIONAL'
+    ENABLE_INTERMEDIATE_REWARD = False
+    INTERMEDIATE_REWARD_MODE = 'PROPORTIONAL'
+    INTERMEDIATE_REWARD_VALUE = 30
+    PROPORTIONAL_REWARD_SCALING_FACTOR = 1
 
-    # New: Reward weighting for starter vs. bench points
-    ENABLE_ROSTER_SLOT_WEIGHTED_REWARD = True # Set to True to prioritize starter points
-    STARTER_POINTS_WEIGHT = 1 # Multiplier for points from players in starting lineup slots
-    BENCH_POINTS_WEIGHT = 0.25  # Multiplier for points from players on the bench (can include FLEX after starters filled)
+    ENABLE_ROSTER_SLOT_WEIGHTED_REWARD = True
+    STARTER_POINTS_WEIGHT = 1
+    BENCH_POINTS_WEIGHT = 0.25
 
-
-    # Bonus for successfully drafting an entire team
-    BONUS_FOR_FULL_ROSTER = 200
+    BONUS_FOR_FULL_ROSTER = 0
 
     # --- Neural Network Architecture ---
     HIDDEN_DIM = 64
 
     # --- Simulation and Evaluation Parameters ---
-    # Path to a trained model (.pth file) to load for simulation/evaluation
-    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "reinforce_policy_model_20250611_164225.pth") # REPLACE with your actual model path
-    NUM_SIMULATION_RUNS = 5 # How many times to run the draft simulation
+    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "reinforce_policy_model_20250615_055153.pth")
+    NUM_SIMULATION_RUNS = 10
 
-    # You might want to temporarily override some env settings for simulation if different from training
-    # SIM_COMPETING_TEAM_LOGIC = 'ADP' # For example, always test against ADP opponents
-    # SIM_AGENT_START_POSITION = 7 # Test a specific draft position
+    # New: Competitive Reward Parameters
+    ENABLE_COMPETITIVE_REWARD = False # Master switch for competitive rewards
+    COMPETITIVE_REWARD_MODE = 'MAX_OPPONENT_DIFFERENCE' # Options: 'NONE', 'MAX_OPPONENT_DIFFERENCE', 'AVG_OPPONENT_DIFFERENCE'
 
-# You can access configuration like: `Config.TOTAL_EPISODES`
+    # Option to add a penalty for high standard deviation among opponents
+    ENABLE_OPPONENT_STD_DEV_PENALTY = False # If True, will apply a penalty based on opponent score std dev
+    OPPONENT_STD_DEV_PENALTY_WEIGHT = 0.05 # A positive value to penalize high std dev (adjust as needed!)
+                                            # Using a smaller value here as a starting point.
