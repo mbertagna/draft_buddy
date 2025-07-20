@@ -18,9 +18,10 @@ class FantasyFootballDraftEnv(gym.Env):
     """
     metadata = {'render_modes': ['human'], 'render_fps': 4}
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, training: bool = False):
         super(FantasyFootballDraftEnv, self).__init__()
         self.config = config
+        self.training = training
         self.manual_draft_teams = set(config.MANUAL_DRAFT_TEAMS) # Teams controlled by the user
 
         # --- Load Players Data ---
@@ -190,13 +191,44 @@ class FantasyFootballDraftEnv(gym.Env):
         # Generate draft order (snake draft)
         self.draft_order = self._generate_snake_draft_order(self.config.NUM_TEAMS, self.total_roster_size_per_team)
 
+        # If in training mode, simulate opponent picks until it's the agent's turn
+        if self.training:
+            while self.current_pick_idx < len(self.draft_order) and \
+                  self.draft_order[self.current_pick_idx] != self.agent_team_id:
+
+                current_sim_team_id = self.draft_order[self.current_pick_idx]
+                sim_drafted_player = self._simulate_competing_pick(current_sim_team_id)
+
+                if sim_drafted_player:
+                    self.teams_rosters[current_sim_team_id]['PLAYERS'].append(sim_drafted_player)
+                    self.available_players_ids.remove(sim_drafted_player.player_id)
+                    self._update_roster_counts(current_sim_team_id, sim_drafted_player)
+                    # Record the simulated pick in history, marking it as not manual
+                    self._draft_history.append({
+                        'player_id': sim_drafted_player.player_id,
+                        'team_id': current_sim_team_id,
+                        'is_manual_pick': False,
+                        'previous_pick_idx': self.current_pick_idx, # Store state before this sim pick
+                        'previous_pick_number': self.current_pick_number,
+                        'previous_overridden_team_id': None, # Sim picks don't have overrides
+                        'was_override': False
+                    })
+                else:
+                    if not self.available_players_ids:
+                        print(f"[{self.current_pick_number}] No players left in pool. Ending draft early during reset advance.")
+                        break 
+                    print(f"[{self.current_pick_number}] Warning: Competing team {current_sim_team_id} could not make a valid pick.")
+
+
+                self.current_pick_idx += 1
+                self.current_pick_number += 1
+
         observation = self._get_state()
         info = self._get_info() 
         
         # If the draft ended before the agent even got its first pick (e.g., very late draft position in a short draft)
         if self.current_pick_idx >= len(self.draft_order) and len(self.teams_rosters[self.agent_team_id]['PLAYERS']) == 0:
             info['episode_ended_before_agent_first_pick'] = True
-            # The agent will get a 0 reward for this episode if it couldn't make any picks.
 
         # Add the action mask to info
         info['action_mask'] = self.get_action_mask()

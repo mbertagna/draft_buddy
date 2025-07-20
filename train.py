@@ -26,7 +26,7 @@ def main():
 
     # 2. Initialize Environment
     print("\nInitializing Fantasy Football Draft Environment...")
-    env = FantasyFootballDraftEnv(config)
+    env = FantasyFootballDraftEnv(config, training=True)
     print(f"Observation Space Dimension: {env.observation_space_dim}")
     print(f"Action Space: {env.action_space.n} actions ({env.action_to_position})")
 
