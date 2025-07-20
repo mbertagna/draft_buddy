@@ -18,7 +18,19 @@ class Config:
 
     # --- Draft Environment Parameters ---
     NUM_TEAMS = 10
-    AGENT_START_POSITION = 10 # Our agent's pick order (1-indexed)
+    AGENT_START_POSITION = 10 # Our agent's pick order (1-indexed) - used for RL training
+    MANUAL_DRAFT_TEAMS = [
+                        # 1, 
+                        # 2, 
+                        # 3, 
+                        # 4, 
+                        # 5, 
+                        # 6, 
+                        # 7, 
+                        # 8, 
+                        # 9, 
+                        10,
+                        ] # List of team IDs (1-indexed) that will be controlled manually by the user
     ROSTER_STRUCTURE = {
         'QB': 1,
         'RB': 2,
@@ -119,7 +131,7 @@ class Config:
     }
 
     # --- Reinforcement Learning Parameters ---
-    TOTAL_EPISODES = 3000
+    TOTAL_EPISODES = 1000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
 

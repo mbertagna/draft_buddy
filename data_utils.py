@@ -13,6 +13,15 @@ class Player:
     projected_points: float
     adp: float = field(default=np.inf) # Default to infinity if no ADP
 
+    def to_dict(self):
+        return {
+            'player_id': self.player_id,
+            'name': self.name,
+            'position': self.position,
+            'projected_points': self.projected_points,
+            'adp': self.adp if np.isfinite(self.adp) else None
+        }
+
 def _generate_mock_adp(players: List[Player], adp_config: Dict) -> List[Player]:
     """
     Generates mock ADP for players based on configurable weighted attributes.

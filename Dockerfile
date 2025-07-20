@@ -9,11 +9,11 @@ WORKDIR /app
 # For now, minimal additions. If you encounter errors later related to
 # dependencies like 'blas', 'lapack', etc., you might need to add:
 # RUN apt-get update && apt-get install -y --no-install-recommends \
-#     build-essential \
-#     libblas-dev \
-#     liblapack-dev \
-#     gfortran \
-#     && rm -rf /var/lib/apt/lists/*
+#      build-essential \
+#      libblas-dev \
+#      liblapack-dev \
+#      gfortran \
+#      && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file into the container
 COPY requirements.txt .
@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of your application code into the container
 # This copies the entire 'your_project' content into '/app'
+# This now includes app.py and the frontend/ directory
 COPY . .
 
 # Create the data, models, and logs directories if they don't exist
@@ -32,6 +33,9 @@ RUN mkdir -p data models logs
 
 # Define environment variables (optional, but good practice)
 ENV PYTHONUNBUFFERED 1
+
+# Expose the port Flask will run on
+EXPOSE 5000
 
 # Command to run your application
 # This is a placeholder. The 'run.sh' script will typically override this

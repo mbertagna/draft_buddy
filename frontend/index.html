@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAFT BUDDY</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; background-color: #f4f4f9; display: flex; flex-direction: column; height: 100vh; }
+        header { background-color: #4CAF50; color: white; padding: 1rem; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { margin: 0; }
+        main { display: flex; flex: 1; overflow: hidden; padding: 1rem; }
+        #left-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-right: 1rem; }
+        #right-panel { flex: 2; overflow-y: auto; padding-left: 1rem; }
+        #controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        #player-list { border-collapse: collapse; width: 100%; }
+        #player-list th, #player-list td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        #player-list th { background-color: #4CAF50; color: white; }
+        #player-list tbody tr:nth-child(even) { background-color: #f2f2f2; }
+        #player-list tbody tr:hover { background-color: #ddd; cursor: pointer; }
+        #backend-status { font-weight: bold; }
+        #player-search { padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px; }
+        .position-filters label { margin-right: 10px; }
+        #new-draft-btn { padding: 8px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .roster-card { border: 1px solid #ccc; border-radius: 4px; padding: 10px; margin-bottom: 10px; background-color: white; }
+        .roster-card h4 { margin-top: 0; }
+        .roster-card ul { list-style-type: none; padding: 0; }
+        .roster-card li { font-size: 0.9rem; }
+        #draft-summary { margin-bottom: 1rem; }
+        .team-button { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; background-color: #007bff; color: white; }
+        .team-button.active { background-color: #28a745; }
+        .team-button.manual { background-color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>DRAFT BUDDY Dashboard</h1>
+        <p>Backend Status: <span id="backend-status">Loading...</span></p>
+    </header>
+
+    <main>
+        <div id="left-panel">
+            <div id="draft-summary">
+                <h3>Draft Summary</h3>
+                <p>Total Picks: <span id="total-picks-display">N/A</span></p>
+                <p>QBs Drafted: <span id="qb-drafted-display">N/A</span></p>
+                <p>RBs Drafted: <span id="rb-drafted-display">N/A</span></p>
+                <p>WRs Drafted: <span id="wr-drafted-display">N/A</span></p>
+                <p>TEs Drafted: <span id="te-drafted-display">N/A</span></p>
+            </div>
+
+            <div id="draft-control-panel" style="margin-bottom: 1rem; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: white;">
+                <h3>Draft Control</h3>
+                <p>Current Pick: <span id="current-pick-display">N/A</span></p>
+                <p>Team On The Clock: <span id="team-on-clock-display">N/A</span></p>
+                <p>AI Suggestion: <span id="ai-suggestion-display" style="font-weight: bold; color: #28a745;">N/A</span></p>
+                <div id="team-buttons" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;">
+                    <!-- Team buttons will be inserted here by JS -->
+                </div>
+                <button id="undo-pick-btn" style="padding: 8px 12px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">Undo Last Pick</button>
+                <button id="simulate-pick-btn" style="padding: 8px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Simulate Pick</button>
+                <button id="download-csv-btn" style="padding: 8px 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Download as CSV</button>
+            </div>
+            <div id="team-rosters">
+                <!-- Team rosters will be inserted here -->
+            </div>
+        </div>
+        <div id="right-panel">
+            <div id="controls">
+                <input type="text" id="player-search" placeholder="Search by name...">
+                <div class="position-filters">
+                    <label><input type="checkbox" name="position" value="QB"> QB</label>
+                    <label><input type="checkbox" name="position" value="RB"> RB</label>
+                    <label><input type="checkbox" name="position" value="WR"> WR</label>
+                    <label><input type="checkbox" name="position" value="TE"> TE</label>
+                </div>
+                <button id="new-draft-btn">Start New Draft</button>
+            </div>
+            <table id="player-list">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Position</th>
+                        <th>Proj. Pts</th>
+                        <th>ADP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Player rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        const playerSearch = document.getElementById('player-search');
+        const positionCheckboxes = document.querySelectorAll('input[name="position"]');
+        const playerTbody = document.querySelector('#player-list tbody');
+        const backendStatus = document.getElementById('backend-status');
+        const newDraftBtn = document.getElementById('new-draft-btn');
+        const draftSummaryDiv = document.getElementById('draft-summary');
+        const teamRostersDiv = document.getElementById('team-rosters');
+        const teamButtonsDiv = document.getElementById('team-buttons');
+        const currentPickDisplay = document.getElementById('current-pick-display');
+        const teamOnClockDisplay = document.getElementById('team-on-clock-display');
+        const aiSuggestionDisplay = document.getElementById('ai-suggestion-display');
+        const totalPicksDisplay = document.getElementById('total-picks-display');
+        const qbDraftedDisplay = document.getElementById('qb-drafted-display');
+        const rbDraftedDisplay = document.getElementById('rb-drafted-display');
+        const wrDraftedDisplay = document.getElementById('wr-drafted-display');
+        const teDraftedDisplay = document.getElementById('te-drafted-display');
+        const undoPickBtn = document.getElementById('undo-pick-btn');
+        const simulatePickBtn = document.getElementById('simulate-pick-btn');
+        const downloadCsvBtn = document.getElementById('download-csv-btn');
+
+        let currentDraftState = null;
+
+        const fetchPlayers = async () => {
+            const searchInput = playerSearch.value;
+            const selectedPositions = Array.from(positionCheckboxes)
+                                           .filter(i => i.checked)
+                                           .map(i => i.value);
+
+            const params = new URLSearchParams();
+            if (searchInput) params.append('search', searchInput);
+            if (selectedPositions.length) params.append('position', selectedPositions.join(','));
+
+            try {
+                const response = await fetch(`/api/players?${params.toString()}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const players = await response.json();
+                renderPlayers(players);
+            } catch (error) {
+                console.error('Error fetching players:', error);
+                playerTbody.innerHTML = `<tr><td colspan="5" style="color: red;">Error loading players: ${error.message}</td></tr>`;
+            }
+        };
+
+        const renderPlayers = (players) => {
+            playerTbody.innerHTML = ''; // Clear existing rows
+            if (players.length === 0) {
+                const row = playerTbody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 5;
+                cell.innerText = 'No players found with current filters.';
+                return;
+            }
+
+            players.forEach(player => {
+                const row = playerTbody.insertRow();
+                row.dataset.playerId = player.player_id;
+                row.insertCell().innerText = player.player_id;
+                row.insertCell().innerText = player.name;
+                row.insertCell().innerText = player.position;
+                row.insertCell().innerText = player.projected_points.toFixed(1);
+                row.insertCell().innerText = player.adp ? player.adp.toFixed(1) : 'N/A';
+
+                row.addEventListener('click', () => draftPlayer(player.player_id));
+            });
+        };
+
+        const checkBackendStatus = async () => {
+            try {
+                const response = await fetch('/api/hello');
+                const data = await response.json();
+                backendStatus.innerText = data.message;
+                backendStatus.style.color = 'lightgreen';
+            } catch (error) {
+                backendStatus.innerText = 'Error connecting to backend.';
+                backendStatus.style.color = 'red';
+                console.error('Error fetching from backend:', error);
+            }
+        };
+
+        // Event Listeners
+        playerSearch.addEventListener('keyup', fetchPlayers);
+        positionCheckboxes.forEach(checkbox => checkbox.addEventListener('change', fetchPlayers));
+        newDraftBtn.addEventListener('click', startNewDraft);
+        undoPickBtn.addEventListener('click', undoLastPick);
+        simulatePickBtn.addEventListener('click', simulateNextPick);
+        downloadCsvBtn.addEventListener('click', downloadCsv);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkBackendStatus();
+            fetchPlayers();
+        });
+
+        async function startNewDraft() {
+            try {
+                const response = await fetch('/api/draft/new', { method: 'POST' });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                renderDraftState(data);
+                fetchPlayers(); // Refresh player list
+            } catch (error) {
+                console.error('Error starting new draft:', error);
+                alert(`Error starting new draft: ${error.message}`);
+            }
+        }
+
+        function renderDraftState(state) {
+            currentDraftState = state;
+            currentPickDisplay.innerText = state.current_pick_number;
+            teamOnClockDisplay.innerText = state.current_team_picking;
+
+            // Fetch and display AI suggestion if it's a manual team's turn
+            if (state.manual_draft_teams.includes(state.current_team_picking)) {
+                fetchAiSuggestion();
+            } else {
+                aiSuggestionDisplay.innerText = 'N/A';
+            }
+
+            // Fetch and display draft summary
+            fetchDraftSummary();
+
+            // Render Team Buttons
+            teamButtonsDiv.innerHTML = '';
+            for (let i = 1; i <= 10; i++) { // Assuming 10 teams from config
+                const button = document.createElement('button');
+                button.innerText = `Team ${i}`;
+                button.classList.add('team-button');
+                if (i === state.current_team_picking) {
+                    button.classList.add('active');
+                }
+                if (state.manual_draft_teams.includes(i)) {
+                    button.classList.add('manual');
+                }
+                button.addEventListener('click', () => overrideTeam(i));
+                teamButtonsDiv.appendChild(button);
+            }
+
+            // Render Team Rosters
+            let rostersHTML = '<h3>Team Rosters</h3>';
+            for (let i = 1; i <= 10; i++) { // Assuming 10 teams
+                const teamId = i;
+                const roster = state.team_rosters[teamId] || [];
+                const rosterCounts = state.roster_counts[teamId] || { QB: 0, RB: 0, WR: 0, TE: 0, FLEX: 0 };
+                rostersHTML += `
+                    <div class="roster-card">
+                        <h4>Team ${teamId}</h4>
+                        <p>QB: ${rosterCounts.QB}/1 | RB: ${rosterCounts.RB}/2 | WR: ${rosterCounts.WR}/2 | TE: ${rosterCounts.TE}/1 | FLEX: ${rosterCounts.FLEX}/1</p>
+                        <ul>
+                            ${roster.map(p => `<li>${p.name} (${p.position})</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            teamRostersDiv.innerHTML = rostersHTML;
+        }
+
+        async function fetchAiSuggestion() {
+            try {
+                const response = await fetch('/api/draft/ai_suggestion');
+                const data = await response.json();
+                if (response.ok) {
+                    aiSuggestionDisplay.innerText = data.suggestion || 'N/A';
+                } else {
+                    aiSuggestionDisplay.innerText = 'Error';
+                }
+            } catch (error) {
+                console.error('Error fetching AI suggestion:', error);
+                aiSuggestionDisplay.innerText = 'Error';
+            }
+        }
+
+        async function fetchDraftSummary() {
+            try {
+                const response = await fetch('/api/draft/summary');
+                const data = await response.json();
+                if (response.ok) {
+                    totalPicksDisplay.innerText = data.total_picks;
+                    qbDraftedDisplay.innerText = data.picks_by_position.QB;
+                    rbDraftedDisplay.innerText = data.picks_by_position.RB;
+                    wrDraftedDisplay.innerText = data.picks_by_position.WR;
+                    teDraftedDisplay.innerText = data.picks_by_position.TE;
+                } else {
+                    totalPicksDisplay.innerText = 'Error';
+                }
+            } catch (error) {
+                console.error('Error fetching draft summary:', error);
+                totalPicksDisplay.innerText = 'Error';
+            }
+        }
+
+        async function draftPlayer(playerId) {
+            if (!currentDraftState) {
+                alert("Please start a new draft before selecting a player.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/draft/pick', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ player_id: playerId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                renderDraftState(data);
+                fetchPlayers(); // Refresh player list
+            } catch (error) {
+                console.error('Error drafting player:', error);
+                alert(`Error drafting player: ${error.message}`);
+            }
+        }
+
+        async function undoLastPick() {
+            if (!currentDraftState) {
+                alert("No draft in progress to undo.");
+                return;
+            }
+            try {
+                const response = await fetch('/api/draft/undo', { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }
+                renderDraftState(data);
+                fetchPlayers();
+            } catch (error) {
+                console.error('Error undoing pick:', error);
+                alert(`Error undoing pick: ${error.message}`);
+            }
+        }
+
+        async function overrideTeam(teamId) {
+            if (!currentDraftState) {
+                alert("Please start a new draft first.");
+                return;
+            }
+            try {
+                const response = await fetch('/api/draft/override_team', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ team_id: teamId })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }
+                renderDraftState(data);
+            } catch (error) {
+                console.error('Error overriding team:', error);
+                alert(`Error overriding team: ${error.message}`);
+            }
+        }
+
+        async function simulateNextPick() {
+            if (!currentDraftState) {
+                alert("Please start a new draft first.");
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/draft/simulate_pick', { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }
+                renderDraftState(data);
+                fetchPlayers();
+
+            } catch (error) {
+                console.error('Error simulating pick:', error);
+                alert(`Error simulating pick: ${error.message}`);
+            }
+        }
+
+        function downloadCsv() {
+            window.location.href = '/api/draft/export_csv';
+        }
+    </script>
+</body>
+</html>
