@@ -258,12 +258,13 @@
                 const teamId = i;
                 const roster = state.team_rosters[teamId] || [];
                 const rosterCounts = state.roster_counts[teamId] || { QB: 0, RB: 0, WR: 0, TE: 0, FLEX: 0 };
+                const totalProjectedPoints = state.team_projected_points[teamId] || 0;
                 rostersHTML += `
                     <div class="roster-card">
-                        <h4>Team ${teamId}</h4>
+                        <h4>Team ${teamId} (Projected Pts: ${totalProjectedPoints.toFixed(1)})</h4>
                         <p>QB: ${rosterCounts.QB}/1 | RB: ${rosterCounts.RB}/2 | WR: ${rosterCounts.WR}/2 | TE: ${rosterCounts.TE}/1 | FLEX: ${rosterCounts.FLEX}/1</p>
                         <ul>
-                            ${roster.map(p => `<li>${p.name} (${p.position})</li>`).join('')}
+                            ${roster.map(p => `<li>${p.name} (${p.position}) - ${p.projected_points.toFixed(1)} pts</li>`).join('')}
                         </ul>
                     </div>
                 `;

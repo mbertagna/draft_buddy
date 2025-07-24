@@ -35,6 +35,7 @@ def get_draft_state():
         'current_team_picking': team_on_clock,
         'team_rosters': {team_id: [p.to_dict() for p in roster_data['PLAYERS']] for team_id, roster_data in draft_env.teams_rosters.items()},
         'roster_counts': {team_id: {pos: roster_data[pos] for pos in ['QB', 'RB', 'WR', 'TE', 'FLEX']} for team_id, roster_data in draft_env.teams_rosters.items()},
+        'team_projected_points': {team_id: sum(p.projected_points for p in roster_data['PLAYERS']) for team_id, roster_data in draft_env.teams_rosters.items()},
         'manual_draft_teams': list(draft_env.manual_draft_teams)
     }
 
