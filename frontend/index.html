@@ -6,10 +6,11 @@
     <title>DRAFT BUDDY</title>
     <style>
         body { font-family: sans-serif; margin: 0; background-color: #f4f4f9; display: flex; flex-direction: column; height: 100vh; }
-        header { background-color: #4CAF50; color: white; padding: 1rem; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { margin: 0; }
+        header { background-color: #4CAF50; color: white; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { margin: 0; text-align: center; }
+        #header-controls { display: flex; justify-content: space-around; }
         main { display: flex; flex: 1; overflow: hidden; padding: 1rem; }
-        #left-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-right: 1rem; }
+        #left-panel { flex: 1; overflow-y: auto; padding-right: 1rem; }
         #right-panel { flex: 2; overflow-y: auto; padding-left: 1rem; }
         #controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         #player-list { border-collapse: collapse; width: 100%; }
@@ -25,20 +26,39 @@
         .roster-card h4 { margin-top: 0; }
         .roster-card ul { list-style-type: none; padding: 0; }
         .roster-card li { font-size: 0.9rem; }
-        #draft-summary { margin-bottom: 1rem; }
-        .team-button { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; background-color: #007bff; color: white; }
-        .team-button.active { background-color: #28a745; }
-        .team-button.manual { background-color: #17a2b8; }
+        #draft-summary, #draft-control-panel { margin: 1rem 0; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: white; color: black; }
+        .team-button {
+            padding: 8px 12px;
+            border: 3px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            background-clip: padding-box; 
+        }
+        .team-button.main-team {
+            font-weight: bold;
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.1),
+                rgba(255, 255, 255, 0.1) 10px,
+                rgba(0, 0, 0, 0) 10px,
+                rgba(0, 0, 0, 0) 20px
+            );
+        }
+        .team-button.snake-order-pick {
+            border-color: #ffc107;
+        }
+        .team-button.picking-now {
+            background-color: #28a745;
+        }
     </style>
 </head>
 <body>
     <header>
         <h1>DRAFT BUDDY Dashboard</h1>
         <p>Backend Status: <span id="backend-status">Loading...</span></p>
-    </header>
-
-    <main>
-        <div id="left-panel">
+        <div id="header-controls">
             <div id="draft-summary">
                 <h3>Draft Summary</h3>
                 <p>Total Picks: <span id="total-picks-display">N/A</span></p>
@@ -47,8 +67,7 @@
                 <p>WRs Drafted: <span id="wr-drafted-display">N/A</span></p>
                 <p>TEs Drafted: <span id="te-drafted-display">N/A</span></p>
             </div>
-
-            <div id="draft-control-panel" style="margin-bottom: 1rem; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: white;">
+            <div id="draft-control-panel">
                 <h3>Draft Control</h3>
                 <p>Current Pick: <span id="current-pick-display">N/A</span></p>
                 <p>Team On The Clock: <span id="team-on-clock-display">N/A</span></p>
@@ -60,6 +79,11 @@
                 <button id="simulate-pick-btn" style="padding: 8px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Simulate Pick</button>
                 <button id="download-csv-btn" style="padding: 8px 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Download as CSV</button>
             </div>
+        </div>
+    </header>
+
+    <main>
+        <div id="left-panel">
             <div id="team-rosters">
                 <!-- Team rosters will be inserted here -->
             </div>
@@ -98,7 +122,6 @@
         const playerTbody = document.querySelector('#player-list tbody');
         const backendStatus = document.getElementById('backend-status');
         const newDraftBtn = document.getElementById('new-draft-btn');
-        const draftSummaryDiv = document.getElementById('draft-summary');
         const teamRostersDiv = document.getElementById('team-rosters');
         const teamButtonsDiv = document.getElementById('team-buttons');
         const currentPickDisplay = document.getElementById('current-pick-display');
@@ -114,6 +137,7 @@
         const downloadCsvBtn = document.getElementById('download-csv-btn');
 
         let currentDraftState = null;
+        const MAIN_TEAM_ID = 10; // Define the main team ID
 
         const fetchPlayers = async () => {
             const searchInput = playerSearch.value;
@@ -203,35 +227,41 @@
             currentPickDisplay.innerText = state.current_pick_number;
             teamOnClockDisplay.innerText = state.current_team_picking;
 
-            // Fetch and display AI suggestion if it's a manual team's turn
             if (state.manual_draft_teams.includes(state.current_team_picking)) {
                 fetchAiSuggestion();
             } else {
                 aiSuggestionDisplay.innerText = 'N/A';
             }
 
-            // Fetch and display draft summary
             fetchDraftSummary();
 
-            // Render Team Buttons
             teamButtonsDiv.innerHTML = '';
-            for (let i = 1; i <= 10; i++) { // Assuming 10 teams from config
+            const snakePickTeam = state.draft_order[state.current_pick_number - 1];
+            const teamOnClock = state.current_team_picking;
+
+            for (let i = 1; i <= 10; i++) {
                 const button = document.createElement('button');
                 button.innerText = `Team ${i}`;
                 button.classList.add('team-button');
-                if (i === state.current_team_picking) {
-                    button.classList.add('active');
+
+                if (i === MAIN_TEAM_ID) {
+                    button.classList.add('main-team');
                 }
-                if (state.manual_draft_teams.includes(i)) {
-                    button.classList.add('manual');
+
+                if (i === snakePickTeam) {
+                    button.classList.add('snake-order-pick');
                 }
+
+                if (i === teamOnClock) {
+                    button.classList.add('picking-now');
+                }
+
                 button.addEventListener('click', () => overrideTeam(i));
                 teamButtonsDiv.appendChild(button);
             }
 
-            // Render Team Rosters
             let rostersHTML = '<h3>Team Rosters</h3>';
-            for (let i = 1; i <= 10; i++) { // Assuming 10 teams
+            for (let i = 1; i <= 10; i++) {
                 const teamId = i;
                 const roster = state.team_rosters[teamId] || [];
                 const rosterCounts = state.roster_counts[teamId] || { QB: 0, RB: 0, WR: 0, TE: 0, FLEX: 0 };
@@ -302,7 +332,7 @@
                 }
                 
                 renderDraftState(data);
-                fetchPlayers(); // Refresh player list
+                fetchPlayers();
             } catch (error) {
                 console.error('Error drafting player:', error);
                 alert(`Error drafting player: ${error.message}`);

@@ -99,6 +99,10 @@ class Config:
             'logic': 'AGENT_MODEL',
             'model_path_key': 'opponent_model_2',
         },
+        # 10: { # Example: Another opponent using a different trained agent model
+        #     'logic': 'AGENT_MODEL',
+        #     'model_path_key': 'opponent_model_10',
+        # },
         # You can add more AGENT_MODEL opponents as needed
     }
 
@@ -116,6 +120,7 @@ class Config:
         # IMPORTANT: Replace these with actual paths to your trained .pth files
         'opponent_model_1': os.path.join(MODELS_DIR, "reinforce_policy_model_20250611_194128.pth"),
         'opponent_model_2': os.path.join(MODELS_DIR, "reinforce_policy_model_20250612_010014.pth"), # Example
+        # 'opponent_model_10': os.path.join(MODELS_DIR, "reinforce_policy_model_20250720_224419.pth"),
         # Add more if you have more agent opponents
     }
 
@@ -131,7 +136,7 @@ class Config:
     }
 
     # --- Reinforcement Learning Parameters ---
-    TOTAL_EPISODES = 1000
+    TOTAL_EPISODES = 50000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
 
@@ -226,7 +231,7 @@ class Config:
     HIDDEN_DIM = 64
 
     # --- Simulation and Evaluation Parameters ---
-    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "reinforce_policy_model_20250615_055153.pth")
+    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "reinforce_policy_model_20250721_005818.pth") # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters

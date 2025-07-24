@@ -6,6 +6,7 @@ import math
 import random
 import torch # Import torch for loading models
 from typing import Optional, Dict, List, Tuple
+import os
 
 from config import Config
 from data_utils import load_player_data, Player
@@ -90,6 +91,30 @@ class FantasyFootballDraftEnv(gym.Env):
         # New: Load opponent models
         self.opponent_models: Dict[int, PolicyNetwork] = {}
         self._load_opponent_models()
+        
+        # New: Load agent model for suggestions
+        self.agent_model: Optional[PolicyNetwork] = None
+        self._load_agent_model()
+
+
+    def _load_agent_model(self):
+        """Loads the primary agent model for AI suggestions."""
+        input_dim = len(self.config.ENABLED_STATE_FEATURES)
+        output_dim = self.action_space.n
+        model_path = self.config.MODEL_PATH_TO_LOAD
+
+        if not model_path or not os.path.exists(model_path):
+            print(f"Warning: Agent model for suggestions not found at {model_path}. AI suggestions will be disabled.")
+            return
+
+        try:
+            self.agent_model = PolicyNetwork(input_dim, output_dim, self.config.HIDDEN_DIM)
+            self.agent_model.load_state_dict(torch.load(model_path))
+            self.agent_model.eval()
+            print(f"Successfully loaded agent model for suggestions from {model_path}")
+        except Exception as e:
+            print(f"Error loading agent model for suggestions from {model_path}: {e}")
+            self.agent_model = None
 
 
     def _load_opponent_models(self):
@@ -579,7 +604,7 @@ class FantasyFootballDraftEnv(gym.Env):
                         continue # Skip to next feature
 
             if max_val == min_val:
-                normalized_state.append(0.0)
+                normalized_state.append(0.0);
             else:
                 normalized_state.append((val - min_val) / (max_val - min_val))
         return np.array(normalized_state, dtype=np.float32)
@@ -911,7 +936,7 @@ class FantasyFootballDraftEnv(gym.Env):
         player_removed = False
         for i, p in enumerate(self.teams_rosters[team_id]['PLAYERS']):
             if p.player_id == player_id:
-                self.teams_rosters[team_id]['PLAYERS'].pop(i)
+                self.teams_rosters[team_id]['PLAYERS'].pop(i);
                 player_removed = True
                 break
         
@@ -997,21 +1022,27 @@ class FantasyFootballDraftEnv(gym.Env):
     def get_ai_suggestion(self):
         """Gets the AI's suggested action for the current state."""
         if self.current_pick_idx >= len(self.draft_order):
-            return None
+            return "Draft is over."
 
-        # Temporarily set the agent to the current team on the clock
+        if not self.agent_model:
+            return "AI model not loaded."
+
+        # The team on the clock is the one we want a suggestion for.
+        current_team_on_clock = self.draft_order[self.current_pick_idx]
+
+        # Temporarily set the environment's perspective to the team on the clock
         original_agent_team_id = self.agent_team_id
-        self.agent_team_id = self.draft_order[self.current_pick_idx]
+        self.agent_team_id = current_team_on_clock
         
         state = self._get_state()
         action_mask = self.get_action_mask()
 
-        # Restore the original agent team ID
+        # Restore the original agent team ID perspective
         self.agent_team_id = original_agent_team_id
 
         state_tensor = torch.from_numpy(state).float().unsqueeze(0)
         with torch.no_grad():
-            action_probs = self.opponent_models[self.agent_team_id].get_action_probabilities(state_tensor, action_mask=action_mask)
+            action_probs = self.agent_model.get_action_probabilities(state_tensor, action_mask=action_mask)
             action_chosen = torch.argmax(action_probs).item()
 
         return self.action_to_position[action_chosen]
@@ -1073,3 +1104,61 @@ class FantasyFootballDraftEnv(gym.Env):
         Clean up resources.
         """
         pass
+
+if __name__ == '__main__':
+    # Example of how to use the environment
+    config = Config()
+    env = FantasyFootballDraftEnv(config, training=True)
+    
+    # Reset the environment to get the initial state and info
+    obs, info = env.reset()
+    
+    done = False
+    total_reward = 0
+    
+    while not done:
+        env.render()
+        
+        # Get the action mask from the info dictionary
+        action_mask = info['action_mask']
+        
+        # Choose a random valid action
+        valid_actions = np.where(action_mask)[0]
+        if len(valid_actions) == 0:
+            print("No valid actions available. Ending episode.")
+            break
+        
+        action = np.random.choice(valid_actions)
+        
+        print(f"\n>>> Agent (Team {env.agent_team_id}) is picking position: {env.action_to_position[action]}")
+        
+        # Take a step in the environment
+        obs, reward, done, _, info = env.step(action)
+        
+        total_reward += reward
+        
+        print(f"Reward for this step: {reward:.2f}")
+        if 'drafted_player' in info:
+            print(f"Agent drafted: {info['drafted_player']} ({info['drafted_position']}) - {info['drafted_points']:.1f} pts")
+        
+        if done:
+            print("\n--- Draft Finished ---")
+            print(f"Total reward for the episode: {total_reward:.2f}")
+            if 'final_score_agent' in info:
+                print(f"Agent's final weighted score: {info['final_score_agent']:.2f}")
+            if 'competitive_mode' in info:
+                print(f"Competitive mode: {info['competitive_mode']}")
+            if 'target_opponent_score' in info:
+                print(f"Target opponent score: {info['target_opponent_score']:.2f}")
+            if 'opponent_std_dev_applied' in info and info['opponent_std_dev_applied']:
+                print(f"Opponent score std dev penalty applied: {info['std_dev_penalty_amount']:.2f}")
+            
+            # Print final rosters for all teams
+            for team_id in range(1, config.NUM_TEAMS + 1):
+                roster_data = env.teams_rosters[team_id]
+                team_score = sum(p.projected_points for p in roster_data['PLAYERS'])
+                print(f"\nTeam {team_id} Roster (Total Raw Points: {team_score:.2f}):")
+                for player in sorted(roster_data['PLAYERS'], key=lambda p: p.projected_points, reverse=True):
+                    print(f"  - {player.name} ({player.position}, {player.projected_points:.1f} pts)")
+
+    env.close()

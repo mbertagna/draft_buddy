@@ -6,9 +6,9 @@ TAG="latest"
 
 # Define the command to run inside the container
 # We now run our Flask web application
-# COMMAND="python app.py"
+COMMAND="python app.py"
 # NOW we execute our main training script!
-COMMAND="python train.py"
+# COMMAND="python train.py"
 # COMMAND="python simulate.py"
 
 
