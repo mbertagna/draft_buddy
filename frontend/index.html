@@ -6,9 +6,7 @@
     <title>DRAFT BUDDY</title>
     <style>
         body { font-family: sans-serif; margin: 0; background-color: #f4f4f9; display: flex; flex-direction: column; height: 100vh; }
-        header { background-color: #4CAF50; color: white; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { margin: 0; text-align: center; }
-        #header-controls { display: flex; justify-content: space-around; }
+        header { background-color: #4CAF50; color: white; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
         main { display: flex; flex: 1; overflow: hidden; padding: 1rem; }
         #left-panel { flex: 1; overflow-y: auto; padding-right: 1rem; }
         #right-panel { flex: 2; overflow-y: auto; padding-left: 1rem; }
@@ -18,7 +16,6 @@
         #player-list th { background-color: #4CAF50; color: white; }
         #player-list tbody tr:nth-child(even) { background-color: #f2f2f2; }
         #player-list tbody tr:hover { background-color: #ddd; cursor: pointer; }
-        #backend-status { font-weight: bold; }
         #player-search { padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px; }
         .position-filters label { margin-right: 10px; }
         #new-draft-btn { padding: 8px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
@@ -26,7 +23,7 @@
         .roster-card h4 { margin-top: 0; }
         .roster-card ul { list-style-type: none; padding: 0; }
         .roster-card li { font-size: 0.9rem; }
-        #draft-summary, #draft-control-panel { margin: 1rem 0; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: white; color: black; }
+        .header-section { color: black; margin: 0 1rem; }
         .team-button {
             padding: 8px 12px;
             border: 3px solid transparent;
@@ -50,35 +47,31 @@
             border-color: #ffc107;
         }
         .team-button.picking-now {
-            background-color: #28a745;
+            background-color: #ffc107;
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>DRAFT BUDDY Dashboard</h1>
-        <p>Backend Status: <span id="backend-status">Loading...</span></p>
-        <div id="header-controls">
-            <div id="draft-summary">
-                <h3>Draft Summary</h3>
-                <p>Total Picks: <span id="total-picks-display">N/A</span></p>
-                <p>QBs Drafted: <span id="qb-drafted-display">N/A</span></p>
-                <p>RBs Drafted: <span id="rb-drafted-display">N/A</span></p>
-                <p>WRs Drafted: <span id="wr-drafted-display">N/A</span></p>
-                <p>TEs Drafted: <span id="te-drafted-display">N/A</span></p>
-            </div>
-            <div id="draft-control-panel">
-                <h3>Draft Control</h3>
-                <p>Current Pick: <span id="current-pick-display">N/A</span></p>
-                <p>Team On The Clock: <span id="team-on-clock-display">N/A</span></p>
-                <p>AI Suggestion: <span id="ai-suggestion-display" style="font-weight: bold; color: #28a745;">N/A</span></p>
-                <div id="team-buttons" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;">
-                    <!-- Team buttons will be inserted here by JS -->
-                </div>
-                <button id="undo-pick-btn" style="padding: 8px 12px; background-color: #ffc107; color: black; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">Undo Last Pick</button>
-                <button id="simulate-pick-btn" style="padding: 8px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Simulate Pick</button>
-                <button id="download-csv-btn" style="padding: 8px 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Download as CSV</button>
-            </div>
+        <div class="header-section">
+            Total Picks: <span id="total-picks-display">N/A</span> | 
+            QBs: <span id="qb-drafted-display">N/A</span> | 
+            RBs: <span id="rb-drafted-display">N/A</span> | 
+            WRs: <span id="wr-drafted-display">N/A</span> | 
+            TEs: <span id="te-drafted-display">N/A</span>
+        </div>
+        <div class="header-section">
+            Current Pick: <span id="current-pick-display">N/A</span> | 
+            Team On The Clock: <span id="team-on-clock-display">N/A</span> | 
+            AI Suggestion: <span id="ai-suggestion-display" style="font-weight: bold; color: #ffc107;">N/A</span>
+        </div>
+        <div id="team-buttons" style="display: flex; flex-wrap: wrap; gap: 5px;">
+            <!-- Team buttons will be inserted here by JS -->
+        </div>
+        <div class="header-section">
+            <button id="undo-pick-btn">Undo Last Pick</button>
+            <button id="simulate-pick-btn">Simulate Pick</button>
+            <button id="download-csv-btn">Download as CSV</button>
         </div>
     </header>
 
@@ -120,7 +113,6 @@
         const playerSearch = document.getElementById('player-search');
         const positionCheckboxes = document.querySelectorAll('input[name="position"]');
         const playerTbody = document.querySelector('#player-list tbody');
-        const backendStatus = document.getElementById('backend-status');
         const newDraftBtn = document.getElementById('new-draft-btn');
         const teamRostersDiv = document.getElementById('team-rosters');
         const teamButtonsDiv = document.getElementById('team-buttons');
@@ -184,16 +176,7 @@
         };
 
         const checkBackendStatus = async () => {
-            try {
-                const response = await fetch('/api/hello');
-                const data = await response.json();
-                backendStatus.innerText = data.message;
-                backendStatus.style.color = 'lightgreen';
-            } catch (error) {
-                backendStatus.innerText = 'Error connecting to backend.';
-                backendStatus.style.color = 'red';
-                console.error('Error fetching from backend:', error);
-            }
+            // This function is no longer needed as the backend status is removed from the UI
         };
 
         // Event Listeners
@@ -205,7 +188,6 @@
         downloadCsvBtn.addEventListener('click', downloadCsv);
 
         document.addEventListener('DOMContentLoaded', () => {
-            checkBackendStatus();
             fetchPlayers();
         });
 
