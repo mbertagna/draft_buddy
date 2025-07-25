@@ -142,6 +142,19 @@
         let currentDraftState = null;
         const MAIN_TEAM_ID = 10; // Define the main team ID
 
+        async function loadInitialState() {
+            try {
+                const response = await fetch('/api/draft/state');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                renderDraftState(data);
+                fetchPlayers(); // Now fetch players
+            } catch (error) {
+                console.error('Error loading initial draft state:', error);
+                alert(`Could not load draft state: ${error.message}`);
+            }
+        }
+
         const fetchPlayers = async () => {
             const searchInput = playerSearch.value;
             const selectedPositions = Array.from(positionCheckboxes)
@@ -198,9 +211,7 @@
         simulatePickBtn.addEventListener('click', simulateNextPick);
         downloadCsvBtn.addEventListener('click', downloadCsv);
 
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchPlayers();
-        });
+        document.addEventListener('DOMContentLoaded', loadInitialState);
 
         async function startNewDraft() {
             try {

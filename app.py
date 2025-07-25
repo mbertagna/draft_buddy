@@ -17,8 +17,16 @@ config = Config()
 all_players = load_player_data(config.PLAYER_DATA_CSV, config.MOCK_ADP_CONFIG)
 player_map = {p.player_id: p for p in all_players}
 
-# Global variable to hold the draft environment
-draft_env = None
+# Initialize the draft environment when the application starts
+draft_env = FantasyFootballDraftEnv(config)
+# Try to load an existing state
+draft_env.load_state(config.DRAFT_STATE_FILE)
+
+# If the draft is empty (e.g., new start or corrupted file), create and save a new one
+if not draft_env.draft_order:
+    print("No valid draft state found or draft is empty. Creating a new draft.")
+    draft_env.reset()
+    draft_env.save_state(config.DRAFT_STATE_FILE)
 
 def get_draft_state():
     """Helper function to create the draft state dictionary."""
@@ -92,12 +100,16 @@ def get_players():
 # API route for creating a new draft
 @app.route('/api/draft/new', methods=['POST'])
 def create_new_draft():
+    """Resets the current draft environment to a new state."""
     global draft_env
-    # Initialize a new environment
-    draft_env = FantasyFootballDraftEnv(config)
-    # Reset the environment to get the initial state
     draft_env.reset()
+    draft_env.save_state(config.DRAFT_STATE_FILE)
+    return jsonify(get_draft_state())
 
+# API route for getting the current draft state
+@app.route('/api/draft/state')
+def draft_state():
+    """Returns the complete current state of the draft."""
     return jsonify(get_draft_state())
 
 @app.route('/api/draft/pick', methods=['POST'])
@@ -113,6 +125,7 @@ def draft_pick():
 
     try:
         draft_env.draft_player(player_id)
+        draft_env.save_state(config.DRAFT_STATE_FILE)
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
 
@@ -125,6 +138,7 @@ def undo_pick():
         return jsonify({'error': 'Draft has not been started'}), 400
     try:
         draft_env.undo_last_pick()
+        draft_env.save_state(config.DRAFT_STATE_FILE)
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     
@@ -141,6 +155,7 @@ def override_team():
         return jsonify({'error': 'Team ID is required'}), 400
     try:
         draft_env.set_current_team_picking(team_id)
+        draft_env.save_state(config.DRAFT_STATE_FILE)
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     
@@ -153,6 +168,7 @@ def simulate_pick():
         return jsonify({'error': 'Draft has not been started'}), 400
     try:
         draft_env.simulate_single_pick()
+        draft_env.save_state(config.DRAFT_STATE_FILE)
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     

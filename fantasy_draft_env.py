@@ -11,6 +11,7 @@ import os
 from config import Config
 from data_utils import load_player_data, Player
 from policy_network import PolicyNetwork # Import PolicyNetwork
+import json
 
 class FantasyFootballDraftEnv(gym.Env):
     """
@@ -95,6 +96,68 @@ class FantasyFootballDraftEnv(gym.Env):
         # New: Load agent model for suggestions
         self.agent_model: Optional[PolicyNetwork] = None
         self._load_agent_model()
+
+    def save_state(self, file_path: str):
+        """Saves the current draft state to a file using an atomic write."""
+        # Create a serializable version of teams_rosters
+        serializable_rosters = defaultdict(lambda: {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'FLEX': 0, 'PLAYERS': []})
+        for team_id, roster_data in self.teams_rosters.items():
+            serializable_rosters[team_id] = roster_data.copy()
+            serializable_rosters[team_id]['PLAYERS'] = [p.to_dict() for p in roster_data['PLAYERS']]
+
+        state = {
+            'available_players_ids': list(self.available_players_ids),
+            'teams_rosters': serializable_rosters,
+            'draft_order': self.draft_order,
+            'current_pick_idx': self.current_pick_idx,
+            'current_pick_number': self.current_pick_number,
+            '_draft_history': self._draft_history,
+            '_overridden_team_id': self._overridden_team_id,
+        }
+        
+        temp_file_path = file_path + ".tmp"
+        try:
+            with open(temp_file_path, 'w') as f:
+                json.dump(state, f, indent=4)
+            os.replace(temp_file_path, file_path)
+        except Exception as e:
+            print(f"Error saving draft state: {e}")
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+
+
+    def load_state(self, file_path: str):
+        """Loads the draft state from a file with error handling."""
+        if not os.path.exists(file_path):
+            print("No saved draft state found.")
+            return
+        try:
+            with open(file_path, 'r') as f:
+                state = json.load(f)
+            self.available_players_ids = set(state.get('available_players_ids', []))
+            
+            # Reconstruct Player objects from dictionaries, ensuring team IDs are integers
+            reconstructed_rosters = defaultdict(lambda: {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'FLEX': 0, 'PLAYERS': []})
+            if 'teams_rosters' in state:
+                for team_id_str, roster_data in state['teams_rosters'].items():
+                    try:
+                        int_team_id = int(team_id_str)
+                        reconstructed_rosters[int_team_id] = roster_data.copy()
+                        reconstructed_rosters[int_team_id]['PLAYERS'] = [Player(**p) for p in roster_data.get('PLAYERS', [])]
+                    except (ValueError, TypeError):
+                        print(f"Warning: Could not parse team_id '{team_id_str}'. Skipping this team.")
+                        continue
+            self.teams_rosters = reconstructed_rosters
+
+            self.draft_order = state.get('draft_order', [])
+            self.current_pick_idx = state.get('current_pick_idx', 0)
+            self.current_pick_number = state.get('current_pick_number', 1)
+            self._draft_history = state.get('_draft_history', [])
+            self._overridden_team_id = state.get('_overridden_team_id', None)
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"Warning: Could not load draft state from {file_path} due to error: {e}. Starting fresh.")
+            # If loading fails, reset the environment to a clean state
+            self.reset()
 
 
     def _load_agent_model(self):

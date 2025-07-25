@@ -10,6 +10,7 @@ class Config:
     MODELS_DIR = os.path.join(BASE_DIR, 'models')
     LOGS_DIR = os.path.join(BASE_DIR, 'logs')
     PLAYER_DATA_CSV = os.path.join(DATA_DIR, 'merged_player_data_cleaned.csv')
+    DRAFT_STATE_FILE = os.path.join(DATA_DIR, 'draft_state.json')
 
     # Ensure directories exist
     os.makedirs(DATA_DIR, exist_ok=True)
