@@ -181,7 +181,7 @@ def ai_suggestion():
         return jsonify({'error': 'Draft has not been started'}), 400
 
     suggestion = draft_env.get_ai_suggestion()
-    return jsonify({'suggestion': suggestion})
+    return jsonify(suggestion)
 
 @app.route('/api/draft/summary')
 def draft_summary():

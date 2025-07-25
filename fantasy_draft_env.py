@@ -1083,12 +1083,12 @@ class FantasyFootballDraftEnv(gym.Env):
         print(f"Simulated pick for Team {current_sim_team_id}. Current pick: {self.current_pick_number}")
 
     def get_ai_suggestion(self):
-        """Gets the AI's suggested action for the current state."""
+        """Gets the AI's suggested action probabilities for the current state."""
         if self.current_pick_idx >= len(self.draft_order):
-            return "Draft is over."
+            return {"error": "Draft is over."}
 
         if not self.agent_model:
-            return "AI model not loaded."
+            return {"error": "AI model not loaded."}
 
         # The team on the clock is the one we want a suggestion for.
         current_team_on_clock = self.draft_order[self.current_pick_idx]
@@ -1105,10 +1105,16 @@ class FantasyFootballDraftEnv(gym.Env):
 
         state_tensor = torch.from_numpy(state).float().unsqueeze(0)
         with torch.no_grad():
-            action_probs = self.agent_model.get_action_probabilities(state_tensor, action_mask=action_mask)
-            action_chosen = torch.argmax(action_probs).item()
+            action_probs_tensor = self.agent_model.get_action_probabilities(state_tensor, action_mask=action_mask)
+            action_probs = action_probs_tensor.squeeze().tolist() # Convert tensor to list
 
-        return self.action_to_position[action_chosen]
+        # Create a dictionary mapping position to probability
+        suggestion_probs = {
+            self.action_to_position[i]: prob 
+            for i, prob in enumerate(action_probs)
+        }
+
+        return suggestion_probs
 
     def get_draft_summary(self):
         """Returns a summary of the draft."""

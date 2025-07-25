@@ -288,9 +288,18 @@
                 const response = await fetch('/api/draft/ai_suggestion');
                 const data = await response.json();
                 if (response.ok) {
-                    aiSuggestionDisplay.innerText = data.suggestion || 'N/A';
+                    if (data.error) {
+                        aiSuggestionDisplay.innerText = data.error;
+                        return;
+                    }
+                    // Format the probabilities
+                    const suggestionText = Object.entries(data)
+                        .sort(([, a], [, b]) => b - a) // Sort by probability descending
+                        .map(([pos, prob]) => `${pos}: ${Math.round(prob * 100)}%`)
+                        .join(' | ');
+                    aiSuggestionDisplay.innerText = suggestionText || 'N/A';
                 } else {
-                    aiSuggestionDisplay.innerText = 'Error';
+                    aiSuggestionDisplay.innerText = data.error || 'Error';
                 }
             } catch (error) {
                 console.error('Error fetching AI suggestion:', error);
