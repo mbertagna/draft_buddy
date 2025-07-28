@@ -137,7 +137,8 @@ class Config:
     }
 
     # --- Reinforcement Learning Parameters ---
-    TOTAL_EPISODES = 50000
+    RESUME_TRAINING = True # Set to True to resume from the latest checkpoint
+    TOTAL_EPISODES = 2000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
 
@@ -232,7 +233,7 @@ class Config:
     HIDDEN_DIM = 64
 
     # --- Simulation and Evaluation Parameters ---
-    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "reinforce_policy_model_20250721_005818.pth") # <-- CHANGE THIS FILENAME
+    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v3/checkpoint_episode_2000.pth") # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters

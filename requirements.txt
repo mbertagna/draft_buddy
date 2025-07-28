@@ -4,3 +4,5 @@ torch
 gym
 matplotlib
 Flask
+requests
+tqdm

@@ -2,6 +2,7 @@ import torch
 import torch.optim as optim
 import numpy as np
 from typing import List, Tuple
+import os
 
 from policy_network import PolicyNetwork
 from fantasy_draft_env import FantasyFootballDraftEnv # Import our environment
@@ -48,9 +49,13 @@ class ReinforceAgent:
             returns.insert(0, G) # Insert at the beginning to keep original order
         return returns
 
-    def train(self) -> Tuple[List[float], List[float]]:
+    def train(self, start_episode=1, run_version_dir=None) -> Tuple[List[float], List[float]]:
         """
         Runs the REINFORCE training loop for a specified number of episodes.
+
+        Args:
+            start_episode (int): The episode number to start training from.
+            run_version_dir (str): The directory to save model checkpoints.
 
         Returns:
             Tuple[List[float], List[float]]: Lists of total rewards per episode and policy losses per episode.
@@ -63,7 +68,7 @@ class ReinforceAgent:
         print(f"Learning Rate: {self.config.LEARNING_RATE}, Discount Factor: {self.config.DISCOUNT_FACTOR}")
         print(f"Action Masking Enabled: {self.config.ENABLE_ACTION_MASKING}")
 
-        for episode in range(1, self.config.TOTAL_EPISODES + 1):
+        for episode in range(start_episode, self.config.TOTAL_EPISODES + 1):
             state, info = self.env.reset()
             current_action_mask = info.get('action_mask') # Get initial action mask
             
@@ -131,6 +136,9 @@ class ReinforceAgent:
                 p.projected_points for p in self.env.teams_rosters[self.env.agent_team_id]['PLAYERS']
             )
 
+            if episode % 1000 == 0: # Save a checkpoint every 1000 episodes
+                self.save_checkpoint(run_version_dir, episode)
+
             if episode % 100 == 0:
                 print(f"Episode {episode}/{self.config.TOTAL_EPISODES} | "
                       f"Total Reward (Weighted): {total_episode_reward:.2f} | "
@@ -141,4 +149,33 @@ class ReinforceAgent:
                 # self.env.render() # Optional: Render environment state periodically
 
         print("\nTraining complete!")
+        # Save the final model as a checkpoint
+        self.save_checkpoint(run_version_dir, self.config.TOTAL_EPISODES)
         return all_episode_rewards, all_policy_losses
+
+    def save_model(self, filepath: str):
+        """
+        Saves the policy network's state dictionary to a file.
+
+        Args:
+            filepath (str): The path to save the model file.
+        """
+        torch.save(self.policy_network.state_dict(), filepath)
+        print(f"Model saved to {filepath}")
+
+    def load_model(self, filepath: str):
+        """
+        Loads the policy network's state dictionary from a file.
+
+        Args:
+            filepath (str): The path to the model file.
+        """
+        self.policy_network.load_state_dict(torch.load(filepath))
+        self.policy_network.eval() # Set the network to evaluation mode
+        print(f"Model loaded from {filepath}")
+
+    def save_checkpoint(self, run_version_dir, episode):
+        """Saves a model checkpoint."""
+        if run_version_dir:
+            checkpoint_path = os.path.join(run_version_dir, f'checkpoint_episode_{episode}.pth')
+            self.save_model(checkpoint_path)

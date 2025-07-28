@@ -10,6 +10,7 @@ COMMAND="python app.py"
 # NOW we execute our main training script!
 # COMMAND="python train.py"
 # COMMAND="python simulate.py"
+# COMMAND="python simulation_runner.py"
 
 
 echo "Running Docker container for ${IMAGE_NAME}:${TAG}"
