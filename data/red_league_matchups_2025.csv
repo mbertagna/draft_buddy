@@ -1,0 +1,71 @@
+﻿Week,Matchup,Away Team,Away Manager(s),Away Score,Home Score,Home Manager(s),Home Team
+1,1,Extra Strength Melatonin,Val Perrin,0.0,0.0,Michael Bertagna,California Fourskin
+1,2,richryans47,Ryan Freilich,0.0,0.0,Paul Flores,Team X
+1,3,Huckleberry,Noah Hollander,0.0,0.0,Sean Freilich,El Matador
+1,4,Field Goals Only,Shane Spence,0.0,0.0,Scott Sheehan,Pauls Dogs
+1,5,Club 33,Jake D'Alonzo,0.0,0.0,lucas johnsen,Sammy D Truther
+2,1,richryans47,Ryan Freilich,0,0,Val Perrin,Extra Strength Melatonin
+2,2,California Fourskin,Michael Bertagna,0,0,Noah Hollander,Huckleberry
+2,3,Team X,Paul Flores,0,0,Shane Spence,Field Goals Only
+2,4,El Matador,Sean Freilich,0,0,Jake D'Alonzo,Club 33
+2,5,Pauls Dogs,Scott Sheehan,0,0,lucas johnsen,Sammy D Truther
+3,1,Extra Strength Melatonin,Val Perrin,0,0,Noah Hollander,Huckleberry
+3,2,Field Goals Only,Shane Spence,0,0,Ryan Freilich,richryans47
+3,3,Club 33,Jake D'Alonzo,0,0,Michael Bertagna,California Fourskin
+3,4,Sammy D Truther,lucas johnsen,0,0,Paul Flores,Team X
+3,5,Pauls Dogs,Scott Sheehan,0,0,Sean Freilich,El Matador
+4,1,Field Goals Only,Shane Spence,0,0,Val Perrin,Extra Strength Melatonin
+4,2,Huckleberry,Noah Hollander,0,0,Jake D'Alonzo,Club 33
+4,3,richryans47,Ryan Freilich,0,0,lucas johnsen,Sammy D Truther
+4,4,California Fourskin,Michael Bertagna,0,0,Scott Sheehan,Pauls Dogs
+4,5,Team X,Paul Flores,0,0,Sean Freilich,El Matador
+5,1,Extra Strength Melatonin,Val Perrin,0,0,Jake D'Alonzo,Club 33
+5,2,Sammy D Truther,lucas johnsen,0,0,Shane Spence,Field Goals Only
+5,3,Pauls Dogs,Scott Sheehan,0,0,Noah Hollander,Huckleberry
+5,4,El Matador,Sean Freilich,0,0,Ryan Freilich,richryans47
+5,5,Team X,Paul Flores,0,0,Michael Bertagna,California Fourskin
+6,1,Sammy D Truther,lucas johnsen,0,0,Val Perrin,Extra Strength Melatonin
+6,2,Club 33,Jake D'Alonzo,0,0,Scott Sheehan,Pauls Dogs
+6,3,Field Goals Only,Shane Spence,0,0,Sean Freilich,El Matador
+6,4,Huckleberry,Noah Hollander,0,0,Paul Flores,Team X
+6,5,richryans47,Ryan Freilich,0,0,Michael Bertagna,California Fourskin
+7,1,Extra Strength Melatonin,Val Perrin,0,0,Scott Sheehan,Pauls Dogs
+7,2,El Matador,Sean Freilich,0,0,lucas johnsen,Sammy D Truther
+7,3,Team X,Paul Flores,0,0,Jake D'Alonzo,Club 33
+7,4,California Fourskin,Michael Bertagna,0,0,Shane Spence,Field Goals Only
+7,5,richryans47,Ryan Freilich,0,0,Noah Hollander,Huckleberry
+8,1,El Matador,Sean Freilich,0,0,Val Perrin,Extra Strength Melatonin
+8,2,Pauls Dogs,Scott Sheehan,0,0,Paul Flores,Team X
+8,3,Sammy D Truther,lucas johnsen,0,0,Michael Bertagna,California Fourskin
+8,4,Club 33,Jake D'Alonzo,0,0,Ryan Freilich,richryans47
+8,5,Field Goals Only,Shane Spence,0,0,Noah Hollander,Huckleberry
+9,1,Extra Strength Melatonin,Val Perrin,0,0,Paul Flores,Team X
+9,2,California Fourskin,Michael Bertagna,0,0,Sean Freilich,El Matador
+9,3,richryans47,Ryan Freilich,0,0,Scott Sheehan,Pauls Dogs
+9,4,Huckleberry,Noah Hollander,0,0,lucas johnsen,Sammy D Truther
+9,5,Field Goals Only,Shane Spence,0,0,Jake D'Alonzo,Club 33
+10,1,California Fourskin,Michael Bertagna,0,0,Val Perrin,Extra Strength Melatonin
+10,2,Team X,Paul Flores,0,0,Ryan Freilich,richryans47
+10,3,El Matador,Sean Freilich,0,0,Noah Hollander,Huckleberry
+10,4,Pauls Dogs,Scott Sheehan,0,0,Shane Spence,Field Goals Only
+10,5,Sammy D Truther,lucas johnsen,0,0,Jake D'Alonzo,Club 33
+11,1,Extra Strength Melatonin,Val Perrin,0,0,Ryan Freilich,richryans47
+11,2,Huckleberry,Noah Hollander,0,0,Michael Bertagna,California Fourskin
+11,3,Field Goals Only,Shane Spence,0,0,Paul Flores,Team X
+11,4,Club 33,Jake D'Alonzo,0,0,Sean Freilich,El Matador
+11,5,Sammy D Truther,lucas johnsen,0,0,Scott Sheehan,Pauls Dogs
+12,1,Huckleberry,Noah Hollander,0,0,Val Perrin,Extra Strength Melatonin
+12,2,richryans47,Ryan Freilich,0,0,Shane Spence,Field Goals Only
+12,3,California Fourskin,Michael Bertagna,0,0,Jake D'Alonzo,Club 33
+12,4,Team X,Paul Flores,0,0,lucas johnsen,Sammy D Truther
+12,5,El Matador,Sean Freilich,0,0,Scott Sheehan,Pauls Dogs
+13,1,Extra Strength Melatonin,Val Perrin,0,0,Shane Spence,Field Goals Only
+13,2,Club 33,Jake D'Alonzo,0,0,Noah Hollander,Huckleberry
+13,3,Sammy D Truther,lucas johnsen,0,0,Ryan Freilich,richryans47
+13,4,Pauls Dogs,Scott Sheehan,0,0,Michael Bertagna,California Fourskin
+13,5,El Matador,Sean Freilich,0,0,Paul Flores,Team X
+14,1,Club 33,Jake D'Alonzo,0,0,Val Perrin,Extra Strength Melatonin
+14,2,Field Goals Only,Shane Spence,0,0,lucas johnsen,Sammy D Truther
+14,3,Huckleberry,Noah Hollander,0,0,Scott Sheehan,Pauls Dogs
+14,4,richryans47,Ryan Freilich,0,0,Sean Freilich,El Matador
+14,5,California Fourskin,Michael Bertagna,0,0,Paul Flores,Team X
