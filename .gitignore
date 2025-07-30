@@ -162,3 +162,4 @@ cython_debug/
 /models
 /logs
 repomix-output.xml
+**/.DS_Store

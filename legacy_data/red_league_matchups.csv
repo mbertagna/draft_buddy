@@ -1,0 +1,80 @@
+Week,Matchup,Away Team,Away Team Manager(s),Away Score,Home Score,Home Team Manager(s),Home Team
+1,1,Team X,Paul,130.68,100.16,Noah,HockleBerry
+1,2,California Fourskin,Michael,169.52,119.58,Sean,Banegals
+1,3,Extra Strength Melatonin,Val,117.36,134.66,Jake,Club 33
+1,4,Pauls Dogs,Scott,124.6,127.46,Lucas,Kurt Cousins
+1,5,Next Years the One 🤞,Shane,143.5,178.78,Ryan,richryans42
+2,1,California Fourskin,Michael,112.82,132.88,Paul,Team X
+2,2,HockleBerry,Noah,192.18,174.28,Val,Extra Strength Melatonin
+2,3,Banegals,Sean,133.88,195.62,Scott,Pauls Dogs
+2,4,Club 33,Jake,129.74,93.78,Shane,Next Years the One 🤞
+2,5,Kurt Cousins,Lucas,148.52,132.56,Ryan,richryans42
+3,1,Team X,Paul,186.4,105.46,Val,Extra Strength Melatonin
+3,2,Pauls Dogs,Scott,200.28,144.12,Michael,California Fourskin
+3,3,Next Years the One 🤞,Shane,174.58,145.7,Noah,HockleBerry
+3,4,richryans42,Ryan,157.14,141.08,Sean,Banegals
+3,5,Kurt Cousins,Lucas,179.88,188.36,Jake,Club 33
+4,1,Pauls Dogs,Scott,147.98,152.18,Paul,Team X
+4,2,Extra Strength Melatonin,Val,106.42,133.36,Shane,Next Years the One 🤞
+4,3,California Fourskin,Michael,140.3,104.44,Ryan,richryans42
+4,4,HockleBerry,Noah,132.56,124.6,Lucas,Kurt Cousins
+4,5,Banegals,Sean,169.46,169.04,Jake,Club 33
+5,1,Team X,Paul,144.12,123.48,Shane,Next Years the One 🤞
+5,2,richryans42,Ryan,134.7,124.82,Scott,Pauls Dogs
+5,3,Kurt Cousins,Lucas,116.58,167.84,Val,Extra Strength Melatonin
+5,4,Club 33,Jake,163.9,86.08,Michael,California Fourskin
+5,5,Banegals,Sean,137.24,221.3,Noah,HockleBerry
+6,1,richryans42,Ryan,166.28,135.08,Paul,Team X
+6,2,Next Years the One 🤞,Shane,111.96,139.72,Lucas,Kurt Cousins
+6,3,Pauls Dogs,Scott,162.88,127.46,Jake,Club 33
+6,4,Extra Strength Melatonin,Val,155.06,123.82,Sean,Banegals
+6,5,California Fourskin,Michael,147.34,134.04,Noah,HockleBerry
+7,1,Team X,Paul,146.76,132.72,Lucas,Kurt Cousins
+7,2,Club 33,Jake,178.46,156.46,Ryan,richryans42
+7,3,Banegals,Sean,130.2,123.68,Shane,Next Years the One 🤞
+7,4,HockleBerry,Noah,180.68,110.62,Scott,Pauls Dogs
+7,5,California Fourskin,Michael,147.16,128.66,Val,Extra Strength Melatonin
+8,1,Club 33,Jake,149.78,197.5,Paul,Team X
+8,2,Kurt Cousins,Lucas,113.2,112.52,Sean,Banegals
+8,3,richryans42,Ryan,154.56,182.52,Noah,HockleBerry
+8,4,Next Years the One 🤞,Shane,151.6,138.86,Michael,California Fourskin
+8,5,Pauls Dogs,Scott,156.26,147.92,Val,Extra Strength Melatonin
+9,1,Team X,Paul,144.6,89.64,Sean,Banegals
+9,2,HockleBerry,Noah,121.72,123.02,Jake,Club 33
+9,3,California Fourskin,Michael,140.88,117.66,Lucas,Kurt Cousins
+9,4,Extra Strength Melatonin,Val,171.48,158.72,Ryan,richryans42
+9,5,Pauls Dogs,Scott,143.54,121.96,Shane,Next Years the One 🤞
+10,1,HockleBerry,Noah,148.96,94.64,Paul,Team X
+10,2,Banegals,Sean,143.8,197.22,Michael,California Fourskin
+10,3,Club 33,Jake,145.02,163.08,Val,Extra Strength Melatonin
+10,4,Kurt Cousins,Lucas,81.84,167.34,Scott,Pauls Dogs
+10,5,richryans42,Ryan,139.58,157.4,Shane,Next Years the One 🤞
+11,1,Team X,Paul,148.8,136.26,Michael,California Fourskin
+11,2,Extra Strength Melatonin,Val,100.84,141.14,Noah,HockleBerry
+11,3,Pauls Dogs,Scott,138.54,146.94,Sean,Banegals
+11,4,Next Years the One 🤞,Shane,135.56,146.78,Jake,Club 33
+11,5,richryans42,Ryan,135.78,99.06,Lucas,Kurt Cousins
+12,1,Extra Strength Melatonin,Val,147.88,160.62,Paul,Team X
+12,2,California Fourskin,Michael,163.96,137.84,Scott,Pauls Dogs
+12,3,HockleBerry,Noah,180.42,127.88,Shane,Next Years the One 🤞
+12,4,Banegals,Sean,144.3,208.44,Ryan,richryans42
+12,5,Club 33,Jake,169.14,78.6,Lucas,Kurt Cousins
+13,1,Team X,Paul,167.86,81.06,Scott,Pauls Dogs
+13,2,Next Years the One 🤞,Shane,158.6,167.62,Val,Extra Strength Melatonin
+13,3,richryans42,Ryan,188.2,166.36,Michael,California Fourskin
+13,4,Kurt Cousins,Lucas,79.72,195.34,Noah,HockleBerry
+13,5,Club 33,Jake,180.78,133.32,Sean,Banegals
+14,1,Next Years the One 🤞,Shane,131.2,225.2,Paul,Team X
+14,2,Pauls Dogs,Scott,121.32,86.68,Ryan,richryans42
+14,3,Extra Strength Melatonin,Val,164.78,99.52,Lucas,Kurt Cousins
+14,4,California Fourskin,Michael,139.92,122.66,Jake,Club 33
+14,5,HockleBerry,Noah,102.76,156.02,Sean,Banegals
+15,1,richryans42,Ryan,151.24,144.56,Michael,California Fourskin
+15,2,Pauls Dogs,Scott,123.82,129.62,Jake,Club 33
+15,3,Next Years the One 🤞,Shane,163.5,201.76,Val,Extra Strength Melatonin
+15,4,Kurt Cousins,Lucas,137.86,103.86,Sean,Banegals
+16,1,richryans42,Ryan,178.56,147.56,Scott,Pauls Dogs
+16,2,Next Years the One 🤞,Shane,156.98,132.52,Paul,Team X
+16,3,Club 33,Jake,192.84,153.98,Michael,California Fourskin
+16,4,Extra Strength Melatonin,Val,147.96,149.14,Noah,HockleBerry
+16,5,Banegals,Sean,141.78,102.18,Lucas,Kurt Cousins

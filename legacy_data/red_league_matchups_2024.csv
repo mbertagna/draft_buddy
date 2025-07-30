@@ -1,0 +1,71 @@
+﻿Week,Matchup,Away Team,Away Manager(s),Away Score,Home Score,Home Manager(s),Home Team
+1,1,Club 33,Jake D'Alonzo,0,0,Val Perrin,Extra Strength Melatonin
+1,2,Next Years the One 🤞,Shane Spence,0,0,Paul Flores,Team X
+1,3,Banegals,Sean Freilich,0,0,lucas johnsen,Kurt Cousins
+1,4,richryans42,Ryan Freilich,0,0,Scott Sheehan,Pauls Dogs
+1,5,HockleBerry,Noah Hollander,0,0,Michael Bertagna,California Fourskin
+2,1,Next Years the One 🤞,Shane Spence,0,0,Jake D'Alonzo,Club 33
+2,2,Extra Strength Melatonin,Val Perrin,0,0,Sean Freilich,Banegals
+2,3,Team X,Paul Flores,0,0,Ryan Freilich,richryans42
+2,4,HockleBerry,Noah Hollander,0,0,Scott Sheehan,Pauls Dogs
+2,5,California Fourskin,Michael Bertagna,0,0,lucas johnsen,Kurt Cousins
+3,1,Club 33,Jake D'Alonzo,0,0,Sean Freilich,Banegals
+3,2,richryans42,Ryan Freilich,0,0,Shane Spence,Next Years the One 🤞
+3,3,HockleBerry,Noah Hollander,0,0,Val Perrin,Extra Strength Melatonin
+3,4,California Fourskin,Michael Bertagna,0,0,Paul Flores,Team X
+3,5,Kurt Cousins,lucas johnsen,0,0,Scott Sheehan,Pauls Dogs
+4,1,richryans42,Ryan Freilich,0,0,Jake D'Alonzo,Club 33
+4,2,Banegals,Sean Freilich,0,0,Noah Hollander,HockleBerry
+4,3,Next Years the One 🤞,Shane Spence,0,0,Michael Bertagna,California Fourskin
+4,4,Extra Strength Melatonin,Val Perrin,0,0,Scott Sheehan,Pauls Dogs
+4,5,Team X,Paul Flores,0,0,lucas johnsen,Kurt Cousins
+5,1,Club 33,Jake D'Alonzo,0,0,Noah Hollander,HockleBerry
+5,2,California Fourskin,Michael Bertagna,0,0,Ryan Freilich,richryans42
+5,3,Banegals,Sean Freilich,0,0,lucas johnsen,Kurt Cousins
+5,4,Next Years the One 🤞,Shane Spence,0,0,Paul Flores,Team X
+5,5,Extra Strength Melatonin,Val Perrin,0,0,Scott Sheehan,Pauls Dogs
+6,1,California Fourskin,Michael Bertagna,0,0,Jake D'Alonzo,Club 33
+6,2,HockleBerry,Noah Hollander,0,0,Scott Sheehan,Pauls Dogs
+6,3,richryans42,Ryan Freilich,0,0,lucas johnsen,Kurt Cousins
+6,4,Banegals,Sean Freilich,0,0,Paul Flores,Team X
+6,5,Next Years the One 🤞,Shane Spence,0,0,Val Perrin,Extra Strength Melatonin
+7,1,Club 33,Jake D'Alonzo,0,0,Scott Sheehan,Pauls Dogs
+7,2,Kurt Cousins,lucas johnsen,0,0,Michael Bertagna,California Fourskin
+7,3,Team X,Paul Flores,0,0,Noah Hollander,HockleBerry
+7,4,Extra Strength Melatonin,Val Perrin,0,0,Ryan Freilich,richryans42
+7,5,Next Years the One 🤞,Shane Spence,0,0,Sean Freilich,Banegals
+8,1,Kurt Cousins,lucas johnsen,0,0,Jake D'Alonzo,Club 33
+8,2,Pauls Dogs,Scott Sheehan,0,0,Paul Flores,Team X
+8,3,California Fourskin,Michael Bertagna,0,0,Val Perrin,Extra Strength Melatonin
+8,4,HockleBerry,Noah Hollander,0,0,Shane Spence,Next Years the One 🤞
+8,5,Banegals,Sean Freilich,0,0,Ryan Freilich,richryans42
+9,1,Club 33,Jake D'Alonzo,0,0,Paul Flores,Team X
+9,2,Extra Strength Melatonin,Val Perrin,0,0,lucas johnsen,Kurt Cousins
+9,3,Next Years the One 🤞,Shane Spence,0,0,Scott Sheehan,Pauls Dogs
+9,4,Banegals,Sean Freilich,0,0,Michael Bertagna,California Fourskin
+9,5,richryans42,Ryan Freilich,0,0,Noah Hollander,HockleBerry
+10,1,Extra Strength Melatonin,Val Perrin,0,0,Jake D'Alonzo,Club 33
+10,2,Team X,Paul Flores,0,0,Shane Spence,Next Years the One 🤞
+10,3,Kurt Cousins,lucas johnsen,0,0,Sean Freilich,Banegals
+10,4,Pauls Dogs,Scott Sheehan,0,0,Ryan Freilich,richryans42
+10,5,California Fourskin,Michael Bertagna,0,0,Noah Hollander,HockleBerry
+11,1,Club 33,Jake D'Alonzo,0,0,Shane Spence,Next Years the One 🤞
+11,2,Banegals,Sean Freilich,0,0,Val Perrin,Extra Strength Melatonin
+11,3,richryans42,Ryan Freilich,0,0,Paul Flores,Team X
+11,4,HockleBerry,Noah Hollander,0,0,lucas johnsen,Kurt Cousins
+11,5,California Fourskin,Michael Bertagna,0,0,Scott Sheehan,Pauls Dogs
+12,1,Banegals,Sean Freilich,0,0,Jake D'Alonzo,Club 33
+12,2,Next Years the One 🤞,Shane Spence,0,0,Ryan Freilich,richryans42
+12,3,Extra Strength Melatonin,Val Perrin,0,0,Noah Hollander,HockleBerry
+12,4,Team X,Paul Flores,0,0,Michael Bertagna,California Fourskin
+12,5,Kurt Cousins,lucas johnsen,0,0,Scott Sheehan,Pauls Dogs
+13,1,Club 33,Jake D'Alonzo,0,0,Ryan Freilich,richryans42
+13,2,HockleBerry,Noah Hollander,0,0,Sean Freilich,Banegals
+13,3,California Fourskin,Michael Bertagna,0,0,Shane Spence,Next Years the One 🤞
+13,4,Pauls Dogs,Scott Sheehan,0,0,Val Perrin,Extra Strength Melatonin
+13,5,Kurt Cousins,lucas johnsen,0,0,Paul Flores,Team X
+14,1,HockleBerry,Noah Hollander,0,0,Jake D'Alonzo,Club 33
+14,2,richryans42,Ryan Freilich,0,0,Michael Bertagna,California Fourskin
+14,3,Banegals,Sean Freilich,0,0,Scott Sheehan,Pauls Dogs
+14,4,Next Years the One 🤞,Shane Spence,0,0,lucas johnsen,Kurt Cousins
+14,5,Extra Strength Melatonin,Val Perrin,0,0,Paul Flores,Team X
