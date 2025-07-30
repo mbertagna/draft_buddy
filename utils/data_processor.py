@@ -84,7 +84,7 @@ class FantasyDataProcessor:
         self.bye_weeks_override = bye_weeks_override
         self.project_rookies = project_rookies
         self.rookie_projection_params = rookie_projection_params if rookie_projection_params is not None \
-            else {'scale_min': 5, 'scale_max': 95, 'udfa_percentile': 75}
+            else {'scale_min': 5, 'scale_max': 80, 'udfa_percentile': 75}
         self.start_year = start_year
 
         os.makedirs(self.cache_dir, exist_ok=True)
@@ -161,7 +161,7 @@ class FantasyDataProcessor:
         
         return df
 
-    def _calculate_fraction_career_in(self, historical_df: pd.DataFrame) -> pd.DataFrame:
+    def _calculate_games_played_frac(self, historical_df: pd.DataFrame) -> pd.DataFrame:
         """
         Calculates the fraction of possible games a player has played in throughout their career.
 
@@ -169,10 +169,10 @@ class FantasyDataProcessor:
             historical_df (pd.DataFrame): The DataFrame with historical week-to-week stats.
 
         Returns:
-            pd.DataFrame: A DataFrame with 'player_id' and the calculated 'fraction_career_in'.
+            pd.DataFrame: A DataFrame with 'player_id' and the calculated 'games_played_frac'.
         """
         if historical_df.empty:
-            return pd.DataFrame(columns=['player_id', 'fraction_career_in'])
+            return pd.DataFrame(columns=['player_id', 'games_played_frac'])
 
         # Calculate the number of games each team played in each season
         team_games_per_season = historical_df.groupby(['season', 'recent_team'])['week'].nunique().reset_index()
@@ -189,9 +189,9 @@ class FantasyDataProcessor:
         total_player_games = historical_df.groupby('player_id').size()
 
         # Calculate the fraction
-        fraction_career_in = (total_player_games / total_team_games).reset_index(name='fraction_career_in')
+        games_played_frac = (total_player_games / total_team_games).reset_index(name='games_played_frac')
         
-        return fraction_career_in
+        return games_played_frac
 
     def _estimate_rookie_points(self, rookies_df: pd.DataFrame, veterans_df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -267,8 +267,8 @@ class FantasyDataProcessor:
         agg_func = 'median' if measure_of_center == 'median' else 'mean'
         legacy_stats_df = historical_df.groupby('player_id').agg(total_pts=('total_pts', agg_func)).reset_index()
 
-        # Calculate fraction_career_in and merge it
-        fraction_df = self._calculate_fraction_career_in(historical_df)
+        # Calculate games_played_frac and merge it
+        fraction_df = self._calculate_games_played_frac(historical_df)
         legacy_stats_df = legacy_stats_df.merge(fraction_df, on='player_id', how='left')
 
         print(f"Fetching player pool for {draft_year}...")
@@ -310,7 +310,7 @@ class FantasyDataProcessor:
         draft_players_df = draft_players_df.sort_values(by='total_pts', ascending=False).reset_index(drop=True)
         final_cols = [
             'player_id', 'player_display_name', 'position', 'recent_team', 
-            'total_pts', 'fraction_career_in', 'bye_week'
+            'total_pts', 'games_played_frac', 'bye_week'
         ]
         final_cols_exist = [col for col in final_cols if col in draft_players_df.columns]
         draft_players_df = draft_players_df[final_cols_exist]

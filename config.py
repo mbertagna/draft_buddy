@@ -9,7 +9,7 @@ class Config:
     DATA_DIR = os.path.join(BASE_DIR, 'data')
     MODELS_DIR = os.path.join(BASE_DIR, 'models')
     LOGS_DIR = os.path.join(BASE_DIR, 'logs')
-    PLAYER_DATA_CSV = os.path.join(DATA_DIR, 'merged_player_data_cleaned.csv')
+    PLAYER_DATA_CSV = os.path.join(DATA_DIR, 'generated_player_data.csv')
     DRAFT_STATE_FILE = os.path.join(DATA_DIR, 'draft_state.json')
 
     # Ensure directories exist
@@ -233,7 +233,7 @@ class Config:
     HIDDEN_DIM = 64
 
     # --- Simulation and Evaluation Parameters ---
-    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v3/checkpoint_episode_2000.pth") # <-- CHANGE THIS FILENAME
+    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v1/checkpoint_episode_2000.pth") # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters

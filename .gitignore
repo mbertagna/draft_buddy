@@ -163,3 +163,4 @@ cython_debug/
 /logs
 repomix-output.xml
 **/.DS_Store
+data/draft_state.json

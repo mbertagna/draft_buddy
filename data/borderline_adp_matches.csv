@@ -1,7 +1,18 @@
-Rank,Player,Team,Bye,Pos,ESPN,Sleeper,NFL,RTSports,FFC,AVG,std_name,matched_name,match_score
+Rank,Player,Team,Bye,Pos,ESPN,Sleeper,NFL,RTSports,FFC,adp,std_name,matched_name,match_score
+347.0,Harrison Mevis,NYJ,9.0,K33,310.0,,336.0,,,323.0,harrison mevis,,83
+163.0,Jason Sanders,MIA,12.0,K9,152.0,225.0,111.0,216.0,,175.8,jason sanders,,83
 792.0,Jalen Cropper,DAL,10.0,WR254,,,713.0,,,713.0,jalen cropper,,83
+409.0,Caden Davis,,,K39,311.0,,647.0,,,479.0,caden davis,,82
+337.0,Spencer Shrader,IND,11.0,K32,292.0,,316.0,,,304.0,spencer shrader,,80
 243.0,Washington Commanders,DST,12.0,DST22,213.0,,165.0,243.0,,207.0,washington commanders,,79
 411.0,Jermaine Jackson,,,WR128,316.0,,,,,316.0,jermaine jackson,,79
+143.0,Chase McLaughlin,TB,9.0,K4,109.0,181.0,113.0,175.0,,152.6,chase mclaughlin,,79
+634.0,Ryan Coe,TB,9.0,K57,,,510.0,,,510.0,ryan coe,,78
 555.0,Jamaal Williams,,,RB140,452.0,,517.0,,,484.5,jamaal williams,,77
 595.0,Rodney Williams,,,TE88,476.0,,,,,476.0,rodney williams,,77
+726.0,Jonathan Kim,CHI,5.0,K60,,,626.0,,,626.0,jonathan kim,,77
+160.0,Tyler Bass,BUF,7.0,K8,143.0,154.0,131.0,237.0,,171.8,tyler bass,,76
+223.0,Will Reichard,MIN,6.0,K17,218.0,265.0,197.0,260.0,,235.0,will reichard,,75
+276.0,Justin Tucker,,,K21,223.0,266.0,357.0,,,282.0,justin tucker,,75
+284.0,Jason Myers,SEA,8.0,K23,236.0,,182.0,,,209.0,jason myers,,75
 561.0,Owen Wright,,,RB143,455.0,,,,,455.0,owen wright,,75

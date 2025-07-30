@@ -110,6 +110,7 @@
                         <th>Name</th>
                         <th>Position</th>
                         <th>Proj. Pts</th>
+                        <th>GP Frac</th>
                         <th>ADP</th>
                     </tr>
                 </thead>
@@ -193,6 +194,7 @@
                 row.insertCell().innerText = player.name;
                 row.insertCell().innerText = player.position;
                 row.insertCell().innerText = player.projected_points.toFixed(1);
+                row.insertCell().innerText = player.games_played_frac ? player.games_played_frac.toFixed(2) : 'N/A';
                 row.insertCell().innerText = player.adp ? player.adp.toFixed(1) : 'N/A';
 
                 row.addEventListener('click', () => draftPlayer(player.player_id));

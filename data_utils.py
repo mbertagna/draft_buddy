@@ -11,6 +11,7 @@ class Player:
     name: str
     position: str # QB, RB, WR, TE
     projected_points: float
+    games_played_frac: float = 1.0
     adp: float = field(default=np.inf) # Default to infinity if no ADP
 
     def to_dict(self):
@@ -19,6 +20,7 @@ class Player:
             'name': self.name,
             'position': self.position,
             'projected_points': self.projected_points,
+            'games_played_frac': self.games_played_frac,
             'adp': self.adp if np.isfinite(self.adp) else None
         }
 
@@ -76,6 +78,7 @@ def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
 
     players = []
     has_adp_column = 'adp' in df.columns
+    has_games_played_frac_column = 'games_played_frac' in df.columns
 
     for _, row in df.iterrows():
         player_id = int(row['player_id'])
@@ -83,8 +86,9 @@ def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
         position = str(row['position']).upper() # Ensure consistent casing
         projected_points = float(row['projected_points'])
         adp = float(row['adp']) if has_adp_column and pd.notna(row['adp']) else np.inf
+        games_played_frac = float(row['games_played_frac']) if has_games_played_frac_column and pd.notna(row['games_played_frac']) else 1.0
 
-        players.append(Player(player_id, name, position, projected_points, adp))
+        players.append(Player(player_id, name, position, projected_points, games_played_frac, adp))
 
     # If ADP column was missing or all values were NaN, generate mock ADP
     if not has_adp_column or all(p.adp == np.inf for p in players):
@@ -102,27 +106,27 @@ def _create_dummy_csv(filepath: str):
     """
     Creates a small dummy CSV file for initial testing if the actual file is not found.
     """
-    dummy_data = """player_id,name,position,projected_points,adp
-1001,Patrick Mahomes,QB,378.5,15.2
-1002,Josh Allen,QB,350.1,25.5
-1003,Christian McCaffrey,RB,320.0,1.1
-1004,Austin Ekeler,RB,290.5,5.8
-1005,Justin Jefferson,WR,310.0,3.2
-1006,Ja'Marr Chase,WR,295.5,7.5
-1007,Travis Kelce,TE,280.0,10.0
-1008,Mark Andrews,TE,250.0,20.1
-1009,Saquon Barkley,RB,280.0,9.0
-1010,Cooper Kupp,WR,270.0,12.0
-1011,Jalen Hurts,QB,340.0,30.0
-1012,Jonathan Taylor,RB,270.0,11.0
-1013,Tyreek Hill,WR,280.0,14.0
-1014,T.J. Hockenson,TE,200.0,35.0
-1015,Stefon Diggs,WR,260.0,16.0
-1016,Nick Chubb,RB,250.0,13.0
-1017,CeeDee Lamb,WR,255.0,18.0
-1018,Amari Cooper,WR,240.0,22.0
-1019,George Kittle,TE,220.0,28.0
-1020,Dak Prescott,QB,300.0,40.0
+    dummy_data = """player_id,name,position,projected_points,adp,games_played_frac
+1001,Patrick Mahomes,QB,378.5,15.2,1.0
+1002,Josh Allen,QB,350.1,25.5,1.0
+1003,Christian McCaffrey,RB,320.0,1.1,0.9
+1004,Austin Ekeler,RB,290.5,5.8,1.0
+1005,Justin Jefferson,WR,310.0,3.2,1.0
+1006,Ja'Marr Chase,WR,295.5,7.5,1.0
+1007,Travis Kelce,TE,280.0,10.0,1.0
+1008,Mark Andrews,TE,250.0,20.1,0.85
+1009,Saquon Barkley,RB,280.0,9.0,0.8
+1010,Cooper Kupp,WR,270.0,12.0,0.75
+1011,Jalen Hurts,QB,340.0,30.0,1.0
+1012,Jonathan Taylor,RB,270.0,11.0,0.9
+1013,Tyreek Hill,WR,280.0,14.0,1.0
+1014,T.J. Hockenson,TE,200.0,35.0,0.8
+1015,Stefon Diggs,WR,260.0,16.0,1.0
+1016,Nick Chubb,RB,250.0,13.0,0.95
+1017,CeeDee Lamb,WR,255.0,18.0,1.0
+1018,Amari Cooper,WR,240.0,22.0,1.0
+1019,George Kittle,TE,220.0,28.0,0.85
+1020,Dak Prescott,QB,300.0,40.0,1.0
 """
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, 'w') as f:

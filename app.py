@@ -88,6 +88,7 @@ def get_players():
             'name': p.name,
             'position': p.position,
             'projected_points': p.projected_points,
+            'games_played_frac': p.games_played_frac,
             'adp': None if np.isinf(p.adp) else p.adp
         }
         players_data.append(player_dict)
@@ -203,7 +204,7 @@ def export_csv():
     cw = csv.writer(si)
 
     # Write header
-    cw.writerow(['Pick Number', 'Team ID', 'Player ID', 'Player Name', 'Position', 'Projected Points', 'ADP'])
+    cw.writerow(['Pick Number', 'Team ID', 'Player ID', 'Player Name', 'Position', 'Projected Points', 'ADP', 'Games Played %'])
 
     # Write draft history
     for pick in draft_env._draft_history:
@@ -216,7 +217,8 @@ def export_csv():
                 player.name,
                 player.position,
                 player.projected_points,
-                player.adp if np.isfinite(player.adp) else 'N/A'
+                player.adp if np.isfinite(player.adp) else 'N/A',
+                f"{player.games_played_frac:.2f}"
             ])
 
     # Prepare response
