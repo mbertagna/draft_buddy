@@ -55,14 +55,14 @@ def run_full_season_simulation(config: Config, num_simulations: int):
     # --- Matchup Data ---
     print("Loading matchup data...")
     try:
-        matchups_df = pd.read_csv('data/red_league_matchups_2024.csv')
+        matchups_df = pd.read_csv('data/red_league_matchups_2025.csv')
         # Basic preprocessing, this can be improved
         matchups_df = matchups_df.rename(columns={'Away Manager(s)': 'Away Team Manager(s)', 'Home Manager(s)': 'Home Team Manager(s)'})
         matchups_df['Away Team Manager(s)'] = matchups_df['Away Team Manager(s)'].apply(lambda x: x.split(' ')[0].lower())
         matchups_df['Home Team Manager(s)'] = matchups_df['Home Team Manager(s)'].apply(lambda x: x.split(' ')[0].lower())
         matchups_df = matchups_df.loc[matchups_df['Week'] < 15]
     except FileNotFoundError:
-        print("ERROR: 'data/red_league_matchups_2024.csv' not found.")
+        print("ERROR: 'data/red_league_matchups_2025.csv' not found.")
         return
 
     draft_order_2024 = [
