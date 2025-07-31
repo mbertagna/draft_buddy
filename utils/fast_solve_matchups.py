@@ -59,8 +59,8 @@ def get_week_results(roster, week):
 def get_matchups_df_results(matchups_df_row_tuple):
     idx, matchups_df_row = matchups_df_row_tuple
     
-    away_team = matchups_df_row['Away Team Manager(s)']
-    home_team = matchups_df_row['Home Team Manager(s)']
+    away_team = matchups_df_row['Away Manager(s)']
+    home_team = matchups_df_row['Home Manager(s)']
     week = matchups_df_row['Week']
     
     if pd.isna(away_team) or pd.isna(home_team):

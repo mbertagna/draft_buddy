@@ -12,6 +12,8 @@ from config import Config
 from data_utils import load_player_data, Player
 from policy_network import PolicyNetwork # Import PolicyNetwork
 import json
+from utils.season_simulation_utils import simulate_season
+import pandas as pd
 
 class FantasyFootballDraftEnv(gym.Env):
     """
@@ -87,7 +89,7 @@ class FantasyFootballDraftEnv(gym.Env):
         self._previous_pick_state = [] # Stores (current_pick_idx, current_pick_number, overridden_team_id) before each pick
 
         # Pre-calculate total roster size for done check
-        self.total_roster_size_per_team = sum(self.config.ROSTER_STRUCTURE.values()) + sum(self.config.BENCH_MAXES.values())
+        self.total_roster_size_per_team = sum(self.config.ROSTER_STRUCTURE.values()) + self.config.TOTAL_BENCH_SIZE
 
         # New: Load opponent models
         self.opponent_models: Dict[int, PolicyNetwork] = {}
@@ -96,6 +98,27 @@ class FantasyFootballDraftEnv(gym.Env):
         # New: Load agent model for suggestions
         self.agent_model: Optional[PolicyNetwork] = None
         self._load_agent_model()
+
+        # --- Season Simulation Data ---
+        matchups_path = os.path.join(self.config.DATA_DIR, 'red_league_matchups_2025.csv')
+        if os.path.exists(matchups_path):
+            self.matchups_df = pd.read_csv(matchups_path)
+        else:
+            self.matchups_df = None
+            if self.config.ENABLE_SEASON_SIM_REWARD:
+                print(f"Warning: ENABLE_SEASON_SIM_REWARD is True, but matchups file not found at {matchups_path}. Season sim rewards will be disabled.")
+        
+        self.wtw_dict = self._create_wtw_points_dict()
+
+    def _create_wtw_points_dict(self):
+        wtw_dict = {}
+        for player in self.all_players_data:
+            # Use player's average projected points for all weeks, as requested.
+            wtw_dict[player.player_id] = {
+                'pts': [player.projected_points] * 18,
+                'pos': player.position
+            }
+        return wtw_dict
 
     def save_state(self, file_path: str):
         """Saves the current draft state to a file using an atomic write."""
@@ -428,7 +451,13 @@ class FantasyFootballDraftEnv(gym.Env):
             if 'draft_complete' in info and self.config.BONUS_FOR_FULL_ROSTER > 0:
                 reward += self.config.BONUS_FOR_FULL_ROSTER
 
-            # --- Competitive Reward Logic ---
+            # --- Final Reward Calculation ---
+            # Initialize with the base score, which might be weighted or raw total points.
+            base_reward = agent_final_weighted_score
+            reward += base_reward
+            info['base_reward_component'] = base_reward
+
+            # --- Competitive Reward (Opponent Difference) ---
             if self.config.ENABLE_COMPETITIVE_REWARD:
                 opponent_scores = []
                 for team_id, roster_data in self.teams_rosters.items():
@@ -446,45 +475,54 @@ class FantasyFootballDraftEnv(gym.Env):
                         else:
                             opponent_score = sum(p.projected_points for p in roster_data['PLAYERS'])
                         opponent_scores.append(opponent_score)
-                
-                competitive_reward_component = 0 # Initialize competitive component
-                if not opponent_scores: # Handle case with no opponents (e.g., NUM_TEAMS = 1)
-                    info['competitive_mode'] = 'None (No Opponents)'
-                    # No competitive reward if there are no opponents
-                else:
+
+                if opponent_scores:
                     opponent_scores_np = np.array(opponent_scores)
+                    competitive_reward_component = 0
 
                     if self.config.COMPETITIVE_REWARD_MODE == 'MAX_OPPONENT_DIFFERENCE':
                         max_opponent_score = np.max(opponent_scores_np)
                         competitive_reward_component = agent_final_weighted_score - max_opponent_score
                         info['competitive_mode'] = 'Max Opponent Difference'
-                        info['target_opponent_score'] = max_opponent_score # Log the specific score targeted
+                        info['target_opponent_score'] = max_opponent_score
                     elif self.config.COMPETITIVE_REWARD_MODE == 'AVG_OPPONENT_DIFFERENCE':
                         avg_opponent_score = np.mean(opponent_scores_np)
                         competitive_reward_component = agent_final_weighted_score - avg_opponent_score
                         info['competitive_mode'] = 'Average Opponent Difference'
-                        info['target_opponent_score'] = avg_opponent_score # Log the specific score targeted
-                    elif self.config.COMPETITIVE_REWARD_MODE == 'NONE': # Explicitly handle NONE for competitive reward
-                        competitive_reward_component = 0
-                        info['competitive_mode'] = 'None'
-                    else: # Fallback for unknown competitive mode
-                        print(f"Warning: Unknown COMPETITIVE_REWARD_MODE: {self.config.COMPETITIVE_REWARD_MODE}. No competitive reward applied.")
-                        competitive_reward_component = 0
-                        info['competitive_mode'] = 'Unknown/Fallback'
+                        info['target_opponent_score'] = avg_opponent_score
+                    
+                    reward += competitive_reward_component
+                    info['competitive_reward_component'] = competitive_reward_component
 
-                    # Apply STD Deviation Penalty (if enabled and applicable)
                     if self.config.ENABLE_OPPONENT_STD_DEV_PENALTY and len(opponent_scores_np) > 1:
                         opponent_std_dev = np.std(opponent_scores_np)
                         std_dev_penalty = opponent_std_dev * self.config.OPPONENT_STD_DEV_PENALTY_WEIGHT
-                        
-                        competitive_reward_component -= std_dev_penalty # Subtract penalty
-                        info['opponent_std_dev_applied'] = True
-                        info['opponent_std_dev'] = opponent_std_dev
-                        info['std_dev_penalty_amount'] = std_dev_penalty
-                    else:
-                        info['opponent_std_dev_applied'] = False
+                        reward -= std_dev_penalty
+                        info['opponent_std_dev_penalty'] = std_dev_penalty
 
-                reward += competitive_reward_component
+            # --- Season Simulation Reward ---
+            if self.config.ENABLE_SEASON_SIM_REWARD and self.matchups_df is not None:
+                sim_rosters = {self.config.TEAM_MANAGER_MAPPING.get(tid): [p.player_id for p in r['PLAYERS']] for tid, r in self.teams_rosters.items() if self.config.TEAM_MANAGER_MAPPING.get(tid)}
+                
+                try:
+                    _, regular_records, _, _, winner = simulate_season(
+                        self.wtw_dict, self.matchups_df, sim_rosters, 2025, "", False
+                    )
+                    sim_reward = 0
+                    agent_manager_name = self.config.TEAM_MANAGER_MAPPING.get(self.agent_team_id)
+
+                    if regular_records and regular_records[0][0] == agent_manager_name:
+                        sim_reward += self.config.SEASON_SIM_REWARDS['WIN_REGULAR_SEASON']
+                        info['regular_season_winner'] = True
+                    
+                    if winner == agent_manager_name:
+                        sim_reward += self.config.SEASON_SIM_REWARDS['WIN_PLAYOFFS']
+                        info['playoff_winner'] = True
+                    
+                    reward += sim_reward
+                    info['season_sim_reward'] = sim_reward
+                except Exception as e:
+                    print(f"Error during season simulation: {e}")
             else:
                 # If competitive reward is NOT enabled, the base reward is simply the agent's score
                 reward += agent_final_weighted_score
@@ -686,32 +724,53 @@ class FantasyFootballDraftEnv(gym.Env):
         """Returns the available player with the highest projected points for a given position."""
         return self._get_kth_best_available_player_by_pos(position, 1)
 
-    def _can_team_draft_position(self, team_id: int, position: str) -> bool:
+    def _can_team_draft_position(self, team_id: int, position: str, is_manual_pick: bool = False) -> bool:
         """
-        Checks if a team can draft a player of a given position, considering roster limits
-        and general availability of players of that position in the pool.
+        Checks if a team can draft a player of a given position, considering roster limits.
+        For manual picks, it only checks total bench size. For AI picks, it enforces positional maxes.
         """
-        # First, check if there are any players of this position available in the pool
-        any_player_of_pos_available = any(
-            self.player_map[pid].position == position for pid in self.available_players_ids
-        )
-        if not any_player_of_pos_available:
+        roster_counts = self.teams_rosters[team_id]
+        total_players = len(roster_counts['PLAYERS'])
+        total_starters = sum(self.config.ROSTER_STRUCTURE.values())
+        total_bench_players = total_players - total_starters
+
+        # Universal check: is the roster completely full?
+        if total_players >= self.total_roster_size_per_team:
             return False
 
-        # Now, check if the specific team has room for this position
-        roster_counts = self.teams_rosters[team_id]
-        current_pos_count = roster_counts[position]
-        current_flex_count = roster_counts['FLEX']
+        # Check if any players of this position are available in the pool
+        if not any(self.player_map[pid].position == position for pid in self.available_players_ids):
+            return False
 
-        max_pos_count = self.config.ROSTER_STRUCTURE.get(position, 0) + self.config.BENCH_MAXES.get(position, 0)
-        max_flex_count = self.config.ROSTER_STRUCTURE.get('FLEX', 0)
+        # --- Logic for Manual vs. AI Picks ---
+        is_manual_team = team_id in self.manual_draft_teams
 
-        if current_pos_count < max_pos_count:
-            return True # Room in starting or bench roster for this position
-        elif position in ['RB', 'WR', 'TE'] and current_flex_count < max_flex_count:
-            return True # Room in FLEX spot for RB/WR/TE
-        
-        return False # No room for this position
+        # For manual teams, only check if the bench has space.
+        if is_manual_team:
+            if total_bench_players < self.config.TOTAL_BENCH_SIZE:
+                return True
+            # If bench is full, check if it can fill a starter/flex spot
+            elif roster_counts[position] < self.config.ROSTER_STRUCTURE.get(position, 0):
+                return True
+            elif position in ['RB', 'WR', 'TE'] and roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE.get('FLEX', 0):
+                return True
+            else:
+                return False
+
+        # For AI teams, enforce positional BENCH_MAXES
+        else:
+            # Can it fill a starter spot?
+            if roster_counts[position] < self.config.ROSTER_STRUCTURE.get(position, 0):
+                return True
+            # Can it fill a FLEX spot?
+            elif position in ['RB', 'WR', 'TE'] and roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE.get('FLEX', 0):
+                return True
+            # Can it fill a positional bench spot?
+            elif total_bench_players < self.config.TOTAL_BENCH_SIZE and \
+                 (roster_counts[position] - self.config.ROSTER_STRUCTURE.get(position, 0)) < self.config.BENCH_MAXES.get(position, 0):
+                return True
+            else:
+                return False
 
     def get_action_mask(self) -> np.ndarray:
         """
@@ -761,24 +820,24 @@ class FantasyFootballDraftEnv(gym.Env):
             return False, None # Should not happen if available_players_for_pos is not empty and _can_team_draft_position is True
 
     def _update_roster_counts(self, team_id: int, player: Player):
-        """Updates team's roster counts, including handling FLEX logic."""
-        
-        # Check if the player fills a direct position spot first
-        current_pos_count = self.teams_rosters[team_id][player.position]
-        required_fixed_spots = self.config.ROSTER_STRUCTURE.get(player.position, 0)
-        max_pos_spots = required_fixed_spots + self.config.BENCH_MAXES.get(player.position, 0)
+        """Updates team's roster counts, correctly assigning players to starter, flex, or bench spots."""
+        roster = self.teams_rosters[team_id]
+        pos = player.position
 
-        if current_pos_count < max_pos_spots:
-            # Player fills a direct position spot (starter or bench)
-            self.teams_rosters[team_id][player.position] += 1
-        elif player.position in ['RB', 'WR', 'TE'] and self.teams_rosters[team_id]['FLEX'] < self.config.ROSTER_STRUCTURE['FLEX']:
-            # Player fills a FLEX spot
-            self.teams_rosters[team_id]['FLEX'] += 1
-        else:
-            # This case indicates an error in _try_select_player_for_team or environment logic
-            # as a player should only be "drafted" if there's a spot.
-            print(f"Error: Player {player.name} ({player.position}) drafted for team {team_id} but no valid spot found to update counts!")
-            # This shouldn't be reached if _try_select_player_for_team works correctly.
+        # 1. Try to fill a required starter position
+        if roster[pos] < self.config.ROSTER_STRUCTURE.get(pos, 0):
+            roster[pos] += 1
+            return
+
+        # 2. Try to fill a FLEX position if applicable
+        if pos in ['RB', 'WR', 'TE'] and roster['FLEX'] < self.config.ROSTER_STRUCTURE.get('FLEX', 0):
+            roster['FLEX'] += 1
+            return
+
+        # 3. If it's not a starter or flex, it must be a bench player.
+        # The _can_team_draft_position function has already validated that there is space.
+        # We still increment the position count for tracking, even for bench players.
+        roster[pos] += 1
 
     def _simulate_competing_pick(self, team_id: int) -> Optional[Player]:
         roster_counts = self.teams_rosters[team_id]
@@ -947,9 +1006,9 @@ class FantasyFootballDraftEnv(gym.Env):
         if not drafted_player or drafted_player.player_id not in self.available_players_ids:
             raise ValueError(f"Player with ID {player_id} is not available to be drafted.")
 
-        # Validate that the team can draft this position
-        if not self._can_team_draft_position(current_team_id, drafted_player.position):
-            raise ValueError(f"Team {current_team_id} cannot draft a {drafted_player.position} as the roster is full for that position.")
+        # Validate that the team can draft this position, noting it's a manual pick
+        if not self._can_team_draft_position(current_team_id, drafted_player.position, is_manual_pick=True):
+            raise ValueError(f"Team {current_team_id} cannot draft a {drafted_player.position}. The roster is full for that position or the bench is at capacity.")
 
         # Store the state before making the pick for the undo history
         was_override = (self._overridden_team_id is not None)

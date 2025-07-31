@@ -9,14 +9,14 @@ file_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_records_from_matchups_results_df(matchups_results_df: pd.DataFrame) -> dict:
-    matchups_results_df['Away Team Manager(s)'] = matchups_results_df['Away Team Manager(s)'].astype(str)
-    matchups_results_df['Home Team Manager(s)'] = matchups_results_df['Home Team Manager(s)'].astype(str)
+    matchups_results_df['Away Manager(s)'] = matchups_results_df['Away Manager(s)'].astype(str)
+    matchups_results_df['Home Manager(s)'] = matchups_results_df['Home Manager(s)'].astype(str)
 
-    records = {(name): {'W': 0, 'L': 0, 'T': 0, 'pts': 0} for name in np.unique(list(matchups_results_df['Away Team Manager(s)'].unique()) + list(matchups_results_df['Home Team Manager(s)'].unique()))}
+    records = {(name): {'W': 0, 'L': 0, 'T': 0, 'pts': 0} for name in np.unique(list(matchups_results_df['Away Manager(s)'].unique()) + list(matchups_results_df['Home Manager(s)'].unique()))}
     
     for idx, row in matchups_results_df.iterrows():
-        away_name = row['Away Team Manager(s)']
-        home_name = row['Home Team Manager(s)']
+        away_name = row['Away Manager(s)']
+        home_name = row['Home Manager(s)']
 
         away_score = round(row['Away Score'], 2)
         home_score = round(row['Home Score'], 2)
@@ -69,15 +69,15 @@ def get_playoff_results_from_reg_records(wtw_dict: dict, records: list, rosters:
     week = sum(list(records[0][1].values())[:-1]) + 1
     seeding = [r[0] for r in records]
 
-    cols = ['Week', 'Matchup', 'Away Team Manager(s)', 'Away Score', 'Home Score', 'Home Team Manager(s)']
+    cols = ['Week', 'Matchup', 'Away Manager(s)', 'Away Score', 'Home Score', 'Home Manager(s)']
 
     round_1_playoff_matchups_dict = {col: [] for col in cols}
     round_1_playoff_matchups_dict['Week'] += [week] * 4
     round_1_playoff_matchups_dict['Away Score'] += [0.0] * 4
     round_1_playoff_matchups_dict['Home Score'] += [0.0] * 4
     round_1_playoff_matchups_dict['Matchup'] += [i for i in range(1, 1 + 4)]
-    round_1_playoff_matchups_dict['Away Team Manager(s)'] += [None, seeding[4], seeding[5], None]
-    round_1_playoff_matchups_dict['Home Team Manager(s)'] += [seeding[0], seeding[3], seeding[2], seeding[1]]
+    round_1_playoff_matchups_dict['Away Manager(s)'] += [None, seeding[4], seeding[5], None]
+    round_1_playoff_matchups_dict['Home Manager(s)'] += [seeding[0], seeding[3], seeding[2], seeding[1]]
 
     round_1_playoff_matchups_df = fast_solve_matchups(wtw_dict, pd.DataFrame(round_1_playoff_matchups_dict), rosters, season)
     week += 1
@@ -88,16 +88,16 @@ def get_playoff_results_from_reg_records(wtw_dict: dict, records: list, rosters:
     round_2_playoff_matchups_dict['Home Score'] += [0.0] * 2
     round_2_playoff_matchups_dict['Matchup'] += [i for i in range(1, 1 + 2)]
 
-    round_2_playoff_matchups_dict['Away Team Manager(s)'] += [
-        round_1_playoff_matchups_df.iloc[1]['Home Team Manager(s)'] if round_1_playoff_matchups_df.iloc[1]['Home Score'] >= 
-        round_1_playoff_matchups_df.iloc[1]['Away Score'] else round_1_playoff_matchups_df.iloc[1]['Away Team Manager(s)'],
-        round_1_playoff_matchups_df.iloc[3]['Home Team Manager(s)']
+    round_2_playoff_matchups_dict['Away Manager(s)'] += [
+        round_1_playoff_matchups_df.iloc[1]['Home Manager(s)'] if round_1_playoff_matchups_df.iloc[1]['Home Score'] >= 
+        round_1_playoff_matchups_df.iloc[1]['Away Score'] else round_1_playoff_matchups_df.iloc[1]['Away Manager(s)'],
+        round_1_playoff_matchups_df.iloc[3]['Home Manager(s)']
     ]
 
-    round_2_playoff_matchups_dict['Home Team Manager(s)'] += [
-        round_1_playoff_matchups_df.iloc[0]['Home Team Manager(s)'],
-        round_1_playoff_matchups_df.iloc[2]['Home Team Manager(s)'] if round_1_playoff_matchups_df.iloc[2]['Home Score'] >= 
-        round_1_playoff_matchups_df.iloc[2]['Away Score'] else round_1_playoff_matchups_df.iloc[2]['Away Team Manager(s)']
+    round_2_playoff_matchups_dict['Home Manager(s)'] += [
+        round_1_playoff_matchups_df.iloc[0]['Home Manager(s)'],
+        round_1_playoff_matchups_df.iloc[2]['Home Manager(s)'] if round_1_playoff_matchups_df.iloc[2]['Home Score'] >= 
+        round_1_playoff_matchups_df.iloc[2]['Away Score'] else round_1_playoff_matchups_df.iloc[2]['Away Manager(s)']
     ]
 
     round_2_playoff_matchups_df = fast_solve_matchups(wtw_dict, pd.DataFrame(round_2_playoff_matchups_dict), rosters, season)
@@ -109,14 +109,14 @@ def get_playoff_results_from_reg_records(wtw_dict: dict, records: list, rosters:
     round_3_playoff_matchups_dict['Home Score'] += [0.0] * 1
     round_3_playoff_matchups_dict['Matchup'] += [i for i in range(1, 1 + 1)]
 
-    round_3_playoff_matchups_dict['Away Team Manager(s)'] += [
-        round_2_playoff_matchups_df.iloc[1]['Home Team Manager(s)'] if round_2_playoff_matchups_df.iloc[1]['Home Score'] >= 
-        round_2_playoff_matchups_df.iloc[1]['Away Score'] else round_2_playoff_matchups_df.iloc[1]['Away Team Manager(s)']
+    round_3_playoff_matchups_dict['Away Manager(s)'] += [
+        round_2_playoff_matchups_df.iloc[1]['Home Manager(s)'] if round_2_playoff_matchups_df.iloc[1]['Home Score'] >= 
+        round_2_playoff_matchups_df.iloc[1]['Away Score'] else round_2_playoff_matchups_df.iloc[1]['Away Manager(s)']
     ]
 
-    round_3_playoff_matchups_dict['Home Team Manager(s)'] += [
-        round_2_playoff_matchups_df.iloc[0]['Home Team Manager(s)'] if round_2_playoff_matchups_df.iloc[0]['Home Score'] >= 
-        round_2_playoff_matchups_df.iloc[0]['Away Score'] else round_2_playoff_matchups_df.iloc[0]['Away Team Manager(s)']
+    round_3_playoff_matchups_dict['Home Manager(s)'] += [
+        round_2_playoff_matchups_df.iloc[0]['Home Manager(s)'] if round_2_playoff_matchups_df.iloc[0]['Home Score'] >= 
+        round_2_playoff_matchups_df.iloc[0]['Away Score'] else round_2_playoff_matchups_df.iloc[0]['Away Manager(s)']
     ]
 
     round_3_playoff_matchups_df = fast_solve_matchups(wtw_dict, pd.DataFrame(round_3_playoff_matchups_dict), rosters, season)
@@ -182,11 +182,11 @@ def get_playoffs_tree(playoffs: pd.DataFrame):
     tree_list = []
 
     for idx, row in playoffs.iterrows():
-        tree_list.append(f"{row['Home Team Manager(s)']} ({round(row['Home Score'], 2)})")
-        tree_list.append(f"{row['Away Team Manager(s)']} ({round(row['Away Score'], 2)})")
+        tree_list.append(f"{row['Home Manager(s)']} ({round(row['Home Score'], 2)})")
+        tree_list.append(f"{row['Away Manager(s)']} ({round(row['Away Score'], 2)})")
 
-    winner = (playoffs.iloc[len(playoffs) - 1]['Home Team Manager(s)'] if playoffs.iloc[len(playoffs) - 1]['Home Score'] >= 
-                playoffs.iloc[len(playoffs) - 1]['Away Score'] else playoffs.iloc[len(playoffs) - 1]['Away Team Manager(s)'])
+    winner = (playoffs.iloc[len(playoffs) - 1]['Home Manager(s)'] if playoffs.iloc[len(playoffs) - 1]['Home Score'] >= 
+                playoffs.iloc[len(playoffs) - 1]['Away Score'] else playoffs.iloc[len(playoffs) - 1]['Away Manager(s)'])
 
     tree_list.append(winner)
 

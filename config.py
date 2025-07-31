@@ -35,16 +35,17 @@ class Config:
     ROSTER_STRUCTURE = {
         'QB': 1,
         'RB': 2,
-        'WR': 3,
+        'WR': 2,
         'TE': 1,
-        'FLEX': 2, # FLEX can be RB, WR, or TE
+        'FLEX': 3, # FLEX can be RB, WR, or TE
     }
     BENCH_MAXES = {
         'QB': 1, # Max QBs on bench
         'RB': 3, # Max RBs on bench
         'WR': 3, # Max WRs on bench
-        'TE': 1, # Max TEs on bench
+        'TE': 2, # Max TEs on bench
     }
+    TOTAL_BENCH_SIZE = 7 # The total number of players allowed on the bench
     # These base values are now used only for agent's own settings, or as default if not overridden for opponents
     COMPETING_TEAM_LOGIC = 'HEURISTIC' # Options: 'ADP', 'HEURISTIC'
     COMPETING_TEAM_RANDOMNESS_FACTOR = 0.2 # Probability (0.0 to 1.0) of making a suboptimal pick
@@ -56,9 +57,9 @@ class Config:
     # If a team_id is not specified here, it will use DEFAULT_OPPONENT_STRATEGY.
     OPPONENT_TEAM_STRATEGIES = {
         1: { # Example: A team that prioritizes ADP with some randomness, and focuses on RB/WR first
-            'logic': 'ADP',
+            'logic': 'HEURISTIC',
             'randomness_factor': 0.1,
-            'suboptimal_strategy': 'NEXT_BEST_ADP',
+            'suboptimal_strategy': 'NEXT_BEST_HEURISTIC',
             'positional_priority': ['RB', 'WR', 'QB', 'TE'] # Custom priority for heuristic logic
         },
         2: { # Example: A more heuristic team that likes QBs early
@@ -68,9 +69,9 @@ class Config:
             'positional_priority': ['QB', 'RB', 'WR', 'TE']
         },
         3: { # Example: A very random team (might pick odd positions early)
-            'logic': 'RANDOM',
+            'logic': 'ADP',
             'randomness_factor': 0.5,
-            'suboptimal_strategy': 'RANDOM_ELIGIBLE',
+            'suboptimal_strategy': 'NEXT_BEST_ADP',
             'positional_priority': ['RB', 'WR', 'QB', 'TE']
         },
         4: { # Example: Another ADP team with higher randomness
@@ -81,24 +82,27 @@ class Config:
         },
         5: { # Example: A heuristic team prioritizing WR/RB
             'logic': 'HEURISTIC',
-            'randomness_factor': 0.1,
+            'randomness_factor': 0.3,
             'suboptimal_strategy': 'NEXT_BEST_HEURISTIC',
             'positional_priority': ['WR', 'RB', 'QB', 'TE']
         },
         6: { # Example: A random team with high randomness
-            'logic': 'RANDOM',
+            'logic': 'ADP',
             'randomness_factor': 0.7,
-            'suboptimal_strategy': 'RANDOM_ELIGIBLE',
+            'suboptimal_strategy': 'NEXT_BEST_ADP',
             'positional_priority': ['WR', 'RB', 'QB', 'TE']
         },
-        7: { # Example: An opponent using a trained agent model
-            'logic': 'AGENT_MODEL', # New logic for using a trained model
-            'model_path_key': 'opponent_model_1', # Key to look up in OPPONENT_MODEL_PATHS
-            # randomness_factor, suboptimal_strategy, positional_priority irrelevant here
+        8: { # Example: An opponent using a trained agent model
+            'logic': 'HEURISTIC', # New logic for using a trained model
+            'randomness_factor': 0.7,
+            'suboptimal_strategy': 'NEXT_BEST_HEURISTIC',
+            'positional_priority': ['WR', 'RB', 'QB', 'TE']
         },
-        8: { # Example: Another opponent using a different trained agent model
-            'logic': 'AGENT_MODEL',
-            'model_path_key': 'opponent_model_2',
+        9: { # Example: Another opponent using a different trained agent model
+            'logic': 'HEURISTIC',
+            'randomness_factor': 0.1,
+            'suboptimal_strategy': 'NEXT_BEST_HEURISTIC',
+            'positional_priority': ['RB', 'WR', 'QB', 'TE']
         },
         # 10: { # Example: Another opponent using a different trained agent model
         #     'logic': 'AGENT_MODEL',
@@ -119,10 +123,23 @@ class Config:
     # Each key should match a 'model_path_key' in OPPONENT_TEAM_STRATEGIES
     OPPONENT_MODEL_PATHS = {
         # IMPORTANT: Replace these with actual paths to your trained .pth files
-        'opponent_model_1': os.path.join(MODELS_DIR, "reinforce_policy_model_20250611_194128.pth"),
-        'opponent_model_2': os.path.join(MODELS_DIR, "reinforce_policy_model_20250612_010014.pth"), # Example
+        # 'opponent_model_1': os.path.join(MODELS_DIR, "reinforce_policy_model_20250611_194128.pth"),
+        # 'opponent_model_2': os.path.join(MODELS_DIR, "reinforce_policy_model_20250612_010014.pth"), # Example
         # 'opponent_model_10': os.path.join(MODELS_DIR, "reinforce_policy_model_20250720_224419.pth"),
         # Add more if you have more agent opponents
+    }
+
+    TEAM_MANAGER_MAPPING = {
+        1: 'Ryan Freilich',
+        2: 'Shane Spence',
+        3: 'Paul Flores',
+        4: 'lucas johnsen',
+        5: 'Val Perrin',
+        6: 'Sean Freilich',
+        7: "Jake D'Alonzo",
+        8: 'Scott Sheehan',
+        9: 'Noah Hollander',
+        10: 'Michael Bertagna'
     }
 
 
@@ -137,8 +154,8 @@ class Config:
     }
 
     # --- Reinforcement Learning Parameters ---
-    RESUME_TRAINING = True # Set to True to resume from the latest checkpoint
-    TOTAL_EPISODES = 2000
+    RESUME_TRAINING = False # Set to True to resume from the latest checkpoint
+    TOTAL_EPISODES = 50000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
 
@@ -233,12 +250,19 @@ class Config:
     HIDDEN_DIM = 64
 
     # --- Simulation and Evaluation Parameters ---
-    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v1/checkpoint_episode_2000.pth") # <-- CHANGE THIS FILENAME
+    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v8/checkpoint_episode_9000.pth") # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters
-    ENABLE_COMPETITIVE_REWARD = False # Master switch for competitive rewards
-    COMPETITIVE_REWARD_MODE = 'MAX_OPPONENT_DIFFERENCE' # Options: 'NONE', 'MAX_OPPONENT_DIFFERENCE', 'AVG_OPPONENT_DIFFERENCE'
+    ENABLE_COMPETITIVE_REWARD = True # Master switch for competitive rewards
+    COMPETITIVE_REWARD_MODE = 'SEASON_SIM' # Options: 'NONE', 'MAX_OPPONENT_DIFFERENCE', 'AVG_OPPONENT_DIFFERENCE', 'SEASON_SIM'
+
+    # --- Season Simulation Reward Parameters ---
+    ENABLE_SEASON_SIM_REWARD = True # Master switch for season simulation rewards
+    SEASON_SIM_REWARDS = {
+        'WIN_REGULAR_SEASON': 1000,
+        'WIN_PLAYOFFS': 1000,
+    }
 
     # Option to add a penalty for high standard deviation among opponents
     ENABLE_OPPONENT_STD_DEV_PENALTY = False # If True, will apply a penalty based on opponent score std dev
