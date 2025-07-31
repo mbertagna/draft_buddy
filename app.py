@@ -73,7 +73,8 @@ def get_draft_state():
         'team_projected_points': {team_id: sum(p.projected_points for p in roster_data['PLAYERS']) for team_id, roster_data in draft_env.teams_rosters.items()},
         'manual_draft_teams': list(draft_env.manual_draft_teams),
         'roster_structure': draft_env.config.ROSTER_STRUCTURE,
-        'team_points_summary': team_points_summary
+        'team_points_summary': team_points_summary,
+        'team_bye_weeks': {team_id: [p.bye_week for p in roster_data['PLAYERS'] if p.bye_week and not np.isnan(p.bye_week)] for team_id, roster_data in draft_env.teams_rosters.items()}
     }
 
 # API route for backend status
@@ -118,7 +119,8 @@ def get_players():
             'position': p.position,
             'projected_points': p.projected_points,
             'games_played_frac': p.games_played_frac,
-            'adp': None if np.isinf(p.adp) else p.adp
+            'adp': None if np.isinf(p.adp) else p.adp,
+            'bye_week': p.bye_week if p.bye_week and not np.isnan(p.bye_week) else 'N/A'
         }
         players_data.append(player_dict)
 

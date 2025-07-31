@@ -13,6 +13,7 @@ class Player:
     projected_points: float
     games_played_frac: float = 1.0
     adp: float = field(default=np.inf) # Default to infinity if no ADP
+    bye_week: Optional[int] = None
 
     def to_dict(self):
         return {
@@ -21,7 +22,8 @@ class Player:
             'position': self.position,
             'projected_points': self.projected_points,
             'games_played_frac': self.games_played_frac,
-            'adp': self.adp if np.isfinite(self.adp) else None
+            'adp': self.adp if np.isfinite(self.adp) else None,
+            'bye_week': self.bye_week
         }
 
 def _generate_mock_adp(players: List[Player], adp_config: Dict) -> List[Player]:
@@ -79,6 +81,7 @@ def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
     players = []
     has_adp_column = 'adp' in df.columns
     has_games_played_frac_column = 'games_played_frac' in df.columns
+    has_bye_week_column = 'bye_week' in df.columns
 
     for _, row in df.iterrows():
         player_id = int(row['player_id'])
@@ -87,8 +90,9 @@ def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
         projected_points = float(row['projected_points'])
         adp = float(row['adp']) if has_adp_column and pd.notna(row['adp']) else np.inf
         games_played_frac = float(row['games_played_frac']) if has_games_played_frac_column and pd.notna(row['games_played_frac']) else 1.0
+        bye_week = int(row['bye_week']) if has_bye_week_column and pd.notna(row['bye_week']) else None
 
-        players.append(Player(player_id, name, position, projected_points, games_played_frac, adp))
+        players.append(Player(player_id, name, position, projected_points, games_played_frac, adp, bye_week))
 
     # If ADP column was missing or all values were NaN, generate mock ADP
     if not has_adp_column or all(p.adp == np.inf for p in players):
