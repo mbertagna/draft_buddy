@@ -74,7 +74,13 @@ def get_draft_state():
         'manual_draft_teams': list(draft_env.manual_draft_teams),
         'roster_structure': draft_env.config.ROSTER_STRUCTURE,
         'team_points_summary': team_points_summary,
-        'team_bye_weeks': {team_id: [p.bye_week for p in roster_data['PLAYERS'] if p.bye_week and not np.isnan(p.bye_week)] for team_id, roster_data in draft_env.teams_rosters.items()}
+        'team_bye_weeks': { 
+            team_id: {
+                week: {pos: int(count) for pos, count in zip(*np.unique([p.position for p in roster_data['PLAYERS'] if p.bye_week == week], return_counts=True))}
+                for week in set(p.bye_week for p in roster_data['PLAYERS'] if p.bye_week and not np.isnan(p.bye_week))
+            }
+            for team_id, roster_data in draft_env.teams_rosters.items()
+        }
     }
 
 # API route for backend status
