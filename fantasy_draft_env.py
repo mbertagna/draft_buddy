@@ -539,52 +539,48 @@ class FantasyFootballDraftEnv(gym.Env):
 
     def _categorize_roster_by_slots(self, team_roster: List[Player], roster_structure: Dict, bench_maxes: Dict) -> Tuple[Dict[str, List[Player]], List[Player], List[Player]]:
         """
-        Categorizes players into starters, bench, and explicit flex players based on roster structure
-        and projected points. This is used for reward calculation.
-        Returns: (starters_dict, all_non_starters_list, flex_players_list)
+        Categorizes players into starters, bench, and flex players based on roster structure
+        and projected points, ensuring no player is double-counted.
         """
-        starters = defaultdict(list) # {'QB': [player1], 'RB': [player2, player3], ...}
-        temp_flex_candidates = [] # Players that could potentially fill a FLEX spot
-        other_bench_players = [] # Players that go straight to the bench
+        starters = defaultdict(list)
+        bench = []
+        flex_players = []
 
-        # Sort players by projected points (descending) for optimal placement
-        sorted_players = sorted(team_roster, key=lambda p: p.projected_points, reverse=True)
-
-        temp_pos_counts = defaultdict(int) # Tracks players in specific position slots (QB, RB, WR, TE)
+        # Create a copy of the roster to avoid modifying the original list
+        sorted_roster = sorted(team_roster, key=lambda p: p.projected_points, reverse=True)
         
-        # First pass: Fill all direct starter spots
-        for player in sorted_players:
-            pos = player.position
-            if temp_pos_counts[pos] < roster_structure.get(pos, 0):
+        # A set to keep track of players who have already been assigned a spot
+        assigned_player_ids = set()
+
+        # --- 1. Fill mandatory starter positions ---
+        for pos in roster_structure.keys():
+            if pos == 'FLEX': continue # Handle FLEX separately
+            
+            # Find the best players for this position
+            pos_players = [p for p in sorted_roster if p.position == pos and p.player_id not in assigned_player_ids]
+            
+            # Assign the required number of starters
+            num_starters_for_pos = roster_structure.get(pos, 0)
+            for i in range(min(len(pos_players), num_starters_for_pos)):
+                player = pos_players[i]
                 starters[pos].append(player)
-                temp_pos_counts[pos] += 1
-            elif pos in ['RB', 'WR', 'TE']: # These can be flex or bench
-                temp_flex_candidates.append(player)
-            else: # QB, TE (if not filling starter and not flex eligible) or too many of any pos
-                other_bench_players.append(player)
+                assigned_player_ids.add(player.player_id)
 
-        # Second pass: Fill FLEX spots from the best available flex_candidates
-        flex_players_list = []
-        current_flex_fill = 0
-        
-        # Sort flex candidates by projected points to pick the best ones for FLEX
-        temp_flex_candidates.sort(key=lambda p: p.projected_points, reverse=True)
+        # --- 2. Identify candidates for FLEX and Bench ---
+        remaining_players = [p for p in sorted_roster if p.player_id not in assigned_player_ids]
+        flex_candidates = [p for p in remaining_players if p.position in ['RB', 'WR', 'TE']]
 
-        for player in temp_flex_candidates:
-            if current_flex_fill < roster_structure.get('FLEX', 0):
-                flex_players_list.append(player)
-                current_flex_fill += 1
-            else:
-                other_bench_players.append(player) # If not used for flex, move to general bench
+        # --- 3. Fill FLEX spots from the best candidates ---
+        num_flex_spots = roster_structure.get('FLEX', 0)
+        flex_players = sorted(flex_candidates, key=lambda p: p.projected_points, reverse=True)[:num_flex_spots]
+        for player in flex_players:
+            starters['FLEX'].append(player)
+            assigned_player_ids.add(player.player_id)
 
-        # Finally, remaining direct bench players from first pass go to all_non_starters
-        # And any remaining flex candidates that didn't fit into a flex spot.
-        all_non_starters_list = other_bench_players + [p for p in temp_flex_candidates if p not in flex_players_list]
+        # --- 4. Assign all remaining players to the bench ---
+        bench = [p for p in sorted_roster if p.player_id not in assigned_player_ids]
 
-        # Ensure all players are accounted for (for debugging)
-        # assert len(team_roster) == sum(len(lst) for lst in starters.values()) + len(all_non_starters_list)
-
-        return starters, all_non_starters_list, flex_players_list
+        return starters, bench, flex_players
 
 
     def _generate_snake_draft_order(self, num_teams, total_picks_per_team):

@@ -32,19 +32,48 @@ def get_draft_state():
     """Helper function to create the draft state dictionary."""
     if not draft_env:
         return None
-    
+
     # Determine the current team on the clock, considering overrides
     team_on_clock = draft_env._overridden_team_id if draft_env._overridden_team_id is not None else \
                     (draft_env.draft_order[draft_env.current_pick_idx] if draft_env.current_pick_idx < len(draft_env.draft_order) else None)
+
+    # Get structured rosters and points for all teams
+    structured_rosters = {}
+    team_points_summary = {}
+
+    for team_id, roster_data in draft_env.teams_rosters.items():
+        starters, bench, _ = draft_env._categorize_roster_by_slots(
+            roster_data['PLAYERS'],
+            draft_env.config.ROSTER_STRUCTURE,
+            draft_env.config.BENCH_MAXES
+        )
+
+        # Calculate starter points
+        starter_points = sum(p.projected_points for pos_list in starters.values() for p in pos_list)
+        
+        # Calculate bench points
+        bench_points = sum(p.projected_points for p in bench)
+
+        team_points_summary[team_id] = {
+            'starters_total': starter_points,
+            'bench_total': bench_points
+        }
+
+        structured_rosters[team_id] = {
+            'starters': {pos: [p.to_dict() for p in players] for pos, players in starters.items()},
+            'bench': [p.to_dict() for p in bench]
+        }
 
     return {
         'draft_order': draft_env.draft_order,
         'current_pick_number': draft_env.current_pick_number,
         'current_team_picking': team_on_clock,
-        'team_rosters': {team_id: [p.to_dict() for p in roster_data['PLAYERS']] for team_id, roster_data in draft_env.teams_rosters.items()},
+        'team_rosters': structured_rosters,
         'roster_counts': {team_id: {pos: roster_data[pos] for pos in ['QB', 'RB', 'WR', 'TE', 'FLEX']} for team_id, roster_data in draft_env.teams_rosters.items()},
         'team_projected_points': {team_id: sum(p.projected_points for p in roster_data['PLAYERS']) for team_id, roster_data in draft_env.teams_rosters.items()},
-        'manual_draft_teams': list(draft_env.manual_draft_teams)
+        'manual_draft_teams': list(draft_env.manual_draft_teams),
+        'roster_structure': draft_env.config.ROSTER_STRUCTURE,
+        'team_points_summary': team_points_summary
     }
 
 # API route for backend status
