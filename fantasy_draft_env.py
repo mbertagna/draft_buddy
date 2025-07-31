@@ -73,6 +73,10 @@ class FantasyFootballDraftEnv(gym.Env):
             "next_pick_opponent_rb_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'RB'),
             "next_pick_opponent_wr_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'WR'),
             "next_pick_opponent_te_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'TE'),
+            "best_qb_bye_week_conflict": lambda: self._get_bye_week_conflict_count('QB'),
+            "best_rb_bye_week_conflict": lambda: self._get_bye_week_conflict_count('RB'),
+            "best_wr_bye_week_conflict": lambda: self._get_bye_week_conflict_count('WR'),
+            "best_te_bye_week_conflict": lambda: self._get_bye_week_conflict_count('TE'),
         }
         self.observation_space_dim = len(config.ENABLED_STATE_FEATURES)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.observation_space_dim,), dtype=np.float32)
@@ -101,14 +105,28 @@ class FantasyFootballDraftEnv(gym.Env):
 
         # --- Season Simulation Data ---
         matchups_path = os.path.join(self.config.DATA_DIR, 'red_league_matchups_2025.csv')
-        if os.path.exists(matchups_path):
+        try:
             self.matchups_df = pd.read_csv(matchups_path)
-        else:
-            self.matchups_df = None
+        except FileNotFoundError:
+            self.matchups_df = pd.DataFrame() # Initialize as empty DataFrame if not found
             if self.config.ENABLE_SEASON_SIM_REWARD:
                 print(f"Warning: ENABLE_SEASON_SIM_REWARD is True, but matchups file not found at {matchups_path}. Season sim rewards will be disabled.")
         
         self.wtw_dict = self._create_wtw_points_dict()
+
+    def _get_bye_week_conflict_count(self, position: str) -> int:
+        """
+        Calculates how many players on the agent's roster share a bye week with the best available player of a given position.
+        """
+        best_player = self._get_best_available_player_by_pos(position)
+        if not best_player or not best_player.bye_week or np.isnan(best_player.bye_week):
+            return 0
+
+        agent_roster = self.teams_rosters[self.agent_team_id]['PLAYERS']
+        conflict_count = sum(
+            1 for p in agent_roster if p.bye_week == best_player.bye_week
+        )
+        return conflict_count
 
     def _create_wtw_points_dict(self):
         wtw_dict = {}
@@ -677,6 +695,10 @@ class FantasyFootballDraftEnv(gym.Env):
             "next_pick_opponent_rb_count": self.config.ROSTER_STRUCTURE['RB'] + self.config.BENCH_MAXES['RB'],
             "next_pick_opponent_wr_count": self.config.ROSTER_STRUCTURE['WR'] + self.config.BENCH_MAXES['WR'],
             "next_pick_opponent_te_count": self.config.ROSTER_STRUCTURE['TE'] + self.config.BENCH_MAXES['TE'],
+            "best_qb_bye_week_conflict": self.total_roster_size_per_team,
+            "best_rb_bye_week_conflict": self.total_roster_size_per_team,
+            "best_wr_bye_week_conflict": self.total_roster_size_per_team,
+            "best_te_bye_week_conflict": self.total_roster_size_per_team,
         }
         min_values = {k: 0.0 for k in max_values}
         

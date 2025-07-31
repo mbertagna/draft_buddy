@@ -188,12 +188,16 @@ class Config:
         "next_pick_opponent_rb_count",
         "next_pick_opponent_wr_count",
         "next_pick_opponent_te_count",
+        "best_qb_bye_week_conflict",
+        "best_rb_bye_week_conflict",
+        "best_wr_bye_week_conflict",
+        "best_te_bye_week_conflict",
     ]
     ENABLED_STATE_FEATURES = [
         "best_available_qb_points",
         "best_available_rb_points",
         "best_available_wr_points",
-        "best_available_te_points", # Keep TE in here to make sure this is complete
+        "best_available_te_points",
         "current_roster_qb_count",
         "current_roster_rb_count",
         "current_roster_wr_count",
@@ -203,20 +207,24 @@ class Config:
         "available_roster_slots_wr",
         "available_roster_slots_te",
         "available_roster_slots_flex",
-        "qb_available_flag",
-        "rb_available_flag",
-        "wr_available_flag",
-        "te_available_flag",
+        # "qb_available_flag",
+        # "rb_available_flag",
+        # "wr_available_flag",
+        # "te_available_flag",
         "current_pick_number",
         "agent_start_position",
-        "second_best_available_qb_points", # Adding this back for completeness in state features
+        "second_best_available_qb_points",
         "second_best_available_rb_points",
         "second_best_available_wr_points",
-        "second_best_available_te_points", # Adding this back for completeness in state features
-        "next_pick_opponent_qb_count", # Adding this back for completeness in state features
+        "second_best_available_te_points",
+        "next_pick_opponent_qb_count",
         "next_pick_opponent_rb_count",
         "next_pick_opponent_wr_count",
-        "next_pick_opponent_te_count", # Adding this back for completeness in state features
+        "next_pick_opponent_te_count",
+        "best_qb_bye_week_conflict",
+        "best_rb_bye_week_conflict",
+        "best_wr_bye_week_conflict",
+        "best_te_bye_week_conflict",
     ]
     STATE_NORMALIZATION_METHOD = 'min_max'
 
