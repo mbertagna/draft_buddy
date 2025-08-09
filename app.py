@@ -296,7 +296,8 @@ def get_players():
             'vorp': player_vorp,
             'games_played_frac': p.games_played_frac,
             'adp': None if np.isinf(p.adp) else p.adp,
-            'bye_week': p.bye_week if p.bye_week and not np.isnan(p.bye_week) else 'N/A'
+            'bye_week': p.bye_week if p.bye_week and not np.isnan(p.bye_week) else 'N/A',
+            'team': getattr(p, 'team', None)
         }
         players_data.append(player_dict)
 

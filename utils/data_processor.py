@@ -63,6 +63,7 @@ class FantasyDataProcessor:
                  cache_dir: str = './data',
                  bye_weeks_override: dict = None,
                  project_rookies: bool = True,
+                 rookie_projection_method: str = 'draft',
                  rookie_projection_params: dict = None,
                  start_year: int = 1999):
         """
@@ -83,6 +84,8 @@ class FantasyDataProcessor:
         self.cache_dir = cache_dir
         self.bye_weeks_override = bye_weeks_override
         self.project_rookies = project_rookies
+        # 'draft' -> scale by draft slot; 'adp' -> interpolate by ADP; 'hybrid' -> average both
+        self.rookie_projection_method = rookie_projection_method
         self.rookie_projection_params = rookie_projection_params if rookie_projection_params is not None \
             else {'scale_min': 5, 'scale_max': 80, 'udfa_percentile': 75}
         self.start_year = start_year
@@ -259,7 +262,135 @@ class FantasyDataProcessor:
 
         return pd.concat(projected_rookies_list, ignore_index=True) if projected_rookies_list else pd.DataFrame()
 
-    def process_draft_data(self, draft_year: int, measure_of_center: str = 'median') -> tuple:
+    def _project_rookies_with_adp(self,
+                                   draft_players_df: pd.DataFrame,
+                                   adp_filepath: str,
+                                   match_threshold: int = 85,
+                                   adp_col_map: dict | None = None) -> pd.DataFrame:
+        """
+        Projects rookie fantasy points using ADP-based interpolation among nearby veteran neighbors.
+
+        Steps:
+        - Map ADP rows to roster using fuzzy matching (existing merge logic)
+        - Within each position, sort by ADP (lower is better)
+        - For each rookie with ADP, interpolate points from the closest veteran above and below by ADP
+        - Fallbacks: if only one veteran neighbor, copy that neighbor's points; if none, use position median
+        - If ADP missing for a rookie, leave as-is (caller can fallback)
+        """
+        if not adp_filepath:
+            # Nothing to do without ADP
+            return draft_players_df
+
+        # Ensure we track which entries are rookies (no prior points pre-projection)
+        draft_players_df = draft_players_df.copy()
+        draft_players_df['is_rookie'] = draft_players_df['total_pts'].isna()
+
+        merged_df, _, _ = self.merge_adp_data(
+            computed_df=draft_players_df,
+            adp_filepath=adp_filepath,
+            match_threshold=match_threshold,
+            adp_col_map=adp_col_map,
+        )
+
+        if merged_df.empty:
+            return draft_players_df
+
+        # Determine ADP numeric column
+        adp_val_col = 'AVG' if 'AVG' in merged_df.columns else ('Rank' if 'Rank' in merged_df.columns else None)
+        if adp_val_col is None:
+            return draft_players_df
+
+        # Use roster points for veterans
+        merged_df = merged_df.copy()
+        # Standardize column names used below
+        pos_col = 'Pos' if 'Pos' in merged_df.columns else ('position' if 'position' in merged_df.columns else None)
+        if pos_col is None:
+            return draft_players_df
+
+        # Prepare lookups for fallback medians by position
+        veteran_mask = (merged_df['is_rookie'] == False) & merged_df['total_pts'].notna()
+        pos_to_vet_median = merged_df[veteran_mask].groupby(pos_col)['total_pts'].median().to_dict()
+
+        # Compute interpolated points for rookies
+        predicted_points_by_player_id = {}
+
+        for position_value, group in merged_df.groupby(pos_col):
+            group_sorted = group.sort_values(by=adp_val_col, ascending=True).reset_index(drop=True)
+
+            # Indices of veterans in this position
+            vet_indices = group_sorted[(group_sorted['is_rookie'] == False) & group_sorted['total_pts'].notna()].index.tolist()
+            if not vet_indices:
+                continue
+
+            vet_idx_set = set(vet_indices)
+
+            for idx, row in group_sorted.iterrows():
+                if not bool(row.get('is_rookie', False)):
+                    continue
+
+                adp_val = row.get(adp_val_col)
+                if pd.isna(adp_val):
+                    # Cannot interpolate without ADP
+                    continue
+
+                # Find nearest veteran above (lower ADP number) and below (higher ADP number)
+                lower_idx = None
+                upper_idx = None
+
+                # Search downward for lower (better ADP)
+                for i in range(idx - 1, -1, -1):
+                    if i in vet_idx_set:
+                        lower_idx = i
+                        break
+
+                # Search upward for upper (worse ADP)
+                for j in range(idx + 1, len(group_sorted)):
+                    if j in vet_idx_set:
+                        upper_idx = j
+                        break
+
+                predicted = None
+                if (lower_idx is not None) and (upper_idx is not None):
+                    low_row = group_sorted.loc[lower_idx]
+                    high_row = group_sorted.loc[upper_idx]
+                    x0 = low_row[adp_val_col]
+                    x1 = high_row[adp_val_col]
+                    y0 = low_row['total_pts']
+                    y1 = high_row['total_pts']
+                    if pd.notna(x0) and pd.notna(x1) and (x1 > x0) and pd.notna(y0) and pd.notna(y1):
+                        # Linear interpolation in ADP space
+                        t = (adp_val - x0) / (x1 - x0)
+                        predicted = y0 + t * (y1 - y0)
+                elif lower_idx is not None:
+                    predicted = group_sorted.loc[lower_idx]['total_pts']
+                elif upper_idx is not None:
+                    predicted = group_sorted.loc[upper_idx]['total_pts']
+
+                if predicted is None or pd.isna(predicted):
+                    # Fallback to position median of veterans
+                    predicted = pos_to_vet_median.get(position_value, np.nan)
+
+                # Store by player_id to merge back
+                pid = row.get('player_id')
+                if pd.notna(predicted) and isinstance(pid, str):
+                    predicted_points_by_player_id[pid] = float(predicted)
+
+        if not predicted_points_by_player_id:
+            return draft_players_df
+
+        # Apply predictions back to rookies in the draft_players_df
+        mask = draft_players_df['player_id'].isin(predicted_points_by_player_id.keys()) & draft_players_df['is_rookie']
+        draft_players_df.loc[mask, 'total_pts'] = draft_players_df.loc[mask, 'player_id'].map(predicted_points_by_player_id)
+
+        draft_players_df.drop(columns=['is_rookie'], inplace=True)
+        return draft_players_df
+
+    def process_draft_data(self,
+                           draft_year: int,
+                           measure_of_center: str = 'median',
+                           adp_filepath: str | None = None,
+                           adp_match_threshold: int = 85,
+                           adp_col_map: dict | None = None) -> tuple:
         print("Fetching historical player data...")
         historical_df = self._get_player_stats_data(start_year=self.start_year, end_year=draft_year - 1)
         historical_df = self._apply_fantasy_scoring(historical_df)
@@ -283,12 +414,62 @@ class FantasyDataProcessor:
             
             draft_pool_df = draft_pool_df[draft_pool_df['position'].isin(self.positions)]
             draft_players_df = draft_pool_df.merge(legacy_stats_df, on='player_id', how='left')
+            # Ensure uniqueness by player_id to avoid downstream duplication
+            if 'player_id' in draft_players_df.columns:
+                draft_players_df = draft_players_df.drop_duplicates(subset=['player_id'], keep='first')
             veterans_df = draft_players_df[draft_players_df['total_pts'].notna()].copy()
             rookies_df = draft_players_df[draft_players_df['total_pts'].isna()].copy()
             if not rookies_df.empty:
-                print(f"Estimating points for {len(rookies_df)} rookies...")
-                projected_rookies_df = self._estimate_rookie_points(rookies_df, veterans_df)
-                draft_players_df = pd.concat([veterans_df, projected_rookies_df], ignore_index=True)
+                print(f"Estimating points for {len(rookies_df)} rookies using method='{self.rookie_projection_method}'...")
+                if self.rookie_projection_method == 'adp':
+                    draft_players_df = self._project_rookies_with_adp(
+                        draft_players_df=draft_players_df,
+                        adp_filepath=adp_filepath,
+                        match_threshold=adp_match_threshold,
+                        adp_col_map=adp_col_map,
+                    )
+                    # If some rookies remain without projection, fill with draft-based as fallback
+                    remaining_rookies = draft_players_df[draft_players_df['total_pts'].isna()].copy()
+                    if not remaining_rookies.empty:
+                        fallback_proj = self._estimate_rookie_points(remaining_rookies, veterans_df)
+                        draft_players_df = pd.concat([
+                            draft_players_df[draft_players_df['total_pts'].notna()],
+                            fallback_proj
+                        ], ignore_index=True)
+                elif self.rookie_projection_method == 'hybrid':
+                    # Compute both, then average
+                    adp_version = self._project_rookies_with_adp(
+                        draft_players_df=draft_players_df,
+                        adp_filepath=adp_filepath,
+                        match_threshold=adp_match_threshold,
+                        adp_col_map=adp_col_map,
+                    )
+                    draft_based = pd.concat([
+                        veterans_df,
+                        self._estimate_rookie_points(rookies_df, veterans_df)
+                    ], ignore_index=True)
+                    # Average only for rookies present in both versions
+                    merged_versions = draft_based[['player_id', 'total_pts']].merge(
+                        adp_version[['player_id', 'total_pts']], on='player_id', how='outer', suffixes=('_draft', '_adp')
+                    )
+                    merged_versions['total_pts_final'] = merged_versions[['total_pts_draft', 'total_pts_adp']].mean(axis=1, skipna=True)
+                    # Apply back to base frame
+                    draft_players_df = draft_players_df.merge(
+                        merged_versions[['player_id', 'total_pts_final']], on='player_id', how='left'
+                    )
+                    draft_players_df['total_pts'] = draft_players_df['total_pts'].combine_first(draft_players_df['total_pts_final'])
+                    draft_players_df.drop(columns=['total_pts_final'], inplace=True)
+                    # Fallbacks if still missing
+                    remaining_rookies = draft_players_df[draft_players_df['total_pts'].isna()].copy()
+                    if not remaining_rookies.empty:
+                        fallback_proj = self._estimate_rookie_points(remaining_rookies, veterans_df)
+                        draft_players_df = pd.concat([
+                            draft_players_df[draft_players_df['total_pts'].notna()],
+                            fallback_proj
+                        ], ignore_index=True)
+                else:
+                    projected_rookies_df = self._estimate_rookie_points(rookies_df, veterans_df)
+                    draft_players_df = pd.concat([veterans_df, projected_rookies_df], ignore_index=True)
         else:
             draft_year_df = self._get_player_stats_data(start_year=draft_year, end_year=draft_year)
             draft_year_df = self._apply_fantasy_scoring(draft_year_df)
@@ -370,10 +551,28 @@ class FantasyDataProcessor:
         computed_df['std_name'] = computed_df['player_display_name'].apply(standardize_name)
         adp_df['std_name'] = adp_df['Player'].apply(standardize_name)
 
+        # Deduplicate ADP rows by standardized name and position, keeping best ADP (lowest numeric AVG/Rank)
+        adp_rank_col = 'AVG' if 'AVG' in adp_df.columns else ('Rank' if 'Rank' in adp_df.columns else None)
+        if adp_rank_col is not None:
+            adp_df[adp_rank_col] = pd.to_numeric(adp_df[adp_rank_col], errors='coerce')
+            # Sort by ADP ascending so best appears first
+            adp_df = adp_df.sort_values(by=[adp_rank_col], ascending=True)
+        # Use Team/Pos if available to reduce cross-position duplicates
+        dedupe_keys = ['std_name']
+        if 'Team' in adp_df.columns:
+            dedupe_keys.append('Team')
+        if 'Pos' in adp_df.columns:
+            dedupe_keys.append('Pos')
+        adp_df = adp_df.drop_duplicates(subset=dedupe_keys, keep='first').reset_index(drop=True)
+
         # --- 2. Perform Weighted Fuzzy Matching (Manual Loop) ---
         print("Performing fuzzy match with weighted scoring...")
+        # Ensure computed_df is unique by player_id to prevent fan-out merges
+        if 'player_id' in computed_df.columns:
+            computed_df = computed_df.drop_duplicates(subset=['player_id'], keep='first')
         roster_choices = computed_df.to_dict('records')
         adp_df['matched_name'] = pd.NA
+        adp_df['matched_player_id'] = pd.NA
         adp_df['match_score'] = 0
 
         for adp_idx, adp_row in adp_df.iterrows():
@@ -381,6 +580,7 @@ class FantasyDataProcessor:
 
             best_score = -1
             best_match_name = None
+            best_match_player_id = None
 
             for roster_player in roster_choices:
                 name_score = fuzz.token_sort_ratio(adp_row['std_name'], roster_player['std_name'])
@@ -393,16 +593,30 @@ class FantasyDataProcessor:
                 if current_score > best_score:
                     best_score = current_score
                     best_match_name = roster_player['std_name']
+                    best_match_player_id = roster_player.get('player_id')
             
             if best_score >= match_threshold:
                 adp_df.at[adp_idx, 'matched_name'] = best_match_name
+                adp_df.at[adp_idx, 'matched_player_id'] = best_match_player_id
             adp_df.at[adp_idx, 'match_score'] = best_score
         
         # --- 3. Merge and Create Final DataFrames ---
-        matched_mask = adp_df['matched_name'].notna()
+        matched_mask = adp_df['matched_player_id'].notna()
+        # Merge by unique player_id to avoid duplication when names collide
+        merge_left = adp_df[matched_mask].copy()
+        # Keep only one ADP row per matched player_id, preferring best ADP (lowest AVG/Rank)
+        adp_sort_col = None
+        if 'AVG' in merge_left.columns:
+            adp_sort_col = 'AVG'
+        elif 'Rank' in merge_left.columns:
+            adp_sort_col = 'Rank'
+        if adp_sort_col is not None:
+            merge_left[adp_sort_col] = pd.to_numeric(merge_left[adp_sort_col], errors='coerce')
+            merge_left = merge_left.sort_values(by=adp_sort_col, ascending=True)
+        merge_left = merge_left.drop_duplicates(subset=['matched_player_id'], keep='first')
         merged_df = pd.merge(
-            adp_df[matched_mask], computed_df,
-            left_on='matched_name', right_on='std_name',
+            merge_left, computed_df,
+            left_on='matched_player_id', right_on='player_id',
             how='left', suffixes=('_adp', '_roster')
         )
         
@@ -412,13 +626,32 @@ class FantasyDataProcessor:
 
         # --- 4. Print Diagnostics ---
         print("\n--- ADP Merge Diagnostics ---")
-        print(f"Total ADP Players: {len(adp_df)}")
-        print(f"Successfully Matched: {len(merged_df)} ({len(merged_df) / len(adp_df):.2%})")
+        total_adp_rows = len(adp_df) if len(adp_df) > 0 else 1
+        matched_count = int(matched_mask.sum())
+        print(f"Total ADP Players: {total_adp_rows}")
+        print(f"Successfully Matched: {matched_count} ({matched_count / total_adp_rows:.2%})")
         print(f"Borderline Cases ({match_threshold-10}-{match_threshold}): {len(borderline_df)}")
         print(f"Unmatched: {len(unmatched_df)}")
         
         print("\nUnmatched Players with Highest Potential Scores:")
         for _, row in unmatched_df.head(5).iterrows():
             print(f"- {row['Player']} (Team: {row.get('Team', 'N/A')}, Top Score: {row['match_score']:.0f})")
+
+        # Extra: show highest ADP (worst) unmatched per position
+        adp_val_col = 'AVG' if 'AVG' in adp_df.columns else ('Rank' if 'Rank' in adp_df.columns else None)
+        pos_col = 'Pos' if 'Pos' in adp_df.columns else None
+        if adp_val_col and pos_col and not unmatched_df.empty and adp_val_col in unmatched_df.columns:
+            tmp = unmatched_df[[pos_col, 'Player', 'Team', adp_val_col]].copy()
+            tmp[adp_val_col] = pd.to_numeric(tmp[adp_val_col], errors='coerce')
+            tmp = tmp[pd.notna(tmp[adp_val_col])]
+            if not tmp.empty:
+                # Normalize position grouping (e.g., WR1 -> WR)
+                tmp['PosBase'] = tmp[pos_col].astype(str).str.extract(r'([A-Za-z]+)')[0]
+                print("\nUnmatched Highest-ADP per Position:")
+                for position_value, g in tmp.groupby('PosBase'):
+                    # Highest ADP is numerically largest
+                    g_sorted = g.sort_values(by=adp_val_col, ascending=False)
+                    r = g_sorted.iloc[0]
+                    print(f"- {position_value}: {r['Player']} (Team: {r.get('Team', 'N/A')}, ADP: {r[adp_val_col]})")
 
         return merged_df, unmatched_df, borderline_df

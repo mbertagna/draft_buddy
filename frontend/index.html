@@ -216,13 +216,13 @@
             <table id="player-list">
                 <thead>
                     <tr>
-                        <th data-sort-key="player_id">ID</th>
+                        <th data-sort-key="adp">ADP</th>
                         <th data-sort-key="name">Name</th>
                         <th data-sort-key="position">Position</th>
                         <th data-sort-key="projected_points">Proj. Pts</th>
                         <th data-sort-key="vorp">VORP</th>
                         <th data-sort-key="games_played_frac">GP Frac</th>
-                        <th data-sort-key="adp">ADP</th>
+                        <th data-sort-key="team">Team</th>
                         <th data-sort-key="bye_week">Bye</th>
                     </tr>
                 </thead>
@@ -259,7 +259,7 @@
         let currentSortDir = 'desc'; // 'asc' or 'desc'
 
         function setupSortHandlers() {
-            const ths = document.querySelectorAll('#player-list th');
+                const ths = document.querySelectorAll('#player-list th');
             ths.forEach(th => {
                 const key = th.dataset.sortKey;
                 if (!key) return;
@@ -270,8 +270,8 @@
                         currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
                     } else {
                         currentSortBy = key;
-                        // Defaults: ADP/name/position/id/bye ascend; others descend
-                        currentSortDir = (key === 'adp' || key === 'name' || key === 'position' || key === 'player_id' || key === 'bye_week') ? 'asc' : 'desc';
+                            // Defaults: ADP/name/position/team/bye ascend; others descend
+                            currentSortDir = (key === 'adp' || key === 'name' || key === 'position' || key === 'team' || key === 'bye_week') ? 'asc' : 'desc';
                     }
                     updateSortIndicators();
                     fetchPlayers();
@@ -341,13 +341,21 @@
             players.forEach(player => {
                 const row = playerTbody.insertRow();
                 row.dataset.playerId = player.player_id;
-                row.insertCell().innerText = player.player_id;
+                // ADP
+                row.insertCell().innerText = (player.adp !== null && player.adp !== undefined) ? Number(player.adp).toFixed(1) : 'N/A';
+                // Name
                 row.insertCell().innerText = player.name;
+                // Position
                 row.insertCell().innerText = player.position;
+                // Projected Points
                 row.insertCell().innerText = player.projected_points.toFixed(1);
+                // VORP
                 row.insertCell().innerText = player.vorp.toFixed(1);
-                row.insertCell().innerText = player.games_played_frac ? player.games_played_frac.toFixed(2) : 'N/A';
-                row.insertCell().innerText = player.adp ? player.adp.toFixed(1) : 'N/A';
+                // Games Played Fraction
+                row.insertCell().innerText = player.games_played_frac ? Number(player.games_played_frac).toFixed(2) : 'N/A';
+                // Team
+                row.insertCell().innerText = player.team || 'N/A';
+                // Bye
                 row.insertCell().innerText = player.bye_week;
 
                 row.addEventListener('click', () => draftPlayer(player.player_id));
