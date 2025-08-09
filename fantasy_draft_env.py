@@ -630,6 +630,16 @@ class FantasyFootballDraftEnv(gym.Env):
         info = {}
 
         # --- 1. Agent's Turn ---
+        # Compute starter points BEFORE pick (for shaping)
+        pre_starter_points = None
+        if self.config.ENABLE_PICK_SHAPING_REWARD and self.config.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
+            pre_starters, _, _ = self._categorize_roster_by_slots(
+                self.teams_rosters[self.agent_team_id]['PLAYERS'],
+                self.config.ROSTER_STRUCTURE,
+                self.config.BENCH_MAXES
+            )
+            pre_starter_points = sum(p.projected_points for pos_list in pre_starters.values() for p in pos_list)
+
         is_valid_pick, drafted_player = self._try_select_player_for_team(
             self.agent_team_id, selected_position, self.available_players_ids
         )
@@ -667,6 +677,31 @@ class FantasyFootballDraftEnv(gym.Env):
                     reward += drafted_player.projected_points * self.config.PROPORTIONAL_REWARD_SCALING_FACTOR
                 else:
                     print(f"Warning: Unknown INTERMEDIATE_REWARD_MODE: {self.config.INTERMEDIATE_REWARD_MODE}. No intermediate reward applied.")
+
+            # Per-pick shaping: starter lineup delta and VORP component
+            if self.config.ENABLE_PICK_SHAPING_REWARD and self.config.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
+                post_starters, _, _ = self._categorize_roster_by_slots(
+                    self.teams_rosters[self.agent_team_id]['PLAYERS'],
+                    self.config.ROSTER_STRUCTURE,
+                    self.config.BENCH_MAXES
+                )
+                post_starter_points = sum(p.projected_points for pos_list in post_starters.values() for p in pos_list)
+                if pre_starter_points is not None:
+                    delta = max(0.0, post_starter_points - pre_starter_points)
+                    reward += delta * self.config.PICK_SHAPING_STARTER_DELTA_WEIGHT
+                    info['pick_shaping_starter_delta'] = delta
+
+            if self.config.ENABLE_VORP_PICK_SHAPING:
+                # Use VORP for the selected position based on current availability after the pick.
+                # To approximate the marginal value, compute VORP using the drafted player's projected points vs replacement baseline
+                # by temporarily reinserting the player to compute baseline if needed.
+                pos = drafted_player.position
+                # Build a small baseline using existing helper on remaining players
+                baselines = self.get_positional_baselines()
+                baseline = baselines.get(pos, 0.0)
+                vorp_shaping = max(0.0, drafted_player.projected_points - baseline)
+                reward += vorp_shaping * self.config.VORP_PICK_SHAPING_WEIGHT
+                info['pick_shaping_vorp'] = vorp_shaping
 
 
         self.current_pick_idx += 1

@@ -193,7 +193,7 @@ class Config:
 
     # --- Reinforcement Learning Parameters ---
     RESUME_TRAINING = True # Set to True to resume from the latest checkpoint
-    TOTAL_EPISODES = 1000
+    TOTAL_EPISODES = 30000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
 
@@ -377,6 +377,14 @@ class Config:
     INTERMEDIATE_REWARD_MODE = 'PROPORTIONAL'
     INTERMEDIATE_REWARD_VALUE = 30
     PROPORTIONAL_REWARD_SCALING_FACTOR = 1
+
+    # Per-pick shaping (recommended small signals)
+    # 1) Starter-lineup improvement after the pick (delta in starter points)
+    ENABLE_PICK_SHAPING_REWARD = True
+    PICK_SHAPING_STARTER_DELTA_WEIGHT = 0.25
+    # 2) VORP-based shaping to encourage scarcity-aware picks
+    ENABLE_VORP_PICK_SHAPING = True
+    VORP_PICK_SHAPING_WEIGHT = 0.1
 
     ENABLE_ROSTER_SLOT_WEIGHTED_REWARD = True
     STARTER_POINTS_WEIGHT = 1
