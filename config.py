@@ -129,6 +129,44 @@ class Config:
         # Add more if you have more agent opponents
     }
 
+    # --- Opponent Strategy Randomization (Optional) ---
+    # Enable to randomize non-agent opponent strategies per episode (useful for RL training diversity)
+    RANDOMIZE_OPPONENT_STRATEGIES = True
+    RANDOMIZE_ONLY_DURING_TRAINING = True  # If True, randomize only when env.training is True
+    RANDOMIZE_INCLUDE_AGENT_MODELS = False  # If True, AGENT_MODEL teams can also be randomized (not recommended unless models provided)
+
+    # Strategy templates used for randomization. The env samples one template per team and instantiates parameters.
+    # You can tune ranges/choices to fit your league preferences.
+    OPPONENT_STRATEGY_TEMPLATES = [
+        {
+            'logic': 'HEURISTIC',
+            'randomness_factor_range': (0.05, 0.45),
+            'suboptimal_strategy_choices': ['NEXT_BEST_HEURISTIC', 'NEXT_BEST_ADP'],
+            'positional_priority_choices': [
+                ['RB', 'WR', 'QB', 'TE'],
+                ['WR', 'RB', 'QB', 'TE'],
+                ['QB', 'RB', 'WR', 'TE']
+            ]
+        },
+        {
+            'logic': 'ADP',
+            'randomness_factor_range': (0.1, 0.6),
+            'suboptimal_strategy_choices': ['NEXT_BEST_ADP', 'RANDOM_ELIGIBLE'],
+            'positional_priority_choices': [
+                ['RB', 'WR', 'QB', 'TE'],
+                ['WR', 'RB', 'QB', 'TE']
+            ]
+        },
+        {
+            'logic': 'RANDOM',
+            'randomness_factor_range': (0.0, 1.0),
+            'suboptimal_strategy_choices': ['RANDOM_ELIGIBLE'],
+            'positional_priority_choices': [
+                ['RB', 'WR', 'QB', 'TE']
+            ]
+        },
+    ]
+
     TEAM_MANAGER_MAPPING = {
         1: 'Ryan Freilich',
         2: 'Shane Spence',
@@ -360,9 +398,9 @@ class Config:
     # --- Season Simulation Reward Parameters ---
     ENABLE_SEASON_SIM_REWARD = True # Master switch for season simulation rewards
     SEASON_SIM_REWARDS = {
-        'WIN_REGULAR_SEASON': 1000,
-        'MAKE_PLAYOFFS': 500,
-        'WIN_PLAYOFFS': 500,
+        'WIN_REGULAR_SEASON': 200,
+        'MAKE_PLAYOFFS': 200,
+        'WIN_PLAYOFFS': 400,
     }
 
     # Option to add a penalty for high standard deviation among opponents

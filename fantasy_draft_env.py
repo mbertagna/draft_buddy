@@ -308,6 +308,37 @@ class FantasyFootballDraftEnv(gym.Env):
                     print(f"Warning: 'model_path_key' missing or invalid for Team {team_id} configured as 'AGENT_MODEL'. Falling back to DEFAULT_OPPONENT_STRATEGY.")
                     self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
 
+        # Optional: Randomize non-agent opponent strategies per episode
+        if self.config.RANDOMIZE_OPPONENT_STRATEGIES and (not self.config.RANDOMIZE_ONLY_DURING_TRAINING or self.training):
+            self._randomize_opponent_strategies()
+
+    def _randomize_opponent_strategies(self) -> None:
+        """Randomizes opponent strategies from templates for diversity in training/interaction."""
+        import random as _rnd
+        templates = getattr(self.config, 'OPPONENT_STRATEGY_TEMPLATES', [])
+        if not templates:
+            return
+        for team_id in range(1, self.config.NUM_TEAMS + 1):
+            if team_id == self.config.AGENT_START_POSITION:
+                continue
+            current = self.config.OPPONENT_TEAM_STRATEGIES.get(team_id, self.config.DEFAULT_OPPONENT_STRATEGY)
+            if current.get('logic') == 'AGENT_MODEL' and not self.config.RANDOMIZE_INCLUDE_AGENT_MODELS:
+                continue
+            tpl = _rnd.choice(templates)
+            # Sample parameters
+            low, high = tpl['randomness_factor_range']
+            sampled_randomness = _rnd.uniform(low, high)
+            sampled_subopt = _rnd.choice(tpl['suboptimal_strategy_choices'])
+            sampled_priority = _rnd.choice(tpl['positional_priority_choices'])
+            # Build new strategy
+            randomized = {
+                'logic': tpl['logic'],
+                'randomness_factor': sampled_randomness,
+                'suboptimal_strategy': sampled_subopt,
+                'positional_priority': sampled_priority,
+            }
+            self.config.OPPONENT_TEAM_STRATEGIES[team_id] = randomized
+
     def _get_dynamic_baseline_for_position(self, position: str, available_for_pos: List[Player]) -> float:
         """Calculates the smoothed baseline score for a list of pre-sorted players."""
         # This assumes available_for_pos is already sorted by projected_points descending.
