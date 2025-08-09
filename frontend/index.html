@@ -213,6 +213,7 @@
                         <th>Name</th>
                         <th>Position</th>
                         <th>Proj. Pts</th>
+                        <th>VORP</th>
                         <th>GP Frac</th>
                         <th>ADP</th>
                         <th>Bye</th>
@@ -286,7 +287,7 @@
             if (players.length === 0) {
                 const row = playerTbody.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = 7;
+                cell.colSpan = 8;
                 cell.innerText = 'No players found with current filters.';
                 return;
             }
@@ -298,6 +299,7 @@
                 row.insertCell().innerText = player.name;
                 row.insertCell().innerText = player.position;
                 row.insertCell().innerText = player.projected_points.toFixed(1);
+                row.insertCell().innerText = player.vorp.toFixed(1);
                 row.insertCell().innerText = player.games_played_frac ? player.games_played_frac.toFixed(2) : 'N/A';
                 row.insertCell().innerText = player.adp ? player.adp.toFixed(1) : 'N/A';
                 row.insertCell().innerText = player.bye_week;

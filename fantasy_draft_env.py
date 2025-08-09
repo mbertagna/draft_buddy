@@ -46,6 +46,10 @@ class FantasyFootballDraftEnv(gym.Env):
             "best_available_rb_points": lambda: self._get_kth_best_available_player_by_pos('RB', 1).projected_points if self._get_kth_best_available_player_by_pos('RB', 1) else 0,
             "best_available_wr_points": lambda: self._get_kth_best_available_player_by_pos('WR', 1).projected_points if self._get_kth_best_available_player_by_pos('WR', 1) else 0,
             "best_available_te_points": lambda: self._get_kth_best_available_player_by_pos('TE', 1).projected_points if self._get_kth_best_available_player_by_pos('TE', 1) else 0,
+            "best_available_qb_vorp": lambda: self._calculate_vorp('QB'),
+            "best_available_rb_vorp": lambda: self._calculate_vorp('RB'),
+            "best_available_wr_vorp": lambda: self._calculate_vorp('WR'),
+            "best_available_te_vorp": lambda: self._calculate_vorp('TE'),
             "qb_available_flag": lambda: 1 if any(p.position == 'QB' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
             "rb_available_flag": lambda: 1 if any(p.position == 'RB' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
             "wr_available_flag": lambda: 1 if any(p.position == 'WR' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
@@ -257,6 +261,103 @@ class FantasyFootballDraftEnv(gym.Env):
                 else:
                     print(f"Warning: 'model_path_key' missing or invalid for Team {team_id} configured as 'AGENT_MODEL'. Falling back to DEFAULT_OPPONENT_STRATEGY.")
                     self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
+
+    def _get_dynamic_baseline_for_position(self, position: str, available_for_pos: List[Player]) -> float:
+        """Calculates the smoothed baseline score for a list of pre-sorted players."""
+        # This assumes available_for_pos is already sorted by projected_points descending.
+        if not available_for_pos:
+            return 0.0
+
+        num_starters_needed = 0
+        if position in self.config.ROSTER_STRUCTURE:
+            required_starters = self.config.ROSTER_STRUCTURE[position]
+            for team_id in range(1, self.config.NUM_TEAMS + 1):
+                roster_counts = self.teams_rosters[team_id]
+                num_on_roster = roster_counts.get(position, 0)
+                if num_on_roster < required_starters:
+                    num_starters_needed += (required_starters - num_on_roster)
+
+        replacement_rank = num_starters_needed + 2
+        num_available = len(available_for_pos)
+        last_idx = num_available - 1
+        replacement_idx = min(replacement_rank - 1, last_idx)
+
+        score_at = available_for_pos[replacement_idx].projected_points
+        score_before = available_for_pos[max(0, replacement_idx - 1)].projected_points
+        score_after = available_for_pos[min(last_idx, replacement_idx + 1)].projected_points
+
+        return (score_before + score_at + score_after) / 3.0
+
+    def _calculate_vorp(self, position: str) -> float:
+        """
+        Calculates the Value Over Replacement Player (VORP) for the best available
+        player at a given position.
+
+        This method is designed to be a self-contained, robust, and clear
+        implementation that handles all steps from data filtering to the final
+        VORP calculation.
+
+        Args:
+            position: The position ('QB', 'RB', 'WR', 'TE') to calculate VORP for.
+
+        Returns:
+            The calculated VORP score as a float.
+        """
+        # --- 1. Performance-intensive step: Filter and sort available players ---
+        # This is the most expensive part of the VORP calculation. For higher
+        # performance, the result of this operation could be cached across the four
+        # VORP calculations within a single environment step.
+        available_for_pos = sorted(
+            [self.player_map[p_id] for p_id in self.available_players_ids if self.player_map[p_id].position == position],
+            key=lambda p: p.projected_points,
+            reverse=True
+        )
+
+        # --- 2. Handle edge case: No players available ---
+        if not available_for_pos:
+            return 0.0
+
+        # --- 3. Calculate the smoothed baseline score ---
+        baseline_score = self._get_dynamic_baseline_for_position(position, available_for_pos)
+
+        # --- 4. Calculate final VORP ---
+        # VORP is the score of the best available player minus the baseline.
+        best_player_score = available_for_pos[0].projected_points
+        vorp = best_player_score - baseline_score
+
+        return vorp
+
+    def get_positional_baselines(self) -> Dict[str, float]:
+        """
+        Calculates and returns the dynamic baseline score for each primary position.
+
+        This method is optimized to filter and sort the available player pool only
+        once per position group, making it efficient for frontend use where VORP
+        for all players is needed.
+
+        Returns:
+            A dictionary mapping each position ('QB', 'RB', 'WR', 'TE') to its
+            calculated baseline score.
+        """
+        baselines = {}
+        
+        # Efficiently group all available players by position.
+        players_by_pos = defaultdict(list)
+        for p_id in self.available_players_ids:
+            player = self.player_map[p_id]
+            players_by_pos[player.position].append(player)
+
+        # Calculate baseline for each position using the grouped lists.
+        for position in self.action_to_position.values(): # ('QB', 'RB', 'WR', 'TE')
+            # Sort the list for the current position.
+            sorted_players = sorted(
+                players_by_pos[position],
+                key=lambda p: p.projected_points,
+                reverse=True
+            )
+            baselines[position] = self._get_dynamic_baseline_for_position(position, sorted_players)
+        
+        return baselines
 
     def _get_kth_best_available_player_by_pos(self, position: str, k: int) -> Optional[Player]:
         """
@@ -678,6 +779,8 @@ class FantasyFootballDraftEnv(gym.Env):
         max_values = {
             "best_available_qb_points": 400.0, "best_available_rb_points": 350.0,
             "best_available_wr_points": 350.0, "best_available_te_points": 300.0,
+            "best_available_qb_vorp": 200.0, "best_available_rb_vorp": 200.0,
+            "best_available_wr_vorp": 200.0, "best_available_te_vorp": 150.0,
             "current_roster_qb_count": self.config.ROSTER_STRUCTURE['QB'] + self.config.BENCH_MAXES['QB'],
             "current_roster_rb_count": self.config.ROSTER_STRUCTURE['RB'] + self.config.BENCH_MAXES['RB'],
             "current_roster_wr_count": self.config.ROSTER_STRUCTURE['WR'] + self.config.BENCH_MAXES['WR'],
@@ -706,6 +809,12 @@ class FantasyFootballDraftEnv(gym.Env):
             "best_te_bye_week_conflict": self.total_roster_size_per_team,
         }
         min_values = {k: 0.0 for k in max_values}
+        min_values.update({
+            "best_available_qb_vorp": -50.0,
+            "best_available_rb_vorp": -50.0,
+            "best_available_wr_vorp": -50.0,
+            "best_available_te_vorp": -50.0,
+        })
         
         normalized_state = []
         for i, feature_name in enumerate(self.config.ENABLED_STATE_FEATURES):

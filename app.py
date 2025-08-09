@@ -116,22 +116,29 @@ def get_players():
             p for p in filtered_players if search_query_lower in p.name.lower()
         ]
 
+    # Get positional baselines for VORP calculation
+    baselines = draft_env.get_positional_baselines()
+
     # Convert Player objects to a list of dictionaries for JSON serialization
     players_data = []
     for p in filtered_players:
+        # Calculate VORP for the player
+        player_vorp = p.projected_points - baselines.get(p.position, 0)
+
         player_dict = {
             'player_id': p.player_id,
             'name': p.name,
             'position': p.position,
             'projected_points': p.projected_points,
+            'vorp': player_vorp,
             'games_played_frac': p.games_played_frac,
             'adp': None if np.isinf(p.adp) else p.adp,
             'bye_week': p.bye_week if p.bye_week and not np.isnan(p.bye_week) else 'N/A'
         }
         players_data.append(player_dict)
 
-    # Sort players by ADP (ascending), with None values at the end
-    players_data.sort(key=lambda x: (x['adp'] is None, x['adp']))
+    # Sort players by VORP (descending), which is a better default for drafting
+    players_data.sort(key=lambda x: x['vorp'], reverse=True)
 
     return jsonify(players_data)
 
