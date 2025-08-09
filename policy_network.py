@@ -10,7 +10,7 @@ class PolicyNetwork(nn.Module):
     Neural network that represents the agent's policy.
     Takes the environment state as input and outputs action probabilities.
     """
-    def __init__(self, input_dim: int, output_dim: int, hidden_dim: int = 64):
+    def __init__(self, input_dim: int, output_dim: int, hidden_dim: int = 128):
         """
         Initializes the Policy Network.
 
@@ -22,12 +22,15 @@ class PolicyNetwork(nn.Module):
         super(PolicyNetwork, self).__init__()
 
         # Define the layers of the neural network
-        # Input Layer -> Hidden Layer 1
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        # Hidden Layer 1 -> Hidden Layer 2
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        # Hidden Layer 2 -> Output Layer (logits for action probabilities)
-        self.fc3 = nn.Linear(hidden_dim, output_dim)
+        self.network = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.LayerNorm(hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim)
+        )
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         """
@@ -39,13 +42,7 @@ class PolicyNetwork(nn.Module):
         Returns:
             torch.Tensor: The raw output (logits) for each action.
         """
-        # Apply ReLU activation function after each hidden layer
-        x = F.relu(self.fc1(state))
-        x = F.relu(self.fc2(x))
-        # The output layer produces logits, which will be converted to probabilities
-        # later using softmax. No activation here as softmax is applied externally.
-        logits = self.fc3(x)
-        return logits
+        return self.network(state)
 
     def get_action_probabilities(self, state: torch.Tensor, action_mask: Optional[np.ndarray] = None) -> torch.Tensor:
         """

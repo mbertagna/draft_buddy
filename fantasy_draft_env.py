@@ -159,6 +159,9 @@ class FantasyFootballDraftEnv(gym.Env):
         
         self.wtw_dict = self._create_wtw_points_dict()
 
+        # Cache: per-step sorted available players by position (descending by projected_points)
+        self._sorted_available_by_pos_cache: Dict[str, List[Player]] = {}
+
     def _get_bye_week_conflict_count(self, position: str) -> int:
         """
         Calculates how many players on the agent's roster share a bye week with the best available player of a given position.
@@ -240,6 +243,8 @@ class FantasyFootballDraftEnv(gym.Env):
             self.current_pick_number = state.get('current_pick_number', 1)
             self._draft_history = state.get('_draft_history', [])
             self._overridden_team_id = state.get('_overridden_team_id', None)
+            # Invalidate cache after loading state
+            self._invalidate_sorted_available_cache()
         except (json.JSONDecodeError, KeyError) as e:
             print(f"Warning: Could not load draft state from {file_path} due to error: {e}. Starting fresh.")
             # If loading fails, reset the environment to a clean state
@@ -258,7 +263,7 @@ class FantasyFootballDraftEnv(gym.Env):
 
         try:
             self.agent_model = PolicyNetwork(input_dim, output_dim, self.config.HIDDEN_DIM)
-            self.agent_model.load_state_dict(torch.load(model_path))
+            self.agent_model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
             self.agent_model.eval()
             print(f"Successfully loaded agent model for suggestions from {model_path}")
         except Exception as e:
@@ -288,7 +293,7 @@ class FantasyFootballDraftEnv(gym.Env):
                     model_path = self.config.OPPONENT_MODEL_PATHS[model_path_key]
                     try:
                         model = PolicyNetwork(input_dim, output_dim, self.config.HIDDEN_DIM)
-                        model.load_state_dict(torch.load(model_path))
+                        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
                         model.eval() # Set to evaluation mode
                         self.opponent_models[team_id] = model
                         print(f"Loaded agent model for opponent Team {team_id} from {model_path}")
@@ -348,11 +353,8 @@ class FantasyFootballDraftEnv(gym.Env):
         # This is the most expensive part of the VORP calculation. For higher
         # performance, the result of this operation could be cached across the four
         # VORP calculations within a single environment step.
-        available_for_pos = sorted(
-            [self.player_map[p_id] for p_id in self.available_players_ids if self.player_map[p_id].position == position],
-            key=lambda p: p.projected_points,
-            reverse=True
-        )
+        # Use cached, pre-sorted available players list
+        available_for_pos = self._get_sorted_available_for_position(position)
 
         # --- 2. Handle edge case: No players available ---
         if not available_for_pos:
@@ -368,6 +370,33 @@ class FantasyFootballDraftEnv(gym.Env):
 
         return vorp
 
+    def _build_sorted_available_cache(self) -> None:
+        """Builds and stores per-position sorted available players cache for this step."""
+        players_by_pos: Dict[str, List[Player]] = defaultdict(list)
+        for p_id in self.available_players_ids:
+            player = self.player_map[p_id]
+            players_by_pos[player.position].append(player)
+
+        sorted_cache: Dict[str, List[Player]] = {}
+        for position in self.action_to_position.values():
+            sorted_cache[position] = sorted(
+                players_by_pos[position],
+                key=lambda p: p.projected_points,
+                reverse=True
+            )
+
+        self._sorted_available_by_pos_cache = sorted_cache
+
+    def _get_sorted_available_for_position(self, position: str) -> List[Player]:
+        """Returns cached sorted available players for a position, building cache if missing."""
+        if not self._sorted_available_by_pos_cache:
+            self._build_sorted_available_cache()
+        return self._sorted_available_by_pos_cache.get(position, [])
+
+    def _invalidate_sorted_available_cache(self) -> None:
+        """Invalidates the per-position sorted available players cache."""
+        self._sorted_available_by_pos_cache = {}
+
     def get_positional_baselines(self) -> Dict[str, float]:
         """
         Calculates and returns the dynamic baseline score for each primary position.
@@ -380,24 +409,12 @@ class FantasyFootballDraftEnv(gym.Env):
             A dictionary mapping each position ('QB', 'RB', 'WR', 'TE') to its
             calculated baseline score.
         """
-        baselines = {}
-        
-        # Efficiently group all available players by position.
-        players_by_pos = defaultdict(list)
-        for p_id in self.available_players_ids:
-            player = self.player_map[p_id]
-            players_by_pos[player.position].append(player)
-
-        # Calculate baseline for each position using the grouped lists.
-        for position in self.action_to_position.values(): # ('QB', 'RB', 'WR', 'TE')
-            # Sort the list for the current position.
-            sorted_players = sorted(
-                players_by_pos[position],
-                key=lambda p: p.projected_points,
-                reverse=True
-            )
+        baselines: Dict[str, float] = {}
+        # Ensure cache exists
+        self._build_sorted_available_cache()
+        for position in self.action_to_position.values():
+            sorted_players = self._get_sorted_available_for_position(position)
             baselines[position] = self._get_dynamic_baseline_for_position(position, sorted_players)
-        
         return baselines
 
     def _get_kth_best_available_player_by_pos(self, position: str, k: int) -> Optional[Player]:
@@ -405,18 +422,11 @@ class FantasyFootballDraftEnv(gym.Env):
         Returns the k-th best available player with the highest projected points for a given position.
         Returns None if fewer than k players are available for that position.
         """
-        eligible_players = []
-        for player_id in self.available_players_ids:
-            player = self.player_map[player_id]
-            if player.position == position:
-                eligible_players.append(player)
-        
-        if len(eligible_players) < k:
+        # Use cached sorted list for efficiency
+        sorted_players = self._get_sorted_available_for_position(position)
+        if len(sorted_players) < k:
             return None
-            
-        # Sort by projected points descending
-        eligible_players.sort(key=lambda p: p.projected_points, reverse=True)
-        return eligible_players[k-1] # k-1 because of 0-based indexing
+        return sorted_players[k-1] # k-1 because of 0-based indexing
 
     def _get_next_opponent_team_id(self) -> int:
         """
@@ -463,18 +473,12 @@ class FantasyFootballDraftEnv(gym.Env):
             return best_player.projected_points - kth_player.projected_points
         else:
             # Edge case: Fewer than k players are available.
-            # Find all available players for the position to determine the last one.
-            eligible_players = sorted(
-                [self.player_map[p_id] for p_id in self.available_players_ids if self.player_map[p_id].position == position],
-                key=lambda p: p.projected_points,
-                reverse=True
-            )
+            # Use cached sorted list to determine the last one.
+            eligible_players = self._get_sorted_available_for_position(position)
             if len(eligible_players) > 1:
-                # Calculate drop-off between the best and the last available player.
                 last_player = eligible_players[-1]
                 return best_player.projected_points - last_player.projected_points
             else:
-                # Only one or zero players left, so no drop-off.
                 return 0.0
 
     def _calculate_imminent_threat(self, position: str) -> int:
@@ -535,6 +539,7 @@ class FantasyFootballDraftEnv(gym.Env):
         self.current_pick_number = 1 # Start at pick 1
         self._draft_history = [] # Clear draft history on reset
         self._overridden_team_id = None # Clear any override on reset
+        self._invalidate_sorted_available_cache()
 
         # Generate draft order (snake draft)
         self.draft_order = self._generate_snake_draft_order(self.config.NUM_TEAMS, self.total_roster_size_per_team)
@@ -551,6 +556,7 @@ class FantasyFootballDraftEnv(gym.Env):
                     self.teams_rosters[current_sim_team_id]['PLAYERS'].append(sim_drafted_player)
                     self.available_players_ids.remove(sim_drafted_player.player_id)
                     self._update_roster_counts(current_sim_team_id, sim_drafted_player)
+                    self._invalidate_sorted_available_cache()
                     # Record the simulated pick in history, marking it as not manual
                     self._draft_history.append({
                         'player_id': sim_drafted_player.player_id,
@@ -620,6 +626,7 @@ class FantasyFootballDraftEnv(gym.Env):
 
             # Update position counts
             self._update_roster_counts(self.agent_team_id, drafted_player)
+            self._invalidate_sorted_available_cache()
 
             # Apply intermediate reward based on configuration
             if self.config.ENABLE_INTERMEDIATE_REWARD:
@@ -646,6 +653,7 @@ class FantasyFootballDraftEnv(gym.Env):
                     self.teams_rosters[current_sim_team_id]['PLAYERS'].append(sim_drafted_player)
                     self.available_players_ids.remove(sim_drafted_player.player_id)
                     self._update_roster_counts(current_sim_team_id, sim_drafted_player)
+                    self._invalidate_sorted_available_cache()
                 else:
                     print(f"[{self.current_pick_number}] Warning: Competing team {current_sim_team_id} could not make a pick. Ending round early.")
                     done = True 
@@ -728,17 +736,22 @@ class FantasyFootballDraftEnv(gym.Env):
                         info['competitive_mode'] = 'Average Opponent Difference'
                         info['target_opponent_score'] = avg_opponent_score
                     
-                    reward += competitive_reward_component
-                    info['competitive_reward_component'] = competitive_reward_component
+                    # Only add competitive reward if it's not season sim mode, which is handled next
+                    if self.config.COMPETITIVE_REWARD_MODE != 'SEASON_SIM':
+                        reward += competitive_reward_component
+                        info['competitive_reward_component'] = competitive_reward_component
 
                     if self.config.ENABLE_OPPONENT_STD_DEV_PENALTY and len(opponent_scores_np) > 1:
                         opponent_std_dev = np.std(opponent_scores_np)
                         std_dev_penalty = opponent_std_dev * self.config.OPPONENT_STD_DEV_PENALTY_WEIGHT
                         reward -= std_dev_penalty
                         info['opponent_std_dev_penalty'] = std_dev_penalty
+                        info['opponent_std_dev_applied'] = True
+            else:
+                info['competitive_mode'] = 'Disabled'
 
             # --- Season Simulation Reward ---
-            if self.config.ENABLE_SEASON_SIM_REWARD and self.matchups_df is not None:
+            if (self.config.COMPETITIVE_REWARD_MODE == 'SEASON_SIM' or self.config.ENABLE_SEASON_SIM_REWARD) and self.matchups_df is not None and not self.matchups_df.empty:
                 sim_rosters = {self.config.TEAM_MANAGER_MAPPING.get(tid): [p.player_id for p in r['PLAYERS']] for tid, r in self.teams_rosters.items() if self.config.TEAM_MANAGER_MAPPING.get(tid)}
                 
                 try:
@@ -765,11 +778,6 @@ class FantasyFootballDraftEnv(gym.Env):
                     info['season_sim_reward'] = sim_reward
                 except Exception as e:
                     print(f"Error during season simulation: {e}")
-            else:
-                # If competitive reward is NOT enabled, the base reward is simply the agent's score
-                reward += agent_final_weighted_score
-                info['competitive_mode'] = 'Disabled'
-                info['opponent_std_dev_applied'] = False
                 
             info['final_reward_total'] = reward # The total reward given to the agent
 
@@ -869,6 +877,9 @@ class FantasyFootballDraftEnv(gym.Env):
         """
         Constructs the state vector based on enabled features and normalizes it.
         """
+        # Build per-step cache of sorted available players to accelerate feature computation
+        self._build_sorted_available_cache()
+
         state_values = []
         for feature_name in self.config.ENABLED_STATE_FEATURES:
             if feature_name in self.state_features_map:
@@ -1181,7 +1192,7 @@ class FantasyFootballDraftEnv(gym.Env):
                 logic = self.config.DEFAULT_OPPONENT_STRATEGY['logic']
                 randomness_factor = self.config.DEFAULT_OPPONENT_STRATEGY['randomness_factor']
                 suboptimal_strategy = self.config.DEFAULT_OPPONENT_STRATEGY['suboptimal_strategy']
-                positional_priority = self.config.DEFAULT_OPPONENT_STRATEGIES['positional_priority'] # Used for HEURISTIC logic
+                positional_priority = self.config.DEFAULT_OPPONENT_STRATEGY['positional_priority'] # Used for HEURISTIC logic
                 # Now proceed with the non-AGENT_MODEL logic as a fallback below
 
         elif logic == 'RANDOM':
@@ -1222,7 +1233,11 @@ class FantasyFootballDraftEnv(gym.Env):
                              best_pick_by_logic = sorted(eligible_flex_players, key=lambda p: p.projected_points, reverse=True)[0]
             
             if not best_pick_by_logic:
-                return None 
+                # As a final fallback, if logic could not select, pick the best eligible by ADP
+                if eligible_players_for_pick:
+                    best_pick_by_logic = sorted(eligible_players_for_pick, key=lambda p: p.adp)[0]
+                else:
+                    return None 
 
             randomness_factor = opponent_strategy['randomness_factor'] # Ensure we use specific opponent's randomness
             suboptimal_strategy = opponent_strategy['suboptimal_strategy'] # Ensure we use specific opponent's suboptimal strategy
@@ -1256,6 +1271,10 @@ class FantasyFootballDraftEnv(gym.Env):
             sorted_by_adp = sorted(eligible_players_for_pick, key=lambda p: p.adp)
             chosen_player = sorted_by_adp[0] if sorted_by_adp else None
 
+        # Final safety: if chosen_player is still None but there are eligible players, choose one at random
+        if chosen_player is None and eligible_players_for_pick:
+            chosen_player = random.choice(eligible_players_for_pick)
+
         return chosen_player
 
     def draft_player(self, player_id: int):
@@ -1263,11 +1282,15 @@ class FantasyFootballDraftEnv(gym.Env):
         Manually drafts a specific player for the current team.
         This method does NOT advance the draft or simulate opponent picks.
         """
-        if self.current_pick_idx >= len(self.draft_order):
+        # Allow manual picks beyond the scheduled draft as long as an override team is set
+        if self.current_pick_idx >= len(self.draft_order) and self._overridden_team_id is None:
             raise ValueError("The draft has already concluded. No more picks can be made.")
 
         # If a team was overridden, use that ID, otherwise use the team from the draft order.
-        current_team_id = self._overridden_team_id if self._overridden_team_id is not None else self.draft_order[self.current_pick_idx]
+        if self._overridden_team_id is not None:
+            current_team_id = self._overridden_team_id
+        else:
+            current_team_id = self.draft_order[self.current_pick_idx]
         
         # Find the player object
         drafted_player = self.player_map.get(player_id)
@@ -1296,6 +1319,7 @@ class FantasyFootballDraftEnv(gym.Env):
         self.teams_rosters[current_team_id]['PLAYERS'].append(drafted_player)
         self.available_players_ids.remove(drafted_player.player_id)
         self._update_roster_counts(current_team_id, drafted_player)
+        self._invalidate_sorted_available_cache()
 
         # Advance pick index and number
         self.current_pick_idx += 1
@@ -1303,6 +1327,8 @@ class FantasyFootballDraftEnv(gym.Env):
         
         # Reset override after it's used for a pick
         self._overridden_team_id = None
+        # Invalidate cache after manual draft
+        self._invalidate_sorted_available_cache()
 
 
     def undo_last_pick(self):
@@ -1349,8 +1375,8 @@ class FantasyFootballDraftEnv(gym.Env):
         self.current_pick_idx = last_pick_info['previous_pick_idx']
         self.current_pick_number = last_pick_info['previous_pick_number']
         self._overridden_team_id = last_pick_info['previous_overridden_team_id']
-
-        
+        # Invalidate cache after undo
+        self._invalidate_sorted_available_cache()
 
         print(f"Undo successful. Current pick: {self.current_pick_number}, Team on clock: {self.draft_order[self.current_pick_idx]}")
 
@@ -1362,9 +1388,8 @@ class FantasyFootballDraftEnv(gym.Env):
         if team_id not in range(1, self.config.NUM_TEAMS + 1):
             raise ValueError(f"Invalid team ID: {team_id}. Must be between 1 and {self.config.NUM_TEAMS}.")
         
-        # Check if the team has any picks left in the draft order
-        if team_id not in self.draft_order[self.current_pick_idx:]:
-            raise ValueError(f"Team {team_id} has no more picks remaining in the draft order.")
+        # For UI flexibility, allow setting an override even if no scheduled picks remain.
+        # Manual drafting can continue post-schedule to fill rosters.
 
         self._overridden_team_id = team_id
         print(f"Next pick will be overridden for Team {team_id}.")
@@ -1391,6 +1416,7 @@ class FantasyFootballDraftEnv(gym.Env):
             self.teams_rosters[current_sim_team_id]['PLAYERS'].append(sim_drafted_player)
             self.available_players_ids.remove(sim_drafted_player.player_id)
             self._update_roster_counts(current_sim_team_id, sim_drafted_player)
+            self._invalidate_sorted_available_cache()
             # Record the simulated pick in history, marking it as not manual
             self._draft_history.append({
                 'player_id': sim_drafted_player.player_id,
@@ -1402,7 +1428,41 @@ class FantasyFootballDraftEnv(gym.Env):
                 'was_override': False
             })
         else:
-            raise ValueError(f"Competing team {current_sim_team_id} could not make a valid pick.")
+            # If the team cannot make a valid pick under constraints, only skip if team is full.
+            roster_data = self.teams_rosters[current_sim_team_id]
+            if len(roster_data['PLAYERS']) >= self.total_roster_size_per_team:
+                print(f"Competing team {current_sim_team_id} cannot pick and roster is full. Skipping.")
+                self.current_pick_idx += 1
+                self.current_pick_number += 1
+                return
+            
+            # Force-pick the best available by ADP (ignoring positional constraints)
+            if not self.available_players_ids:
+                print("No players left to force-pick. Skipping.")
+                self.current_pick_idx += 1
+                self.current_pick_number += 1
+                return
+            
+            all_available_players = [self.player_map[pid] for pid in self.available_players_ids]
+            # Prefer finite ADP; if equal/unavailable, fall back to higher projected points
+            def force_key(p):
+                return (np.isinf(p.adp), p.adp if np.isfinite(p.adp) else float('inf'), -p.projected_points)
+            forced_player = min(all_available_players, key=force_key)
+
+            # Apply the forced pick
+            self.teams_rosters[current_sim_team_id]['PLAYERS'].append(forced_player)
+            self.available_players_ids.remove(forced_player.player_id)
+            self._update_roster_counts(current_sim_team_id, forced_player)
+            self._invalidate_sorted_available_cache()
+            self._draft_history.append({
+                'player_id': forced_player.player_id,
+                'team_id': current_sim_team_id,
+                'is_manual_pick': False,
+                'previous_pick_idx': self.current_pick_idx,
+                'previous_pick_number': self.current_pick_number,
+                'previous_overridden_team_id': None,
+                'was_override': False
+            })
 
         self.current_pick_idx += 1
         self.current_pick_number += 1
@@ -1546,8 +1606,8 @@ if __name__ == '__main__':
                 print(f"Competitive mode: {info['competitive_mode']}")
             if 'target_opponent_score' in info:
                 print(f"Target opponent score: {info['target_opponent_score']:.2f}")
-            if 'opponent_std_dev_applied' in info and info['opponent_std_dev_applied']:
-                print(f"Opponent score std dev penalty applied: {info['std_dev_penalty_amount']:.2f}")
+            if info.get('opponent_std_dev_applied'):
+                print(f"Opponent score std dev penalty applied: {info['opponent_std_dev_penalty']:.2f}")
             
             # Print final rosters for all teams
             for team_id in range(1, config.NUM_TEAMS + 1):

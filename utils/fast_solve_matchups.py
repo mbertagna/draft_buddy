@@ -28,22 +28,22 @@ def get_sorted_players_info(r, week):
     return sorted(info, key=lambda x: x['pts'][week-1], reverse=True)
 
 
+REQUIRED = {'QB': 1, 'RB': 2, 'WR': 2, 'TE': 1}
+FLEX_ELIGIBLE = {'RB', 'WR', 'TE'}
+FLEX_MAX = 3
+
 def get_pts_roster_from_sorted_players_info(sorted_players_info):
     roster = {'QB': [], 'RB': [], 'WR': [], 'TE': [], 'FLEX': [], 'BENCH': []}
-    
     for p_info in sorted_players_info:
         pos = p_info['pos']
-        if len(roster[pos]) < 1:
+        if pos in REQUIRED and len(roster[pos]) < REQUIRED[pos]:
             roster[pos].append(p_info)
-        elif pos in ['RB', 'WR', 'TE'] and len(roster['FLEX']) < 2 and len(roster[pos]) < 3:
-            roster['FLEX'].append(p_info)
-        elif pos in ['RB', 'WR'] and len(roster['FLEX']) < 2 and len(roster[pos]) < 4:
+        elif pos in FLEX_ELIGIBLE and len(roster['FLEX']) < FLEX_MAX:
             roster['FLEX'].append(p_info)
         else:
             roster['BENCH'].append(p_info)
-            
     return roster
-
+            
 
 def get_week_results(roster, week):
     

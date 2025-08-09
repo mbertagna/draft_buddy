@@ -112,6 +112,11 @@
             background-color: #ffc107;
             color: black;
         }
+        .team-button.team-full {
+            background-color: #6c757d;
+            color: #fff;
+            opacity: 0.85;
+        }
 
         /* Header actions */
         .header-actions {
@@ -147,6 +152,7 @@
 
         /* Rosters */
         .roster-card { border: 1px solid #ccc; border-radius: 4px; padding: 10px; margin-bottom: 10px; background-color: white; }
+        .roster-card.full { border-color: #6c757d; background-color: #f1f1f1; }
         .roster-card h4 { margin-top: 0; }
         .roster-details { display: flex; gap: 20px; }
         .roster-section { flex: 1; }
@@ -412,6 +418,10 @@
                     button.classList.add('picking-now');
                 }
 
+                if (state.team_is_full && state.team_is_full[i]) {
+                    button.classList.add('team-full');
+                }
+
                 button.addEventListener('click', () => overrideTeam(i));
                 teamButtonsDiv.appendChild(button);
             }
@@ -467,8 +477,9 @@
                 }
                 byeWeekHTML += '</div></div>';
 
+                const fullClass = (state.team_is_full && state.team_is_full[teamId]) ? 'full' : '';
                 rostersHTML += `
-                    <div class="roster-card">
+                    <div class="roster-card ${fullClass}">
                         <h4>Team ${teamId} (Projected Pts: ${totalProjectedPoints.toFixed(1)})</h4>
                         <div class="roster-details">
                             ${startersHTML}
