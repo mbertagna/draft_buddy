@@ -529,6 +529,11 @@ class FantasyFootballDraftEnv(gym.Env):
                     sim_reward = 0
                     agent_manager_name = self.config.TEAM_MANAGER_MAPPING.get(self.agent_team_id)
 
+                    playoff_teams = [record[0] for record in regular_records[:6]]
+                    if agent_manager_name in playoff_teams:
+                        sim_reward += self.config.SEASON_SIM_REWARDS['MAKE_PLAYOFFS']
+                        info['made_playoffs'] = True
+
                     if regular_records and regular_records[0][0] == agent_manager_name:
                         sim_reward += self.config.SEASON_SIM_REWARDS['WIN_REGULAR_SEASON']
                         info['regular_season_winner'] = True
@@ -745,47 +750,49 @@ class FantasyFootballDraftEnv(gym.Env):
     def _can_team_draft_position(self, team_id: int, position: str, is_manual_pick: bool = False) -> bool:
         """
         Checks if a team can draft a player of a given position, considering roster limits.
-        For manual picks, it only checks total bench size. For AI picks, it enforces positional maxes.
+        For manual UI picks, it only checks total bench size. For AI/simulated picks, it enforces positional maxes.
         """
         roster_counts = self.teams_rosters[team_id]
-        total_players = len(roster_counts['PLAYERS'])
-        total_starters = sum(self.config.ROSTER_STRUCTURE.values())
-        total_bench_players = total_players - total_starters
+        current_total_players = len(roster_counts['PLAYERS'])
+        total_starters_slots = sum(self.config.ROSTER_STRUCTURE.values())
+        current_bench_players_count = current_total_players - total_starters_slots
 
-        # Universal check: is the roster completely full?
-        if total_players >= self.total_roster_size_per_team:
+        # Universal check: is the roster completely full (starters + total bench)?
+        if current_total_players >= self.total_roster_size_per_team:
             return False
 
         # Check if any players of this position are available in the pool
         if not any(self.player_map[pid].position == position for pid in self.available_players_ids):
             return False
 
-        # --- Logic for Manual vs. AI Picks ---
-        is_manual_team = team_id in self.manual_draft_teams
-
-        # For manual teams, only check if the bench has space.
-        if is_manual_team:
-            if total_bench_players < self.config.TOTAL_BENCH_SIZE:
+        # --- Logic based on whether it's a manual UI pick or an AI/simulated pick ---
+        if is_manual_pick:
+            # For manual UI picks:
+            # 1. Can fill a starter spot?
+            if roster_counts[position] < self.config.ROSTER_STRUCTURE.get(position, 0):
                 return True
-            # If bench is full, check if it can fill a starter/flex spot
-            elif roster_counts[position] < self.config.ROSTER_STRUCTURE.get(position, 0):
-                return True
+            # 2. Can fill a FLEX spot?
             elif position in ['RB', 'WR', 'TE'] and roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE.get('FLEX', 0):
+                return True
+            # 3. Can fill any bench spot (only limited by total bench size)
+            elif current_bench_players_count < self.config.TOTAL_BENCH_SIZE:
                 return True
             else:
                 return False
-
-        # For AI teams, enforce positional BENCH_MAXES
         else:
-            # Can it fill a starter spot?
+            # For AI/simulated picks (enforce positional bench limits):
+            # 1. Can fill a starter spot?
             if roster_counts[position] < self.config.ROSTER_STRUCTURE.get(position, 0):
                 return True
-            # Can it fill a FLEX spot?
+            # 2. Can fill a FLEX spot?
             elif position in ['RB', 'WR', 'TE'] and roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE.get('FLEX', 0):
                 return True
-            # Can it fill a positional bench spot?
-            elif total_bench_players < self.config.TOTAL_BENCH_SIZE and \
-                 (roster_counts[position] - self.config.ROSTER_STRUCTURE.get(position, 0)) < self.config.BENCH_MAXES.get(position, 0):
+            # 3. Can fill a positional bench spot?
+            #    Check if current count for this position (including starters) is less than
+            #    its total allowed (starters + positional bench max) AND
+            #    if the total bench is not yet full.
+            elif (roster_counts[position] < (self.config.ROSTER_STRUCTURE.get(position, 0) + self.config.BENCH_MAXES.get(position, 0))) \
+                 and current_bench_players_count < self.config.TOTAL_BENCH_SIZE:
                 return True
             else:
                 return False

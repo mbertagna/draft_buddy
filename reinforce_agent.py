@@ -49,7 +49,7 @@ class ReinforceAgent:
             returns.insert(0, G) # Insert at the beginning to keep original order
         return returns
 
-    def train(self, start_episode=1, run_version_dir=None) -> Tuple[List[float], List[float]]:
+    def train(self, start_episode=1, run_version_dir=None, logs_dir=None) -> Tuple[List[float], List[float]]:
         """
         Runs the REINFORCE training loop for a specified number of episodes.
 
@@ -137,7 +137,7 @@ class ReinforceAgent:
             )
 
             if episode % 1000 == 0: # Save a checkpoint every 1000 episodes
-                self.save_checkpoint(run_version_dir, episode)
+                self.save_checkpoint(run_version_dir, logs_dir, episode, all_episode_rewards, all_policy_losses)
 
             if episode % 100 == 0:
                 print(f"Episode {episode}/{self.config.TOTAL_EPISODES} | "
@@ -150,7 +150,7 @@ class ReinforceAgent:
 
         print("\nTraining complete!")
         # Save the final model as a checkpoint
-        self.save_checkpoint(run_version_dir, self.config.TOTAL_EPISODES)
+        self.save_checkpoint(run_version_dir, logs_dir, self.config.TOTAL_EPISODES, all_episode_rewards, all_policy_losses)
         return all_episode_rewards, all_policy_losses
 
     def save_model(self, filepath: str):
@@ -174,8 +174,22 @@ class ReinforceAgent:
         self.policy_network.eval() # Set the network to evaluation mode
         print(f"Model loaded from {filepath}")
 
-    def save_checkpoint(self, run_version_dir, episode):
-        """Saves a model checkpoint."""
+    def save_checkpoint(self, run_version_dir, logs_dir, episode, all_episode_rewards, all_policy_losses):
+        """Saves a model checkpoint and associated training data/plots."""
         if run_version_dir:
             checkpoint_path = os.path.join(run_version_dir, f'checkpoint_episode_{episode}.pth')
             self.save_model(checkpoint_path)
+
+            # Save raw data
+            rewards_data_path = os.path.join(logs_dir, 'all_episode_rewards.csv')
+            losses_data_path = os.path.join(logs_dir, 'all_policy_losses.csv')
+
+            # Append data to CSVs
+            with open(rewards_data_path, 'a') as f:
+                for r in all_episode_rewards[episode-1000:episode]: # Save only new data
+                    f.write(f"{r}\n")
+            with open(losses_data_path, 'a') as f:
+                for l in all_policy_losses[episode-1000:episode]: # Save only new data
+                    f.write(f"{l}\n")
+
+            print(f"Raw training data saved to {rewards_data_path} and {losses_data_path}")

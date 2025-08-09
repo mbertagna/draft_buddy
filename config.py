@@ -154,8 +154,8 @@ class Config:
     }
 
     # --- Reinforcement Learning Parameters ---
-    RESUME_TRAINING = False # Set to True to resume from the latest checkpoint
-    TOTAL_EPISODES = 50000
+    RESUME_TRAINING = True # Set to True to resume from the latest checkpoint
+    TOTAL_EPISODES = 1000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
 
@@ -258,7 +258,7 @@ class Config:
     HIDDEN_DIM = 64
 
     # --- Simulation and Evaluation Parameters ---
-    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v8/checkpoint_episode_9000.pth") # <-- CHANGE THIS FILENAME
+    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v1/checkpoint_episode_1000.pth") # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters
@@ -269,7 +269,8 @@ class Config:
     ENABLE_SEASON_SIM_REWARD = True # Master switch for season simulation rewards
     SEASON_SIM_REWARDS = {
         'WIN_REGULAR_SEASON': 1000,
-        'WIN_PLAYOFFS': 1000,
+        'MAKE_PLAYOFFS': 500,
+        'WIN_PLAYOFFS': 500,
     }
 
     # Option to add a penalty for high standard deviation among opponents

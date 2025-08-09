@@ -9,6 +9,36 @@ from fantasy_draft_env import FantasyFootballDraftEnv
 from reinforce_agent import ReinforceAgent
 from utils.run_utils import setup_run_directories, save_run_metadata, find_latest_checkpoint
 
+def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
+    """
+    Plots training results and saves them to the specified directory.
+    """
+    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Plot Total Rewards
+    plt.figure(figsize=(12, 6))
+    plt.plot(episode_rewards)
+    plt.title(f'{prefix}Total Reward per Episode')
+    plt.xlabel('Episode')
+    plt.ylabel('Total Reward')
+    plt.grid(True)
+    rewards_plot_path = os.path.join(logs_dir, f"{prefix}rewards_plot_{timestamp}.png")
+    plt.savefig(rewards_plot_path)
+    plt.close()
+    print(f"Rewards plot saved to: {rewards_plot_path}")
+
+    # Plot Policy Losses
+    plt.figure(figsize=(12, 6))
+    plt.plot(policy_losses)
+    plt.title(f'{prefix}Policy Loss per Episode')
+    plt.xlabel('Episode')
+    plt.ylabel('Loss')
+    plt.grid(True)
+    losses_plot_path = os.path.join(logs_dir, f"{prefix}losses_plot_{timestamp}.png")
+    plt.savefig(losses_plot_path)
+    plt.close()
+    print(f"Losses plot saved to: {losses_plot_path}")
+
 def main():
     """
     Main function to initialize the environment, agent, and run the training process.
@@ -48,41 +78,28 @@ def main():
                 print(f"Starting from episode {start_episode}")
             except (IndexError, ValueError):
                 print("Could not determine start episode from checkpoint filename. Starting from episode 1.")
+
+            # Load existing raw data for plotting
+            rewards_data_path = os.path.join(logs_dir, 'all_episode_rewards.csv')
+            losses_data_path = os.path.join(logs_dir, 'all_policy_losses.csv')
+            if os.path.exists(rewards_data_path):
+                with open(rewards_data_path, 'r') as f:
+                    agent.all_episode_rewards = [float(line.strip()) for line in f]
+            if os.path.exists(losses_data_path):
+                with open(losses_data_path, 'r') as f:
+                    agent.all_policy_losses = [float(line.strip()) for line in f]
+
         else:
             print("\nNo checkpoint found. Starting a new training run.")
 
     # 6. Train the Agent
     print("\nStarting Agent Training...")
-    episode_rewards, policy_losses = agent.train(start_episode=start_episode, run_version_dir=run_version_dir)
+    episode_rewards, policy_losses = agent.train(start_episode=start_episode, run_version_dir=run_version_dir, logs_dir=logs_dir)
     print("\nAgent training complete!")
 
-    # 7. Plotting Training Results
-    print("\nGenerating training plots...")
-    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    
-    # Plot Total Rewards
-    plt.figure(figsize=(12, 6))
-    plt.plot(episode_rewards)
-    plt.title('Total Reward per Episode')
-    plt.xlabel('Episode')
-    plt.ylabel('Total Reward')
-    plt.grid(True)
-    rewards_plot_path = os.path.join(logs_dir, f"rewards_plot_{timestamp}.png")
-    plt.savefig(rewards_plot_path)
-    plt.close()
-    print(f"Rewards plot saved to: {rewards_plot_path}")
-
-    # Plot Policy Losses
-    plt.figure(figsize=(12, 6))
-    plt.plot(policy_losses)
-    plt.title('Policy Loss per Episode')
-    plt.xlabel('Episode')
-    plt.ylabel('Loss')
-    plt.grid(True)
-    losses_plot_path = os.path.join(logs_dir, f"losses_plot_{timestamp}.png")
-    plt.savefig(losses_plot_path)
-    plt.close()
-    print(f"Losses plot saved to: {losses_plot_path}")
+    # 7. Plotting Training Results (Final)
+    print("\nGenerating final training plots...")
+    plot_training_results(episode_rewards, policy_losses, logs_dir, prefix="final_")
     
     print("\nTraining process finished.")
     print(f"You can inspect the saved model and plots in the '{run_version_dir}' and '{logs_dir}' directories.")
