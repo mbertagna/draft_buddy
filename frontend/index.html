@@ -6,19 +6,145 @@
     <title>DRAFT BUDDY</title>
     <style>
         body { font-family: sans-serif; margin: 0; background-color: #f4f4f9; display: flex; flex-direction: column; height: 100vh; }
-        header { background-color: #4CAF50; color: white; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
         main { display: flex; flex: 1; overflow: hidden; padding: 1rem; }
         #left-panel { flex: 1; overflow-y: auto; padding-right: 1rem; }
         #right-panel { flex: 2; overflow-y: auto; padding-left: 1rem; }
-        #controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+
+        /* Header: compact, sticky, space-efficient */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: #4CAF50;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-rows: auto auto auto;
+            gap: 6px;
+            padding: 8px 12px;
+        }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .stats-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.18);
+            font-weight: 600;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            min-height: 24px;
+        }
+        .status-row .label {
+            opacity: 0.9;
+        }
+        #ai-suggestion-display {
+            font-weight: 700;
+            color: #ffdd75;
+            display: inline-block;
+            max-width: 55vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: bottom;
+        }
+        .team-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #team-buttons {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            padding-bottom: 2px;
+            width: 100%;
+        }
+        /* Team buttons: compact */
+        .team-button {
+            padding: 4px 8px;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #1976d2;
+            color: white;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .team-button.main-team {
+            font-weight: 700;
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.15),
+                rgba(255, 255, 255, 0.15) 10px,
+                rgba(0, 0, 0, 0) 10px,
+                rgba(0, 0, 0, 0) 20px
+            );
+        }
+        .team-button.snake-order-pick {
+            border-color: #ffc107;
+        }
+        .team-button.picking-now {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        /* Header actions */
+        .header-actions {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .header-actions button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            font-size: 0.85rem;
+        }
+        #undo-pick-btn { background-color: #ffc107; color: black; }
+        #simulate-pick-btn { background-color: #007bff; }
+        #download-csv-btn { background-color: #6c757d; }
+
+        /* Controls + table */
+        #controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 10px; flex-wrap: wrap; }
+        #player-search { padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px; }
+        .position-filters label { margin-right: 10px; }
+        #new-draft-btn { padding: 8px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
         #player-list { border-collapse: collapse; width: 100%; }
         #player-list th, #player-list td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         #player-list th { background-color: #4CAF50; color: white; }
         #player-list tbody tr:nth-child(even) { background-color: #f2f2f2; }
         #player-list tbody tr:hover { background-color: #ddd; cursor: pointer; }
-        #player-search { padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px; }
-        .position-filters label { margin-right: 10px; }
-        #new-draft-btn { padding: 8px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+        /* Rosters */
         .roster-card { border: 1px solid #ccc; border-radius: 4px; padding: 10px; margin-bottom: 10px; background-color: white; }
         .roster-card h4 { margin-top: 0; }
         .roster-details { display: flex; gap: 20px; }
@@ -29,68 +155,37 @@
         .roster-section td:first-child { font-weight: bold; width: 40px; }
         .roster-section ul { list-style-type: none; padding: 0; margin: 0; }
         .roster-section li { font-size: 0.9rem; padding: 2px 0; }
+
+        /* Bye week grid */
         .bye-week-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 5px; }
         .bye-week-cell { padding: 5px; text-align: center; border-radius: 3px; font-size: 0.8rem; }
-        .header-section { color: black; margin: 0 1rem; }
-        .team-button {
-            padding: 8px 12px;
-            border: 3px solid transparent;
-            border-radius: 4px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            background-clip: padding-box; 
-        }
-        .team-button.main-team {
-            font-weight: bold;
-            background-image: repeating-linear-gradient(
-                45deg,
-                rgba(255, 255, 255, 0.1),
-                rgba(255, 255, 255, 0.1) 10px,
-                rgba(0, 0, 0, 0) 10px,
-                rgba(0, 0, 0, 0) 20px
-            );
-        }
-        .team-button.snake-order-pick {
-            border-color: #ffc107;
-        }
-        .team-button.picking-now {
-            background-color: #ffc107;
-        }
-        .header-section button {
-            padding: 8px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            color: white;
-            margin-left: 10px;
-        }
-        #undo-pick-btn { background-color: #ffc107; color: black; }
-        #simulate-pick-btn { background-color: #007bff; }
-        #download-csv-btn { background-color: #6c757d; }
     </style>
 </head>
 <body>
     <header>
-        <div class="header-section">
-            Total Picks: <span id="total-picks-display">N/A</span> | 
-            QBs: <span id="qb-drafted-display">N/A</span> | 
-            RBs: <span id="rb-drafted-display">N/A</span> | 
-            WRs: <span id="wr-drafted-display">N/A</span> | 
-            TEs: <span id="te-drafted-display">N/A</span>
+        <div class="toolbar">
+            <div class="stats-bar">
+                <span class="chip">Total <span id="total-picks-display">N/A</span></span>
+                <span class="chip">QB <span id="qb-drafted-display">N/A</span></span>
+                <span class="chip">RB <span id="rb-drafted-display">N/A</span></span>
+                <span class="chip">WR <span id="wr-drafted-display">N/A</span></span>
+                <span class="chip">TE <span id="te-drafted-display">N/A</span></span>
+            </div>
+            <div class="header-actions">
+                <button id="undo-pick-btn">Undo</button>
+                <button id="simulate-pick-btn">Sim Pick</button>
+                <button id="download-csv-btn">CSV</button>
+            </div>
         </div>
-        <div class="header-section">
-            Current Pick: <span id="current-pick-display">N/A</span> | 
-            Team On The Clock: <span id="team-on-clock-display">N/A</span> | 
-            AI Suggestion: <span id="ai-suggestion-display" style="font-weight: bold; color: #ffc107;">N/A</span>
+
+        <div class="status-row">
+            <span class="label">Pick #</span><span id="current-pick-display">N/A</span>
+            <span class="label">On Clock</span><span id="team-on-clock-display">N/A</span>
+            <span class="label">AI</span><span id="ai-suggestion-display">N/A</span>
         </div>
-        <div id="team-buttons" style="display: flex; flex-wrap: wrap; gap: 5px;">
-            <!-- Team buttons will be inserted here by JS -->
-        </div>
-        <div class="header-section">
-            <button id="undo-pick-btn">Undo Last Pick</button>
-            <button id="simulate-pick-btn">Simulate Pick</button>
-            <button id="download-csv-btn">Download as CSV</button>
+
+        <div class="team-row">
+            <div id="team-buttons"></div>
         </div>
     </header>
 
@@ -212,7 +307,7 @@
         };
 
         const checkBackendStatus = async () => {
-            // This function is no longer needed as the backend status is removed from the UI
+            // Not used
         };
 
         // Event Listeners
@@ -350,9 +445,8 @@
                         aiSuggestionDisplay.innerText = data.error;
                         return;
                     }
-                    // Format the probabilities
                     const suggestionText = Object.entries(data)
-                        .sort(([, a], [, b]) => b - a) // Sort by probability descending
+                        .sort(([, a], [, b]) => b - a)
                         .map(([pos, prob]) => `${pos}: ${Math.round(prob * 100)}%`)
                         .join(' | ');
                     aiSuggestionDisplay.innerText = suggestionText || 'N/A';
