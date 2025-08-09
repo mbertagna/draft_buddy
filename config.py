@@ -161,6 +161,7 @@ class Config:
 
     # --- State Space Parameters ---
     ALL_STATE_FEATURES = [
+        # --- Original Tier 1 Features ---
         "best_available_qb_points",
         "best_available_rb_points",
         "best_available_wr_points",
@@ -196,8 +197,50 @@ class Config:
         "best_rb_bye_week_conflict",
         "best_wr_bye_week_conflict",
         "best_te_bye_week_conflict",
+
+        # --- New Tier 2 Features ---
+
+        # 1. Positional Scarcity (Drop-off Score)
+        "qb_scarcity",
+        "rb_scarcity",
+        "wr_scarcity",
+        "te_scarcity",
+
+        # 2. Top-k Literal Data (Hybrid Component)
+        "top_3_qb_points_1",
+        "top_3_qb_points_2",
+        "top_3_qb_points_3",
+        "top_3_rb_points_1",
+        "top_3_rb_points_2",
+        "top_3_rb_points_3",
+        "top_3_wr_points_1",
+        "top_3_wr_points_2",
+        "top_3_wr_points_3",
+        "top_3_te_points_1",
+        "top_3_te_points_2",
+        "top_3_te_points_3",
+
+        # 3. Opponent Threat Analysis (Imminent Threat)
+        "qb_imminent_threat",
+        "rb_imminent_threat",
+        "wr_imminent_threat",
+        "te_imminent_threat",
+
+        # 4. Bye Week Management (Full Roster Vector)
+        "bye_week_4_count",
+        "bye_week_5_count",
+        "bye_week_6_count",
+        "bye_week_7_count",
+        "bye_week_8_count",
+        "bye_week_9_count",
+        "bye_week_10_count",
+        "bye_week_11_count",
+        "bye_week_12_count",
+        "bye_week_13_count",
+        "bye_week_14_count",
     ]
     ENABLED_STATE_FEATURES = [
+        # --- Original Tier 1 Features ---
         "best_available_qb_points",
         "best_available_rb_points",
         "best_available_wr_points",
@@ -233,6 +276,47 @@ class Config:
         "best_rb_bye_week_conflict",
         "best_wr_bye_week_conflict",
         "best_te_bye_week_conflict",
+
+        # --- New Tier 2 Features ---
+
+        # 1. Positional Scarcity (Drop-off Score)
+        "qb_scarcity",
+        "rb_scarcity",
+        "wr_scarcity",
+        "te_scarcity",
+
+        # 2. Top-k Literal Data (Hybrid Component)
+        "top_3_qb_points_1",
+        "top_3_qb_points_2",
+        "top_3_qb_points_3",
+        "top_3_rb_points_1",
+        "top_3_rb_points_2",
+        "top_3_rb_points_3",
+        "top_3_wr_points_1",
+        "top_3_wr_points_2",
+        "top_3_wr_points_3",
+        "top_3_te_points_1",
+        "top_3_te_points_2",
+        "top_3_te_points_3",
+
+        # 3. Opponent Threat Analysis (Imminent Threat)
+        "qb_imminent_threat",
+        "rb_imminent_threat",
+        "wr_imminent_threat",
+        "te_imminent_threat",
+
+        # 4. Bye Week Management (Full Roster Vector)
+        "bye_week_4_count",
+        "bye_week_5_count",
+        "bye_week_6_count",
+        "bye_week_7_count",
+        "bye_week_8_count",
+        "bye_week_9_count",
+        "bye_week_10_count",
+        "bye_week_11_count",
+        "bye_week_12_count",
+        "bye_week_13_count",
+        "bye_week_14_count",
     ]
     STATE_NORMALIZATION_METHOD = 'min_max'
 

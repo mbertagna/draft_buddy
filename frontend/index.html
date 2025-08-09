@@ -139,10 +139,11 @@
         #new-draft-btn { padding: 8px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
 
         #player-list { border-collapse: collapse; width: 100%; }
-        #player-list th, #player-list td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         #player-list th { background-color: #4CAF50; color: white; }
+        #player-list th.sortable { cursor: pointer; user-select: none; }
         #player-list tbody tr:nth-child(even) { background-color: #f2f2f2; }
         #player-list tbody tr:hover { background-color: #ddd; cursor: pointer; }
+        #player-list th, #player-list td { border: 1px solid #ddd; padding: 8px; text-align: left; }
 
         /* Rosters */
         .roster-card { border: 1px solid #ccc; border-radius: 4px; padding: 10px; margin-bottom: 10px; background-color: white; }
@@ -209,14 +210,14 @@
             <table id="player-list">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Position</th>
-                        <th>Proj. Pts</th>
-                        <th>VORP</th>
-                        <th>GP Frac</th>
-                        <th>ADP</th>
-                        <th>Bye</th>
+                        <th data-sort-key="player_id">ID</th>
+                        <th data-sort-key="name">Name</th>
+                        <th data-sort-key="position">Position</th>
+                        <th data-sort-key="projected_points">Proj. Pts</th>
+                        <th data-sort-key="vorp">VORP</th>
+                        <th data-sort-key="games_played_frac">GP Frac</th>
+                        <th data-sort-key="adp">ADP</th>
+                        <th data-sort-key="bye_week">Bye</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -248,6 +249,43 @@
         let currentDraftState = null;
         const MAIN_TEAM_ID = 10; // Define the main team ID
 
+        let currentSortBy = 'vorp';
+        let currentSortDir = 'desc'; // 'asc' or 'desc'
+
+        function setupSortHandlers() {
+            const ths = document.querySelectorAll('#player-list th');
+            ths.forEach(th => {
+                const key = th.dataset.sortKey;
+                if (!key) return;
+                th.classList.add('sortable');
+                if (!th.dataset.label) th.dataset.label = th.innerText;
+                th.addEventListener('click', () => {
+                    if (currentSortBy === key) {
+                        currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSortBy = key;
+                        // Defaults: ADP/name/position/id/bye ascend; others descend
+                        currentSortDir = (key === 'adp' || key === 'name' || key === 'position' || key === 'player_id' || key === 'bye_week') ? 'asc' : 'desc';
+                    }
+                    updateSortIndicators();
+                    fetchPlayers();
+                });
+            });
+            updateSortIndicators();
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('#player-list th').forEach(th => {
+                const key = th.dataset.sortKey;
+                if (!key) {
+                    if (th.dataset.label) th.innerText = th.dataset.label;
+                    return;
+                }
+                const arrow = (key === currentSortBy) ? (currentSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+                th.innerText = (th.dataset.label || th.innerText) + arrow;
+            });
+        }
+
         async function loadInitialState() {
             try {
                 const response = await fetch('/api/draft/state');
@@ -270,6 +308,8 @@
             const params = new URLSearchParams();
             if (searchInput) params.append('search', searchInput);
             if (selectedPositions.length) params.append('position', selectedPositions.join(','));
+            params.append('sort_by', currentSortBy);
+            params.append('sort_dir', currentSortDir);
 
             try {
                 const response = await fetch(`/api/players?${params.toString()}`);
@@ -278,7 +318,7 @@
                 renderPlayers(players);
             } catch (error) {
                 console.error('Error fetching players:', error);
-                playerTbody.innerHTML = `<tr><td colspan="7" style="color: red;">Error loading players: ${error.message}</td></tr>`;
+                playerTbody.innerHTML = `<tr><td colspan="8" style="color: red;">Error loading players: ${error.message}</td></tr>`;
             }
         };
 
@@ -320,7 +360,10 @@
         simulatePickBtn.addEventListener('click', simulateNextPick);
         downloadCsvBtn.addEventListener('click', downloadCsv);
 
-        document.addEventListener('DOMContentLoaded', loadInitialState);
+        document.addEventListener('DOMContentLoaded', () => {
+            setupSortHandlers();
+            loadInitialState();
+        });
 
         async function startNewDraft() {
             try {

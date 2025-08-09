@@ -88,60 +88,6 @@ def get_draft_state():
 def hello_world():
     return {'message': 'Hello from DRAFT BUDDY backend!'}
 
-# API route for player data
-@app.route('/api/players')
-def get_players():
-    position_filter = request.args.get('position')
-    search_query = request.args.get('search')
-
-    # If a draft is in progress, use the available players from the environment
-    if draft_env:
-        source_players = [player_map[p_id] for p_id in draft_env.available_players_ids]
-    else:
-        source_players = all_players
-
-    filtered_players = source_players
-
-    # Apply position filtering
-    if position_filter:
-        positions_to_match = [pos.strip().upper() for pos in position_filter.split(',')]
-        filtered_players = [
-            p for p in filtered_players if p.position in positions_to_match
-        ]
-
-    # Apply search query filtering
-    if search_query:
-        search_query_lower = search_query.lower()
-        filtered_players = [
-            p for p in filtered_players if search_query_lower in p.name.lower()
-        ]
-
-    # Get positional baselines for VORP calculation
-    baselines = draft_env.get_positional_baselines()
-
-    # Convert Player objects to a list of dictionaries for JSON serialization
-    players_data = []
-    for p in filtered_players:
-        # Calculate VORP for the player
-        player_vorp = p.projected_points - baselines.get(p.position, 0)
-
-        player_dict = {
-            'player_id': p.player_id,
-            'name': p.name,
-            'position': p.position,
-            'projected_points': p.projected_points,
-            'vorp': player_vorp,
-            'games_played_frac': p.games_played_frac,
-            'adp': None if np.isinf(p.adp) else p.adp,
-            'bye_week': p.bye_week if p.bye_week and not np.isnan(p.bye_week) else 'N/A'
-        }
-        players_data.append(player_dict)
-
-    # Sort players by VORP (descending), which is a better default for drafting
-    players_data.sort(key=lambda x: x['vorp'], reverse=True)
-
-    return jsonify(players_data)
-
 # API route for creating a new draft
 @app.route('/api/draft/new', methods=['POST'])
 def create_new_draft():
@@ -270,6 +216,83 @@ def export_csv():
     output.headers["Content-Disposition"] = "attachment; filename=draft_results.csv"
     output.headers["Content-type"] = "text/csv"
     return output
+
+@app.route('/api/players')
+def get_players():
+    position_filter = request.args.get('position')
+    search_query = request.args.get('search')
+    sort_by = request.args.get('sort_by', 'vorp')  # one of: player_id, name, position, projected_points, vorp, games_played_frac, adp, bye_week
+    sort_dir = request.args.get('sort_dir', 'desc').lower()  # 'asc' or 'desc'
+    reverse = (sort_dir == 'desc')
+
+    # If a draft is in progress, use the available players from the environment
+    if draft_env:
+        source_players = [player_map[p_id] for p_id in draft_env.available_players_ids]
+    else:
+        source_players = all_players
+
+    filtered_players = source_players
+
+    # Apply position filtering
+    if position_filter:
+        positions_to_match = [pos.strip().upper() for pos in position_filter.split(',')]
+        filtered_players = [p for p in filtered_players if p.position in positions_to_match]
+
+    # Apply search query filtering
+    if search_query:
+        search_query_lower = search_query.lower()
+        filtered_players = [p for p in filtered_players if search_query_lower in p.name.lower()]
+
+    # Get positional baselines for VORP calculation
+    baselines = draft_env.get_positional_baselines()
+
+    # Precompute VORP map to sort efficiently
+    player_vorp_map = {p.player_id: (p.projected_points - baselines.get(p.position, 0)) for p in filtered_players}
+
+    def sort_key(p):
+        if sort_by == 'vorp':
+            val = player_vorp_map.get(p.player_id, 0.0)
+        elif sort_by == 'adp':
+            # Lower ADP is better; treat inf/missing as very large so they sink on asc
+            val = p.adp if np.isfinite(p.adp) else float('inf')
+        elif sort_by == 'projected_points':
+            val = p.projected_points
+        elif sort_by == 'games_played_frac':
+            val = p.games_played_frac
+        elif sort_by == 'position':
+            val = p.position
+        elif sort_by == 'name':
+            val = p.name.lower()
+        elif sort_by == 'bye_week':
+            val = p.bye_week if (p.bye_week is not None and not np.isnan(p.bye_week)) else 99
+        elif sort_by == 'player_id':
+            val = p.player_id
+        else:
+            # Default to VORP if unknown key
+            val = player_vorp_map.get(p.player_id, 0.0)
+        # Secondary key for determinism
+        return (val, p.player_id)
+
+    # Sort in place
+    filtered_players.sort(key=sort_key, reverse=reverse)
+
+    # Convert Player objects to a list of dictionaries for JSON serialization
+    players_data = []
+    for p in filtered_players:
+        player_vorp = player_vorp_map.get(p.player_id, 0.0)
+        player_dict = {
+            'player_id': p.player_id,
+            'name': p.name,
+            'position': p.position,
+            'projected_points': p.projected_points,
+            'vorp': player_vorp,
+            'games_played_frac': p.games_played_frac,
+            'adp': None if np.isinf(p.adp) else p.adp,
+            'bye_week': p.bye_week if p.bye_week and not np.isnan(p.bye_week) else 'N/A'
+        }
+        players_data.append(player_dict)
+
+    return jsonify(players_data)
 
 # Serve frontend application
 @app.route('/', defaults={'path': ''})

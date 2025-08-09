@@ -81,6 +81,47 @@ class FantasyFootballDraftEnv(gym.Env):
             "best_rb_bye_week_conflict": lambda: self._get_bye_week_conflict_count('RB'),
             "best_wr_bye_week_conflict": lambda: self._get_bye_week_conflict_count('WR'),
             "best_te_bye_week_conflict": lambda: self._get_bye_week_conflict_count('TE'),
+
+            # --- TIER 2 FEATURES ---
+
+            # 1. Positional Scarcity (Drop-off Score)
+            "qb_scarcity": lambda: self._calculate_scarcity('QB'),
+            "rb_scarcity": lambda: self._calculate_scarcity('RB'),
+            "wr_scarcity": lambda: self._calculate_scarcity('WR'),
+            "te_scarcity": lambda: self._calculate_scarcity('TE'),
+
+            # 2. Top-k Literal Data (Hybrid Component)
+            "top_3_qb_points_1": lambda: self._get_kth_best_available_player_by_pos('QB', 1).projected_points if self._get_kth_best_available_player_by_pos('QB', 1) else 0.0,
+            "top_3_qb_points_2": lambda: self._get_kth_best_available_player_by_pos('QB', 2).projected_points if self._get_kth_best_available_player_by_pos('QB', 2) else 0.0,
+            "top_3_qb_points_3": lambda: self._get_kth_best_available_player_by_pos('QB', 3).projected_points if self._get_kth_best_available_player_by_pos('QB', 3) else 0.0,
+            "top_3_rb_points_1": lambda: self._get_kth_best_available_player_by_pos('RB', 1).projected_points if self._get_kth_best_available_player_by_pos('RB', 1) else 0.0,
+            "top_3_rb_points_2": lambda: self._get_kth_best_available_player_by_pos('RB', 2).projected_points if self._get_kth_best_available_player_by_pos('RB', 2) else 0.0,
+            "top_3_rb_points_3": lambda: self._get_kth_best_available_player_by_pos('RB', 3).projected_points if self._get_kth_best_available_player_by_pos('RB', 3) else 0.0,
+            "top_3_wr_points_1": lambda: self._get_kth_best_available_player_by_pos('WR', 1).projected_points if self._get_kth_best_available_player_by_pos('WR', 1) else 0.0,
+            "top_3_wr_points_2": lambda: self._get_kth_best_available_player_by_pos('WR', 2).projected_points if self._get_kth_best_available_player_by_pos('WR', 2) else 0.0,
+            "top_3_wr_points_3": lambda: self._get_kth_best_available_player_by_pos('WR', 3).projected_points if self._get_kth_best_available_player_by_pos('WR', 3) else 0.0,
+            "top_3_te_points_1": lambda: self._get_kth_best_available_player_by_pos('TE', 1).projected_points if self._get_kth_best_available_player_by_pos('TE', 1) else 0.0,
+            "top_3_te_points_2": lambda: self._get_kth_best_available_player_by_pos('TE', 2).projected_points if self._get_kth_best_available_player_by_pos('TE', 2) else 0.0,
+            "top_3_te_points_3": lambda: self._get_kth_best_available_player_by_pos('TE', 3).projected_points if self._get_kth_best_available_player_by_pos('TE', 3) else 0.0,
+
+            # 3. Opponent Threat Analysis (Imminent Threat)
+            "qb_imminent_threat": lambda: self._calculate_imminent_threat('QB'),
+            "rb_imminent_threat": lambda: self._calculate_imminent_threat('RB'),
+            "wr_imminent_threat": lambda: self._calculate_imminent_threat('WR'),
+            "te_imminent_threat": lambda: self._calculate_imminent_threat('TE'),
+
+            # 4. Bye Week Management (Full Roster Vector)
+            "bye_week_4_count": lambda: self._get_agent_bye_week_vector()[0],
+            "bye_week_5_count": lambda: self._get_agent_bye_week_vector()[1],
+            "bye_week_6_count": lambda: self._get_agent_bye_week_vector()[2],
+            "bye_week_7_count": lambda: self._get_agent_bye_week_vector()[3],
+            "bye_week_8_count": lambda: self._get_agent_bye_week_vector()[4],
+            "bye_week_9_count": lambda: self._get_agent_bye_week_vector()[5],
+            "bye_week_10_count": lambda: self._get_agent_bye_week_vector()[6],
+            "bye_week_11_count": lambda: self._get_agent_bye_week_vector()[7],
+            "bye_week_12_count": lambda: self._get_agent_bye_week_vector()[8],
+            "bye_week_13_count": lambda: self._get_agent_bye_week_vector()[9],
+            "bye_week_14_count": lambda: self._get_agent_bye_week_vector()[10],
         }
         self.observation_space_dim = len(config.ENABLED_STATE_FEATURES)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.observation_space_dim,), dtype=np.float32)
@@ -405,6 +446,83 @@ class FantasyFootballDraftEnv(gym.Env):
         if opponent_team_id in self.teams_rosters:
             return self.teams_rosters[opponent_team_id].get(position, 0)
         return 0 # No roster information for this opponent_team_id
+
+    def _calculate_scarcity(self, position: str, k: int = 5) -> float:
+        """
+        Calculates the point difference between the best available player and the k-th
+        best available player at a position to measure talent drop-off.
+        """
+        best_player = self._get_kth_best_available_player_by_pos(position, 1)
+        if not best_player:
+            return 0.0
+
+        kth_player = self._get_kth_best_available_player_by_pos(position, k)
+
+        if kth_player:
+            # If the k-th player exists, calculate the drop-off directly.
+            return best_player.projected_points - kth_player.projected_points
+        else:
+            # Edge case: Fewer than k players are available.
+            # Find all available players for the position to determine the last one.
+            eligible_players = sorted(
+                [self.player_map[p_id] for p_id in self.available_players_ids if self.player_map[p_id].position == position],
+                key=lambda p: p.projected_points,
+                reverse=True
+            )
+            if len(eligible_players) > 1:
+                # Calculate drop-off between the best and the last available player.
+                last_player = eligible_players[-1]
+                return best_player.projected_points - last_player.projected_points
+            else:
+                # Only one or zero players left, so no drop-off.
+                return 0.0
+
+    def _calculate_imminent_threat(self, position: str) -> int:
+        """
+        Calculates how many teams picking between the agent's current and next pick
+        still need to fill a starting spot at the given position.
+        """
+        threat_count = 0
+        try:
+            # Find the index of the agent's next pick
+            next_agent_pick_idx = self.draft_order.index(self.agent_team_id, self.current_pick_idx + 1)
+        except ValueError:
+            # Agent has no more picks, so the window is the rest of the draft.
+            next_agent_pick_idx = len(self.draft_order)
+
+        # Identify the team IDs picking between now and the agent's next turn
+        intervening_picks = self.draft_order[self.current_pick_idx + 1 : next_agent_pick_idx]
+        opponent_teams_in_window = set(intervening_picks)
+
+        # Count how many of those opponents need a starter for the position
+        needed_starters = self.config.ROSTER_STRUCTURE.get(position, 0)
+        if needed_starters == 0:
+            return 0
+
+        for team_id in opponent_teams_in_window:
+            roster_counts = self.teams_rosters[team_id]
+            if roster_counts.get(position, 0) < needed_starters:
+                threat_count += 1
+
+        return threat_count
+
+    def _get_agent_bye_week_vector(self) -> np.ndarray:
+        """
+        Returns a fixed-length numpy array representing the count of players
+        on the agent's roster for each bye week (Weeks 4-14).
+        """
+        # Vector for Weeks 4 through 14 (11 weeks total)
+        bye_week_vector = np.zeros(11, dtype=np.float32)
+        agent_roster = self.teams_rosters[self.agent_team_id]['PLAYERS']
+
+        for player in agent_roster:
+            bye_week = player.bye_week
+            if bye_week and not np.isnan(bye_week) and 4 <= bye_week <= 14:
+                # Subtract 4 to map week 4 to index 0, week 5 to index 1, etc.
+                vector_index = int(bye_week) - 4
+                bye_week_vector[vector_index] += 1
+
+        return bye_week_vector
 
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None):
@@ -807,6 +925,22 @@ class FantasyFootballDraftEnv(gym.Env):
             "best_rb_bye_week_conflict": self.total_roster_size_per_team,
             "best_wr_bye_week_conflict": self.total_roster_size_per_team,
             "best_te_bye_week_conflict": self.total_roster_size_per_team,
+            # Tier 2 Features
+            "qb_scarcity": 150.0, "rb_scarcity": 150.0, "wr_scarcity": 150.0, "te_scarcity": 100.0,
+            "top_3_qb_points_1": 400.0, "top_3_qb_points_2": 400.0, "top_3_qb_points_3": 400.0,
+            "top_3_rb_points_1": 350.0, "top_3_rb_points_2": 350.0, "top_3_rb_points_3": 350.0,
+            "top_3_wr_points_1": 350.0, "top_3_wr_points_2": 350.0, "top_3_wr_points_3": 350.0,
+            "top_3_te_points_1": 300.0, "top_3_te_points_2": 300.0, "top_3_te_points_3": 300.0,
+            "qb_imminent_threat": self.config.NUM_TEAMS - 1,
+            "rb_imminent_threat": self.config.NUM_TEAMS - 1,
+            "wr_imminent_threat": self.config.NUM_TEAMS - 1,
+            "te_imminent_threat": self.config.NUM_TEAMS - 1,
+            "bye_week_4_count": self.total_roster_size_per_team, "bye_week_5_count": self.total_roster_size_per_team,
+            "bye_week_6_count": self.total_roster_size_per_team, "bye_week_7_count": self.total_roster_size_per_team,
+            "bye_week_8_count": self.total_roster_size_per_team, "bye_week_9_count": self.total_roster_size_per_team,
+            "bye_week_10_count": self.total_roster_size_per_team, "bye_week_11_count": self.total_roster_size_per_team,
+            "bye_week_12_count": self.total_roster_size_per_team, "bye_week_13_count": self.total_roster_size_per_team,
+            "bye_week_14_count": self.total_roster_size_per_team,
         }
         min_values = {k: 0.0 for k in max_values}
         min_values.update({
