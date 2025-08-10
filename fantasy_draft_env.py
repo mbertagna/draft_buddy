@@ -1569,6 +1569,37 @@ class FantasyFootballDraftEnv(gym.Env):
 
         return suggestion_probs
 
+    def get_ai_suggestion_for_team(self, team_id: int):
+        """Gets AI suggested action probabilities for a specific team perspective, regardless of turn."""
+        if not (1 <= team_id <= self.config.NUM_TEAMS):
+            return {"error": f"Invalid team id {team_id}"}
+        if not self.agent_model:
+            return {"error": "AI model not loaded."}
+
+        original_agent_team_id = self.agent_team_id
+        self.agent_team_id = team_id
+        try:
+            state = self._get_state()
+            action_mask = self.get_action_mask()
+        finally:
+            self.agent_team_id = original_agent_team_id
+
+        state_tensor = torch.from_numpy(state).float().unsqueeze(0)
+        with torch.no_grad():
+            action_probs_tensor = self.agent_model.get_action_probabilities(state_tensor, action_mask=action_mask)
+            action_probs = action_probs_tensor.squeeze().tolist()
+
+        return {self.action_to_position[i]: prob for i, prob in enumerate(action_probs)}
+
+    def get_ai_suggestions_all(self):
+        """Returns AI action probabilities for all teams 1..NUM_TEAMS."""
+        if not self.agent_model:
+            return {"error": "AI model not loaded."}
+        suggestions: Dict[int, Dict[str, float]] = {}
+        for team_id in range(1, self.config.NUM_TEAMS + 1):
+            suggestions[team_id] = self.get_ai_suggestion_for_team(team_id)
+        return suggestions
+
     def get_draft_summary(self):
         """Returns a summary of the draft."""
         summary = {

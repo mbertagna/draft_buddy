@@ -182,6 +182,30 @@ def ai_suggestion():
     suggestion = draft_env.get_ai_suggestion()
     return jsonify(suggestion)
 
+@app.route('/api/draft/ai_suggestions_all')
+def ai_suggestions_all():
+    global draft_env
+    if not draft_env:
+        return jsonify({'error': 'Draft has not been started'}), 400
+    suggestions = draft_env.get_ai_suggestions_all()
+    return jsonify(suggestions)
+
+@app.route('/api/draft/ai_suggestion_for_team')
+def ai_suggestion_for_team():
+    global draft_env
+    if not draft_env:
+        return jsonify({'error': 'Draft has not been started'}), 400
+    try:
+        team_id_str = request.args.get('team_id')
+        if team_id_str is None:
+            return jsonify({'error': 'team_id is required'}), 400
+        team_id = int(team_id_str)
+    except ValueError:
+        return jsonify({'error': 'team_id must be an integer'}), 400
+
+    suggestion = draft_env.get_ai_suggestion_for_team(team_id)
+    return jsonify(suggestion)
+
 @app.route('/api/draft/summary')
 def draft_summary():
     global draft_env

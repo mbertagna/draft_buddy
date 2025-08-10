@@ -383,8 +383,8 @@ class Config:
     ENABLE_PICK_SHAPING_REWARD = True
     PICK_SHAPING_STARTER_DELTA_WEIGHT = 0.25
     # 2) VORP-based shaping to encourage scarcity-aware picks
-    ENABLE_VORP_PICK_SHAPING = True
-    VORP_PICK_SHAPING_WEIGHT = 0.1
+    ENABLE_VORP_PICK_SHAPING = False
+    VORP_PICK_SHAPING_WEIGHT = 0.05
 
     ENABLE_ROSTER_SLOT_WEIGHTED_REWARD = True
     STARTER_POINTS_WEIGHT = 1
@@ -396,7 +396,7 @@ class Config:
     HIDDEN_DIM = 64
 
     # --- Simulation and Evaluation Parameters ---
-    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v1/checkpoint_episode_1000.pth") # <-- CHANGE THIS FILENAME
+    MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v1/checkpoint_episode_17000.pth") # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters

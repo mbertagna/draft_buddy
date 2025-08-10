@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
+import argparse
 
 from config import Config
 from fantasy_draft_env import FantasyFootballDraftEnv
@@ -39,11 +40,68 @@ def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
     plt.close()
     print(f"Losses plot saved to: {losses_plot_path}")
 
+def find_latest_logs_dir_with_csvs(logs_root: str) -> str:
+    """Recursively search for the most recently updated logs directory containing both CSVs."""
+    candidates = []
+    for root, _dirs, files in os.walk(logs_root):
+        if {"all_episode_rewards.csv", "all_policy_losses.csv"}.issubset(set(files)):
+            try:
+                csv_paths = [
+                    os.path.join(root, "all_episode_rewards.csv"),
+                    os.path.join(root, "all_policy_losses.csv"),
+                ]
+                mtime = max(os.path.getmtime(p) for p in csv_paths)
+            except FileNotFoundError:
+                continue
+            candidates.append((mtime, root))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    return candidates[0][1]
+
+def _load_floats_from_csv(path: str):
+    with open(path, "r") as f:
+        return [float(line.strip()) for line in f if line.strip()]
+
 def main():
     """
     Main function to initialize the environment, agent, and run the training process.
     """
     print("--- Starting Fantasy Football Draft AI Training ---")
+
+    # CLI args
+    parser = argparse.ArgumentParser(description="Train agent or plot latest CSV results.")
+    parser.add_argument(
+        "--plot-latest-csvs", 
+        "-plc",
+        action="store_true",
+        help="Auto-find the latest logs directory with CSVs and generate plots without training.",
+    )
+    args = parser.parse_args()
+
+    # If only plotting is requested, auto-find logs dir and plot, then exit
+    if args.plot_latest_csvs:
+        config = Config()
+        latest_logs_dir = find_latest_logs_dir_with_csvs(config.LOGS_DIR)
+        if not latest_logs_dir:
+            print(f"No logs directory with both CSVs found under '{config.LOGS_DIR}'.")
+            return
+
+        rewards_csv = os.path.join(latest_logs_dir, "all_episode_rewards.csv")
+        losses_csv = os.path.join(latest_logs_dir, "all_policy_losses.csv")
+
+        if not (os.path.exists(rewards_csv) and os.path.exists(losses_csv)):
+            print(f"Missing CSVs in '{latest_logs_dir}'. Expected both rewards and losses CSVs.")
+            return
+
+        print(f"Auto-found logs directory: {latest_logs_dir}")
+        episode_rewards = _load_floats_from_csv(rewards_csv)
+        policy_losses = _load_floats_from_csv(losses_csv)
+
+        print("Generating plots from discovered CSVs...")
+        plot_training_results(episode_rewards, policy_losses, latest_logs_dir, prefix="manual_")
+        print("Finished plotting from CSVs. Exiting.")
+        return
 
     # 1. Load Configuration
     config = Config()

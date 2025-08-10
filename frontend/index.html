@@ -243,6 +243,7 @@
         const currentPickDisplay = document.getElementById('current-pick-display');
         const teamOnClockDisplay = document.getElementById('team-on-clock-display');
         const aiSuggestionDisplay = document.getElementById('ai-suggestion-display');
+        // We fetch AI suggestion only for the team currently picking
         const totalPicksDisplay = document.getElementById('total-picks-display');
         const qbDraftedDisplay = document.getElementById('qb-drafted-display');
         const rbDraftedDisplay = document.getElementById('rb-drafted-display');
@@ -397,11 +398,7 @@
             currentPickDisplay.innerText = state.current_pick_number;
             teamOnClockDisplay.innerText = state.current_team_picking;
 
-            if (state.manual_draft_teams.includes(state.current_team_picking)) {
-                fetchAiSuggestion();
-            } else {
-                aiSuggestionDisplay.innerText = 'N/A';
-            }
+            updateHeaderSuggestion(state);
 
             fetchDraftSummary();
 
@@ -500,28 +497,35 @@
             teamRostersDiv.innerHTML = rostersHTML;
         }
 
-        async function fetchAiSuggestion() {
+        async function fetchAiSuggestionForTeam(teamId) {
+            const response = await fetch(`/api/draft/ai_suggestion_for_team?team_id=${teamId}`);
+            return await response.json();
+        }
+
+        async function updateHeaderSuggestion(state) {
+            const teamOnClock = state.current_team_picking;
+            if (!teamOnClock) {
+                aiSuggestionDisplay.innerText = 'N/A';
+                return;
+            }
             try {
-                const response = await fetch('/api/draft/ai_suggestion');
-                const data = await response.json();
-                if (response.ok) {
-                    if (data.error) {
-                        aiSuggestionDisplay.innerText = data.error;
-                        return;
-                    }
+                const data = await fetchAiSuggestionForTeam(teamOnClock);
+                if (data && !data.error) {
                     const suggestionText = Object.entries(data)
                         .sort(([, a], [, b]) => b - a)
                         .map(([pos, prob]) => `${pos}: ${Math.round(prob * 100)}%`)
                         .join(' | ');
                     aiSuggestionDisplay.innerText = suggestionText || 'N/A';
                 } else {
-                    aiSuggestionDisplay.innerText = data.error || 'Error';
+                    aiSuggestionDisplay.innerText = data.error || 'N/A';
                 }
-            } catch (error) {
-                console.error('Error fetching AI suggestion:', error);
+            } catch (e) {
+                console.error('Error fetching AI suggestion for team:', e);
                 aiSuggestionDisplay.innerText = 'Error';
             }
         }
+
+        // Removed bulk prefetch; suggestions are fetched on demand for the team on clock
 
         async function fetchDraftSummary() {
             try {
