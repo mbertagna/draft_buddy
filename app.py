@@ -1,6 +1,7 @@
 import os
 import io
 import csv
+import datetime
 from flask import Flask, send_from_directory, jsonify, request, make_response
 from data_utils import load_player_data
 from config import Config
@@ -96,8 +97,20 @@ def hello_world():
 # API route for creating a new draft
 @app.route('/api/draft/new', methods=['POST'])
 def create_new_draft():
-    """Resets the current draft environment to a new state."""
+    """Saves the current draft state and resets the environment."""
     global draft_env
+
+    # Archive the current state if the draft has started
+    if draft_env and draft_env.current_pick_number > 1:
+        saved_states_dir = 'saved_states'
+        if not os.path.exists(saved_states_dir):
+            os.makedirs(saved_states_dir)
+        
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        archive_filename = os.path.join(saved_states_dir, f'draft_state_{timestamp}.json')
+        draft_env.save_state(archive_filename)
+        print(f"Saved current draft state to {archive_filename}")
+
     draft_env.reset()
     draft_env.save_state(config.DRAFT_STATE_FILE)
     return jsonify(get_draft_state())
@@ -235,7 +248,11 @@ def export_csv():
     cw = csv.writer(si)
 
     # Write header
-    cw.writerow(['Pick Number', 'Team ID', 'Player ID', 'Player Name', 'Position', 'Projected Points', 'ADP', 'Games Played %'])
+    header = [
+        'Pick Number', 'Team ID', 'Player ID', 'Name', 'Position', 'Team', 'Bye Week',
+        'Projected Points', 'ADP', 'Games Played %'
+    ]
+    cw.writerow(header)
 
     # Write draft history
     for pick in draft_env._draft_history:
@@ -247,9 +264,11 @@ def export_csv():
                 player.player_id,
                 player.name,
                 player.position,
+                getattr(player, 'team', 'N/A'),
+                player.bye_week if player.bye_week and not np.isnan(player.bye_week) else 'N/A',
                 player.projected_points,
                 player.adp if np.isfinite(player.adp) else 'N/A',
-                f"{player.games_played_frac:.2f}"
+                f"{player.games_played_frac:.2f}" if isinstance(player.games_played_frac, (int, float)) else player.games_played_frac
             ])
 
     # Prepare response
@@ -300,6 +319,9 @@ def get_players():
             val = p.projected_points
         elif sort_by == 'games_played_frac':
             val = p.games_played_frac
+            if val == 'R':
+                return -1.0  # Sort rookies consistently
+            return val if np.isfinite(val) else -1.0
         elif sort_by == 'position':
             val = p.position
         elif sort_by == 'name':

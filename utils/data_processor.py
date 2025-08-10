@@ -479,6 +479,11 @@ class FantasyDataProcessor:
         team_bye_weeks = self._get_team_bye_weeks()
         draft_players_df['bye_week'] = draft_players_df['recent_team'].map(team_bye_weeks)
 
+        # For rookies (players without historical data), games_played_frac will be NaN.
+        # Fill this with 'R' to signify they are a rookie.
+        if 'games_played_frac' in draft_players_df.columns:
+            draft_players_df['games_played_frac'].fillna('R', inplace=True)
+
         wtw_pts_dict = {}
         for _, row in draft_players_df.iterrows():
             player_id = row['player_id']

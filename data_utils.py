@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 # Define Player data structure
 @dataclass
@@ -11,7 +11,7 @@ class Player:
     name: str
     position: str # QB, RB, WR, TE
     projected_points: float
-    games_played_frac: float = 1.0
+    games_played_frac: Union[float, str] = 1.0
     adp: float = field(default=np.inf) # Default to infinity if no ADP
     bye_week: Optional[int] = None
     team: Optional[str] = None
@@ -93,7 +93,13 @@ def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
         position = str(row['position']).upper() # Ensure consistent casing
         projected_points = float(row['projected_points'])
         adp = float(row['adp']) if has_adp_column and pd.notna(row['adp']) else np.inf
-        games_played_frac = float(row['games_played_frac']) if has_games_played_frac_column and pd.notna(row['games_played_frac']) else 1.0
+        
+        games_played_frac_val = row['games_played_frac'] if has_games_played_frac_column and pd.notna(row['games_played_frac']) else 1.0
+        if games_played_frac_val == 'R':
+            games_played_frac = 'R'
+        else:
+            games_played_frac = float(games_played_frac_val)
+
         bye_week = int(row['bye_week']) if has_bye_week_column and pd.notna(row['bye_week']) else None
 
         team = str(row[team_col]) if team_col and pd.notna(row[team_col]) else None
@@ -104,7 +110,7 @@ def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
         print("ADP column missing or all values NaN. Generating mock ADP...")
         players = _generate_mock_adp(players, adp_config)
     else:
-        print(f"Loaded {len(players)} players with existing ADP.")
+        print(f"Loaded {len(players)} with existing ADP.")
 
     # Sort players by ADP for easier processing later (lower ADP means drafted earlier)
     players.sort(key=lambda p: p.adp)

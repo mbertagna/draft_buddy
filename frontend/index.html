@@ -59,14 +59,33 @@
             opacity: 0.9;
         }
         #ai-suggestion-display {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            max-width: 55vw;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 2px; /* for scrollbar */
+        }
+        .ai-suggestion-item {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 3px 7px;
+            border-radius: 5px;
+            color: #fff;
+            white-space: nowrap;
+        }
+        .ai-suggestion-item .ai-pos {
+            font-size: 0.8rem;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+        .ai-suggestion-item .ai-prob {
+            font-size: 0.9rem;
             font-weight: 700;
             color: #ffdd75;
-            display: inline-block;
-            max-width: 55vw;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            vertical-align: bottom;
         }
         .team-row {
             display: flex;
@@ -191,7 +210,8 @@
         #player-list th { background-color: #4CAF50; color: white; }
         #player-list th.sortable { cursor: pointer; user-select: none; }
         #player-list tbody tr:nth-child(even) { background-color: #f2f2f2; }
-        #player-list tbody tr:hover { background-color: #ddd; cursor: pointer; }
+        #player-list tbody tr:hover { cursor: pointer; }
+        #player-list tbody tr:hover td { box-shadow: inset 0 0 100vw 100vh rgba(0, 0, 0, 0.07); }
         #player-list th, #player-list td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         #player-list td:first-child { text-align: center; vertical-align: middle; }
 
@@ -412,12 +432,30 @@
         }
         const GREEN = [200, 245, 200]; // light green
         const RED = [245, 200, 200];   // light red
-        function metricColor(value, minVal, maxVal, invert=false) {
-            if (value === null || value === undefined || Number.isNaN(value)) return '';
-            const tRaw = (value - minVal) / (maxVal - minVal || 1);
-            const t = clamp(tRaw, 0, 1);
-            const p = invert ? (1 - t) : t; // invert for metrics where lower is better (e.g., ADP)
-            return lerpColor(RED, GREEN, p);
+        // Dynamic, multi-stop color scale: green (good) -> yellow -> orange -> red (bad)
+        function dynamicMetricColor(value, minVal, maxVal, invert=false) {
+            if (
+                value === null || value === undefined || Number.isNaN(value) ||
+                minVal === null || maxVal === null || maxVal === minVal
+            ) return '';
+
+            const tRaw = (value - minVal) / (maxVal - minVal);
+            let t = clamp(tRaw, 0, 1);
+            if (invert) t = 1 - t; // e.g., ADP lower is better
+
+            const RED = [245, 200, 200];
+            const ORANGE = [255, 218, 185];
+            const YELLOW = [255, 255, 224];
+            const GREEN = [200, 245, 200];
+
+            // Map t in [0,1] from bad->good: 0=RED, ~0.33=ORANGE, ~0.66=YELLOW, 1=GREEN
+            if (t < 1/3) {
+                return lerpColor(RED, ORANGE, t * 3);
+            } else if (t < 2/3) {
+                return lerpColor(ORANGE, YELLOW, (t - 1/3) * 3);
+            } else {
+                return lerpColor(YELLOW, GREEN, (t - 2/3) * 3);
+            }
         }
 
         const renderPlayers = (players) => {
@@ -429,6 +467,29 @@
                 cell.innerText = 'No players found with current filters.';
                 return;
             }
+
+            // ----- Compute dynamic ranges from currently visible players -----
+            const numberOrNull = (v) => (v === null || v === undefined || Number.isNaN(Number(v))) ? null : Number(v);
+            const finiteNumber = (v) => (typeof v === 'number' && isFinite(v));
+
+            const adpValues = players
+                .map(p => numberOrNull(p.adp))
+                .filter(v => v !== null && isFinite(v));
+            const ptsValues = players
+                .map(p => numberOrNull(p.projected_points))
+                .filter(v => v !== null && isFinite(v));
+            const vorpValues = players
+                .map(p => numberOrNull(p.vorp))
+                .filter(v => v !== null && isFinite(v));
+            const gpValues = players
+                .map(p => (p.games_played_frac === 'R' ? null : numberOrNull(p.games_played_frac)))
+                .filter(v => v !== null && isFinite(v));
+
+            const minMax = (arr) => arr.length ? [Math.min(...arr), Math.max(...arr)] : [null, null];
+            const [adpMin, adpMax] = minMax(adpValues);
+            const [ptsMin, ptsMax] = minMax(ptsValues);
+            const [vorpMin, vorpMax] = minMax(vorpValues);
+            const [gpMin, gpMax] = minMax(gpValues);
 
             players.forEach(player => {
                 const row = playerTbody.insertRow();
@@ -463,10 +524,28 @@
                 const vorpCell = row.insertCell();
                 const vorpVal = Number(player.vorp) || 0;
                 vorpCell.innerText = vorpVal.toFixed(1);
+                
                 // Games Played Fraction
                 const gpCell = row.insertCell();
-                const gpVal = (player.games_played_frac !== null && player.games_played_frac !== undefined) ? Number(player.games_played_frac) : null;
-                gpCell.innerText = (gpVal !== null) ? gpVal.toFixed(2) : 'N/A';
+                const gpRawVal = player.games_played_frac;
+                const isRookie = (gpRawVal === 'R');
+                if (isRookie) {
+                    gpCell.innerText = 'R';
+                    gpCell.style.backgroundColor = '#e0ccff'; // distinct rookie color
+                    gpCell.style.color = '#3b2a64';
+                    gpCell.style.fontWeight = 'bold';
+                } else {
+                    const gpValNum = (gpRawVal !== null && gpRawVal !== undefined && !Number.isNaN(Number(gpRawVal))) ? Number(gpRawVal) : null;
+                    gpCell.innerText = (gpValNum !== null) ? gpValNum.toFixed(2) : 'N/A';
+                    gpCell.style.color = '';
+                    gpCell.style.fontWeight = '';
+                    if (gpValNum !== null) {
+                        gpCell.style.background = dynamicMetricColor(gpValNum, gpMin, gpMax, /*invert*/ false);
+                    } else {
+                        gpCell.style.background = '';
+                    }
+                }
+
                 // Team
                 const teamCell = row.insertCell();
                 const teamVal = player.team || 'N/A';
@@ -476,23 +555,15 @@
                 byeCell.innerText = player.bye_week;
 
                 // ----- Conditional Coloring -----
-                // Metrics ranges: tweak as needed for your league
-                // ADP (lower is better): typical 1..400+; clamp to [1, 400]
-                if (adpValNum !== null) adpCell.style.background = metricColor(adpValNum, 1, 400, /*invert*/ true);
-                // Projected points: [0, 400]
-                ptsCell.style.background = metricColor(ptsVal, 0, 400);
-                // VORP: [-50, 200]
-                vorpCell.style.background = metricColor(vorpVal, -50, 200);
-                // GP Fraction: [0, 1]
-                if (gpVal !== null) gpCell.style.background = metricColor(gpVal, 0, 1);
+                if (adpValNum !== null) adpCell.style.background = dynamicMetricColor(adpValNum, adpMin, adpMax, /*invert*/ true);
+                ptsCell.style.background = dynamicMetricColor(ptsVal, ptsMin, ptsMax, /*invert*/ false);
+                vorpCell.style.background = dynamicMetricColor(vorpVal, vorpMin, vorpMax, /*invert*/ false);
 
-                // Position color (cell tint)
                 const posColor = POS_COLORS[player.position];
                 if (posColor) {
                     posCell.style.backgroundColor = posColor;
                 }
 
-                // Team color (also apply to bye week to match request)
                 const teamBg = getTeamColor(teamVal);
                 if (teamBg) {
                     teamCell.style.backgroundColor = teamBg;
@@ -521,6 +592,9 @@
         });
 
         async function startNewDraft() {
+            if (!confirm('Are you sure you want to start a new draft? This will archive the current draft state.')) {
+                return;
+            }
             try {
                 const response = await fetch('/api/draft/new', { method: 'POST' });
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -647,17 +721,21 @@
         async function updateHeaderSuggestion(state) {
             const teamOnClock = state.current_team_picking;
             if (!teamOnClock) {
-                aiSuggestionDisplay.innerText = 'N/A';
+                aiSuggestionDisplay.innerHTML = 'N/A';
                 return;
             }
             try {
                 const data = await fetchAiSuggestionForTeam(teamOnClock, blindSet);
                 if (data && !data.error) {
-                    const suggestionText = Object.entries(data)
-                        .sort(([, a], [, b]) => b - a)
-                        .map(([pos, prob]) => `${pos}: ${Math.round(prob * 100)}%`)
-                        .join(' | ');
-                    aiSuggestionDisplay.innerText = suggestionText || 'N/A';
+                    const POS_ORDER = ['QB', 'RB', 'WR', 'TE'];
+                    const suggestionHTML = POS_ORDER.map(pos => {
+                        const prob = data[pos] || 0;
+                        return `<div class="ai-suggestion-item">
+                                    <span class="ai-pos">${pos}</span>
+                                    <span class="ai-prob">${Math.round(prob * 100)}%</span>
+                                </div>`;
+                    }).join('');
+                    aiSuggestionDisplay.innerHTML = suggestionHTML || 'N/A';
                 } else {
                     aiSuggestionDisplay.innerText = data.error || 'N/A';
                 }
