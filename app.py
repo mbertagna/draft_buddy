@@ -203,7 +203,16 @@ def ai_suggestion_for_team():
     except ValueError:
         return jsonify({'error': 'team_id must be an integer'}), 400
 
-    suggestion = draft_env.get_ai_suggestion_for_team(team_id)
+    # Optional: ignore list for blind prediction
+    ignore_raw = request.args.get('ignore')  # comma-separated ids
+    ignore_ids = None
+    if ignore_raw:
+        try:
+            ignore_ids = [int(x) for x in ignore_raw.split(',') if x.strip()]
+        except ValueError:
+            return jsonify({'error': 'ignore must be a comma-separated list of integers'}), 400
+
+    suggestion = draft_env.get_ai_suggestion_for_team(team_id, ignore_player_ids=ignore_ids)
     return jsonify(suggestion)
 
 @app.route('/api/draft/summary')

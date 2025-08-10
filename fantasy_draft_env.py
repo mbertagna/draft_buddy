@@ -1569,20 +1569,37 @@ class FantasyFootballDraftEnv(gym.Env):
 
         return suggestion_probs
 
-    def get_ai_suggestion_for_team(self, team_id: int):
-        """Gets AI suggested action probabilities for a specific team perspective, regardless of turn."""
+    def get_ai_suggestion_for_team(self, team_id: int, ignore_player_ids: Optional[List[int]] = None):
+        """Gets AI suggested action probabilities for a specific team's perspective.
+
+        If ignore_player_ids is provided, those players will be treated as unavailable
+        for the purpose of computing this suggestion only (no state mutation).
+        """
         if not (1 <= team_id <= self.config.NUM_TEAMS):
             return {"error": f"Invalid team id {team_id}"}
         if not self.agent_model:
             return {"error": "AI model not loaded."}
 
         original_agent_team_id = self.agent_team_id
+        original_available_ids = None
         self.agent_team_id = team_id
         try:
+            # Temporarily remove ignored players from availability
+            if ignore_player_ids:
+                ignore_set = set(pid for pid in ignore_player_ids if pid in self.available_players_ids)
+                if ignore_set:
+                    original_available_ids = set(self.available_players_ids)
+                    self.available_players_ids = self.available_players_ids - ignore_set
+                    self._invalidate_sorted_available_cache()
+
             state = self._get_state()
             action_mask = self.get_action_mask()
         finally:
+            # Restore perspective and availability
             self.agent_team_id = original_agent_team_id
+            if original_available_ids is not None:
+                self.available_players_ids = original_available_ids
+                self._invalidate_sorted_available_cache()
 
         state_tensor = torch.from_numpy(state).float().unsqueeze(0)
         with torch.no_grad():

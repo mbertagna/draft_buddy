@@ -140,8 +140,52 @@
         /* Controls + table */
         #controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 10px; flex-wrap: wrap; }
         #player-search { padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px; }
-        .position-filters label { margin-right: 10px; }
         #new-draft-btn { padding: 8px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+        /* Prettier Checkboxes */
+        input[type="checkbox"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: #fdfdfd;
+            margin: 0;
+            font: inherit;
+            color: #6c757d;
+            width: 1.25em;
+            height: 1.25em;
+            border: 0.1em solid #6c757d;
+            border-radius: 0.2em;
+            transform: translateY(-0.075em);
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"]::before {
+            content: "";
+            width: 0.7em;
+            height: 0.7em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em #4CAF50;
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+
+        input[type="checkbox"]:checked::before {
+            transform: scale(1);
+        }
+
+        input[type="checkbox"]:focus {
+            outline: max(2px, 0.15em) solid #4CAF50;
+            outline-offset: max(2px, 0.15em);
+        }
+
+        .position-filters label {
+            margin-right: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
 
         #player-list { border-collapse: collapse; width: 100%; }
         #player-list th { background-color: #4CAF50; color: white; }
@@ -149,6 +193,7 @@
         #player-list tbody tr:nth-child(even) { background-color: #f2f2f2; }
         #player-list tbody tr:hover { background-color: #ddd; cursor: pointer; }
         #player-list th, #player-list td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        #player-list td:first-child { text-align: center; vertical-align: middle; }
 
         /* Rosters */
         .roster-card { border: 1px solid #ccc; border-radius: 4px; padding: 10px; margin-bottom: 10px; background-color: white; }
@@ -216,6 +261,7 @@
             <table id="player-list">
                 <thead>
                     <tr>
+                        <th style="width:28px;">Blind</th>
                         <th data-sort-key="adp">ADP</th>
                         <th data-sort-key="name">Name</th>
                         <th data-sort-key="position">Position</th>
@@ -258,6 +304,8 @@
 
         let currentSortBy = 'vorp';
         let currentSortDir = 'desc'; // 'asc' or 'desc'
+        // Track players to ignore for AI suggestion
+        const blindSet = new Set();
 
         function setupSortHandlers() {
                 const ths = document.querySelectorAll('#player-list th');
@@ -329,12 +377,55 @@
             }
         };
 
+        // ----- Coloring Utilities -----
+        const POS_COLORS = {
+            'QB': '#cfe2ff',  // light blue
+            'RB': '#e2f7cf',  // light green
+            'WR': '#ffe8cc',  // light orange
+            'TE': '#f8d7da',  // light red
+        };
+
+        const TEAM_COLOR_CACHE = {};
+        function hashStringToHue(str) {
+            let h = 0;
+            for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+            return h % 360;
+        }
+        function getTeamColor(team) {
+            if (!team) return null;
+            if (TEAM_COLOR_CACHE[team]) return TEAM_COLOR_CACHE[team];
+            const hue = hashStringToHue(team);
+            // pastel-like color
+            const color = `hsl(${hue}, 60%, 85%)`;
+            TEAM_COLOR_CACHE[team] = color;
+            return color;
+        }
+
+        function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+        function lerp(a, b, t) { return a + (b - a) * t; }
+        function lerpColor(colorA, colorB, t) {
+            // colors as [r,g,b]
+            const r = Math.round(lerp(colorA[0], colorB[0], t));
+            const g = Math.round(lerp(colorA[1], colorB[1], t));
+            const b = Math.round(lerp(colorA[2], colorB[2], t));
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+        const GREEN = [200, 245, 200]; // light green
+        const RED = [245, 200, 200];   // light red
+        function metricColor(value, minVal, maxVal, invert=false) {
+            if (value === null || value === undefined || Number.isNaN(value)) return '';
+            const tRaw = (value - minVal) / (maxVal - minVal || 1);
+            const t = clamp(tRaw, 0, 1);
+            const p = invert ? (1 - t) : t; // invert for metrics where lower is better (e.g., ADP)
+            return lerpColor(RED, GREEN, p);
+        }
+
         const renderPlayers = (players) => {
             playerTbody.innerHTML = ''; // Clear existing rows
             if (players.length === 0) {
                 const row = playerTbody.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = 8;
+                cell.colSpan = 9;
                 cell.innerText = 'No players found with current filters.';
                 return;
             }
@@ -342,22 +433,71 @@
             players.forEach(player => {
                 const row = playerTbody.insertRow();
                 row.dataset.playerId = player.player_id;
+                // Blind toggle cell
+                const blindCell = row.insertCell();
+                const blindCheckbox = document.createElement('input');
+                blindCheckbox.type = 'checkbox';
+                blindCheckbox.title = 'Exclude from AI suggestion';
+                blindCheckbox.checked = blindSet.has(player.player_id);
+                blindCheckbox.addEventListener('click', (e) => e.stopPropagation());
+                blindCheckbox.addEventListener('change', (e) => {
+                    if (e.target.checked) blindSet.add(player.player_id); else blindSet.delete(player.player_id);
+                    if (currentDraftState) updateHeaderSuggestion(currentDraftState);
+                });
+                blindCell.appendChild(blindCheckbox);
                 // ADP
-                row.insertCell().innerText = (player.adp !== null && player.adp !== undefined) ? Number(player.adp).toFixed(1) : 'N/A';
+                const adpCell = row.insertCell();
+                const adpValNum = (player.adp !== null && player.adp !== undefined) ? Number(player.adp) : null;
+                adpCell.innerText = (adpValNum !== null) ? adpValNum.toFixed(1) : 'N/A';
                 // Name
-                row.insertCell().innerText = player.name;
+                const nameCell = row.insertCell();
+                nameCell.innerText = player.name;
                 // Position
-                row.insertCell().innerText = player.position;
+                const posCell = row.insertCell();
+                posCell.innerText = player.position;
                 // Projected Points
-                row.insertCell().innerText = player.projected_points.toFixed(1);
+                const ptsCell = row.insertCell();
+                const ptsVal = Number(player.projected_points) || 0;
+                ptsCell.innerText = ptsVal.toFixed(1);
                 // VORP
-                row.insertCell().innerText = player.vorp.toFixed(1);
+                const vorpCell = row.insertCell();
+                const vorpVal = Number(player.vorp) || 0;
+                vorpCell.innerText = vorpVal.toFixed(1);
                 // Games Played Fraction
-                row.insertCell().innerText = player.games_played_frac ? Number(player.games_played_frac).toFixed(2) : 'N/A';
+                const gpCell = row.insertCell();
+                const gpVal = (player.games_played_frac !== null && player.games_played_frac !== undefined) ? Number(player.games_played_frac) : null;
+                gpCell.innerText = (gpVal !== null) ? gpVal.toFixed(2) : 'N/A';
                 // Team
-                row.insertCell().innerText = player.team || 'N/A';
+                const teamCell = row.insertCell();
+                const teamVal = player.team || 'N/A';
+                teamCell.innerText = teamVal;
                 // Bye
-                row.insertCell().innerText = player.bye_week;
+                const byeCell = row.insertCell();
+                byeCell.innerText = player.bye_week;
+
+                // ----- Conditional Coloring -----
+                // Metrics ranges: tweak as needed for your league
+                // ADP (lower is better): typical 1..400+; clamp to [1, 400]
+                if (adpValNum !== null) adpCell.style.background = metricColor(adpValNum, 1, 400, /*invert*/ true);
+                // Projected points: [0, 400]
+                ptsCell.style.background = metricColor(ptsVal, 0, 400);
+                // VORP: [-50, 200]
+                vorpCell.style.background = metricColor(vorpVal, -50, 200);
+                // GP Fraction: [0, 1]
+                if (gpVal !== null) gpCell.style.background = metricColor(gpVal, 0, 1);
+
+                // Position color (cell tint)
+                const posColor = POS_COLORS[player.position];
+                if (posColor) {
+                    posCell.style.backgroundColor = posColor;
+                }
+
+                // Team color (also apply to bye week to match request)
+                const teamBg = getTeamColor(teamVal);
+                if (teamBg) {
+                    teamCell.style.backgroundColor = teamBg;
+                    byeCell.style.backgroundColor = teamBg;
+                }
 
                 row.addEventListener('click', () => draftPlayer(player.player_id));
             });
@@ -497,8 +637,10 @@
             teamRostersDiv.innerHTML = rostersHTML;
         }
 
-        async function fetchAiSuggestionForTeam(teamId) {
-            const response = await fetch(`/api/draft/ai_suggestion_for_team?team_id=${teamId}`);
+        async function fetchAiSuggestionForTeam(teamId, ignoreIds) {
+            const params = new URLSearchParams({ team_id: String(teamId) });
+            if (ignoreIds && ignoreIds.size > 0) params.append('ignore', Array.from(ignoreIds).join(','));
+            const response = await fetch(`/api/draft/ai_suggestion_for_team?${params.toString()}`);
             return await response.json();
         }
 
@@ -509,7 +651,7 @@
                 return;
             }
             try {
-                const data = await fetchAiSuggestionForTeam(teamOnClock);
+                const data = await fetchAiSuggestionForTeam(teamOnClock, blindSet);
                 if (data && !data.error) {
                     const suggestionText = Object.entries(data)
                         .sort(([, a], [, b]) => b - a)
