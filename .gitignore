@@ -168,3 +168,4 @@ data/player_stats.csv
 data/player_stats_kicking.csv
 data/roster_????.csv
 saved_states/
+saved_models/

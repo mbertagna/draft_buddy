@@ -1441,10 +1441,16 @@ class FantasyFootballDraftEnv(gym.Env):
         self.current_pick_idx = last_pick_info['previous_pick_idx']
         self.current_pick_number = last_pick_info['previous_pick_number']
         self._overridden_team_id = last_pick_info['previous_overridden_team_id']
+
         # Invalidate cache after undo
         self._invalidate_sorted_available_cache()
 
-        print(f"Undo successful. Current pick: {self.current_pick_number}, Team on clock: {self.draft_order[self.current_pick_idx]}")
+        # Safely determine the team on clock for display
+        team_on_clock_display = 'N/A'
+        if self.current_pick_idx < len(self.draft_order):
+            team_on_clock_display = self.draft_order[self.current_pick_idx]
+
+        print(f"Undo successful. Current pick: {self.current_pick_number}, Team on clock: {team_on_clock_display}")
 
     def set_current_team_picking(self, team_id: int):
         """

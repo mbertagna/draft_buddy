@@ -43,16 +43,18 @@ Draft Buddy is a complete system for simulating, training, and running a fantasy
 
 ## Requirements & Installation
 
-- Python 3.9+
-- Recommended: create a virtual environment
+- Docker installed on your system
+- Recommended: Docker Desktop for easier management
 
-```
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+```bash
+# Build the Docker image
+./build.sh
+
+# Run the Docker container (interactive shell with mounted volume)
+./run.sh
 ```
 
-If you run on CPU only, the code already loads models with `map_location='cpu'` to avoid CUDA issues.
+The Docker setup automatically handles all Python dependencies and provides an isolated environment. Your project directory is mounted at `/app` in the container, so changes are reflected immediately.
 
 ---
 

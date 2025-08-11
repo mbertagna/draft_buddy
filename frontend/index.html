@@ -50,7 +50,7 @@
         .status-row {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px; /* Reduced gap slightly */
             font-weight: 600;
             font-size: 0.95rem;
             min-height: 24px;
@@ -85,7 +85,6 @@
         .ai-suggestion-item .ai-prob {
             font-size: 0.9rem;
             font-weight: 700;
-            color: #ffdd75;
         }
         .team-row {
             display: flex;
@@ -231,6 +230,45 @@
         /* Bye week grid */
         .bye-week-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 5px; }
         .bye-week-cell { padding: 5px; text-align: center; border-radius: 3px; font-size: 0.8rem; }
+
+        /* AI text animation */
+        #ai-text {
+            color: #00FFFF; /* Starting color for AI */
+            animation: aiColorShift 3s infinite linear; /* Continuously rotate every 3 seconds */
+        }
+
+        @keyframes aiColorShift {
+            0% {
+                filter: hue-rotate(0deg);
+            }
+            100% {
+                filter: hue-rotate(360deg);
+            }
+        }
+
+        .ai-chip {
+            position: relative;
+            background: rgba(255, 255, 255, 0.18); /* Match other chips' background */
+            padding: 4px 10px;
+            border-radius: 999px; /* Match other chips */
+            /* REMOVE THE LINE BELOW */
+            /* border: 2px solid #00FFFF; */ 
+        }
+
+        .ai-chip::before {
+            content: '';
+            position: absolute;
+            /* Adjust positioning to account for the border width */
+            top: -2px; 
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 999px;
+            /* The border is now only defined here */
+            border: 2px solid #00FFFF; 
+            animation: aiColorShift 3s infinite linear; /* Use same animation as text */
+            z-index: -1;
+        }
     </style>
 </head>
 <body>
@@ -251,9 +289,12 @@
         </div>
 
         <div class="status-row">
-            <span class="label">Pick #</span><span id="current-pick-display">N/A</span>
-            <span class="label">On Clock</span><span id="team-on-clock-display">N/A</span>
-            <span class="label">AI</span><span id="ai-suggestion-display">N/A</span>
+            <span class="chip">Pick #<span id="current-pick-display" style="margin-left: 6px;">N/A</span></span>
+            <span class="chip">On Clock<span id="team-on-clock-display" style="margin-left: 6px;">N/A</span></span>
+            
+            <div class="chip ai-chip" id="ai-chip"><span id="ai-text">AI</span></div>
+            
+            <div id="ai-suggestion-display">N/A</div>
         </div>
 
         <div class="team-row">
@@ -419,6 +460,21 @@
             const color = `hsl(${hue}, 60%, 85%)`;
             TEAM_COLOR_CACHE[team] = color;
             return color;
+        }
+
+        function getColorForPercentage(prob) {
+            const p = prob * 100;
+            let hue;
+            if (p >= 75) {
+                hue = 120; // Green
+            } else if (p >= 50) {
+                hue = Math.round(120 - (75 - p) * (120 - 60) / 25); // Green to Yellow
+            } else if (p >= 25) {
+                hue = Math.round(60 - (50 - p) * (60 - 30) / 25);  // Yellow to Orange
+            } else {
+                hue = 30; // Orange to Red (we can keep it around orange/red for lower probabilities for better visibility)
+            }
+            return `hsl(${hue}, 100%, 50%)`;
         }
 
         function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
@@ -730,9 +786,12 @@
                     const POS_ORDER = ['QB', 'RB', 'WR', 'TE'];
                     const suggestionHTML = POS_ORDER.map(pos => {
                         const prob = data[pos] || 0;
+                        const color = getColorForPercentage(prob);
                         return `<div class="ai-suggestion-item">
                                     <span class="ai-pos">${pos}</span>
-                                    <span class="ai-prob">${Math.round(prob * 100)}%</span>
+                                    <span class="ai-prob" style="color: ${color}; text-shadow: 1px 1px 3px rgba(0,0,0,0.5);">
+                                        ${Math.round(prob * 100)}%
+                                    </span>
                                 </div>`;
                     }).join('');
                     aiSuggestionDisplay.innerHTML = suggestionHTML || 'N/A';
