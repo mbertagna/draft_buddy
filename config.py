@@ -193,7 +193,7 @@ class Config:
 
     # --- Reinforcement Learning Parameters ---
     RESUME_TRAINING = True # Set to True to resume from the latest checkpoint
-    TOTAL_EPISODES = 2000
+    TOTAL_EPISODES = 20000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
 

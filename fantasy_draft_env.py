@@ -12,7 +12,7 @@ from config import Config
 from data_utils import load_player_data, Player
 from policy_network import PolicyNetwork # Import PolicyNetwork
 import json
-from utils.season_simulation_utils import simulate_season
+from utils.season_simulation_fast import simulate_season_fast
 import pandas as pd
 
 class FantasyFootballDraftEnv(gym.Env):
@@ -824,7 +824,7 @@ class FantasyFootballDraftEnv(gym.Env):
                 sim_rosters = {self.config.TEAM_MANAGER_MAPPING.get(tid): [p.player_id for p in r['PLAYERS']] for tid, r in self.teams_rosters.items() if self.config.TEAM_MANAGER_MAPPING.get(tid)}
                 
                 try:
-                    regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season(
+                    regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season_fast(
                         self.wtw_dict, self.matchups_df, sim_rosters, 2025, "", False
                     )
                     sim_reward = 0.0
