@@ -446,20 +446,47 @@
             'TE': '#f8d7da',  // light red
         };
 
-        const TEAM_COLOR_CACHE = {};
-        function hashStringToHue(str) {
-            let h = 0;
-            for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-            return h % 360;
-        }
+        // *** NEW: Store official team colors ***
+        const TEAM_COLORS = {
+            "BAL": { background: "#241773", text: "#FFFFFF" }, // Changed text to white for readability
+            "CIN": { background: "#FB4F14", text: "#000000" },
+            "CLE": { background: "#311D00", text: "#FF3C00" },
+            "PIT": { background: "#FFB612", text: "#101820" },
+            "BUF": { background: "#00338D", text: "#C60C30" },
+            "MIA": { background: "#008E97", text: "#FC4C02" },
+            "NE": { background: "#002244", text: "#C60C30" },
+            "NYJ": { background: "#125740", text: "#FFFFFF" }, // Changed text to white for readability
+            "HOU": { background: "#03202F", text: "#A71930" },
+            "IND": { background: "#002C5F", text: "#A2AAAD" },
+            "JAX": { background: "#101820", text: "#D7A22A" },
+            "TEN": { background: "#0C2340", text: "#4B92DB" },
+            "DEN": { background: "#FB4F14", text: "#002244" },
+            "KC": { background: "#E31837", text: "#FFB81C" },
+            "LV": { background: "#000000", text: "#A5ACAF" },
+            "LAC": { background: "#0080C6", text: "#FFC20E" },
+            "CHI": { background: "#0B162A", text: "#C83803" },
+            "DET": { background: "#0076B6", text: "#B0B7BC" },
+            "GB": { background: "#203731", text: "#FFB612" },
+            "MIN": { background: "#4F2683", text: "#FFC62F" },
+            "DAL": { background: "#003594", text: "#FFFFFF" }, // Changed text to white for readability
+            "NYG": { background: "#0B2265", text: "#A71930" },
+            "PHI": { background: "#004C54", text: "#A5ACAF" },
+            "WAS": { background: "#5A1414", text: "#FFB612" },
+            "ATL": { background: "#A71930", text: "#000000" },
+            "CAR": { background: "#0085CA", text: "#101820" },
+            "NO": { background: "#D3BC8D", text: "#101820" },
+            "TB": { background: "#D50A0A", text: "#FF7900" },
+            "ARI": { background: "#97233F", text: "#FFFFFF" }, // Changed text to white for readability
+            "LA": { background: "#003594", text: "#FFA300" },
+            "SF": { background: "#AA0000", text: "#B3995D" },
+            "SEA": { background: "#002244", text: "#69BE28" }
+        };
+
+        // *** UPDATED: New function to look up team colors ***
         function getTeamColor(team) {
-            if (!team) return null;
-            if (TEAM_COLOR_CACHE[team]) return TEAM_COLOR_CACHE[team];
-            const hue = hashStringToHue(team);
-            // pastel-like color
-            const color = `hsl(${hue}, 60%, 85%)`;
-            TEAM_COLOR_CACHE[team] = color;
-            return color;
+            // Returns an object { background, text } or null if not found
+            if (!team || !TEAM_COLORS[team]) return null;
+            return TEAM_COLORS[team];
         }
 
         function getColorForPercentage(prob) {
@@ -620,10 +647,13 @@
                     posCell.style.backgroundColor = posColor;
                 }
 
-                const teamBg = getTeamColor(teamVal);
-                if (teamBg) {
-                    teamCell.style.backgroundColor = teamBg;
-                    byeCell.style.backgroundColor = teamBg;
+                // *** UPDATED: Apply background and text color for the team ***
+                const teamColors = getTeamColor(teamVal);
+                if (teamColors) {
+                    teamCell.style.backgroundColor = teamColors.background;
+                    teamCell.style.color = teamColors.text;
+                    byeCell.style.backgroundColor = teamColors.background; // Also color the bye week cell
+                    byeCell.style.color = teamColors.text; // And its text
                 }
 
                 row.addEventListener('click', () => draftPlayer(player.player_id));

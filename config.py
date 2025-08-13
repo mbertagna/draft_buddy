@@ -193,7 +193,7 @@ class Config:
 
     # --- Reinforcement Learning Parameters ---
     RESUME_TRAINING = True # Set to True to resume from the latest checkpoint
-    TOTAL_EPISODES = 30000
+    TOTAL_EPISODES = 2000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
 
@@ -380,13 +380,13 @@ class Config:
 
     # Per-pick shaping (recommended small signals)
     # 1) Starter-lineup improvement after the pick (delta in starter points)
-    ENABLE_PICK_SHAPING_REWARD = True
+    ENABLE_PICK_SHAPING_REWARD = False
     PICK_SHAPING_STARTER_DELTA_WEIGHT = 0.25
     # 2) VORP-based shaping to encourage scarcity-aware picks
     ENABLE_VORP_PICK_SHAPING = False
     VORP_PICK_SHAPING_WEIGHT = 0.05
 
-    ENABLE_ROSTER_SLOT_WEIGHTED_REWARD = True
+    ENABLE_ROSTER_SLOT_WEIGHTED_REWARD = False
     STARTER_POINTS_WEIGHT = 1
     BENCH_POINTS_WEIGHT = 0.25
 
@@ -401,16 +401,42 @@ class Config:
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters
-    ENABLE_COMPETITIVE_REWARD = True # Master switch for competitive rewards
-    COMPETITIVE_REWARD_MODE = 'SEASON_SIM' # Options: 'NONE', 'MAX_OPPONENT_DIFFERENCE', 'AVG_OPPONENT_DIFFERENCE', 'SEASON_SIM'
+    ENABLE_COMPETITIVE_REWARD = False # Disable competitive difference; we want only playoff win reward
+    COMPETITIVE_REWARD_MODE = 'SEASON_SIM' # Keep season sim enabled for playoff win computation
 
     # --- Season Simulation Reward Parameters ---
-    ENABLE_SEASON_SIM_REWARD = True # Master switch for season simulation rewards
-    SEASON_SIM_REWARDS = {
-        'WIN_REGULAR_SEASON': 200,
-        'MAKE_PLAYOFFS': 200,
-        'WIN_PLAYOFFS': 400,
+    ENABLE_SEASON_SIM_REWARD = True
+    # Regular season seeding reward configuration
+    # Modes:
+    #   - 'LINEAR': interpolate between SEED_REWARD_MAX (seed 1) and SEED_REWARD_MIN (last seed)
+    #   - 'MAPPING': use SEED_REWARD_MAPPING dict directly
+    REGULAR_SEASON_REWARD = {
+        'SEED_REWARD_MODE': 'LINEAR',
+        'NUM_PLAYOFF_TEAMS': 6,
+        'MAKE_PLAYOFFS_BONUS': 10.0,
+        'SEED_REWARD_MAX': 30.0,
+        'SEED_REWARD_MIN': 5.0,
+        'SEED_REWARD_MAPPING': {
+            1: 30.0,
+            2: 24.0,
+            3: 18.0,
+            4: 12.0,
+            5: 8.0,
+            6: 5.0,
+        },
     }
+    # Playoff final placement rewards
+    PLAYOFF_PLACEMENT_REWARDS = {
+        'CHAMPION': 100.0,
+        'RUNNER_UP': 40.0,
+        'SEMIFINALIST': 15.0,
+        'QUARTERFINALIST': 5.0,
+        'NON_PLAYOFF': 0.0,
+    }
+
+    # Control whether to add the final roster score as a base reward at episode end.
+    # Set to False to ensure ONLY season-sim playoff win contributes to final reward.
+    ENABLE_FINAL_BASE_REWARD = False
 
     # Option to add a penalty for high standard deviation among opponents
     ENABLE_OPPONENT_STD_DEV_PENALTY = False # If True, will apply a penalty based on opponent score std dev

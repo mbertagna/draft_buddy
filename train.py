@@ -73,7 +73,7 @@ def main():
     parser = argparse.ArgumentParser(description="Train agent or plot latest CSV results.")
     parser.add_argument(
         "--plot-latest-csvs", 
-        "-plc",
+        "-p",
         action="store_true",
         help="Auto-find the latest logs directory with CSVs and generate plots without training.",
     )

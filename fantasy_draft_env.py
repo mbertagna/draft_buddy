@@ -763,10 +763,13 @@ class FantasyFootballDraftEnv(gym.Env):
                 reward += self.config.BONUS_FOR_FULL_ROSTER
 
             # --- Final Reward Calculation ---
-            # Initialize with the base score, which might be weighted or raw total points.
-            base_reward = agent_final_weighted_score
-            reward += base_reward
-            info['base_reward_component'] = base_reward
+            # Optionally include the base final roster score in the reward.
+            if getattr(self.config, 'ENABLE_FINAL_BASE_REWARD', True):
+                base_reward = agent_final_weighted_score
+                reward += base_reward
+                info['base_reward_component'] = base_reward
+            else:
+                info['base_reward_component'] = 0.0
 
             # --- Competitive Reward (Opponent Difference) ---
             if self.config.ENABLE_COMPETITIVE_REWARD:
@@ -821,25 +824,33 @@ class FantasyFootballDraftEnv(gym.Env):
                 sim_rosters = {self.config.TEAM_MANAGER_MAPPING.get(tid): [p.player_id for p in r['PLAYERS']] for tid, r in self.teams_rosters.items() if self.config.TEAM_MANAGER_MAPPING.get(tid)}
                 
                 try:
-                    _, regular_records, _, _, winner = simulate_season(
+                    regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season(
                         self.wtw_dict, self.matchups_df, sim_rosters, 2025, "", False
                     )
-                    sim_reward = 0
+                    sim_reward = 0.0
                     agent_manager_name = self.config.TEAM_MANAGER_MAPPING.get(self.agent_team_id)
 
-                    playoff_teams = [record[0] for record in regular_records[:6]]
-                    if agent_manager_name in playoff_teams:
-                        sim_reward += self.config.SEASON_SIM_REWARDS['MAKE_PLAYOFFS']
-                        info['made_playoffs'] = True
+                    # --- Regular Season Reward (Playoff Qualification & Seeding) ---
+                    seed_reward, made_playoffs, seed_value = self._compute_regular_season_reward(regular_records, agent_manager_name)
+                    sim_reward += seed_reward
+                    info['made_playoffs'] = bool(made_playoffs)
+                    if made_playoffs:
+                        info['playoff_seed'] = int(seed_value)
+                        info['regular_season_seed_reward'] = float(seed_reward)
+                        if seed_value == 1:
+                            info['regular_season_winner'] = True
 
-                    if regular_records and regular_records[0][0] == agent_manager_name:
-                        sim_reward += self.config.SEASON_SIM_REWARDS['WIN_REGULAR_SEASON']
-                        info['regular_season_winner'] = True
-                    
-                    if winner == agent_manager_name:
-                        sim_reward += self.config.SEASON_SIM_REWARDS['WIN_PLAYOFFS']
+                    # --- Playoff Placement Reward ---
+                    placement_reward, placement_label = self._compute_playoff_placement_reward(
+                        regular_records, playoff_results_df, winner, agent_manager_name
+                    )
+                    sim_reward += placement_reward
+                    info['playoff_placement'] = placement_label
+                    info['playoff_placement_reward'] = float(placement_reward)
+                    if placement_label == 'CHAMPION':
                         info['playoff_winner'] = True
-                    
+
+                    # Accumulate
                     reward += sim_reward
                     info['season_sim_reward'] = sim_reward
                 except Exception as e:
@@ -852,6 +863,105 @@ class FantasyFootballDraftEnv(gym.Env):
         info['action_mask'] = self.get_action_mask()
 
         return observation, reward, done, False, info
+
+    # -------------------- Season Reward Helpers --------------------
+    def _compute_regular_season_reward(self, regular_records, agent_manager_name: str):
+        """
+        Returns (seed_reward, made_playoffs_flag, seed) based on config.REGULAR_SEASON_REWARD.
+        - If not in playoffs, returns (0.0, False, None).
+        - If in playoffs, reward = MAKE_PLAYOFFS_BONUS + seed_component.
+        Seed component from LINEAR or MAPPING mode.
+        """
+        cfg = getattr(self.config, 'REGULAR_SEASON_REWARD', None)
+        if not cfg:
+            return 0.0, False, None
+
+        num_playoff_teams = int(cfg.get('NUM_PLAYOFF_TEAMS', 6))
+        seeding_list = [record[0] for record in regular_records[:num_playoff_teams]]
+
+        if agent_manager_name not in seeding_list:
+            return 0.0, False, None
+
+        seed_index = seeding_list.index(agent_manager_name) # 0-based
+        seed = seed_index + 1
+
+        # Base bonus for making playoffs
+        total_reward = float(cfg.get('MAKE_PLAYOFFS_BONUS', 0.0))
+
+        mode = cfg.get('SEED_REWARD_MODE', 'LINEAR').upper()
+        if mode == 'MAPPING':
+            mapping = cfg.get('SEED_REWARD_MAPPING', {})
+            seed_component = float(mapping.get(seed, 0.0))
+        else: # LINEAR
+            seed_max = float(cfg.get('SEED_REWARD_MAX', 0.0))
+            seed_min = float(cfg.get('SEED_REWARD_MIN', 0.0))
+            if num_playoff_teams <= 1:
+                seed_component = seed_max
+            else:
+                # Linear interpolation from 1..N -> max..min
+                t = (seed - 1) / (num_playoff_teams - 1)
+                seed_component = seed_max + (seed_min - seed_max) * t
+
+        total_reward += seed_component
+        return total_reward, True, seed
+
+    def _compute_playoff_placement_reward(self, regular_records, playoff_results_df, winner: str, agent_manager_name: str):
+        """
+        Returns (placement_reward, placement_label) for playoff placement.
+        Placement labels: 'CHAMPION', 'RUNNER_UP', 'SEMIFINALIST', 'QUARTERFINALIST', 'NON_PLAYOFF'.
+        Uses config.PLAYOFF_PLACEMENT_REWARDS.
+        """
+        cfg = getattr(self.config, 'PLAYOFF_PLACEMENT_REWARDS', None)
+        if not cfg:
+            return 0.0, 'NON_PLAYOFF'
+
+        # Determine whether the agent made playoffs and identify round reached.
+        num_playoff_teams = int(getattr(self.config, 'REGULAR_SEASON_REWARD', {}).get('NUM_PLAYOFF_TEAMS', 6))
+        playoff_teams = [record[0] for record in regular_records[:num_playoff_teams]]
+        if agent_manager_name not in playoff_teams:
+            return float(cfg.get('NON_PLAYOFF', 0.0)), 'NON_PLAYOFF'
+
+        # If champion
+        if winner == agent_manager_name:
+            return float(cfg.get('CHAMPION', 0.0)), 'CHAMPION'
+
+        # Determine runner-up vs earlier exit using playoff_results_df
+        # playoff_results_df has rows per game with Week and scores; last row is the final.
+        # Identify the finalist (loser of last game):
+        try:
+            last_row = playoff_results_df.iloc[-1]
+            finalist = last_row['Home Manager(s)'] if last_row['Home Manager(s)'] != winner else last_row['Away Manager(s)']
+        except Exception:
+            finalist = None
+
+        if finalist == agent_manager_name:
+            return float(cfg.get('RUNNER_UP', 0.0)), 'RUNNER_UP'
+
+        # Determine if agent reached semifinals or exited in quarters
+        # For 6-team bracket with byes: our helper upstream generated quarters (round 1), semis (round 2), final (round 3).
+        # Count how many playoff rows feature the agent to infer deepest round.
+        try:
+            appears_mask = (playoff_results_df['Home Manager(s)'] == agent_manager_name) | (playoff_results_df['Away Manager(s)'] == agent_manager_name)
+            appearances = playoff_results_df[appears_mask]
+            if appearances.empty:
+                return float(cfg.get('NON_PLAYOFF', 0.0)), 'NON_PLAYOFF'
+
+            # Determine last week agent appeared in
+            last_week = appearances['Week'].max()
+            max_week = playoff_results_df['Week'].max()
+            min_week = playoff_results_df['Week'].min()
+
+            # Map week depth to label; assumes three playoff weeks produced by utils
+            if last_week == max_week:
+                # Handled runner-up/champion above; reaching final but not runner-up implies data issue
+                return float(cfg.get('RUNNER_UP', 0.0)), 'RUNNER_UP'
+            elif last_week == max_week - 1:
+                return float(cfg.get('SEMIFINALIST', 0.0)), 'SEMIFINALIST'
+            else:
+                return float(cfg.get('QUARTERFINALIST', 0.0)), 'QUARTERFINALIST'
+        except Exception:
+            # Fallback if structure unexpected
+            return float(cfg.get('QUARTERFINALIST', 0.0)), 'QUARTERFINALIST'
 
     def _categorize_roster_by_slots(self, team_roster: List[Player], roster_structure: Dict, bench_maxes: Dict) -> Tuple[Dict[str, List[Player]], List[Player], List[Player]]:
         """
