@@ -34,10 +34,13 @@ class ReinforceAgent:
             torch.nn.ReLU(),
             torch.nn.Linear(config.HIDDEN_DIM, 1),
         )
-        # Initialize the optimizer (joint for simplicity)
+        # Initialize the optimizer with separate LRs for policy and value
+        value_lr_multiplier = getattr(self.config, 'VALUE_LR_MULTIPLIER', 2.0)
         self.optimizer = optim.Adam(
-            list(self.policy_network.parameters()) + list(self.value_network.parameters()),
-            lr=config.LEARNING_RATE,
+            [
+                {"params": self.policy_network.parameters(), "lr": config.LEARNING_RATE},
+                {"params": self.value_network.parameters(), "lr": config.LEARNING_RATE * value_lr_multiplier},
+            ]
         )
 
         # Store rewards and log probabilities for each episode
@@ -77,6 +80,17 @@ class ReinforceAgent:
         print(f"State features enabled: {self.config.ENABLED_STATE_FEATURES}")
         print(f"Learning Rate: {self.config.LEARNING_RATE}, Discount Factor: {self.config.DISCOUNT_FACTOR}")
         print(f"Action Masking Enabled: {self.config.ENABLE_ACTION_MASKING}")
+        print(f"Batch episodes per update: {getattr(self.config, 'BATCH_EPISODES', 16)} | Grad clip: {getattr(self.config, 'GRAD_CLIP_NORM', 0.5)} | Value LR x{getattr(self.config, 'VALUE_LR_MULTIPLIER', 2.0)}")
+
+        # Batch accumulators
+        batch_states: List[torch.Tensor] = []
+        batch_log_probs: List[torch.Tensor] = []
+        batch_entropies: List[torch.Tensor] = []
+        batch_returns: List[float] = []
+        episodes_in_batch = 0
+
+        batch_size = getattr(self.config, 'BATCH_EPISODES', 16)
+        grad_clip_norm = getattr(self.config, 'GRAD_CLIP_NORM', 0.5)
 
         for episode in range(start_episode, self.config.TOTAL_EPISODES + 1):
             state, info = self.env.reset()
@@ -115,43 +129,70 @@ class ReinforceAgent:
                 episode_done = done or truncated # Consider truncated also as episode end
                 current_action_mask = info.get('action_mask') # Get updated action mask for next step
 
-            # --- 2. Calculate Returns ---
+            # --- 2. Calculate Returns and stash episode into batch ---
             returns = self._calculate_returns(self.episode_rewards)
-            returns_tensor = torch.tensor(returns, dtype=torch.float32)
+            # Append episode data into batch accumulators
+            batch_states.extend(self.episode_states)
+            batch_log_probs.extend(self.episode_log_probs)
+            batch_entropies.extend(self.episode_entropies)
+            batch_returns.extend(returns)
+            episodes_in_batch += 1
 
-            # Compute baseline values and advantages
-            states_tensor = torch.stack(self.episode_states)  # shape [T, input_dim]
-            values = self.value_network(states_tensor).squeeze(-1)  # shape [T]
-            advantages = returns_tensor - values.detach()
-            # Optional normalization of advantages for stability
-            if len(advantages) > 1 and advantages.std() > 1e-6:
-                advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+            # --- 3. If batch is ready, perform one optimization step ---
+            did_update = False
+            if episodes_in_batch >= batch_size or episode == self.config.TOTAL_EPISODES:
+                returns_tensor = torch.tensor(batch_returns, dtype=torch.float32)
+                states_tensor = torch.stack(batch_states)
+                values = self.value_network(states_tensor).squeeze(-1)
+                advantages = returns_tensor - values.detach()
+                if len(advantages) > 1 and advantages.std() > 1e-6:
+                    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-            # --- 3. Compute Losses ---
-            # Policy loss with advantage
-            policy_terms = []
-            for log_prob, adv in zip(self.episode_log_probs, advantages):
-                policy_terms.append(-log_prob * adv)
-            policy_loss = torch.stack(policy_terms).sum()
+                # Losses
+                policy_terms = []
+                for log_prob, adv in zip(batch_log_probs, advantages):
+                    policy_terms.append(-log_prob * adv)
+                policy_loss = torch.stack(policy_terms).sum()
 
-            # Entropy bonus to encourage exploration
-            entropy_coeff = getattr(self.config, 'ENTROPY_COEFFICIENT', 0.01)
-            entropy_loss = -entropy_coeff * torch.stack(self.episode_entropies).sum()
+                entropy_coeff = getattr(self.config, 'ENTROPY_COEFFICIENT', 0.01)
+                entropy_loss = -entropy_coeff * torch.stack(batch_entropies).sum()
 
-            # Value loss (MSE) for baseline
-            value_coeff = getattr(self.config, 'VALUE_LOSS_COEFFICIENT', 0.5)
-            value_loss = value_coeff * torch.nn.functional.mse_loss(values, returns_tensor)
+                value_coeff = getattr(self.config, 'VALUE_LOSS_COEFFICIENT', 0.5)
+                value_loss = value_coeff * torch.nn.functional.mse_loss(values, returns_tensor)
 
-            total_loss = policy_loss + value_loss + entropy_loss
+                total_loss = policy_loss + value_loss + entropy_loss
 
-            # --- 4. Perform Optimization Step ---
-            self.optimizer.zero_grad() # Clear gradients from previous step
-            total_loss.backward()      # Compute gradients
-            self.optimizer.step()       # Update network weights
+                # Optimization with gradient clipping
+                self.optimizer.zero_grad()
+                total_loss.backward()
+                try:
+                    torch.nn.utils.clip_grad_norm_(self.policy_network.parameters(), grad_clip_norm)
+                    torch.nn.utils.clip_grad_norm_(self.value_network.parameters(), grad_clip_norm)
+                except Exception:
+                    pass
+                self.optimizer.step()
 
-            # --- 5. Logging and Reporting ---
+                # Explained variance of value predictions
+                with torch.no_grad():
+                    var_returns = returns_tensor.var(unbiased=False)
+                    if var_returns.item() > 1e-8:
+                        ev = 1.0 - (returns_tensor - values).var(unbiased=False) / var_returns
+                        explained_variance = ev.item()
+                    else:
+                        explained_variance = 0.0
+
+                # Reset batch
+                batch_states.clear()
+                batch_log_probs.clear()
+                batch_entropies.clear()
+                batch_returns.clear()
+                episodes_in_batch = 0
+                did_update = True
+
+            # --- 4. Logging and Reporting ---
             all_episode_rewards.append(total_episode_reward)
-            all_policy_losses.append(total_loss.item())
+            if did_update:
+                all_policy_losses.append(total_loss.item())
 
             # Calculate actual (unweighted) final projected points for logging clarity
             actual_final_projected_points = sum(
@@ -161,13 +202,15 @@ class ReinforceAgent:
             if episode % 1000 == 0: # Save a checkpoint every 1000 episodes
                 self.save_checkpoint(run_version_dir, logs_dir, episode, all_episode_rewards, all_policy_losses)
 
-            if episode % 100 == 0:
-                print(f"Episode {episode}/{self.config.TOTAL_EPISODES} | "
-                      f"Total Reward (Weighted): {total_episode_reward:.2f} | "
-                      f"Loss (total): {total_loss.item():.4f} | "
-                      f"Agent Roster Size: {len(self.env.teams_rosters[self.env.agent_team_id]['PLAYERS'])} "
-                      f"| Actual Final Score (Unweighted): {actual_final_projected_points:.2f}" # Updated line
-                     )
+            if episode % 100 == 0 and did_update:
+                print(
+                    f"Episode {episode}/{self.config.TOTAL_EPISODES} | "
+                    f"Total Reward (Weighted): {total_episode_reward:.2f} | "
+                    f"Loss (total): {total_loss.item():.4f} | "
+                    f"EV(Value): {explained_variance:.3f} | "
+                    f"Agent Roster Size: {len(self.env.teams_rosters[self.env.agent_team_id]['PLAYERS'])} "
+                    f"| Actual Final Score (Unweighted): {actual_final_projected_points:.2f}"
+                )
                 # self.env.render() # Optional: Render environment state periodically
 
         print("\nTraining complete!")

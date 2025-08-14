@@ -193,13 +193,17 @@ class Config:
 
     # --- Reinforcement Learning Parameters ---
     RESUME_TRAINING = True # Set to True to resume from the latest checkpoint
-    TOTAL_EPISODES = 20000
+    TOTAL_EPISODES = 200000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
     # Variance reduction + exploration
     USE_BASELINE = True
     VALUE_LOSS_COEFFICIENT = 0.5
     ENTROPY_COEFFICIENT = 0.01
+    # Batch REINFORCE + stability
+    BATCH_EPISODES = 16
+    GRAD_CLIP_NORM = 0.5
+    VALUE_LR_MULTIPLIER = 2.0
 
     # --- State Space Parameters ---
     ALL_STATE_FEATURES = [
@@ -401,7 +405,7 @@ class Config:
 
     # --- Simulation and Evaluation Parameters ---
     # MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v1/checkpoint_episode_30000.pth") # <-- CHANGE THIS FILENAME
-    MODEL_PATH_TO_LOAD = os.path.join('saved_models/projected_points/checkpoint_episode_30000.pth') # <-- CHANGE THIS FILENAME
+    MODEL_PATH_TO_LOAD = os.path.join('models/10_teams_pos_10/v2/checkpoint_episode_200000.pth') # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters
