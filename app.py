@@ -328,6 +328,8 @@ def get_players():
             val = p.name.lower()
         elif sort_by == 'bye_week':
             val = p.bye_week if (p.bye_week is not None and not np.isnan(p.bye_week)) else 99
+        elif sort_by == 'team':
+            val = p.team.lower() if p.team else 'N/A'
         elif sort_by == 'player_id':
             val = p.player_id
         else:

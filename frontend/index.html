@@ -231,43 +231,56 @@
         .bye-week-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 5px; }
         .bye-week-cell { padding: 5px; text-align: center; border-radius: 3px; font-size: 0.8rem; }
 
-        /* AI text animation */
-        #ai-text {
-            color: #00FFFF; /* Starting color for AI */
-            animation: aiColorShift 3s infinite linear; /* Continuously rotate every 3 seconds */
-        }
-
-        @keyframes aiColorShift {
-            0% {
-                filter: hue-rotate(0deg);
-            }
-            100% {
-                filter: hue-rotate(360deg);
-            }
-        }
-
+        /* AI "lava lamp" effect: multi-color gradient for text and ring border */
         .ai-chip {
+            /* Static fill like other chips */
             position: relative;
-            background: rgba(255, 255, 255, 0.18); /* Match other chips' background */
+            background: rgba(255, 255, 255, 0.18);
             padding: 4px 10px;
-            border-radius: 999px; /* Match other chips */
-            /* REMOVE THE LINE BELOW */
-            /* border: 2px solid #00FFFF; */ 
+            border-radius: 999px;
+            /* Shared animated gradient */
+            --lava-gradient: 
+                radial-gradient(120% 180% at 0% 50%, #ff8a00 0%, transparent 50%),
+                radial-gradient(120% 180% at 100% 50%, #8a2be2 0%, transparent 50%),
+                radial-gradient(120% 180% at 50% 0%, #00e5ff 0%, transparent 50%),
+                radial-gradient(120% 180% at 50% 100%, #00ff6a 0%, transparent 50%),
+                linear-gradient(90deg, #ff0080, #ff8a00, #ffff00, #00ff6a, #00e5ff, #8a2be2, #ff0080);
+            --lava-size: 300% 300%;
+        }
+
+        #ai-text {
+            background: var(--lava-gradient);
+            background-size: var(--lava-size);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+            animation: lavaMove 8s ease-in-out infinite;
         }
 
         .ai-chip::before {
             content: '';
             position: absolute;
-            /* Adjust positioning to account for the border width */
-            top: -2px; 
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            border-radius: 999px;
-            /* The border is now only defined here */
-            border: 2px solid #00FFFF; 
-            animation: aiColorShift 3s infinite linear; /* Use same animation as text */
-            z-index: -1;
+            inset: 0;
+            padding: 2px; /* ring thickness */
+            border-radius: inherit;
+            background: var(--lava-gradient);
+            background-size: var(--lava-size);
+            animation: lavaMove 8s ease-in-out infinite;
+            /* Mask to show only the ring (border area) */
+            -webkit-mask: 
+                linear-gradient(#000 0 0) content-box,
+                linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes lavaMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
     </style>
 </head>
@@ -292,9 +305,10 @@
             <span class="chip">Pick #<span id="current-pick-display" style="margin-left: 6px;">N/A</span></span>
             <span class="chip">On Clock<span id="team-on-clock-display" style="margin-left: 6px;">N/A</span></span>
             
-            <div class="chip ai-chip" id="ai-chip"><span id="ai-text">AI</span></div>
-            
-            <div id="ai-suggestion-display">N/A</div>
+            <div class="chip ai-chip" id="ai-chip">
+                <span id="ai-text">AI</span>
+                <div id="ai-suggestion-display">N/A</div>
+            </div>
         </div>
 
         <div class="team-row">
@@ -440,46 +454,46 @@
 
         // ----- Coloring Utilities -----
         const POS_COLORS = {
-            'QB': '#cfe2ff',  // light blue
-            'RB': '#e2f7cf',  // light green
-            'WR': '#ffe8cc',  // light orange
-            'TE': '#f8d7da',  // light red
+            'QB': '#f8d7da',  // light red
+            'RB': '#cfe2ff',  // light blue
+            'WR': '#e2f7cf',  // light green
+            'TE': '#ffe8cc',  // light orange
         };
 
         // *** NEW: Store official team colors ***
         const TEAM_COLORS = {
-            "BAL": { background: "#241773", text: "#FFFFFF" }, // Changed text to white for readability
-            "CIN": { background: "#FB4F14", text: "#000000" },
-            "CLE": { background: "#311D00", text: "#FF3C00" },
-            "PIT": { background: "#FFB612", text: "#101820" },
-            "BUF": { background: "#00338D", text: "#C60C30" },
-            "MIA": { background: "#008E97", text: "#FC4C02" },
-            "NE": { background: "#002244", text: "#C60C30" },
-            "NYJ": { background: "#125740", text: "#FFFFFF" }, // Changed text to white for readability
-            "HOU": { background: "#03202F", text: "#A71930" },
-            "IND": { background: "#002C5F", text: "#A2AAAD" },
-            "JAX": { background: "#101820", text: "#D7A22A" },
-            "TEN": { background: "#0C2340", text: "#4B92DB" },
-            "DEN": { background: "#FB4F14", text: "#002244" },
-            "KC": { background: "#E31837", text: "#FFB81C" },
-            "LV": { background: "#000000", text: "#A5ACAF" },
-            "LAC": { background: "#0080C6", text: "#FFC20E" },
-            "CHI": { background: "#0B162A", text: "#C83803" },
-            "DET": { background: "#0076B6", text: "#B0B7BC" },
-            "GB": { background: "#203731", text: "#FFB612" },
-            "MIN": { background: "#4F2683", text: "#FFC62F" },
-            "DAL": { background: "#003594", text: "#FFFFFF" }, // Changed text to white for readability
-            "NYG": { background: "#0B2265", text: "#A71930" },
-            "PHI": { background: "#004C54", text: "#A5ACAF" },
-            "WAS": { background: "#5A1414", text: "#FFB612" },
-            "ATL": { background: "#A71930", text: "#000000" },
-            "CAR": { background: "#0085CA", text: "#101820" },
-            "NO": { background: "#D3BC8D", text: "#101820" },
-            "TB": { background: "#D50A0A", text: "#FF7900" },
-            "ARI": { background: "#97233F", text: "#FFFFFF" }, // Changed text to white for readability
-            "LA": { background: "#003594", text: "#FFA300" },
-            "SF": { background: "#AA0000", text: "#B3995D" },
-            "SEA": { background: "#002244", text: "#69BE28" }
+            "BAL": { background: "#655C9D", text: "#FFFFFF" },
+            "CIN": { background: "#FC835A", text: "#000000" },
+            "CLE": { background: "#6E604C", text: "#FF3C00" },
+            "PIT": { background: "#FFCB59", text: "#101820" },
+            "BUF": { background: "#4C70AF", text: "#C60C30" },
+            "MIA": { background: "#4CAFB6", text: "#FC4C02" },
+            "NE": { background: "#4C647C", text: "#C60C30" },
+            "NYJ": { background: "#598979", text: "#FFFFFF" },
+            "HOU": { background: "#4E626D", text: "#A71930" },
+            "IND": { background: "#4C6B8F", text: "#A2AAAD" },
+            "JAX": { background: "#575D62", text: "#D7A22A" },
+            "TEN": { background: "#546579", text: "#4B92DB" },
+            "DEN": { background: "#FC835A", text: "#002244" },
+            "KC": { background: "#EB5D73", text: "#FFB81C" },
+            "LV": { background: "#4C4C4C", text: "#A5ACAF" },
+            "LAC": { background: "#4CA6D7", text: "#FFC20E" },
+            "CHI": { background: "#545B69", text: "#C83803" },
+            "DET": { background: "#4C9FCB", text: "#B0B7BC" },
+            "GB": { background: "#62736E", text: "#FFB612" },
+            "MIN": { background: "#8367A8", text: "#FFC62F" },
+            "DAL": { background: "#4C71B4", text: "#FFFFFF" },
+            "NYG": { background: "#546493", text: "#A71930" },
+            "PHI": { background: "#4C8187", text: "#A5ACAF" },
+            "WAS": { background: "#8B5A5A", text: "#FFB612" },
+            "ATL": { background: "#C15E6E", text: "#000000" },
+            "CAR": { background: "#4CA9D9", text: "#101820" },
+            "NO": { background: "#E0D0AF", text: "#101820" },
+            "TB": { background: "#E15353", text: "#FF7900" },
+            "ARI": { background: "#B66578", text: "#FFFFFF" },
+            "LA": { background: "#4C71B4", text: "#FFA300" },
+            "SF": { background: "#C34C4C", text: "#B3995D" },
+            "SEA": { background: "#4C647C", text: "#69BE28" }
         };
 
         // *** UPDATED: New function to look up team colors ***
