@@ -27,14 +27,24 @@ class ReinforceAgent:
         input_dim = len(config.ENABLED_STATE_FEATURES)
         output_dim = env.action_space.n # Number of discrete actions (QB, RB, WR, TE)
 
-        # Initialize the Policy Network
+        # Initialize the Policy Network (actor) and Value Network (baseline)
         self.policy_network = PolicyNetwork(input_dim, output_dim, config.HIDDEN_DIM)
-        # Initialize the optimizer
-        self.optimizer = optim.Adam(self.policy_network.parameters(), lr=config.LEARNING_RATE)
+        self.value_network = torch.nn.Sequential(
+            torch.nn.Linear(input_dim, config.HIDDEN_DIM),
+            torch.nn.ReLU(),
+            torch.nn.Linear(config.HIDDEN_DIM, 1),
+        )
+        # Initialize the optimizer (joint for simplicity)
+        self.optimizer = optim.Adam(
+            list(self.policy_network.parameters()) + list(self.value_network.parameters()),
+            lr=config.LEARNING_RATE,
+        )
 
         # Store rewards and log probabilities for each episode
         self.episode_log_probs: List[torch.Tensor] = []
         self.episode_rewards: List[float] = [] # Raw rewards received at each step
+        self.episode_entropies: List[torch.Tensor] = []
+        self.episode_states: List[torch.Tensor] = []
 
     def _calculate_returns(self, rewards: List[float]) -> List[float]:
         """
@@ -74,6 +84,8 @@ class ReinforceAgent:
             
             self.episode_log_probs = []
             self.episode_rewards = []
+            self.episode_entropies = []
+            self.episode_states = []
             episode_done = False
             total_episode_reward = 0
 
@@ -84,16 +96,18 @@ class ReinforceAgent:
 
                 # Sample an action from the policy, passing the action mask if enabled
                 if self.config.ENABLE_ACTION_MASKING:
-                    action, log_prob = self.policy_network.sample_action(state_tensor, action_mask=current_action_mask)
+                    action, log_prob, entropy = self.policy_network.sample_action(state_tensor, action_mask=current_action_mask)
                 else:
-                    action, log_prob = self.policy_network.sample_action(state_tensor)
+                    action, log_prob, entropy = self.policy_network.sample_action(state_tensor)
 
 
                 # Take the action in the environment
                 next_state, reward, done, truncated, info = self.env.step(action)
 
-                # Store log probability and reward
+                # Store state, log probability, entropy, and reward
+                self.episode_states.append(state_tensor)
                 self.episode_log_probs.append(log_prob)
+                self.episode_entropies.append(entropy)
                 self.episode_rewards.append(reward)
                 total_episode_reward += reward
 
@@ -105,31 +119,39 @@ class ReinforceAgent:
             returns = self._calculate_returns(self.episode_rewards)
             returns_tensor = torch.tensor(returns, dtype=torch.float32)
 
-            # Normalize returns (standard practice for stability in REINFORCE)
-            # Avoid division by zero if all returns are the same
-            if len(returns_tensor) > 1 and returns_tensor.std() > 1e-6:
-                returns_tensor = (returns_tensor - returns_tensor.mean()) / (returns_tensor.std() + 1e-8)
-            else:
-                # If only one or no returns, or std is zero, no normalization needed or possible
-                pass
+            # Compute baseline values and advantages
+            states_tensor = torch.stack(self.episode_states)  # shape [T, input_dim]
+            values = self.value_network(states_tensor).squeeze(-1)  # shape [T]
+            advantages = returns_tensor - values.detach()
+            # Optional normalization of advantages for stability
+            if len(advantages) > 1 and advantages.std() > 1e-6:
+                advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
-            # --- 3. Compute Policy Loss ---
-            # Loss = - sum(log_prob * G_t)
-            policy_loss = []
-            for log_prob, G_t in zip(self.episode_log_probs, returns_tensor):
-                policy_loss.append(-log_prob * G_t) # Negative sign for gradient ascent (maximize reward)
+            # --- 3. Compute Losses ---
+            # Policy loss with advantage
+            policy_terms = []
+            for log_prob, adv in zip(self.episode_log_probs, advantages):
+                policy_terms.append(-log_prob * adv)
+            policy_loss = torch.stack(policy_terms).sum()
 
-            # Combine all step losses for the episode
-            policy_loss = torch.stack(policy_loss).sum()
+            # Entropy bonus to encourage exploration
+            entropy_coeff = getattr(self.config, 'ENTROPY_COEFFICIENT', 0.01)
+            entropy_loss = -entropy_coeff * torch.stack(self.episode_entropies).sum()
+
+            # Value loss (MSE) for baseline
+            value_coeff = getattr(self.config, 'VALUE_LOSS_COEFFICIENT', 0.5)
+            value_loss = value_coeff * torch.nn.functional.mse_loss(values, returns_tensor)
+
+            total_loss = policy_loss + value_loss + entropy_loss
 
             # --- 4. Perform Optimization Step ---
             self.optimizer.zero_grad() # Clear gradients from previous step
-            policy_loss.backward()      # Compute gradients
+            total_loss.backward()      # Compute gradients
             self.optimizer.step()       # Update network weights
 
             # --- 5. Logging and Reporting ---
             all_episode_rewards.append(total_episode_reward)
-            all_policy_losses.append(policy_loss.item())
+            all_policy_losses.append(total_loss.item())
 
             # Calculate actual (unweighted) final projected points for logging clarity
             actual_final_projected_points = sum(
@@ -142,7 +164,7 @@ class ReinforceAgent:
             if episode % 100 == 0:
                 print(f"Episode {episode}/{self.config.TOTAL_EPISODES} | "
                       f"Total Reward (Weighted): {total_episode_reward:.2f} | "
-                      f"Policy Loss: {policy_loss.item():.4f} | "
+                      f"Loss (total): {total_loss.item():.4f} | "
                       f"Agent Roster Size: {len(self.env.teams_rosters[self.env.agent_team_id]['PLAYERS'])} "
                       f"| Actual Final Score (Unweighted): {actual_final_projected_points:.2f}" # Updated line
                      )

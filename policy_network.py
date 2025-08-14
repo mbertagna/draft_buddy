@@ -71,7 +71,7 @@ class PolicyNetwork(nn.Module):
         action_probs = F.softmax(logits, dim=-1)
         return action_probs
 
-    def sample_action(self, state: torch.Tensor, action_mask: Optional[np.ndarray] = None) -> tuple[int, torch.Tensor]:
+    def sample_action(self, state: torch.Tensor, action_mask: Optional[np.ndarray] = None) -> tuple[int, torch.Tensor, torch.Tensor]:
         """
         Samples an action from the policy distribution and returns its log probability.
         Optionally applies action masking before sampling.
@@ -83,8 +83,7 @@ class PolicyNetwork(nn.Module):
                                                 Defaults to None (no masking).
 
         Returns:
-            tuple[int, torch.Tensor]: A tuple containing the sampled action (int)
-                                      and its log probability (torch.Tensor).
+            tuple[int, torch.Tensor, torch.Tensor]: (sampled action, log_prob, entropy)
         """
         # Ensure state is a float tensor and has a batch dimension (even if batch size is 1)
         state = state.float().unsqueeze(0) # Add batch dimension
@@ -98,7 +97,8 @@ class PolicyNetwork(nn.Module):
         # Sample an action from the distribution
         action = m.sample()
 
-        # Get the log probability of the sampled action
+        # Get the log probability and entropy
         log_prob = m.log_prob(action)
+        entropy = m.entropy()
 
-        return action.item(), log_prob
+        return action.item(), log_prob, entropy

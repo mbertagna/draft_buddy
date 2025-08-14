@@ -196,6 +196,10 @@ class Config:
     TOTAL_EPISODES = 20000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
+    # Variance reduction + exploration
+    USE_BASELINE = True
+    VALUE_LOSS_COEFFICIENT = 0.5
+    ENTROPY_COEFFICIENT = 0.01
 
     # --- State Space Parameters ---
     ALL_STATE_FEATURES = [
