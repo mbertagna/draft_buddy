@@ -169,3 +169,5 @@ data/player_stats_kicking.csv
 data/roster_????.csv
 saved_states/
 saved_models/
+lighten_colors.py
+lighter_team_colors.js

@@ -7,6 +7,8 @@ from data_utils import load_player_data
 from config import Config
 import numpy as np
 from fantasy_draft_env import FantasyFootballDraftEnv
+from utils.season_simulation_fast import simulate_season_fast
+import pandas as pd
 
 # Use 'frontend' as the static folder, and serve files from it
 app = Flask(__name__, static_folder='frontend')
@@ -276,6 +278,49 @@ def export_csv():
     output.headers["Content-Disposition"] = "attachment; filename=draft_results.csv"
     output.headers["Content-type"] = "text/csv"
     return output
+
+@app.route('/api/simulate_season', methods=['POST'])
+def simulate_season():
+    """Runs a full season simulation using current in-memory draft state and returns results.
+
+    This does not modify any saved state on disk.
+    """
+    global draft_env
+    if not draft_env:
+        return jsonify({'error': 'Draft has not been started'}), 400
+
+    # Build rosters: manager name -> list of player_ids
+    rosters = {}
+    for team_id, roster_data in draft_env.teams_rosters.items():
+        manager_name = config.TEAM_MANAGER_MAPPING.get(team_id)
+        if not manager_name:
+            continue
+        rosters[manager_name] = [p.player_id for p in roster_data['PLAYERS']]
+
+    # Load matchups
+    matchups_path = os.path.join(config.DATA_DIR, 'red_league_matchups_2025.csv')
+    try:
+        matchups_df = pd.read_csv(matchups_path)
+    except FileNotFoundError:
+        return jsonify({'error': f'Matchups file not found at {matchups_path}'}), 400
+
+    # Week-to-week points dict. Prefer env's prepared dict if available
+    wtw_dict = getattr(draft_env, 'wtw_dict', None)
+    if wtw_dict is None:
+        wtw_dict = {p.player_id: {'pts': [p.projected_points] * 18, 'pos': p.position} for p in draft_env.all_players_data}
+
+    try:
+        regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season_fast(
+            wtw_dict, matchups_df, rosters, 2025, '', False
+        )
+    except Exception as e:
+        return jsonify({'error': f'Season simulation failed: {e}'}), 500
+
+    return jsonify({
+        'regular_season_records': regular_records,
+        'playoff_tree': playoffs_tree,
+        'winner': winner
+    })
 
 @app.route('/api/players')
 def get_players():

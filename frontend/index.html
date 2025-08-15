@@ -392,6 +392,10 @@
             <div id="team-rosters">
                 <!-- Team rosters will be inserted here -->
             </div>
+            <div id="season-sim-container" style="margin-top:12px;">
+                <button id="simulate-season-btn" style="background-color:#8a2be2; color:#fff; padding:8px 12px; border:none; border-radius:6px; cursor:pointer;">Sim Season</button>
+                <div id="season-simulation-results" style="margin-top:12px;"></div>
+            </div>
         </div>
         <div id="right-panel">
             <div id="controls">
@@ -446,6 +450,8 @@
         const simulatePickBtn = document.getElementById('simulate-pick-btn');
         const downloadCsvBtn = document.getElementById('download-csv-btn');
         const gpFracMinInput = document.getElementById('gp-frac-min');
+        const simulateSeasonBtn = document.getElementById('simulate-season-btn');
+        const seasonResultsDiv = document.getElementById('season-simulation-results');
 
         let currentDraftState = null;
         const MAIN_TEAM_ID = 10; // Define the main team ID
@@ -819,6 +825,7 @@
         undoPickBtn.addEventListener('click', undoLastPick);
         simulatePickBtn.addEventListener('click', simulateNextPick);
         downloadCsvBtn.addEventListener('click', downloadCsv);
+        if (simulateSeasonBtn) simulateSeasonBtn.addEventListener('click', simulateSeason);
 
         document.addEventListener('DOMContentLoaded', () => {
             setupSortHandlers();
@@ -1126,6 +1133,66 @@
 
         function downloadCsv() {
             window.location.href = '/api/draft/export_csv';
+        }
+
+        async function simulateSeason() {
+            if (!seasonResultsDiv) return;
+            seasonResultsDiv.innerHTML = '<div class="roster-card"><h4>Season Simulation</h4><p>Loading...</p></div>';
+            try {
+                const resp = await fetch('/api/simulate_season', { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                renderSeasonResults(data);
+            } catch (e) {
+                console.error('Season simulation error:', e);
+                seasonResultsDiv.innerHTML = `<div class="roster-card"><h4>Season Simulation</h4><p style="color:red;">${e.message}</p></div>`;
+            }
+        }
+
+        function renderSeasonResults(data) {
+            const records = data.regular_season_records || [];
+            const tree = data.playoff_tree || '';
+            const winner = data.winner || 'N/A';
+
+            const standingsRows = records.map(([manager, rec]) => {
+                const name = String(manager);
+                const W = rec.W ?? rec['W'] ?? 0;
+                const L = rec.L ?? rec['L'] ?? 0;
+                const T = rec.T ?? rec['T'] ?? 0;
+                const pts = rec.pts ?? rec['pts'] ?? 0;
+                return `<tr><td>${name}</td><td>${W}</td><td>${L}</td><td>${T}</td><td>${Number(pts).toFixed(2)}</td></tr>`;
+            }).join('');
+
+            const html = `
+                <div class="roster-card">
+                    <h4>Season Simulation Results</h4>
+                    <div class="team-summary" style="margin-top:6px;">
+                        <div class="team-summary-grid">
+                            <div class="team-summary-item"><span class="chip">Champion</span><span class="metric"><span class="value">${winner}</span></span></div>
+                        </div>
+                    </div>
+                    <h5>Regular Season Standings</h5>
+                    <div style="overflow:auto;">
+                        <table style="width:100%; border-collapse:collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left; border-bottom:1px solid #ddd; padding:6px;">Manager</th>
+                                    <th style="text-align:right; border-bottom:1px solid #ddd; padding:6px;">W</th>
+                                    <th style="text-align:right; border-bottom:1px solid #ddd; padding:6px;">L</th>
+                                    <th style="text-align:right; border-bottom:1px solid #ddd; padding:6px;">T</th>
+                                    <th style="text-align:right; border-bottom:1px solid #ddd; padding:6px;">Pts</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${standingsRows}
+                            </tbody>
+                        </table>
+                    </div>
+                    <h5 style="margin-top:10px;">Playoffs</h5>
+                    <pre style="background:#f9f9f9; border:1px solid #eee; border-radius:6px; padding:8px; overflow:auto;">${tree}</pre>
+                </div>
+            `;
+            seasonResultsDiv.innerHTML = html;
         }
     </script>
 </body>
