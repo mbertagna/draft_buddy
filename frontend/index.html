@@ -35,6 +35,12 @@
             gap: 6px;
             align-items: center;
         }
+        .availability-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
         .chip {
             display: inline-flex;
             align-items: center;
@@ -47,6 +53,24 @@
             line-height: 1.2;
             white-space: nowrap;
         }
+        .chip.availability {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.18);
+            padding: 4px 10px;
+        }
+        .chip .chip-title { font-weight: 700; opacity: 0.95; }
+        .metric {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.22);
+        }
+        .metric .label { opacity: 0.85; font-size: 0.8rem; font-weight: 600; }
+        .metric .value { font-weight: 700; }
         .status-row {
             display: flex;
             align-items: center;
@@ -159,6 +183,9 @@
         #controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 10px; flex-wrap: wrap; }
         #player-search { padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px; }
         #new-draft-btn { padding: 8px 12px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .gp-filter { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; background: rgba(0,0,0,0.05); }
+        .gp-filter span { font-weight: 600; opacity: 0.9; }
+        #gp-frac-min { padding: 8px; width: 160px; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
 
         /* Prettier Checkboxes */
         input[type="checkbox"] {
@@ -218,18 +245,26 @@
         .roster-card { border: 1px solid #ccc; border-radius: 4px; padding: 10px; margin-bottom: 10px; background-color: white; }
         .roster-card.full { border-color: #6c757d; background-color: #f1f1f1; }
         .roster-card h4 { margin-top: 0; }
-        .roster-details { display: flex; gap: 20px; }
+        .roster-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
         .roster-section { flex: 1; }
         .roster-section h5 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .roster-section table { width: 100%; border-collapse: collapse; }
         .roster-section td { padding: 4px; font-size: 0.9rem; }
         .roster-section td:first-child { font-weight: bold; width: 40px; }
-        .roster-section ul { list-style-type: none; padding: 0; margin: 0; }
-        .roster-section li { font-size: 0.9rem; padding: 2px 0; }
+        .roster-section ul { list-style-type: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+        .roster-section li { font-size: 0.9rem; padding: 0; }
+        .player-chip { white-space: normal; word-break: break-word; }
 
         /* Bye week grid */
         .bye-week-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 5px; }
         .bye-week-cell { padding: 5px; text-align: center; border-radius: 3px; font-size: 0.8rem; }
+
+        /* Team summary grid */
+        .team-summary { margin: 6px 0 10px; }
+        .team-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+        .team-summary-item { display: flex; align-items: center; gap: 8px; background: #ffffff; color: #333; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 8px; }
+        .team-summary-item .chip { background: rgba(76, 175, 80, 0.12); color: #1b5e20; }
+        .team-summary-item .metric { background: rgba(0,0,0,0.05); }
 
         /* AI "lava lamp" effect: multi-color gradient for text and ring border */
         .ai-chip {
@@ -271,6 +306,9 @@
             -webkit-mask: 
                 linear-gradient(#000 0 0) content-box,
                 linear-gradient(#000 0 0);
+            mask: 
+                linear-gradient(#000 0 0) content-box,
+                linear-gradient(#000 0 0);
             -webkit-mask-composite: xor;
             mask-composite: exclude;
             pointer-events: none;
@@ -299,6 +337,39 @@
                 <button id="simulate-pick-btn">Sim Pick</button>
                 <button id="download-csv-btn">CSV</button>
             </div>
+        </div>
+
+        <div class="availability-bar">
+            <span class="chip availability" id="overall-avail-chip">
+                <span class="chip-title">Overall</span>
+                <span class="metric"><span class="label">ADP</span> <span class="value" id="overall-min-adp">N/A</span></span>
+                <span class="metric"><span class="label">VORP</span> <span class="value" id="overall-max-vorp">N/A</span></span>
+                <span class="metric"><span class="label">Pts</span> <span class="value" id="overall-max-pts">N/A</span></span>
+            </span>
+            <span class="chip availability" id="qb-avail-chip">
+                <span class="chip-title">QB</span>
+                <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
+                <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
+                <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
+            </span>
+            <span class="chip availability" id="rb-avail-chip">
+                <span class="chip-title">RB</span>
+                <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
+                <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
+                <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
+            </span>
+            <span class="chip availability" id="wr-avail-chip">
+                <span class="chip-title">WR</span>
+                <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
+                <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
+                <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
+            </span>
+            <span class="chip availability" id="te-avail-chip">
+                <span class="chip-title">TE</span>
+                <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
+                <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
+                <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
+            </span>
         </div>
 
         <div class="status-row">
@@ -331,6 +402,7 @@
                     <label><input type="checkbox" name="position" value="WR"> WR</label>
                     <label><input type="checkbox" name="position" value="TE"> TE</label>
                 </div>
+                <div class="gp-filter"><span>Min GP Frac</span><input type="number" id="gp-frac-min" step="0.01" min="0" max="1" placeholder="e.g., 0.75"></div>
                 <button id="new-draft-btn">Start New Draft</button>
             </div>
             <table id="player-list">
@@ -373,6 +445,7 @@
         const undoPickBtn = document.getElementById('undo-pick-btn');
         const simulatePickBtn = document.getElementById('simulate-pick-btn');
         const downloadCsvBtn = document.getElementById('download-csv-btn');
+        const gpFracMinInput = document.getElementById('gp-frac-min');
 
         let currentDraftState = null;
         const MAIN_TEAM_ID = 10; // Define the main team ID
@@ -444,13 +517,73 @@
             try {
                 const response = await fetch(`/api/players?${params.toString()}`);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const players = await response.json();
+                let players = await response.json();
+                const gpMinStr = gpFracMinInput.value;
+                if (gpMinStr !== '' && !Number.isNaN(parseFloat(gpMinStr))) {
+                    const gpMin = parseFloat(gpMinStr);
+                    players = players.filter(p => {
+                        const v = p.games_played_frac;
+                        if (v === 'R') return false;
+                        if (v === null || v === undefined) return false;
+                        const num = Number(v);
+                        if (!isFinite(num)) return false;
+                        return num >= gpMin;
+                    });
+                }
                 renderPlayers(players);
             } catch (error) {
                 console.error('Error fetching players:', error);
                 playerTbody.innerHTML = `<tr><td colspan="8" style="color: red;">Error loading players: ${error.message}</td></tr>`;
             }
         };
+
+        async function updatePositionMetaChips() {
+            try {
+                const resp = await fetch('/api/players');
+                if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+                const allPlayers = await resp.json();
+                const positions = ['QB', 'RB', 'WR', 'TE'];
+                const byPos = { QB: [], RB: [], WR: [], TE: [] };
+                allPlayers.forEach(p => { if (byPos[p.position]) byPos[p.position].push(p); });
+
+                function stats(arr) {
+                    if (!arr || arr.length === 0) return { minAdp: 'N/A', maxVorp: 'N/A', maxPts: 'N/A' };
+                    const adps = arr.map(p => p.adp).filter(v => v !== null && v !== undefined && isFinite(Number(v))).map(Number);
+                    const vorps = arr.map(p => p.vorp).filter(v => v !== null && v !== undefined && isFinite(Number(v))).map(Number);
+                    const pts = arr.map(p => p.projected_points).filter(v => v !== null && v !== undefined && isFinite(Number(v))).map(Number);
+                    return {
+                        minAdp: adps.length ? Math.min(...adps).toFixed(1) : 'N/A',
+                        maxVorp: vorps.length ? Math.max(...vorps).toFixed(1) : 'N/A',
+                        maxPts: pts.length ? Math.max(...pts).toFixed(1) : 'N/A',
+                    };
+                }
+
+                const qbStats = stats(byPos.QB);
+                const rbStats = stats(byPos.RB);
+                const wrStats = stats(byPos.WR);
+                const teStats = stats(byPos.TE);
+
+                const allStats = stats(allPlayers);
+                const setChipValues = (chipId, s) => {
+                    const chip = document.getElementById(chipId);
+                    if (!chip) return;
+                    const adpEl = chip.querySelector('[data-field="adp"], #overall-min-adp');
+                    const vorpEl = chip.querySelector('[data-field="vorp"], #overall-max-vorp');
+                    const ptsEl = chip.querySelector('[data-field="pts"], #overall-max-pts');
+                    if (adpEl) adpEl.textContent = s.minAdp;
+                    if (vorpEl) vorpEl.textContent = s.maxVorp;
+                    if (ptsEl) ptsEl.textContent = s.maxPts;
+                };
+
+                setChipValues('overall-avail-chip', allStats);
+                setChipValues('qb-avail-chip', qbStats);
+                setChipValues('rb-avail-chip', rbStats);
+                setChipValues('wr-avail-chip', wrStats);
+                setChipValues('te-avail-chip', teStats);
+            } catch (e) {
+                console.error('Error updating position meta chips:', e);
+            }
+        }
 
         // ----- Coloring Utilities -----
         const POS_COLORS = {
@@ -681,6 +814,7 @@
         // Event Listeners
         playerSearch.addEventListener('keyup', fetchPlayers);
         positionCheckboxes.forEach(checkbox => checkbox.addEventListener('change', fetchPlayers));
+        gpFracMinInput.addEventListener('input', fetchPlayers);
         newDraftBtn.addEventListener('click', startNewDraft);
         undoPickBtn.addEventListener('click', undoLastPick);
         simulatePickBtn.addEventListener('click', simulateNextPick);
@@ -689,6 +823,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             setupSortHandlers();
             loadInitialState();
+            updatePositionMetaChips();
         });
 
         async function startNewDraft() {
@@ -715,6 +850,7 @@
             updateHeaderSuggestion(state);
 
             fetchDraftSummary();
+            updatePositionMetaChips();
 
             teamButtonsDiv.innerHTML = '';
             const snakePickTeam = state.draft_order[state.current_pick_number - 1];
@@ -746,6 +882,29 @@
             }
 
             let rostersHTML = '<h3>Team Rosters</h3>';
+            // --- Summary section: total players and points per team ---
+            let summaryHTML = '<div class="team-summary"><div class="team-summary-grid">';
+            for (let i = 1; i <= 10; i++) {
+                const teamId = i;
+                const roster = state.team_rosters[teamId];
+                const totalProjectedPoints = state.team_projected_points[teamId] || 0;
+                let totalPlayers = 0;
+                if (roster) {
+                    const starters = roster.starters || {};
+                    const startersCount = Object.values(starters).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
+                    const benchCount = (roster.bench || []).length;
+                    totalPlayers = startersCount + benchCount;
+                }
+                summaryHTML += `
+                    <div class="team-summary-item">
+                        <span class="chip">Team ${teamId}</span>
+                        <span class="metric"><span class="label">Players</span> <span class="value">${totalPlayers}</span></span>
+                        <span class="metric"><span class="label">Pts</span> <span class="value">${totalProjectedPoints.toFixed(1)}</span></span>
+                    </div>
+                `;
+            }
+            summaryHTML += '</div></div>';
+            rostersHTML += summaryHTML;
             for (let i = 1; i <= 10; i++) {
                 const teamId = i;
                 const roster = state.team_rosters[teamId];
@@ -765,7 +924,12 @@
                     const numSlots = state.roster_structure[pos] || 0;
                     for (let j = 0; j < numSlots; j++) {
                         const player = players[j];
-                        startersHTML += `<tr><td>${pos}</td><td>${player ? `${player.name} (${player.position}) - ${player.projected_points.toFixed(1)} pts` : 'Empty'}</td></tr>`;
+                        if (player) {
+                            const posColor = POS_COLORS[player.position] || '';
+                            startersHTML += `<tr><td>${pos}</td><td><span class="chip" style="background-color: ${posColor};">${player.name} - ${player.projected_points.toFixed(1)} pts</span></td></tr>`;
+                        } else {
+                            startersHTML += `<tr><td>${pos}</td><td>Empty</td></tr>`;
+                        }
                     }
                 });
                 startersHTML += '</table></div>';
@@ -775,7 +939,8 @@
                 const benchPlayers = roster.bench || [];
                 benchPlayers.sort((a, b) => b.projected_points - a.projected_points);
                 benchPlayers.forEach(player => {
-                    benchHTML += `<li>${player.name} (${player.position}) - ${player.projected_points.toFixed(1)} pts</li>`;
+                    const posColor = POS_COLORS[player.position] || '';
+                    benchHTML += `<li><span class="chip" style="background-color: ${posColor};">${player.name} - ${player.projected_points.toFixed(1)} pts</span></li>`;
                 });
                 benchHTML += '</ul></div>';
 
@@ -797,9 +962,10 @@
                 byeWeekHTML += '</div></div>';
 
                 const fullClass = (state.team_is_full && state.team_is_full[teamId]) ? 'full' : '';
+                const totalPlayers = roster.starters ? Object.values(roster.starters).flat().length + (roster.bench ? roster.bench.length : 0) : 0;
                 rostersHTML += `
                     <div class="roster-card ${fullClass}">
-                        <h4>Team ${teamId} (Projected Pts: ${totalProjectedPoints.toFixed(1)})</h4>
+                        <h4>Team ${teamId} (${totalPlayers} players, ${totalProjectedPoints.toFixed(1)} pts)</h4>
                         <div class="roster-details">
                             ${startersHTML}
                             ${benchHTML}
