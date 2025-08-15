@@ -316,9 +316,25 @@ def simulate_season():
     except Exception as e:
         return jsonify({'error': f'Season simulation failed: {e}'}), 500
 
+    # Convert playoff results to structured JSON for nicer UI
+    playoff_results = []
+    try:
+        for _, row in playoff_results_df.iterrows():
+            playoff_results.append({
+                'week': int(row['Week']),
+                'matchup': int(row['Matchup']),
+                'away_manager': None if pd.isna(row['Away Manager(s)']) else str(row['Away Manager(s)']),
+                'away_score': None if pd.isna(row['Away Score']) else float(row['Away Score']),
+                'home_manager': None if pd.isna(row['Home Manager(s)']) else str(row['Home Manager(s)']),
+                'home_score': None if pd.isna(row['Home Score']) else float(row['Home Score'])
+            })
+    except Exception:
+        playoff_results = []
+
     return jsonify({
         'regular_season_records': regular_records,
         'playoff_tree': playoffs_tree,
+        'playoff_results': playoff_results,
         'winner': winner
     })
 

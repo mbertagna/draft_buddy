@@ -240,6 +240,9 @@
         #player-list tbody tr:hover td { box-shadow: inset 0 0 100vw 100vh rgba(0, 0, 0, 0.07); }
         #player-list th, #player-list td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         #player-list td:first-child { text-align: center; vertical-align: middle; }
+        /* Info column/button */
+        #player-list th.info-col, #player-list td.info-col { width: 28px; text-align: center; }
+        .info-button { padding: 2px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; font-size: 0.9rem; line-height: 1; }
 
         /* Rosters */
         .roster-card { border: 1px solid #ccc; border-radius: 4px; padding: 10px; margin-bottom: 10px; background-color: white; }
@@ -247,24 +250,25 @@
         .roster-card h4 { margin-top: 0; }
         .roster-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
         .roster-section { flex: 1; }
-        .roster-section h5 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .roster-section h5 { margin-top: 0; border-bottom: 2px solid #bbb; padding-bottom: 5px; }
         .roster-section table { width: 100%; border-collapse: collapse; }
         .roster-section td { padding: 4px; font-size: 0.9rem; }
         .roster-section td:first-child { font-weight: bold; width: 40px; }
         .roster-section ul { list-style-type: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-        .roster-section li { font-size: 0.9rem; padding: 0; }
+        .roster-section li { font-size: 0.9rem; padding: 2px 0; }
         .player-chip { white-space: normal; word-break: break-word; }
 
         /* Bye week grid */
         .bye-week-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 5px; }
-        .bye-week-cell { padding: 5px; text-align: center; border-radius: 3px; font-size: 0.8rem; }
+        .bye-week-cell { padding: 5px; text-align: center; border-radius: 3px; font-size: 0.8rem; border: 1px solid #000; }
 
         /* Team summary grid */
         .team-summary { margin: 6px 0 10px; }
         .team-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
-        .team-summary-item { display: flex; align-items: center; gap: 8px; background: #ffffff; color: #333; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 8px; }
+        .team-summary-item { display: flex; align-items: center; gap: 8px; background: #ffffff; color: #333; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 8px; flex-wrap: wrap; overflow: hidden; }
         .team-summary-item .chip { background: rgba(76, 175, 80, 0.12); color: #1b5e20; }
-        .team-summary-item .metric { background: rgba(0,0,0,0.05); }
+        .team-summary-item .metric { background: rgba(0,0,0,0.05); white-space: nowrap; flex-shrink: 0; }
+        .team-summary-item .metric .value { font-variant-numeric: tabular-nums; }
 
         /* AI "lava lamp" effect: multi-color gradient for text and ring border */
         .ai-chip {
@@ -320,6 +324,26 @@
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
+
+        /* Summary chip robustness */
+        .team-summary-item { display: flex; align-items: center; gap: 8px; background: #ffffff; color: #333; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 8px; flex-wrap: wrap; overflow: hidden; }
+        .team-summary-item .chip { background: rgba(76, 175, 80, 0.12); color: #1b5e20; }
+        .team-summary-item .metric { background: rgba(0,0,0,0.05); white-space: nowrap; flex-shrink: 0; }
+        .team-summary-item .metric .value { font-variant-numeric: tabular-nums; }
+
+        /* Season results styling */
+        .standings-table { width: 100%; border-collapse: collapse; }
+        .standings-table th, .standings-table td { border: 1px solid #ddd; padding: 6px; }
+        .standings-table th { background: #f5f5f5; text-align: left; }
+        .standings-table th.num, .standings-table td.num { text-align: right; }
+        .playoff-tree { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 8px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; line-height: 1.3; }
+        .playoff-rounds { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+        .playoff-card { border: 1px solid #e5e5e5; background: #fff; border-radius: 8px; padding: 8px; }
+        .playoff-card h6 { margin: 0 0 6px; border-bottom: 2px solid #ddd; padding-bottom: 4px; }
+        .matchup-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 4px 0; align-items: center; }
+        .matchup-row + .matchup-row { border-top: 1px dashed #eee; }
+        .team-name { font-weight: 600; }
+        .score { font-variant-numeric: tabular-nums; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -421,6 +445,7 @@
                         <th data-sort-key="games_played_frac">GP Frac</th>
                         <th data-sort-key="team">Team</th>
                         <th data-sort-key="bye_week">Bye</th>
+                        <th class="info-col">Info</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -539,7 +564,7 @@
                 renderPlayers(players);
             } catch (error) {
                 console.error('Error fetching players:', error);
-                playerTbody.innerHTML = `<tr><td colspan="8" style="color: red;">Error loading players: ${error.message}</td></tr>`;
+                playerTbody.innerHTML = `<tr><td colspan="10" style="color: red;">Error loading players: ${error.message}</td></tr>`;
             }
         };
 
@@ -694,12 +719,18 @@
             }
         }
 
+        function openPlayerInfo(playerName) {
+            const query = `${playerName} 2025 outlook`;
+            const url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+            window.open(url, '_blank');
+        }
+
         const renderPlayers = (players) => {
             playerTbody.innerHTML = ''; // Clear existing rows
             if (players.length === 0) {
                 const row = playerTbody.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = 9;
+                cell.colSpan = 10;
                 cell.innerText = 'No players found with current filters.';
                 return;
             }
@@ -789,6 +820,19 @@
                 // Bye
                 const byeCell = row.insertCell();
                 byeCell.innerText = player.bye_week;
+
+                // Info button
+                const infoCell = row.insertCell();
+                infoCell.classList.add('info-col');
+                const infoBtn = document.createElement('button');
+                infoBtn.className = 'info-button';
+                infoBtn.title = 'Open Google search';
+                infoBtn.textContent = '↗';
+                infoBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openPlayerInfo(player.name);
+                });
+                infoCell.appendChild(infoBtn);
 
                 // ----- Conditional Coloring -----
                 if (adpValNum !== null) adpCell.style.background = dynamicMetricColor(adpValNum, adpMin, adpMax, /*invert*/ true);
@@ -1151,8 +1195,8 @@
 
         function renderSeasonResults(data) {
             const records = data.regular_season_records || [];
-            const tree = data.playoff_tree || '';
             const winner = data.winner || 'N/A';
+            const playoffResults = data.playoff_results || [];
 
             const standingsRows = records.map(([manager, rec]) => {
                 const name = String(manager);
@@ -1160,7 +1204,44 @@
                 const L = rec.L ?? rec['L'] ?? 0;
                 const T = rec.T ?? rec['T'] ?? 0;
                 const pts = rec.pts ?? rec['pts'] ?? 0;
-                return `<tr><td>${name}</td><td>${W}</td><td>${L}</td><td>${T}</td><td>${Number(pts).toFixed(2)}</td></tr>`;
+                return `<tr><td>${name}</td><td class="num">${W}</td><td class="num">${L}</td><td class="num">${T}</td><td class="num">${Number(pts).toFixed(2)}</td></tr>`;
+            }).join('');
+
+            // Group playoff results by week for round-style cards
+            const resultsByWeek = {};
+            for (const m of playoffResults) {
+                const wk = m.week ?? 0;
+                if (!resultsByWeek[wk]) resultsByWeek[wk] = [];
+                resultsByWeek[wk].push(m);
+            }
+            const sortedWeeks = Object.keys(resultsByWeek).map(Number).sort((a,b)=>a-b);
+            const roundTitles = ['Quarterfinals','Semifinals','Final'];
+            const roundsHTML = sortedWeeks.map((wk, idx) => {
+                const title = roundTitles[idx] || `Round ${idx+1}`;
+                const rows = resultsByWeek[wk]
+                    .sort((a,b)=> (a.matchup||0) - (b.matchup||0))
+                    .map(g => {
+                        const away = g.away_manager ?? 'BYE';
+                        const home = g.home_manager ?? 'BYE';
+                        const awayScore = (g.away_score ?? 0).toFixed(2);
+                        const homeScore = (g.home_score ?? 0).toFixed(2);
+                        return `
+                            <div class="matchup-row">
+                                <div class="team-name">${home}</div>
+                                <div class="score">${homeScore}</div>
+                            </div>
+                            <div class="matchup-row">
+                                <div class="team-name">${away}</div>
+                                <div class="score">${awayScore}</div>
+                            </div>
+                        `;
+                    }).join('');
+                return `
+                    <div class="playoff-card">
+                        <h6>${title}</h6>
+                        ${rows || '<div style="opacity:0.7;">No games</div>'}
+                    </div>
+                `;
             }).join('');
 
             const html = `
@@ -1173,14 +1254,14 @@
                     </div>
                     <h5>Regular Season Standings</h5>
                     <div style="overflow:auto;">
-                        <table style="width:100%; border-collapse:collapse;">
+                        <table class="standings-table">
                             <thead>
                                 <tr>
-                                    <th style="text-align:left; border-bottom:1px solid #ddd; padding:6px;">Manager</th>
-                                    <th style="text-align:right; border-bottom:1px solid #ddd; padding:6px;">W</th>
-                                    <th style="text-align:right; border-bottom:1px solid #ddd; padding:6px;">L</th>
-                                    <th style="text-align:right; border-bottom:1px solid #ddd; padding:6px;">T</th>
-                                    <th style="text-align:right; border-bottom:1px solid #ddd; padding:6px;">Pts</th>
+                                    <th>Manager</th>
+                                    <th class="num">W</th>
+                                    <th class="num">L</th>
+                                    <th class="num">T</th>
+                                    <th class="num">Pts</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1189,7 +1270,7 @@
                         </table>
                     </div>
                     <h5 style="margin-top:10px;">Playoffs</h5>
-                    <pre style="background:#f9f9f9; border:1px solid #eee; border-radius:6px; padding:8px; overflow:auto;">${tree}</pre>
+                    <div class="playoff-rounds">${roundsHTML}</div>
                 </div>
             `;
             seasonResultsDiv.innerHTML = html;
