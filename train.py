@@ -8,7 +8,7 @@ import argparse
 from config import Config
 from fantasy_draft_env import FantasyFootballDraftEnv
 from reinforce_agent import ReinforceAgent
-from utils.run_utils import setup_run_directories, save_run_metadata, find_latest_checkpoint
+from utils.run_utils import setup_run_directories, save_run_metadata, find_latest_checkpoint, get_run_name
 
 def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
     """
@@ -59,6 +59,28 @@ def find_latest_logs_dir_with_csvs(logs_root: str) -> str:
     candidates.sort(key=lambda x: x[0], reverse=True)
     return candidates[0][1]
 
+def find_version_dirs_with_csvs(run_logs_root: str):
+    """Return a list of (version_num, dir_path) for version dirs under run_logs_root that contain both CSVs."""
+    results = []
+    if not os.path.exists(run_logs_root):
+        return results
+    for entry in os.listdir(run_logs_root):
+        dir_path = os.path.join(run_logs_root, entry)
+        if not os.path.isdir(dir_path):
+            continue
+        if not entry.startswith('v'):
+            continue
+        try:
+            version_num = int(entry.replace('v', ''))
+        except ValueError:
+            continue
+        rewards_csv = os.path.join(dir_path, "all_episode_rewards.csv")
+        losses_csv = os.path.join(dir_path, "all_policy_losses.csv")
+        if os.path.exists(rewards_csv) and os.path.exists(losses_csv):
+            results.append((version_num, dir_path))
+    results.sort(key=lambda x: x[0])
+    return results
+
 def _load_floats_from_csv(path: str):
     with open(path, "r") as f:
         return [float(line.strip()) for line in f if line.strip()]
@@ -82,25 +104,48 @@ def main():
     # If only plotting is requested, auto-find logs dir and plot, then exit
     if args.plot_latest_csvs:
         config = Config()
-        latest_logs_dir = find_latest_logs_dir_with_csvs(config.LOGS_DIR)
-        if not latest_logs_dir:
-            print(f"No logs directory with both CSVs found under '{config.LOGS_DIR}'.")
+        # Aggregate across all versions under the run's logs root
+        run_name = get_run_name(config)
+        run_logs_root = os.path.join(config.LOGS_DIR, run_name)
+        version_dirs = find_version_dirs_with_csvs(run_logs_root)
+        if not version_dirs:
+            # fallback to legacy behavior of searching entire logs root
+            latest_logs_dir = find_latest_logs_dir_with_csvs(config.LOGS_DIR)
+            if not latest_logs_dir:
+                print(f"No logs directory with both CSVs found under '{config.LOGS_DIR}'.")
+                return
+            rewards_csv = os.path.join(latest_logs_dir, "all_episode_rewards.csv")
+            losses_csv = os.path.join(latest_logs_dir, "all_policy_losses.csv")
+            if not (os.path.exists(rewards_csv) and os.path.exists(losses_csv)):
+                print(f"Missing CSVs in '{latest_logs_dir}'. Expected both rewards and losses CSVs.")
+                return
+            print(f"Auto-found logs directory: {latest_logs_dir}")
+            episode_rewards = _load_floats_from_csv(rewards_csv)
+            policy_losses = _load_floats_from_csv(losses_csv)
+            print("Generating plots from discovered CSVs...")
+            plot_training_results(episode_rewards, policy_losses, latest_logs_dir, prefix="manual_")
+            print("Finished plotting from CSVs. Exiting.")
             return
 
-        rewards_csv = os.path.join(latest_logs_dir, "all_episode_rewards.csv")
-        losses_csv = os.path.join(latest_logs_dir, "all_policy_losses.csv")
+        # Concatenate data from all versions in order
+        all_rewards, all_losses = [], []
+        for vnum, vdir in version_dirs:
+            rewards_csv = os.path.join(vdir, "all_episode_rewards.csv")
+            losses_csv = os.path.join(vdir, "all_policy_losses.csv")
+            try:
+                all_rewards.extend(_load_floats_from_csv(rewards_csv))
+            except Exception:
+                pass
+            try:
+                all_losses.extend(_load_floats_from_csv(losses_csv))
+            except Exception:
+                pass
 
-        if not (os.path.exists(rewards_csv) and os.path.exists(losses_csv)):
-            print(f"Missing CSVs in '{latest_logs_dir}'. Expected both rewards and losses CSVs.")
-            return
-
-        print(f"Auto-found logs directory: {latest_logs_dir}")
-        episode_rewards = _load_floats_from_csv(rewards_csv)
-        policy_losses = _load_floats_from_csv(losses_csv)
-
-        print("Generating plots from discovered CSVs...")
-        plot_training_results(episode_rewards, policy_losses, latest_logs_dir, prefix="manual_")
-        print("Finished plotting from CSVs. Exiting.")
+        # Save aggregate plots in the run root logs dir
+        print("Auto-found run logs root:", run_logs_root)
+        print("Generating aggregated plots from all versions...")
+        plot_training_results(all_rewards, all_losses, run_logs_root, prefix="manual_aggregate_")
+        print("Finished plotting aggregated CSVs. Exiting.")
         return
 
     # 1. Load Configuration
@@ -146,6 +191,20 @@ def main():
             if os.path.exists(losses_data_path):
                 with open(losses_data_path, 'r') as f:
                     agent.all_policy_losses = [float(line.strip()) for line in f]
+
+            # Try to resume optimizer and value network if available
+            optimizer_path_guess = os.path.join(os.path.dirname(latest_checkpoint), f"optimizer_episode_{start_episode-1}.pt")
+            value_path_guess = os.path.join(os.path.dirname(latest_checkpoint), f"value_episode_{start_episode-1}.pth")
+            if os.path.exists(optimizer_path_guess):
+                try:
+                    agent.load_optimizer(optimizer_path_guess)
+                except Exception as e:
+                    print(f"Warning: failed to load optimizer from {optimizer_path_guess}: {e}")
+            if os.path.exists(value_path_guess):
+                try:
+                    agent.load_value_network(value_path_guess)
+                except Exception as e:
+                    print(f"Warning: failed to load value network from {value_path_guess}: {e}")
 
         else:
             print("\nNo checkpoint found. Starting a new training run.")

@@ -193,7 +193,7 @@ class Config:
 
     # --- Reinforcement Learning Parameters ---
     RESUME_TRAINING = True # Set to True to resume from the latest checkpoint
-    TOTAL_EPISODES = 200000
+    TOTAL_EPISODES = 1_000_000
     LEARNING_RATE = 0.0005
     DISCOUNT_FACTOR = 0.99 # Gamma
     # Variance reduction + exploration
@@ -405,7 +405,7 @@ class Config:
 
     # --- Simulation and Evaluation Parameters ---
     # MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v1/checkpoint_episode_30000.pth") # <-- CHANGE THIS FILENAME
-    MODEL_PATH_TO_LOAD = os.path.join('models/10_teams_pos_10/v2/checkpoint_episode_200000.pth') # <-- CHANGE THIS FILENAME
+    MODEL_PATH_TO_LOAD = os.path.join('models/10_teams_pos_10/v1/checkpoint_episode_60000.pth') # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters
