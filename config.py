@@ -405,7 +405,7 @@ class Config:
 
     # --- Simulation and Evaluation Parameters ---
     # MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v1/checkpoint_episode_30000.pth") # <-- CHANGE THIS FILENAME
-    MODEL_PATH_TO_LOAD = os.path.join('models/10_teams_pos_10/v1/checkpoint_episode_60000.pth') # <-- CHANGE THIS FILENAME
+    MODEL_PATH_TO_LOAD = os.path.join('models/10_teams_pos_10/v6/checkpoint_episode_296000.pth') # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters

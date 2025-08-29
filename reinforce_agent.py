@@ -135,6 +135,9 @@ class ReinforceAgent:
 
         # Track a per-episode loss value to keep losses aligned with episodes
         last_loss_per_episode = float('nan')
+        # Track last computed optimization metrics for periodic logging even when no update this episode
+        last_total_loss_value = float('nan')
+        last_explained_variance = float('nan')
 
         try:
             for episode in range(start_episode, self.config.TOTAL_EPISODES + 1):
@@ -224,6 +227,9 @@ class ReinforceAgent:
                             explained_variance = ev.item()
                         else:
                             explained_variance = 0.0
+                    # Store for logging even in future episodes without updates
+                    last_total_loss_value = float(total_loss.item())
+                    last_explained_variance = float(explained_variance)
 
                     # Reset batch
                     batch_states.clear()
@@ -270,12 +276,16 @@ class ReinforceAgent:
                 if episode % 1000 == 0:
                     self.save_checkpoint(run_version_dir, logs_dir, episode, all_episode_rewards, all_policy_losses)
 
-                if episode % 100 == 0 and did_update:
+                # Print periodic progress regardless of whether an update happened this episode.
+                # Uses last known loss/EV from the most recent optimization step.
+                if episode % 100 == 0:
+                    loss_for_log = last_total_loss_value
+                    ev_for_log = last_explained_variance
                     print(
                         f"Episode {episode}/{self.config.TOTAL_EPISODES} | "
                         f"Total Reward (Weighted): {total_episode_reward:.2f} | "
-                        f"Loss (total): {total_loss.item():.4f} | "
-                        f"EV(Value): {explained_variance:.3f} | "
+                        f"Loss (total): {loss_for_log if not np.isnan(loss_for_log) else float('nan'):.4f} | "
+                        f"EV(Value): {ev_for_log if not np.isnan(ev_for_log) else float('nan'):.3f} | "
                         f"Agent Roster Size: {len(self.env.teams_rosters[self.env.agent_team_id]['PLAYERS'])} "
                         f"| Actual Final Score (Unweighted): {actual_final_projected_points:.2f}"
                     )
