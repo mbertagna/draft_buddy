@@ -5,6 +5,8 @@ from datetime import datetime
 
 def get_run_name(config):
     """Generates a descriptive name for the training run based on config."""
+    if getattr(config, 'RANDOMIZE_AGENT_START_POSITION', False):
+        return f"{config.NUM_TEAMS}_teams_random_start"
     return f"{config.NUM_TEAMS}_teams_pos_{config.AGENT_START_POSITION}"
 
 def get_next_version(run_dir):
@@ -49,34 +51,24 @@ def save_run_metadata(config, run_name, version, run_version_dir):
     print(f"Run metadata saved to {metadata_path}")
 
 def find_latest_checkpoint(config):
-    """Finds the latest model checkpoint from the previous version of a run."""
+    """
+    Finds the latest model checkpoint across all versions for the current run name.
+    """
     run_name = get_run_name(config)
     base_run_dir = os.path.join(config.MODELS_DIR, run_name)
-
+    
     if not os.path.exists(base_run_dir):
         return None
 
-    existing_versions = [d for d in os.listdir(base_run_dir) if os.path.isdir(os.path.join(base_run_dir, d)) and d.startswith('v')]
-    if not existing_versions:
-        return None
-
-    version_nums = [int(v.replace('v', '')) for v in existing_versions]
-    if not version_nums or max(version_nums) < 2:
-        # Cannot resume if there's no version before the current one.
-        return None
-
-    # The current version is the max, so the previous version is max - 1.
-    previous_version_num = max(version_nums) - 1
-    previous_version_dir = os.path.join(base_run_dir, f"v{previous_version_num}")
-
-    if not os.path.exists(previous_version_dir):
-        return None
-
-    # Look specifically for checkpoint files.
-    checkpoints = glob.glob(os.path.join(previous_version_dir, 'checkpoint_episode_*.pth'))
+    # Search for all checkpoint files in all version subdirectories
+    # Use glob with ** to search recursively, with recursive=True
+    checkpoints = glob.glob(os.path.join(base_run_dir, '**', 'checkpoint_episode_*.pth'), recursive=True)
+    
     if not checkpoints:
+        print(f"No checkpoint files found for run '{run_name}'.")
         return None
-
+    
     # Return the path to the most recently modified checkpoint file.
     latest_checkpoint = max(checkpoints, key=os.path.getmtime)
+    print(f"Found latest checkpoint: {latest_checkpoint}")
     return latest_checkpoint

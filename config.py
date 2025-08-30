@@ -18,26 +18,30 @@ class Config:
     os.makedirs(LOGS_DIR, exist_ok=True)
 
     # --- Draft Environment Parameters ---
-    NUM_TEAMS = 10
-    AGENT_START_POSITION = 10 # Our agent's pick order (1-indexed) - used for RL training
+    NUM_TEAMS = 12
+    AGENT_START_POSITION = 12 # Our agent's pick order (1-indexed) - used for RL training
+    # Master switch: randomize the agent's start slot during training episodes
+    RANDOMIZE_AGENT_START_POSITION = True
     MANUAL_DRAFT_TEAMS = [
-                        # 1, 
-                        # 2, 
-                        # 3, 
-                        # 4, 
-                        # 5, 
-                        # 6, 
-                        # 7, 
-                        # 8, 
-                        # 9, 
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
                         10,
+                        11,
+                        12,
                         ] # List of team IDs (1-indexed) that will be controlled manually by the user
     ROSTER_STRUCTURE = {
         'QB': 1,
         'RB': 2,
         'WR': 2,
         'TE': 1,
-        'FLEX': 3, # FLEX can be RB, WR, or TE
+        'FLEX': 2, # FLEX can be RB, WR, or TE; 2 FLEX yields 8 starters
     }
     BENCH_MAXES = {
         'QB': 1, # Max QBs on bench
@@ -45,7 +49,7 @@ class Config:
         'WR': 3, # Max WRs on bench
         'TE': 2, # Max TEs on bench
     }
-    TOTAL_BENCH_SIZE = 7 # The total number of players allowed on the bench
+    TOTAL_BENCH_SIZE = 7 # 8 starters + 7 bench = 15 total roster size
     # These base values are now used only for agent's own settings, or as default if not overridden for opponents
     COMPETING_TEAM_LOGIC = 'HEURISTIC' # Options: 'ADP', 'HEURISTIC'
     COMPETING_TEAM_RANDOMNESS_FACTOR = 0.2 # Probability (0.0 to 1.0) of making a suboptimal pick
@@ -177,7 +181,9 @@ class Config:
         7: "Jake D'Alonzo",
         8: 'Scott Sheehan',
         9: 'Noah Hollander',
-        10: 'Michael Bertagna'
+        10: 'Michael Bertagna',
+        11: 'Manager 11',
+        12: 'Manager 12',
     }
 
 
@@ -414,6 +420,10 @@ class Config:
 
     # --- Season Simulation Reward Parameters ---
     ENABLE_SEASON_SIM_REWARD = True
+    # Use randomly generated regular-season matchups instead of fixed CSV
+    USE_RANDOM_MATCHUPS = True
+    # Number of regular-season weeks to generate when using random matchups
+    NUM_REGULAR_SEASON_WEEKS = 14
     # Regular season seeding reward configuration
     # Modes:
     #   - 'LINEAR': interpolate between SEED_REWARD_MAX (seed 1) and SEED_REWARD_MIN (last seed)

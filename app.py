@@ -297,8 +297,20 @@ def simulate_season():
             continue
         rosters[manager_name] = [p.player_id for p in roster_data['PLAYERS']]
 
-    # Load matchups
-    matchups_path = os.path.join(config.DATA_DIR, 'red_league_matchups_2025.csv')
+    # Load matchups: prefer size-specific file when available
+    default_matchups_filename = 'red_league_matchups_2025.csv'
+    size_specific_filename = f"red_league_matchups_2025_{config.NUM_TEAMS}_team.csv"
+    candidates = [
+        os.path.join(config.DATA_DIR, size_specific_filename),
+        os.path.join(config.DATA_DIR, default_matchups_filename),
+    ]
+    matchups_path = None
+    for p in candidates:
+        if os.path.exists(p):
+            matchups_path = p
+            break
+    if matchups_path is None:
+        matchups_path = os.path.join(config.DATA_DIR, default_matchups_filename)
     try:
         matchups_df = pd.read_csv(matchups_path)
     except FileNotFoundError:
@@ -310,8 +322,9 @@ def simulate_season():
         wtw_dict = {p.player_id: {'pts': [p.projected_points] * 18, 'pos': p.position} for p in draft_env.all_players_data}
 
     try:
+        num_playoff_teams = int(getattr(config, 'REGULAR_SEASON_REWARD', {}).get('NUM_PLAYOFF_TEAMS', 6))
         regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season_fast(
-            wtw_dict, matchups_df, rosters, 2025, '', False
+            wtw_dict, matchups_df, rosters, 2025, '', False, num_playoff_teams
         )
     except Exception as e:
         return jsonify({'error': f'Season simulation failed: {e}'}), 500

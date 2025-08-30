@@ -12,7 +12,7 @@ from config import Config
 from data_utils import load_player_data, Player
 from policy_network import PolicyNetwork # Import PolicyNetwork
 import json
-from utils.season_simulation_fast import simulate_season_fast
+from utils.season_simulation_fast import simulate_season_fast, generate_round_robin_schedule
 import pandas as pd
 
 class FantasyFootballDraftEnv(gym.Env):
@@ -67,7 +67,7 @@ class FantasyFootballDraftEnv(gym.Env):
             "available_roster_slots_flex": lambda: self.config.ROSTER_STRUCTURE['FLEX'] - self.teams_rosters[self.agent_team_id]['FLEX'], # Simplified flex calculation
             # Draft Progression Context
             "current_pick_number": lambda: self.current_pick_number,
-            "agent_start_position": lambda: self.config.AGENT_START_POSITION,
+            "agent_start_position": lambda: self.agent_team_id,
             # New features
             "second_best_available_qb_points": lambda: self._get_kth_best_available_player_by_pos('QB', 2).projected_points if self._get_kth_best_available_player_by_pos('QB', 2) else 0,
             "second_best_available_rb_points": lambda: self._get_kth_best_available_player_by_pos('RB', 2).projected_points if self._get_kth_best_available_player_by_pos('RB', 2) else 0,
@@ -132,7 +132,7 @@ class FantasyFootballDraftEnv(gym.Env):
         self.draft_order = [] # List of team_id in draft order for current episode
         self.current_pick_idx = 0 # Index in self.draft_order
         self.current_pick_number = 0 # Global pick number (1-indexed)
-        self.agent_team_id = self.config.AGENT_START_POSITION # Agent's unique ID (matches its start position)
+        self.agent_team_id = self.config.AGENT_START_POSITION # Default; may be randomized during reset in training
         self._draft_history = [] # Stores (player_id, team_id, previous_state_info) for undo functionality
         self._overridden_team_id = None # Stores team ID for a single-pick override
         self._previous_pick_state = [] # Stores (current_pick_idx, current_pick_number, overridden_team_id) before each pick
@@ -149,13 +149,32 @@ class FantasyFootballDraftEnv(gym.Env):
         self._load_agent_model()
 
         # --- Season Simulation Data ---
-        matchups_path = os.path.join(self.config.DATA_DIR, 'red_league_matchups_2025.csv')
-        try:
-            self.matchups_df = pd.read_csv(matchups_path)
-        except FileNotFoundError:
-            self.matchups_df = pd.DataFrame() # Initialize as empty DataFrame if not found
-            if self.config.ENABLE_SEASON_SIM_REWARD:
-                print(f"Warning: ENABLE_SEASON_SIM_REWARD is True, but matchups file not found at {matchups_path}. Season sim rewards will be disabled.")
+        if getattr(self.config, 'USE_RANDOM_MATCHUPS', False):
+            manager_names = [self.config.TEAM_MANAGER_MAPPING.get(tid) for tid in range(1, self.config.NUM_TEAMS + 1)]
+            manager_names = [m for m in manager_names if m]
+            num_weeks = int(getattr(self.config, 'NUM_REGULAR_SEASON_WEEKS', 14))
+            self.matchups_df = generate_round_robin_schedule(manager_names, num_weeks)
+        else:
+            # Choose matchup file based on league size; prefer size-specific file when configured
+            default_matchups_filename = 'red_league_matchups_2025.csv'
+            size_specific_filename = f"red_league_matchups_2025_{self.config.NUM_TEAMS}_team.csv"
+            candidate_paths = [
+                os.path.join(self.config.DATA_DIR, size_specific_filename),
+                os.path.join(self.config.DATA_DIR, default_matchups_filename),
+            ]
+            matchups_path = None
+            for path in candidate_paths:
+                if os.path.exists(path):
+                    matchups_path = path
+                    break
+            if matchups_path is None:
+                matchups_path = os.path.join(self.config.DATA_DIR, default_matchups_filename)
+            try:
+                self.matchups_df = pd.read_csv(matchups_path)
+            except FileNotFoundError:
+                self.matchups_df = pd.DataFrame() # Initialize as empty DataFrame if not found
+                if self.config.ENABLE_SEASON_SIM_REWARD:
+                    print(f"Warning: ENABLE_SEASON_SIM_REWARD is True, but matchups file not found at {matchups_path}. Season sim rewards will be disabled.")
         
         self.wtw_dict = self._create_wtw_points_dict()
 
@@ -572,6 +591,13 @@ class FantasyFootballDraftEnv(gym.Env):
         self._overridden_team_id = None # Clear any override on reset
         self._invalidate_sorted_available_cache()
 
+        # Randomize agent start position in training if enabled
+        if getattr(self.config, 'RANDOMIZE_AGENT_START_POSITION', False) and self.training:
+            import random as _rnd
+            self.agent_team_id = _rnd.randint(1, self.config.NUM_TEAMS)
+        else:
+            self.agent_team_id = self.config.AGENT_START_POSITION
+
         # Generate draft order (snake draft)
         self.draft_order = self._generate_snake_draft_order(self.config.NUM_TEAMS, self.total_roster_size_per_team)
 
@@ -824,8 +850,10 @@ class FantasyFootballDraftEnv(gym.Env):
                 sim_rosters = {self.config.TEAM_MANAGER_MAPPING.get(tid): [p.player_id for p in r['PLAYERS']] for tid, r in self.teams_rosters.items() if self.config.TEAM_MANAGER_MAPPING.get(tid)}
                 
                 try:
+                    # Pass dynamic number of playoff teams
+                    num_playoff_teams = int(getattr(self.config, 'REGULAR_SEASON_REWARD', {}).get('NUM_PLAYOFF_TEAMS', 6))
                     regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season_fast(
-                        self.wtw_dict, self.matchups_df, sim_rosters, 2025, "", False
+                        self.wtw_dict, self.matchups_df, sim_rosters, 2025, "", False, num_playoff_teams
                     )
                     sim_reward = 0.0
                     agent_manager_name = self.config.TEAM_MANAGER_MAPPING.get(self.agent_team_id)

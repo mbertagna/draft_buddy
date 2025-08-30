@@ -1,11 +1,13 @@
 import datetime
+import os
 import pandas as pd
 import tqdm
 import numpy as np
 
 from config import Config
 from fantasy_draft_env import FantasyFootballDraftEnv
-from utils import player_data_utils, season_simulation_utils
+from utils import player_data_utils
+from utils.season_simulation_fast import simulate_season_fast
 
 def run_full_season_simulation(config: Config, num_simulations: int):
     """
@@ -54,24 +56,30 @@ def run_full_season_simulation(config: Config, num_simulations: int):
 
     # --- Matchup Data ---
     print("Loading matchup data...")
+    # Prefer size-specific matchup file if available
+    default_matchups_filename = 'red_league_matchups_2025.csv'
+    size_specific_filename = f"red_league_matchups_2025_{config.NUM_TEAMS}_team.csv"
+    candidates = [f"data/{size_specific_filename}", f"data/{default_matchups_filename}"]
+    matchups_path = None
+    for p in candidates:
+        if os.path.exists(p):
+            matchups_path = p
+            break
+    if matchups_path is None:
+        matchups_path = f"data/{default_matchups_filename}"
     try:
-        matchups_df = pd.read_csv('data/red_league_matchups_2025.csv')
+        matchups_df = pd.read_csv(matchups_path)
         # Basic preprocessing, this can be improved
-        matchups_df = matchups_df.rename(columns={'Away Manager(s)': 'Away Team Manager(s)', 'Home Manager(s)': 'Home Team Manager(s)'})
-        matchups_df['Away Team Manager(s)'] = matchups_df['Away Team Manager(s)'].apply(lambda x: x.split(' ')[0].lower())
-        matchups_df['Home Team Manager(s)'] = matchups_df['Home Team Manager(s)'].apply(lambda x: x.split(' ')[0].lower())
         matchups_df = matchups_df.loc[matchups_df['Week'] < 15]
     except FileNotFoundError:
-        print("ERROR: 'data/red_league_matchups_2025.csv' not found.")
+        print(f"ERROR: Matchups file not found at {matchups_path}.")
         return
 
-    draft_order_2024 = [
-        'michael', 'paul', 'ryan', 'val', 'shane', 'noah', 'jake', 'scott', 'sean', 'lucas'
-    ]
-    draft_order_dict = {i + 1: name for i, name in enumerate(draft_order_2024)}
+    # Use manager mapping from config for flexible team sizes
+    draft_order_dict = config.TEAM_MANAGER_MAPPING
 
     # --- Simulation Loop ---
-    win_dict = {name: 0 for name in draft_order_2024}
+    win_dict = {name: 0 for name in draft_order_dict.values()}
     draft_env = FantasyFootballDraftEnv(config)
 
     for _ in tqdm.tqdm(range(num_simulations)):
@@ -108,16 +116,19 @@ def run_full_season_simulation(config: Config, num_simulations: int):
         # 2. Prepare rosters for season simulation
         rosters = {}
         for team_id, data in draft_env.teams_rosters.items():
-            rosters[draft_order_dict[team_id]] = [p.player_id for p in data['PLAYERS']]
+            manager_name = draft_order_dict.get(team_id)
+            if manager_name:
+                rosters[manager_name] = [p.player_id for p in data['PLAYERS']]
 
         # 3. Simulate the season
-        _, _, _, _, winner = season_simulation_utils.simulate_season(
+        _, _, _, _, winner = simulate_season_fast(
             wtw_pts_dict,
             matchups_df.copy(deep=True), # Use a copy to avoid modification issues
             rosters,
             season,
             output_file_prefix=f'./simulated_data/sim_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}',
-            save_data=False # Disable saving for now
+            save_data=False, # Disable saving for now
+            num_playoff_teams=int(getattr(config, 'REGULAR_SEASON_REWARD', {}).get('NUM_PLAYOFF_TEAMS', 6))
         )
         if winner:
             win_dict[winner] += 1
