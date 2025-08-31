@@ -82,6 +82,7 @@ def get_draft_state():
         'roster_structure': draft_env.config.ROSTER_STRUCTURE,
         'team_is_full': team_is_full,
         'team_points_summary': team_points_summary,
+        'num_teams': draft_env.config.NUM_TEAMS,
         'team_bye_weeks': { 
             team_id: {
                 week: {pos: int(count) for pos, count in zip(*np.unique([p.position for p in roster_data['PLAYERS'] if p.bye_week == week], return_counts=True))}

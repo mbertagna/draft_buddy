@@ -76,6 +76,7 @@ class ReinforceAgent:
         """
         all_episode_rewards = []
         all_policy_losses = []
+        all_episode_actual_points = []
 
         # Prepare log file paths
         rewards_data_path = os.path.join(logs_dir, 'all_episode_rewards.csv') if logs_dir else None
@@ -88,17 +89,8 @@ class ReinforceAgent:
                     with open(path, 'w') as _f:
                         _f.write("")
 
-        def _append_value_to_csv(path: str, value: float):
-            if not path:
-                return
-            try:
-                with open(path, 'a') as f:
-                    f.write(f"{value}\n")
-                    f.flush()
-                    os.fsync(f.fileno())
-            except Exception:
-                # As a fallback, try to rewrite the entire file atomically
-                self._write_list_to_csv_atomic(path, all_episode_rewards if 'rewards' in path else all_policy_losses)
+        # Saving interval (episodes)
+        interval = getattr(self.config, 'LOG_SAVE_INTERVAL_EPISODES', 128)
 
         # Flag to support graceful shutdown on signals
         stop_requested = {'value': False}
@@ -241,19 +233,9 @@ class ReinforceAgent:
 
                 # --- 4. Logging and Reporting ---
                 all_episode_rewards.append(total_episode_reward)
-                _append_value_to_csv(rewards_data_path, total_episode_reward)
 
                 # Keep losses list aligned per episode using last known per-episode loss
                 all_policy_losses.append(last_loss_per_episode)
-                # Persist the placeholder for this episode's loss (may be corrected below)
-                if losses_data_path is not None:
-                    try:
-                        with open(losses_data_path, 'a') as f:
-                            f.write(f"{last_loss_per_episode}\n")
-                            f.flush()
-                            os.fsync(f.fileno())
-                    except Exception:
-                        pass
 
                 # If we updated this episode, distribute the batch loss across the last N episodes
                 if did_update:
@@ -262,32 +244,37 @@ class ReinforceAgent:
                     last_loss_per_episode = loss_per_episode_value
                     # Overwrite last N entries with the new value
                     all_policy_losses[-num_episodes_to_update:] = [loss_per_episode_value] * num_episodes_to_update
-                    # Snapshot the losses CSV atomically so values are corrected
-                    try:
-                        self._write_list_to_csv_atomic(losses_data_path, all_policy_losses)
-                    except Exception:
-                        pass
 
                 # Calculate actual (unweighted) final projected points for logging clarity
                 actual_final_projected_points = sum(
                     p.projected_points for p in self.env.teams_rosters[self.env.agent_team_id]['PLAYERS']
                 )
+                all_episode_actual_points.append(actual_final_projected_points)
 
-                if episode % 1000 == 0:
+                if episode % interval == 0:
                     self.save_checkpoint(run_version_dir, logs_dir, episode, all_episode_rewards, all_policy_losses)
 
-                # Print periodic progress regardless of whether an update happened this episode.
-                # Uses last known loss/EV from the most recent optimization step.
-                if episode % 100 == 0:
+                # Print periodic progress aligned with checkpoint/log interval
+                # Includes averages over last interval and lifetime
+                if episode % interval == 0:
+                    recent_n = min(len(all_episode_rewards), interval)
+                    avg_recent_reward = float(np.mean(all_episode_rewards[-recent_n:])) if recent_n > 0 else float('nan')
+                    avg_lifetime_reward = float(np.mean(all_episode_rewards)) if all_episode_rewards else float('nan')
+
+                    recent_pts_n = min(len(all_episode_actual_points), interval)
+                    avg_recent_points = float(np.mean(all_episode_actual_points[-recent_pts_n:])) if recent_pts_n > 0 else float('nan')
+                    avg_lifetime_points = float(np.mean(all_episode_actual_points)) if all_episode_actual_points else float('nan')
+
                     loss_for_log = last_total_loss_value
                     ev_for_log = last_explained_variance
                     print(
-                        f"Episode {episode}/{self.config.TOTAL_EPISODES} | "
-                        f"Total Reward (Weighted): {total_episode_reward:.2f} | "
-                        f"Loss (total): {loss_for_log if not np.isnan(loss_for_log) else float('nan'):.4f} | "
-                        f"EV(Value): {ev_for_log if not np.isnan(ev_for_log) else float('nan'):.3f} | "
-                        f"Agent Roster Size: {len(self.env.teams_rosters[self.env.agent_team_id]['PLAYERS'])} "
-                        f"| Actual Final Score (Unweighted): {actual_final_projected_points:.2f}"
+                        f"[Episode {episode}/{self.config.TOTAL_EPISODES}] "
+                        f"avg_reward(last {recent_n})={avg_recent_reward:.2f} | "
+                        f"avg_reward(lifetime)={avg_lifetime_reward:.2f} | "
+                        f"avg_points(last {recent_pts_n})={avg_recent_points:.2f} | "
+                        f"avg_points(lifetime)={avg_lifetime_points:.2f} | "
+                        f"loss={loss_for_log if not np.isnan(loss_for_log) else float('nan'):.4f} | "
+                        f"EV={ev_for_log if not np.isnan(ev_for_log) else float('nan'):.3f}"
                     )
 
                 # If a stop was requested (e.g., Ctrl+C), finish after saving this episode

@@ -906,8 +906,8 @@
             teamButtonsDiv.innerHTML = '';
             const snakePickTeam = state.draft_order[state.current_pick_number - 1];
             const teamOnClock = state.current_team_picking;
-
-            for (let i = 1; i <= 10; i++) {
+            const numTeams = Number(state.num_teams) || Object.keys(state.team_rosters || {}).length || 10;
+            for (let i = 1; i <= numTeams; i++) {
                 const button = document.createElement('button');
                 button.innerText = `Team ${i}`;
                 button.classList.add('team-button');
@@ -935,7 +935,7 @@
             let rostersHTML = '<h3>Team Rosters</h3>';
             // --- Summary section: total players and points per team ---
             let summaryHTML = '<div class="team-summary"><div class="team-summary-grid">';
-            for (let i = 1; i <= 10; i++) {
+            for (let i = 1; i <= numTeams; i++) {
                 const teamId = i;
                 const roster = state.team_rosters[teamId];
                 const totalProjectedPoints = state.team_projected_points[teamId] || 0;
@@ -956,7 +956,7 @@
             }
             summaryHTML += '</div></div>';
             rostersHTML += summaryHTML;
-            for (let i = 1; i <= 10; i++) {
+            for (let i = 1; i <= numTeams; i++) {
                 const teamId = i;
                 const roster = state.team_rosters[teamId];
                 const totalProjectedPoints = state.team_projected_points[teamId] || 0;

@@ -171,3 +171,4 @@ saved_states/
 saved_models/
 lighten_colors.py
 lighter_team_colors.js
+data/*.csv

@@ -23,18 +23,18 @@ class Config:
     # Master switch: randomize the agent's start slot during training episodes
     RANDOMIZE_AGENT_START_POSITION = True
     MANUAL_DRAFT_TEAMS = [
-                        1,
-                        2,
-                        3,
-                        4,
-                        5,
-                        6,
-                        7,
-                        8,
-                        9,
-                        10,
-                        11,
-                        12,
+                        # 1,
+                        # 2,
+                        # 3,
+                        # 4,
+                        # 5,
+                        # 6,
+                        # 7,
+                        # 8,
+                        # 9,
+                        # 10,
+                        # 11,
+                        # 12,
                         ] # List of team IDs (1-indexed) that will be controlled manually by the user
     ROSTER_STRUCTURE = {
         'QB': 1,
@@ -210,6 +210,10 @@ class Config:
     BATCH_EPISODES = 16
     GRAD_CLIP_NORM = 0.5
     VALUE_LR_MULTIPLIER = 2.0
+
+    # --- Logging/Checkpointing ---
+    # Save logs and checkpoints every N episodes to reduce per-episode overhead
+    LOG_SAVE_INTERVAL_EPISODES = 128
 
     # --- State Space Parameters ---
     ALL_STATE_FEATURES = [
@@ -411,7 +415,7 @@ class Config:
 
     # --- Simulation and Evaluation Parameters ---
     # MODEL_PATH_TO_LOAD = os.path.join(MODELS_DIR, "10_teams_pos_10/v1/checkpoint_episode_30000.pth") # <-- CHANGE THIS FILENAME
-    MODEL_PATH_TO_LOAD = os.path.join('models/10_teams_pos_10/v6/checkpoint_episode_296000.pth') # <-- CHANGE THIS FILENAME
+    MODEL_PATH_TO_LOAD = os.path.join('models/12_teams_random_start/v2/checkpoint_episode_125054.pth') # <-- CHANGE THIS FILENAME
     NUM_SIMULATION_RUNS = 10
 
     # New: Competitive Reward Parameters
