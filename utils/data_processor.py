@@ -7,6 +7,8 @@ import unicodedata
 from fuzzywuzzy import process, fuzz
 from io import StringIO
 
+from utils.scoring_utils import ScoringEngine
+
 # Default scoring rules, can be overridden during class initialization
 DEFAULT_SCORING_RULES = {
     "passing_yards": 0.04,
@@ -144,26 +146,23 @@ class FantasyDataProcessor:
         return merged_df.reset_index(drop=True)
 
     def _apply_fantasy_scoring(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Applies the configured fantasy scoring rules to the DataFrame.
-        """
-        # Create composite stats needed for scoring
-        df['passing_yards_300_399_game'] = df['passing_yards'].between(300, 399).astype(int)
-        df['passing_yards_400_plus_game'] = (df['passing_yards'] >= 400).astype(int)
-        df['receiving_yards_100_199_game'] = df['receiving_yards'].between(100, 199).astype(int)
-        df['receiving_yards_200_plus_game'] = (df['receiving_yards'] >= 200).astype(int)
-        df['rushing_yards_100_199_game'] = df['rushing_yards'].between(100, 199).astype(int)
-        df['rushing_yards_200_plus_game'] = (df['rushing_yards'] >= 200).astype(int)
-        df['total_fumbles_lost'] = df['sack_fumbles_lost'] + df['rushing_fumbles_lost'] + df['receiving_fumbles_lost']
-        df['fg_made_0_39'] = df['fg_made_0_19'] + df['fg_made_20_29'] + df['fg_made_30_39']
+        if df is None:
+            return pd.DataFrame({"total_pts": pd.Series(dtype=float)})
+        if df.empty:
+            out = df.copy()
+            if 'total_pts' not in out.columns:
+                out['total_pts'] = pd.Series(dtype=float)
+            return out
 
-        # Calculate total points
-        df['total_pts'] = 0
-        for stat, points in self.scoring_rules.items():
-            if stat in df.columns:
-                df['total_pts'] += df[stat].fillna(0) * points
-        
-        return df
+        prepared = ScoringEngine.prepare_offense_kicking_features(df)
+        scored = ScoringEngine.apply_scoring(prepared, self.scoring_rules)
+        # Ensure 'total_pts' exists, is numeric, and NaN-free
+        if 'total_pts' not in scored.columns:
+            scored['total_pts'] = 0.0
+        else:
+            scored['total_pts'] = pd.to_numeric(scored['total_pts'], errors='coerce').fillna(0.0)
+        print(f"Scored: {scored['total_pts']}")
+        return scored
 
     def _calculate_games_played_frac(self, historical_df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -399,9 +398,28 @@ class FantasyDataProcessor:
         agg_func = 'median' if measure_of_center == 'median' else 'mean'
         legacy_stats_df = historical_df.groupby('player_id').agg(total_pts=('total_pts', agg_func)).reset_index()
 
+        print(f"Legacy stats df: {legacy_stats_df['total_pts']}")
+
         # Calculate games_played_frac and merge it
         fraction_df = self._calculate_games_played_frac(historical_df)
         legacy_stats_df = legacy_stats_df.merge(fraction_df, on='player_id', how='left')
+
+        # Attach latest known metadata (name/position/team) for legacy players to enable name-based merging
+        try:
+            legacy_meta = (
+                historical_df.sort_values('season')
+                .groupby('player_id')
+                .agg(
+                    player_display_name=('player_display_name', 'last'),
+                    position=('position', 'last'),
+                    recent_team=('recent_team', 'last'),
+                )
+                .reset_index()
+            )
+            legacy_stats_df = legacy_stats_df.merge(legacy_meta, on='player_id', how='left')
+        except Exception:
+            # If anything goes wrong, proceed without metadata (merge will be on id only where possible)
+            pass
 
         # Normalize legacy player_id to integer form (strip non-digits, drop empties)
         if 'player_id' in legacy_stats_df.columns:
@@ -419,7 +437,9 @@ class FantasyDataProcessor:
             roster_url = f'https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_{draft_year}.csv'
             draft_pool_df = self._download_data(f'roster_{draft_year}.csv', roster_url)
             draft_pool_df = draft_pool_df.rename(columns={'team': 'recent_team'})
-            draft_pool_df['player_id'] = draft_pool_df.index.astype(int)
+            # Preserve existing roster player_id if present; only fallback to index when missing
+            if 'player_id' not in draft_pool_df.columns:
+                draft_pool_df['player_id'] = draft_pool_df.index.astype(int)
             # Normalize roster player_id to integer form for consistent merging
             if 'player_id' in draft_pool_df.columns:
                 draft_pool_df['player_id'] = (
@@ -433,33 +453,63 @@ class FantasyDataProcessor:
             draft_pool_df['player_display_name'] = draft_pool_df['full_name']
             
             draft_pool_df = draft_pool_df[draft_pool_df['position'].isin(self.positions)]
-            draft_players_df = draft_pool_df.merge(legacy_stats_df, on='player_id', how='left')
+            # Merge roster to legacy by name+position to preserve veteran projections when ids differ
+            merge_keys_left = ['player_display_name', 'position']
+            merge_keys_right = ['player_display_name', 'position'] if all(k in legacy_stats_df.columns for k in ['player_display_name', 'position']) else ['player_id']
+            if merge_keys_right == ['player_id'] and 'player_id' not in draft_pool_df.columns:
+                # Fallback: no reliable join key; create empty cols and let all be treated as rookies later
+                draft_players_df = draft_pool_df.copy()
+                draft_players_df['player_id'] = pd.NA
+                draft_players_df['total_pts'] = pd.NA
+                draft_players_df['games_played_frac'] = pd.NA
+            else:
+                draft_players_df = draft_pool_df.merge(
+                    legacy_stats_df[['player_id', 'total_pts', 'games_played_frac'] + ([
+                        'player_display_name', 'position'] if set(['player_display_name','position']).issubset(legacy_stats_df.columns) else [])],
+                    left_on=merge_keys_left,
+                    right_on=merge_keys_right,
+                    how='left',
+                    suffixes=('_roster', '_legacy')
+                )
+                # Prefer legacy IDs for veterans; drop roster IDs if present
+                if 'player_id_legacy' in draft_players_df.columns:
+                    draft_players_df['player_id'] = pd.to_numeric(draft_players_df['player_id_legacy'], errors='coerce').astype('Int64')
+                elif 'player_id' in draft_players_df.columns:
+                    draft_players_df['player_id'] = pd.to_numeric(draft_players_df['player_id'], errors='coerce').astype('Int64')
+                # Clean up any suffixed id columns
+                for col in ['player_id_roster', 'player_id_legacy']:
+                    if col in draft_players_df.columns:
+                        draft_players_df.drop(columns=[col], inplace=True)
+            # Track original rookies (no legacy stats) for downstream logic (gpf fill, ID assignment)
+            draft_players_df['is_rookie_original'] = draft_players_df['total_pts'].isna()
 
             # Immediately assign new unique integer IDs to rookies (no legacy stats)
-            if 'player_id' in draft_players_df.columns:
-                rookie_mask_after_merge = draft_players_df['total_pts'].isna()
-                if rookie_mask_after_merge.any():
-                    # Determine the max existing legacy id to start sequencing
+            # Ensure column exists for id assignment
+            if 'player_id' not in draft_players_df.columns:
+                draft_players_df['player_id'] = pd.Series(pd.NA, index=draft_players_df.index, dtype='Int64')
+            rookie_mask_after_merge = draft_players_df['is_rookie_original']
+            if rookie_mask_after_merge.any():
+                # Determine the max existing legacy id to start sequencing
+                max_legacy_id = None
+                try:
+                    max_legacy_id = int(pd.to_numeric(legacy_stats_df['player_id'], errors='coerce').max())
+                except Exception:
                     max_legacy_id = None
-                    try:
-                        max_legacy_id = int(pd.to_numeric(legacy_stats_df['player_id'], errors='coerce').max())
-                    except Exception:
-                        max_legacy_id = None
-                    start_id = (max_legacy_id + 1) if max_legacy_id is not None and not pd.isna(max_legacy_id) else 1
-                    num_new = int(rookie_mask_after_merge.sum())
-                    if num_new > 0:
-                        new_ids = pd.Series(
-                            range(start_id, start_id + num_new),
-                            index=draft_players_df[rookie_mask_after_merge].index,
-                            dtype='Int64'
-                        )
-                        draft_players_df.loc[rookie_mask_after_merge, 'player_id'] = new_ids
+                start_id = (max_legacy_id + 1) if max_legacy_id is not None and not pd.isna(max_legacy_id) else 1
+                num_new = int(rookie_mask_after_merge.sum())
+                if num_new > 0:
+                    new_ids = pd.Series(
+                        range(start_id, start_id + num_new),
+                        index=draft_players_df[rookie_mask_after_merge].index,
+                        dtype='Int64'
+                    )
+                    draft_players_df.loc[rookie_mask_after_merge, 'player_id'] = new_ids
 
             # Ensure uniqueness by player_id to avoid downstream duplication (after ID assignment)
             if 'player_id' in draft_players_df.columns:
                 draft_players_df = draft_players_df.drop_duplicates(subset=['player_id'], keep='first')
-            veterans_df = draft_players_df[draft_players_df['total_pts'].notna()].copy()
-            rookies_df = draft_players_df[draft_players_df['total_pts'].isna()].copy()
+            veterans_df = draft_players_df[draft_players_df['is_rookie_original'] == False].copy()
+            rookies_df = draft_players_df[draft_players_df['is_rookie_original'] == True].copy()
             if not rookies_df.empty:
                 print(f"Estimating points for {len(rookies_df)} rookies using method='{self.rookie_projection_method}'...")
                 if self.rookie_projection_method == 'adp':
@@ -523,7 +573,10 @@ class FantasyDataProcessor:
         # For rookies (players without historical data), games_played_frac will be NaN.
         # Fill this with 'R' to signify they are a rookie.
         if 'games_played_frac' in draft_players_df.columns:
-            draft_players_df['games_played_frac'].fillna('R', inplace=True)
+            # Mark only original rookies with 'R'; preserve numeric fractions for veterans
+            if 'is_rookie_original' in draft_players_df.columns:
+                mask_rookie = draft_players_df['is_rookie_original'] == True
+                draft_players_df.loc[mask_rookie, 'games_played_frac'] = 'R'
 
         wtw_pts_dict = {}
         for _, row in draft_players_df.iterrows():
@@ -535,6 +588,10 @@ class FantasyDataProcessor:
                 wtw_pts_dict[player_id][week] = 0 if week == bye else avg_pts
 
         draft_players_df = draft_players_df.sort_values(by='total_pts', ascending=False).reset_index(drop=True)
+        # Drop helper column before selecting final columns
+        if 'is_rookie_original' in draft_players_df.columns:
+            draft_players_df.drop(columns=['is_rookie_original'], inplace=True)
+
         final_cols = [
             'player_id', 'player_display_name', 'position', 'recent_team', 
             'total_pts', 'games_played_frac', 'bye_week'
