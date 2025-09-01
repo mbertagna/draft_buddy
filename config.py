@@ -18,8 +18,10 @@ class Config:
     os.makedirs(LOGS_DIR, exist_ok=True)
 
     # --- Draft Environment Parameters ---
+    # NUM_TEAMS = 10
     NUM_TEAMS = 12
-    AGENT_START_POSITION = 12 # Our agent's pick order (1-indexed) - used for RL training
+    # AGENT_START_POSITION = 12 # Our agent's pick order (1-indexed) - used for RL training
+    AGENT_START_POSITION = 5 # Our agent's pick order (1-indexed) - used for RL training
     # Master switch: randomize the agent's start slot during training episodes
     RANDOMIZE_AGENT_START_POSITION = True
     MANUAL_DRAFT_TEAMS = [
@@ -36,6 +38,22 @@ class Config:
                         # 11,
                         # 12,
                         ] # List of team IDs (1-indexed) that will be controlled manually by the user
+
+    # ROSTER_STRUCTURE = {
+    #     'QB': 1,
+    #     'RB': 2,
+    #     'WR': 2,
+    #     'TE': 1,
+    #     'FLEX': 2, # FLEX can be RB, WR, or TE; 2 FLEX yields 8 starters
+    # }
+    # BENCH_MAXES = {
+    #     'QB': 1, # Max QBs on bench
+    #     'RB': 3, # Max RBs on bench
+    #     'WR': 3, # Max WRs on bench
+    #     'TE': 2, # Max TEs on bench
+    # }
+    # TOTAL_BENCH_SIZE = 7 # 8 starters + 7 bench = 15 total roster size
+
     ROSTER_STRUCTURE = {
         'QB': 1,
         'RB': 2,
@@ -49,7 +67,8 @@ class Config:
         'WR': 3, # Max WRs on bench
         'TE': 2, # Max TEs on bench
     }
-    TOTAL_BENCH_SIZE = 7 # 8 starters + 7 bench = 15 total roster size
+    TOTAL_BENCH_SIZE = 6 # 8 starters + 7 bench = 15 total roster size
+
     # These base values are now used only for agent's own settings, or as default if not overridden for opponents
     COMPETING_TEAM_LOGIC = 'HEURISTIC' # Options: 'ADP', 'HEURISTIC'
     COMPETING_TEAM_RANDOMNESS_FACTOR = 0.2 # Probability (0.0 to 1.0) of making a suboptimal pick

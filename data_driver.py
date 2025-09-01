@@ -84,25 +84,8 @@ def main(output_path, draft_year, rookie_projection_method):
                 for position_value, g in tmp.groupby('PosBase'):
                     r = g.sort_values(by=adp_col, ascending=False).iloc[0]
                     print(f"- {position_value}: {r['Player']} (Team: {r.get('Team', 'N/A')}, ADP: {r[adp_col]})")
-    # Clean existing player_ids and assign new ones for missing
-    def get_max_id(dfs):
-        max_id = 0
-        for df in dfs:
-            if 'player_id' in df.columns:
-                df['player_id'] = df['player_id'].str.replace(r'[^0-9]', '', regex=True)
-                df_max = df['player_id'].astype(float).max()
-                if pd.notna(df_max) and df_max > max_id:
-                    max_id = df_max
-        return int(max_id)
-
-    next_id = get_max_id([merged_df, unmatched_df, borderline_df]) + 1
-
-    # Assign new IDs to players missing them
-    for df in [merged_df, unmatched_df, borderline_df]:
-        if 'player_id' in df.columns:
-            missing_mask = df['player_id'].isna()
-            df.loc[missing_mask, 'player_id'] = [str(id).zfill(9) for id in range(next_id, next_id + missing_mask.sum())]
-            next_id += missing_mask.sum()
+    # ID normalization and assignment now handled inside FantasyDataProcessor.
+    # No additional ID manipulation required here.
 
     if not merged_df.empty:
         print(f"\n\n--- Successfully Merged Data for {draft_year} ---")

@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import requests
 import re
+import unicodedata
 from fuzzywuzzy import process, fuzz
 from io import StringIO
 
@@ -372,7 +373,7 @@ class FantasyDataProcessor:
 
                 # Store by player_id to merge back
                 pid = row.get('player_id')
-                if pd.notna(predicted) and isinstance(pid, str):
+                if pd.notna(predicted) and pd.notna(pid):
                     predicted_points_by_player_id[pid] = float(predicted)
 
         if not predicted_points_by_player_id:
@@ -402,19 +403,59 @@ class FantasyDataProcessor:
         fraction_df = self._calculate_games_played_frac(historical_df)
         legacy_stats_df = legacy_stats_df.merge(fraction_df, on='player_id', how='left')
 
+        # Normalize legacy player_id to integer form (strip non-digits, drop empties)
+        if 'player_id' in legacy_stats_df.columns:
+            legacy_stats_df['player_id'] = (
+                legacy_stats_df['player_id']
+                .astype(str)
+                .str.replace(r'[^0-9]', '', regex=True)
+            )
+            # Preserve rows even if empty; convert to pandas nullable integer
+            legacy_stats_df['player_id'] = legacy_stats_df['player_id'].replace('', pd.NA).astype('Int64')
+
         print(f"Fetching player pool for {draft_year}...")
         
         if self.project_rookies:
             roster_url = f'https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_{draft_year}.csv'
             draft_pool_df = self._download_data(f'roster_{draft_year}.csv', roster_url)
-            draft_pool_df = draft_pool_df.rename(columns={'gsis_id': 'player_id', 'team': 'recent_team'})
+            draft_pool_df = draft_pool_df.rename(columns={'team': 'recent_team'})
+            draft_pool_df['player_id'] = draft_pool_df.index.astype(int)
+            # Normalize roster player_id to integer form for consistent merging
+            if 'player_id' in draft_pool_df.columns:
+                draft_pool_df['player_id'] = (
+                    draft_pool_df['player_id']
+                    .astype(str)
+                    .str.replace(r'[^0-9]', '', regex=True)
+                )
+                draft_pool_df['player_id'] = draft_pool_df['player_id'].replace('', pd.NA).astype('Int64')
             
             # Standardize player name column
             draft_pool_df['player_display_name'] = draft_pool_df['full_name']
             
             draft_pool_df = draft_pool_df[draft_pool_df['position'].isin(self.positions)]
             draft_players_df = draft_pool_df.merge(legacy_stats_df, on='player_id', how='left')
-            # Ensure uniqueness by player_id to avoid downstream duplication
+
+            # Immediately assign new unique integer IDs to rookies (no legacy stats)
+            if 'player_id' in draft_players_df.columns:
+                rookie_mask_after_merge = draft_players_df['total_pts'].isna()
+                if rookie_mask_after_merge.any():
+                    # Determine the max existing legacy id to start sequencing
+                    max_legacy_id = None
+                    try:
+                        max_legacy_id = int(pd.to_numeric(legacy_stats_df['player_id'], errors='coerce').max())
+                    except Exception:
+                        max_legacy_id = None
+                    start_id = (max_legacy_id + 1) if max_legacy_id is not None and not pd.isna(max_legacy_id) else 1
+                    num_new = int(rookie_mask_after_merge.sum())
+                    if num_new > 0:
+                        new_ids = pd.Series(
+                            range(start_id, start_id + num_new),
+                            index=draft_players_df[rookie_mask_after_merge].index,
+                            dtype='Int64'
+                        )
+                        draft_players_df.loc[rookie_mask_after_merge, 'player_id'] = new_ids
+
+            # Ensure uniqueness by player_id to avoid downstream duplication (after ID assignment)
             if 'player_id' in draft_players_df.columns:
                 draft_players_df = draft_players_df.drop_duplicates(subset=['player_id'], keep='first')
             veterans_df = draft_players_df[draft_players_df['total_pts'].notna()].copy()
@@ -543,18 +584,85 @@ class FantasyDataProcessor:
             adp_df['Team'] = adp_df['Team'].replace({'JAC': 'JAX', 'LA': 'LAR'})
         if adp_col_map['POS'] in adp_df.columns:
             adp_df.rename(columns={adp_col_map['POS']: 'Pos'}, inplace=True)
-            adp_df['Pos'] = adp_df['Pos'].str.replace('RB', 'RB').replace('WR', 'WR').replace('TE', 'TE').replace('QB', 'QB')
+            adp_df['Pos'] = adp_df['Pos'].astype(str)
+            adp_df['Pos'] = adp_df['Pos'].str.extract(r'([A-Za-z]+)')
         if adp_col_map['Player'] in adp_df.columns:
             adp_df.rename(columns={adp_col_map['Player']: 'Player'}, inplace=True)
 
         def standardize_name(name):
-            if pd.isna(name): return name
-            name = re.sub(r'\s+(jr|sr|iv|iii|ii)\.?$', '', name.lower())
-            name = re.sub(r'[^a-z0-9\s]', '', name)
-            return re.sub(r'\s+', ' ', name).strip()
+            if pd.isna(name):
+                return name
+            s = str(name)
+            # Normalize to a consistent Unicode form
+            s = unicodedata.normalize('NFKC', s)
+            # Remove any non-printable or zero-width characters (e.g., BOM)
+            # Re-using the existing logic but being explicit about what's being removed
+            s = ''.join(ch for ch in s if unicodedata.category(ch) not in ('Cf', 'Cc'))
+            # Remove diacritics
+            s = ''.join(ch for ch in unicodedata.normalize('NFKD', s) if not unicodedata.category(ch).startswith('M'))
+            # Case fold for robust lowercasing
+            s = s.casefold()
+            # Drop common suffixes at end (jr/sr/ii/iii/iv)
+            s = re.sub(r'\b(jr|sr|iv|iii|ii)\b\.?$', '', s).strip()
+            # Keep only letters, numbers, and whitespace. This is where the issue is.
+            # Let's try to remove only what's absolutely necessary.
+            # s = re.sub(r'[^a-z0-9\s]', '', s) # This line might be too aggressive
+            # A more targeted approach would be to only replace specific known issues, or to
+            # make sure the input is clean before this step.
+            
+            # Given your debugging, the issue is not with the name itself, but with a hidden
+            # character or encoding problem. The best place to fix this is earlier.
+            # Let's trust the `_clean_adp_content` to fix the source file.
+            
+            # Collapse spaces
+            s = re.sub(r'\s+', ' ', s).strip()
+            return s
 
         computed_df['std_name'] = computed_df['player_display_name'].apply(standardize_name)
         adp_df['std_name'] = adp_df['Player'].apply(standardize_name)
+
+        # Normalize position letters for safer comparisons and bonuses (e.g., WR8 -> WR)
+        def _pos_base(val):
+            if pd.isna(val):
+                return None
+            m = re.search(r'([A-Za-z]+)', str(val))
+            return m.group(1).upper() if m else None
+        if 'Pos' in adp_df.columns:
+            adp_df['PosBase'] = adp_df['Pos'].apply(_pos_base)
+        else:
+            adp_df['PosBase'] = None
+        if 'position' in computed_df.columns:
+            computed_df['PosBase'] = computed_df['position'].astype(str).apply(_pos_base)
+        else:
+            computed_df['PosBase'] = None
+
+        # Temporary diagnostics for specific problematic names (e.g., TreVeyon Henderson)
+        def _debug_fuzzy_for_target(adp_df_local, computed_df_local, target_name='TreVeyon Henderson'):
+            try:
+                print("\n--- Debug: Fuzzy check for target name ---")
+                # Collect raw candidates from both datasets
+                adp_candidates = adp_df_local[adp_df_local['Player'].astype(str).str.contains(target_name, na=False, regex=False)]
+                roster_candidates = computed_df_local[computed_df_local['player_display_name'].astype(str).str.contains(target_name, na=False, regex=False)]
+
+                if adp_candidates.empty and roster_candidates.empty:
+                    print(f"No raw candidates found for '{target_name}' in either dataset.")
+                    return
+
+                for _, a_row in adp_candidates.iterrows():
+                    a_raw = a_row['Player']
+                    a_std = standardize_name(a_raw)
+                    print(f"ADP raw: {repr(a_raw)} | std: {repr(a_std)}")
+                    for _, r_row in roster_candidates.iterrows():
+                        r_raw = r_row['player_display_name']
+                        r_std = standardize_name(r_raw)
+                        name_score_raw = fuzz.token_sort_ratio(str(a_raw), str(r_raw))
+                        name_score_std = fuzz.token_sort_ratio(a_std, r_std)
+                        print(f"Roster raw: {repr(r_raw)} | std: {repr(r_std)} | fuzz_raw={name_score_raw} | fuzz_std={name_score_std}")
+            except Exception as _e:
+                # Non-fatal diagnostics
+                print(f"Debug error: {_e}")
+
+        _debug_fuzzy_for_target(adp_df, computed_df, target_name='TreVeyon Henderson')
 
         # Deduplicate ADP rows by standardized name and position, keeping best ADP (lowest numeric AVG/Rank)
         adp_rank_col = 'AVG' if 'AVG' in adp_df.columns else ('Rank' if 'Rank' in adp_df.columns else None)
@@ -570,12 +678,18 @@ class FantasyDataProcessor:
             dedupe_keys.append('Pos')
         adp_df = adp_df.drop_duplicates(subset=dedupe_keys, keep='first').reset_index(drop=True)
 
-        # --- 2. Perform Weighted Fuzzy Matching (Manual Loop) ---
+        # --- 2. Perform Weighted Fuzzy Matching (with exact-match short-circuit) ---
         print("Performing fuzzy match with weighted scoring...")
         # Ensure computed_df is unique by player_id to prevent fan-out merges
         if 'player_id' in computed_df.columns:
             computed_df = computed_df.drop_duplicates(subset=['player_id'], keep='first')
         roster_choices = computed_df.to_dict('records')
+        # Index roster by standardized name to short-circuit perfect matches
+        stdname_to_roster = {}
+        for rp in roster_choices:
+            key = rp.get('std_name')
+            if isinstance(key, str):
+                stdname_to_roster.setdefault(key, []).append(rp)
         adp_df['matched_name'] = pd.NA
         adp_df['matched_player_id'] = pd.NA
         adp_df['match_score'] = 0
@@ -586,12 +700,51 @@ class FantasyDataProcessor:
             best_score = -1
             best_match_name = None
             best_match_player_id = None
+            # Targeted debug for TreVeyon Henderson
+            is_target = False
+            try:
+                is_target = (
+                    str(adp_row.get('Player', '')) == 'TreVeyon Henderson' or
+                    adp_row.get('std_name') == 'treveyon henderson'
+                )
+            except Exception:
+                is_target = False
+            target_candidates = [] if is_target else None
 
+            # 2a) Deterministic: exact standardized-name match
+            exact_candidates = stdname_to_roster.get(adp_row['std_name'], [])
+            if exact_candidates:
+                candidates = exact_candidates
+                if len(candidates) > 1 and adp_row.get('PosBase') is not None:
+                    filtered = [c for c in candidates if c.get('PosBase') == adp_row.get('PosBase')]
+                    if len(filtered) == 1:
+                        candidates = filtered
+                if len(candidates) == 1:
+                    rp = candidates[0]
+                    team_bonus = 15 if pd.notna(adp_row.get('Team')) and (adp_row['Team'] == rp.get('recent_team')) else 0
+                    pos_bonus = 5 if adp_row.get('PosBase') is not None and (adp_row.get('PosBase') == rp.get('PosBase')) else 0
+                    best_score = min(100, 100 + team_bonus + pos_bonus)
+                    best_match_name = rp.get('std_name')
+                    best_match_player_id = rp.get('player_id')
+                    if is_target:
+                        try:
+                            print("\n--- Debug (Exact-Match Short-Circuit): TreVeyon Henderson ---")
+                            print(f"ADP: raw={repr(adp_row.get('Player'))}, std={repr(adp_row.get('std_name'))}, Team={adp_row.get('Team')}, PosBase={adp_row.get('PosBase')}")
+                            print(f"Roster chosen: raw={repr(rp.get('player_display_name'))}, std={repr(rp.get('std_name'))}, Team={rp.get('recent_team')}, PosBase={rp.get('PosBase')}")
+                            print(f"Bonuses: team_bonus={team_bonus}, pos_bonus={pos_bonus}; final_score={best_score}")
+                        except Exception:
+                            pass
+                    adp_df.at[adp_idx, 'matched_name'] = best_match_name
+                    adp_df.at[adp_idx, 'matched_player_id'] = best_match_player_id
+                    adp_df.at[adp_idx, 'match_score'] = best_score
+                    continue
+
+            # 2b) Fuzzy fallback
             for roster_player in roster_choices:
                 name_score = fuzz.token_sort_ratio(adp_row['std_name'], roster_player['std_name'])
                 
-                team_bonus = 15 if pd.notna(adp_row.get('Team')) and (adp_row['Team'] == roster_player['recent_team']) else 0
-                pos_bonus = 5 if pd.notna(adp_row.get('Pos')) and (adp_row['Pos'] in roster_player['position']) else 0
+                team_bonus = 15 if pd.notna(adp_row.get('Team')) and (adp_row['Team'] == roster_player.get('recent_team')) else 0
+                pos_bonus = 5 if adp_row.get('PosBase') is not None and (adp_row.get('PosBase') == roster_player.get('PosBase')) else 0
                 
                 current_score = min(100, name_score + team_bonus + pos_bonus)
 
@@ -599,11 +752,40 @@ class FantasyDataProcessor:
                     best_score = current_score
                     best_match_name = roster_player['std_name']
                     best_match_player_id = roster_player.get('player_id')
+                if is_target:
+                    try:
+                        target_candidates.append({
+                            'roster_raw': roster_player.get('player_display_name'),
+                            'roster_std': roster_player.get('std_name'),
+                            'roster_team': roster_player.get('recent_team'),
+                            'roster_posbase': roster_player.get('PosBase'),
+                            'name_score': name_score,
+                            'team_bonus': team_bonus,
+                            'pos_bonus': pos_bonus,
+                            'current_score': current_score,
+                        })
+                    except Exception:
+                        pass
             
             if best_score >= match_threshold:
                 adp_df.at[adp_idx, 'matched_name'] = best_match_name
                 adp_df.at[adp_idx, 'matched_player_id'] = best_match_player_id
             adp_df.at[adp_idx, 'match_score'] = best_score
+            if is_target and target_candidates is not None:
+                try:
+                    print("\n--- Debug (Fuzzy Details): TreVeyon Henderson ---")
+                    print(f"ADP: raw={repr(adp_row.get('Player'))}, std={repr(adp_row.get('std_name'))}, Team={adp_row.get('Team')}, PosBase={adp_row.get('PosBase')}")
+                    # Show top 10 by current_score
+                    top = sorted(target_candidates, key=lambda x: x['current_score'], reverse=True)[:10]
+                    for i, cand in enumerate(top, 1):
+                        print(
+                            f"{i:02d}) score={cand['current_score']} (name={cand['name_score']}, team={cand['team_bonus']}, pos={cand['pos_bonus']}) "
+                            f"-> roster_raw={repr(cand['roster_raw'])}, roster_std={repr(cand['roster_std'])}, "
+                            f"team={cand['roster_team']}, posbase={cand['roster_posbase']}"
+                        )
+                    print(f"Selected best_match_std={best_match_name}, best_score={best_score}")
+                except Exception:
+                    pass
         
         # --- 3. Merge and Create Final DataFrames ---
         matched_mask = adp_df['matched_player_id'].notna()

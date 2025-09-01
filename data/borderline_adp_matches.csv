@@ -1,19 +1,39 @@
-Rank,Player,Team,Bye,Pos,ESPN,Sleeper,NFL,RTSports,FFC,adp,std_name,matched_name,matched_player_id,match_score
-792.0,Jalen Cropper,DAL,10.0,WR254,,,713.0,,,713.0,jalen cropper,,,83
-163.0,Jason Sanders,MIA,12.0,K9,152.0,225.0,111.0,216.0,,175.8,jason sanders,,,83
-347.0,Harrison Mevis,NYJ,9.0,K33,310.0,,336.0,,,323.0,harrison mevis,,,83
-218.0,Mason Taylor,NYJ,9.0,TE27,241.0,176.0,248.0,199.0,,216.0,mason taylor,,,83
-409.0,Caden Davis,,,K39,311.0,,647.0,,,479.0,caden davis,,,82
-337.0,Spencer Shrader,IND,11.0,K32,292.0,,316.0,,,304.0,spencer shrader,,,80
-143.0,Chase McLaughlin,TB,9.0,K4,109.0,181.0,113.0,175.0,,152.6,chase mclaughlin,,,79
-243.0,Washington Commanders,DST,12.0,DST22,213.0,,165.0,243.0,,207.0,washington commanders,,,79
-411.0,Jermaine Jackson,,,WR128,316.0,,,,,316.0,jermaine jackson,,,79
-634.0,Ryan Coe,TB,9.0,K57,,,510.0,,,510.0,ryan coe,,,78
-595.0,Rodney Williams,,,TE88,476.0,,,,,476.0,rodney williams,,,77
-555.0,Jamaal Williams,,,RB140,452.0,,517.0,,,484.5,jamaal williams,,,77
-726.0,Jonathan Kim,CHI,5.0,K60,,,626.0,,,626.0,jonathan kim,,,77
-160.0,Tyler Bass,BUF,7.0,K8,143.0,154.0,131.0,237.0,,171.8,tyler bass,,,76
-276.0,Justin Tucker,,,K21,223.0,266.0,357.0,,,282.0,justin tucker,,,75
-223.0,Will Reichard,MIN,6.0,K17,218.0,265.0,197.0,260.0,,235.0,will reichard,,,75
-284.0,Jason Myers,SEA,8.0,K23,236.0,,182.0,,,209.0,jason myers,,,75
-561.0,Owen Wright,,,RB143,455.0,,,,,455.0,owen wright,,,75
+Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?),std_name,PosBase,matched_name,matched_player_id,match_score
+762.0,Scotty Washington,,,WR,,,,626.0,,,626.0,,scotty washington,WR,,,84
+594.0,James Robinson,,,RB,402.0,,,,,,402.0,,james robinson,RB,,,84
+411.0,Harrison Mevis,NYJ,9,K,237.0,,,478.0,,,357.5,,harrison mevis,K,,,83
+591.0,Gus Edwards,,,RB,399.0,,,603.0,,,501.0,,gus edwards,RB,,,82
+388.0,Caden Davis,,,K,267.0,,,471.0,,424.0,387.3,,caden davis,K,,,82
+320.0,Spencer Shrader,IND,11,K,,,219.0,294.0,,443.0,318.7,,spencer shrader,K,,,80
+907.0,Malik Turner,SF,14,WR,,,,817.0,,,817.0,,malik turner,WR,,,80
+883.0,Jaden Smith,,,WR,,,,779.0,,,779.0,,jaden smith,WR,,,80
+658.0,Jamaal Williams,,,RB,475.0,,,490.0,,,482.5,,jamaal williams,RB,,,79
+523.0,Travis Wilson,,,WR,,346.0,,,,,346.0,,travis wilson,WR,,,79
+146.0,Chase McLaughlin,TB,9,K,116.0,145.0,160.0,112.0,188.0,168.0,148.2,157  -11,chase mclaughlin,K,,,79
+198.0,Washington Commanders,DST,12,DST,212.0,154.0,205.0,169.0,243.0,286.0,211.5,206  -8,washington commanders,DST,,,79
+798.0,Michael Woods II,,",WR274""",nan,,,672.0,,,672.0,,,michael woods,NAN,,,78
+509.0,Jermaine Jackson,,,WR,331.0,,,,,,331.0,,jermaine jackson,WR,,,78
+428.0,Sean Culkin,,,TE,,252.0,,,,,252.0,,sean culkin,TE,,,78
+437.0,Josh Malone,,,WR,,261.0,,,,,261.0,,josh malone,WR,,,78
+536.0,Noah Cain,,,RB,,360.0,,,,,360.0,,noah cain,RB,,,78
+778.0,Deon Jackson,,,RB,,,,647.0,,,647.0,,deon jackson,RB,,,77
+420.0,Isaiah Bond,CLE,9,WR,353.0,,,558.0,,380.0,430.3,,isaiah bond,WR,,,77
+812.0,Braylon Sanders,,,WR,,,,690.0,,,690.0,,braylon sanders,WR,,,76
+724.0,Jonathan,Kim,,K,,,,565.0,,,565.0,,jonathan,K,,,76
+346.0,Jermar Jefferson,,,RB,222.0,,,344.0,,,283.0,,jermar jefferson,RB,,,76
+453.0,Kadarius Toney,,,WR,358.0,,,423.0,,,390.5,,kadarius toney,WR,,,76
+565.0,Giovani Bernard,,,RB,,,,,,377.0,377.0,,giovani bernard,RB,,,76
+172.0,Tyler Bass,BUF,7,K,144.0,164.0,158.0,147.0,240.0,195.0,174.7,187  -15,tyler bass,K,,,76
+533.0,George Campbell,,,WR,,,,,,357.0,357.0,,george campbell,WR,,,76
+478.0,Travis Toivonen,,,WR,,309.0,,,,,309.0,,travis toivonen,WR,,,76
+520.0,Carl Tucker,,,TE,,344.0,,,,,344.0,,carl tucker,TE,,,76
+516.0,Anthony Brown Jr.,,,QB,341.0,,,,,,341.0,,anthony brown,QB,,,76
+264.0,Justin Tucker,,,K,216.0,296.0,,269.0,,354.0,283.8,,justin tucker,K,,,75
+540.0,Kyle Markway,,,TE,,362.0,,,,,362.0,,kyle markway,TE,,,75
+525.0,Julio Jones,,,WR,351.0,,,,,,351.0,,julio jones,WR,,,75
+323.0,Jason Myers,SEA,8,K,,,,181.0,,290.0,235.5,242  +81,jason myers,K,,,75
+219.0,Will Reichard,MIN,6,K,220.0,223.0,,196.0,237.0,268.0,228.8,240  -21,will reichard,K,,,75
+514.0,John Ross,,,WR,339.0,,,,,,339.0,,john ross,WR,,,75
+914.0,Kawaan Baker,,,WR,,,,828.0,,,828.0,,kawaan baker,WR,,,75
+929.0,Kevin Harris,,,RB,,,,846.0,,,846.0,,kevin harris,RB,,,75
+494.0,Brett Maher,,,K,323.0,,,,,,323.0,,brett maher,K,,,75
