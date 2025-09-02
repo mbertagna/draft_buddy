@@ -9,3 +9,4 @@ tqdm
 fuzzywuzzy 
 python-Levenshtein
 beautifulsoup4
+bokeh

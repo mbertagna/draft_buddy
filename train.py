@@ -10,13 +10,19 @@ from fantasy_draft_env import FantasyFootballDraftEnv
 from reinforce_agent import ReinforceAgent
 from utils.run_utils import setup_run_directories, save_run_metadata, find_latest_checkpoint, get_run_name
 
+from bokeh.plotting import figure, output_file, save
+from bokeh.models import HoverTool
+from bokeh.layouts import column
+
 def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
     """
-    Plots training results and saves them to the specified directory.
+    Plots training results as static PNGs and combined interactive Bokeh HTML dashboard.
     """
     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    # Plot Total Rewards
+    # --------------------
+    # Matplotlib (PNG)
+    # --------------------
     plt.figure(figsize=(12, 6))
     plt.plot(episode_rewards)
     plt.title(f'{prefix}Total Reward per Episode')
@@ -28,7 +34,6 @@ def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
     plt.close()
     print(f"Rewards plot saved to: {rewards_plot_path}")
 
-    # Plot Policy Losses
     plt.figure(figsize=(12, 6))
     plt.plot(policy_losses)
     plt.title(f'{prefix}Policy Loss per Episode')
@@ -39,6 +44,53 @@ def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
     plt.savefig(losses_plot_path)
     plt.close()
     print(f"Losses plot saved to: {losses_plot_path}")
+
+    # --------------------
+    # Bokeh (Interactive HTML Dashboard)
+    # --------------------
+    html_path = os.path.join(logs_dir, f"{prefix}training_dashboard_{timestamp}.html")
+    output_file(html_path, title=f"{prefix} Training Dashboard")
+
+    # Explicit x values (lists instead of range objects)
+    x_rewards = list(range(len(episode_rewards)))
+    x_losses = list(range(len(policy_losses)))
+
+    # Shared x_range for synchronized zooming
+    x_range = (0, max(len(episode_rewards), len(policy_losses)))
+
+    p1 = figure(
+        title=f"{prefix}Total Reward per Episode",
+        x_axis_label="Episode",
+        y_axis_label="Total Reward",
+        width=1000,
+        height=400,
+        tools="pan,xwheel_zoom,reset,save",  # only zooms x with wheel
+        active_scroll="xwheel_zoom",         # make x-zoom active
+        x_range=x_range
+    )
+    p1.line(x_rewards, episode_rewards, line_width=2, legend_label="Reward")
+    p1.add_tools(HoverTool(tooltips=[("Episode", "$x"), ("Reward", "$y")]))
+    p1.legend.click_policy = "hide"
+
+
+    p2 = figure(
+        title=f"{prefix}Policy Loss per Episode",
+        x_axis_label="Episode",
+        y_axis_label="Loss",
+        width=1000,
+        height=400,
+        tools="pan,xwheel_zoom,reset,save",  # only zooms x with wheel
+        active_scroll="xwheel_zoom",
+        x_range=p1.x_range  # sync x zoom
+    )
+    p2.line(x_losses, policy_losses, line_width=2, color="red", legend_label="Loss")
+    p2.add_tools(HoverTool(tooltips=[("Episode", "$x"), ("Loss", "$y")]))
+    p2.legend.click_policy = "hide"
+
+    layout = column(p1, p2)
+    save(layout)
+
+    print(f"Interactive training dashboard saved to: {html_path}")
 
 def find_latest_logs_dir_with_csvs(logs_root: str) -> str:
     """Recursively search for the most recently updated logs directory containing both CSVs."""

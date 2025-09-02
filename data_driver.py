@@ -35,7 +35,47 @@ def main(output_path, draft_year, rookie_projection_method):
         }
     }
 
+    half_ppr_sleeper_scoring_rules = {
+        # Passing
+        "passing_yards": 0.04,          # 1 point per 25 yards
+        "passing_touchdowns": 6,
+        "interceptions": -3,
+        "sack_fumbles_lost": -3,        # turnovers
+        "two_point_conversions": 2,     # includes passing 2PCs if tracked
+
+        # Rushing
+        "rushing_yards": 0.1,           # 1 point per 10 yards
+        "rushing_touchdowns": 6,
+        "rushing_fumbles_lost": -3,
+
+        # Receiving
+        "receptions": 1,                # full PPR
+        "receiving_yards": 0.1,
+        "receiving_touchdowns": 6,
+        "receiving_fumbles_lost": -3,
+
+        # Kicking (no distance buckets — just flat yardage scoring)
+        "fg_made_yards": 0.1,           # 1 point per 10 yards of FG distance
+        "fg_missed": -1,
+        "xp_made": 1,
+        "xp_missed": -1,
+
+        # Defense / Special Teams
+        "sacks": 1,
+        "def_interceptions": 2,
+        "def_fumbles_recovered": 2,
+        "safeties": 2,
+        "def_touchdowns": 6,
+        "kick_return_touchdowns": 6,
+        "punt_return_touchdowns": 6,
+        "blocked_kicks": 2,
+
+        # Negative scoring
+        "points_allowed": None,         # handled separately as a tiered rule
+    }
+
     processor = FantasyDataProcessor(
+        scoring_rules=half_ppr_sleeper_scoring_rules,
         project_rookies=True,
         bye_weeks_override=bye_weeks.get(draft_year, {}),
         start_year=draft_year - 2,

@@ -1,148 +1,148 @@
 Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?),std_name_adp,PosBase_adp,matched_name,matched_player_id,match_score,player_id,name,position,recent_team,projected_points,games_played_frac,bye_week,std_name_roster,PosBase_roster
 1.0,Ja'Marr Chase,CIN,10,WR,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1,ja'marr chase,WR,ja'marr chase,36900,100,36900,Ja'Marr Chase,WR,CIN,17.6,0.9705882352941176,10,ja'marr chase,WR
-2.0,Bijan Robinson,ATL,5,RB,2.0,3.0,2.0,2.0,2.0,2.0,2.2,2,bijan robinson,RB,bijan robinson,38542,100,38542,Bijan Robinson,RB,ATL,19.5,1.0,5,bijan robinson,RB
-3.0,Saquon Barkley,PHI,9,RB,3.0,2.0,3.0,4.0,4.0,6.0,3.7,3,saquon barkley,RB,saquon barkley,34844,100,34844,Saquon Barkley,RB,PHI,20.35,0.8947368421052632,9,saquon barkley,RB
+2.0,Bijan Robinson,ATL,5,RB,2.0,3.0,2.0,2.0,2.0,2.0,2.2,2,bijan robinson,RB,bijan robinson,38542,100,38542,Bijan Robinson,RB,ATL,18.15,1.0,5,bijan robinson,RB
+3.0,Saquon Barkley,PHI,9,RB,3.0,2.0,3.0,4.0,4.0,6.0,3.7,3,saquon barkley,RB,saquon barkley,34844,100,34844,Saquon Barkley,RB,PHI,17.700000000000003,0.8947368421052632,9,saquon barkley,RB
 4.0,Jahmyr Gibbs,DET,8,RB,5.0,4.0,4.0,6.0,3.0,4.0,4.3,4,jahmyr gibbs,RB,jahmyr gibbs,39139,100,39139,Jahmyr Gibbs,RB,DET,18.450000000000003,0.9473684210526315,8,jahmyr gibbs,RB
-5.0,Justin Jefferson,MIN,6,WR,4.0,5.0,6.0,5.0,6.0,3.0,4.8,6  -1,justin jefferson,WR,justin jefferson,36322,100,36322,Justin Jefferson,WR,MIN,20.200000000000003,0.8,6,justin jefferson,WR
-6.0,CeeDee Lamb,DAL,10,WR,6.0,6.0,5.0,3.0,5.0,5.0,5.0,5  +1,ceedee lamb,WR,ceedee lamb,36358,100,36358,CeeDee Lamb,WR,DAL,19.0,0.9428571428571428,10,ceedee lamb,WR
-7.0,Christian McCaffrey,SF,14,RB,7.0,10.0,8.0,11.0,7.0,7.0,8.3,8  -1,christian mccaffrey,RB,christian mccaffrey,33280,100,33280,Christian McCaffrey,RB,SF,22.6,0.6216216216216216,14,christian mccaffrey,RB
-8.0,Amon-Ra St. Brown,DET,8,WR,9.0,8.0,12.0,8.0,10.0,11.0,9.7,7  +1,amon-ra st. brown,WR,amon-ra st. brown,36963,100,36963,Amon-Ra St. Brown,WR,DET,20.5,0.9736842105263158,8,amon-ra st. brown,WR
+5.0,Justin Jefferson,MIN,6,WR,4.0,5.0,6.0,5.0,6.0,3.0,4.8,6  -1,justin jefferson,WR,justin jefferson,36322,100,36322,Justin Jefferson,WR,MIN,19.8,0.8,6,justin jefferson,WR
+6.0,CeeDee Lamb,DAL,10,WR,6.0,6.0,5.0,3.0,5.0,5.0,5.0,5  +1,ceedee lamb,WR,ceedee lamb,36358,100,36358,CeeDee Lamb,WR,DAL,18.6,0.9428571428571428,10,ceedee lamb,WR
+7.0,Christian McCaffrey,SF,14,RB,7.0,10.0,8.0,11.0,7.0,7.0,8.3,8  -1,christian mccaffrey,RB,christian mccaffrey,33280,100,33280,Christian McCaffrey,RB,SF,22.3,0.6216216216216216,14,christian mccaffrey,RB
+8.0,Amon-Ra St. Brown,DET,8,WR,9.0,8.0,12.0,8.0,10.0,11.0,9.7,7  +1,amon-ra st. brown,WR,amon-ra st. brown,36963,100,36963,Amon-Ra St. Brown,WR,DET,19.1,0.9736842105263158,8,amon-ra st. brown,WR
 9.0,Malik Nabers,NYG,14,WR,10.0,11.0,11.0,9.0,9.0,9.0,9.8,10  -1,malik nabers,WR,malik nabers,39337,100,39337,Malik Nabers,WR,NYG,14.9,0.8823529411764706,14,malik nabers,WR
-10.0,Derrick Henry,BAL,7,RB,12.0,7.0,7.0,10.0,12.0,13.0,10.2,9  +1,derrick henry,RB,derrick henry,32764,100,32764,Derrick Henry,RB,BAL,18.85,1.0,7,derrick henry,RB
-11.0,Ashton Jeanty,LV,8,RB,11.0,12.0,9.0,12.0,8.0,10.0,10.3,12  -1,ashton jeanty,RB,ashton jeanty,40113,100,40113,Ashton Jeanty,RB,LV,18.490000000000002,R,8,ashton jeanty,RB
-12.0,Puka Nacua,LAR,8,WR,8.0,9.0,14.0,7.0,18.0,8.0,10.7,13  -1,puka nacua,WR,puka nacua,39075,100,39075,Puka Nacua,WR,LA,18.7,0.8378378378378378,8,puka nacua,WR
+10.0,Derrick Henry,BAL,7,RB,12.0,7.0,7.0,10.0,12.0,13.0,10.2,9  +1,derrick henry,RB,derrick henry,32764,100,32764,Derrick Henry,RB,BAL,17.35,1.0,7,derrick henry,RB
+11.0,Ashton Jeanty,LV,8,RB,11.0,12.0,9.0,12.0,8.0,10.0,10.3,12  -1,ashton jeanty,RB,ashton jeanty,40113,100,40113,Ashton Jeanty,RB,LV,17.034999999999997,R,8,ashton jeanty,RB
+12.0,Puka Nacua,LAR,8,WR,8.0,9.0,14.0,7.0,18.0,8.0,10.7,13  -1,puka nacua,WR,puka nacua,39075,100,39075,Puka Nacua,WR,LA,18.1,0.8378378378378378,8,puka nacua,WR
 13.0,Nico Collins,HOU,6,WR,13.0,13.0,13.0,16.0,11.0,12.0,13.0,11  +2,nico collins,WR,nico collins,36554,100,36554,Nico Collins,WR,HOU,14.8,0.8157894736842105,6,nico collins,WR
-14.0,De'Von Achane,MIA,12,RB,14.0,14.0,16.0,14.0,17.0,15.0,15.0,16  -2,de'von achane,RB,devon achane,39040,100,39040,Devon Achane,RB,MIA,18.9,0.8285714285714286,12,devon achane,RB
+14.0,De'Von Achane,MIA,12,RB,14.0,14.0,16.0,14.0,17.0,15.0,15.0,16  -2,de'von achane,RB,devon achane,39040,100,39040,Devon Achane,RB,MIA,18.1,0.8285714285714286,12,devon achane,RB
 15.0,Brian Thomas Jr.,JAX,8,WR,16.0,15.0,20.0,13.0,15.0,14.0,15.5,14  +1,brian thomas,WR,brian thomas,39893,100,39893,Brian Thomas,WR,JAX,16.6,1.0,8,brian thomas,WR
-16.0,Josh Jacobs,GB,5,RB,17.0,16.0,10.0,19.0,13.0,21.0,16.0,17  -1,josh jacobs,RB,josh jacobs,35700,100,35700,Josh Jacobs,RB,GB,16.8,0.8857142857142857,5,josh jacobs,RB
+16.0,Josh Jacobs,GB,5,RB,17.0,16.0,10.0,19.0,13.0,21.0,16.0,17  -1,josh jacobs,RB,josh jacobs,35700,100,35700,Josh Jacobs,RB,GB,12.8,0.8857142857142857,5,josh jacobs,RB
 17.0,Drake London,ATL,5,WR,21.0,17.0,24.0,20.0,19.0,16.0,19.5,15  +2,drake london,WR,drake london,37238,100,37238,Drake London,WR,ATL,12.0,0.9705882352941176,5,drake london,WR
 18.0,Brock Bowers,LV,8,TE,20.0,19.0,23.0,17.0,22.0,17.0,19.7,20  -2,brock bowers,TE,brock bowers,39338,100,39338,Brock Bowers,TE,LV,15.0,1.0,8,brock bowers,TE
-19.0,Jonathan Taylor,IND,11,RB,15.0,23.0,21.0,22.0,20.0,19.0,20.0,22  -3,jonathan taylor,RB,jonathan taylor,36223,100,36223,Jonathan Taylor,RB,IND,18.0,0.7058823529411765,11,jonathan taylor,RB
-20.0,A.J. Brown,PHI,9,WR,18.0,18.0,27.0,15.0,23.0,20.0,20.2,18  +2,a.j. brown,WR,a.j. brown,35676,100,35676,A.J. Brown,WR,PHI,15.649999999999999,0.8717948717948718,9,a.j. brown,WR
-21.0,Josh Allen,BUF,7,QB,19.0,20.0,15.0,21.0,25.0,24.0,20.7,23  -2,josh allen,QB,josh allen,34857,100,34857,Josh Allen,QB,BUF,23.32,0.9743589743589743,7,josh allen,QB
-22.0,Chase Brown,CIN,10,RB,24.0,27.0,19.0,27.0,14.0,18.0,21.5,21  +1,chase brown,RB,chase brown,38597,100,38597,Chase Brown,RB,CIN,10.15,0.7647058823529411,10,chase brown,RB
-23.0,Bucky Irving,TB,9,RB,22.0,22.0,22.0,24.0,16.0,23.0,21.5,19  +4,bucky irving,RB,bucky irving,39361,100,39361,Bucky Irving,RB,TB,16.35,1.0,9,bucky irving,RB
-24.0,Lamar Jackson,BAL,7,QB,23.0,21.0,17.0,18.0,24.0,29.0,22.0,25  -1,lamar jackson,QB,lamar jackson,34796,100,34796,Lamar Jackson,QB,BAL,23.1,0.9736842105263158,7,lamar jackson,QB
-25.0,Kyren Williams,LAR,8,RB,29.0,25.0,18.0,25.0,21.0,26.0,24.0,26  -1,kyren williams,RB,kyren williams,37840,100,37840,Kyren Williams,RB,LA,20.200000000000003,0.8378378378378378,8,kyren williams,RB
+19.0,Jonathan Taylor,IND,11,RB,15.0,23.0,21.0,22.0,20.0,19.0,20.0,22  -3,jonathan taylor,RB,jonathan taylor,36223,100,36223,Jonathan Taylor,RB,IND,16.4,0.7058823529411765,11,jonathan taylor,RB
+20.0,A.J. Brown,PHI,9,WR,18.0,18.0,27.0,15.0,23.0,20.0,20.2,18  +2,a.j. brown,WR,a.j. brown,35676,100,35676,A.J. Brown,WR,PHI,15.149999999999999,0.8717948717948718,9,a.j. brown,WR
+21.0,Josh Allen,BUF,7,QB,19.0,20.0,15.0,21.0,25.0,24.0,20.7,23  -2,josh allen,QB,josh allen,34857,100,34857,Josh Allen,QB,BUF,26.98,0.9743589743589743,7,josh allen,QB
+22.0,Chase Brown,CIN,10,RB,24.0,27.0,19.0,27.0,14.0,18.0,21.5,21  +1,chase brown,RB,chase brown,38597,100,38597,Chase Brown,RB,CIN,10.149999999999999,0.7647058823529411,10,chase brown,RB
+23.0,Bucky Irving,TB,9,RB,22.0,22.0,22.0,24.0,16.0,23.0,21.5,19  +4,bucky irving,RB,bucky irving,39361,100,39361,Bucky Irving,RB,TB,15.849999999999998,1.0,9,bucky irving,RB
+24.0,Lamar Jackson,BAL,7,QB,23.0,21.0,17.0,18.0,24.0,29.0,22.0,25  -1,lamar jackson,QB,lamar jackson,34796,100,34796,Lamar Jackson,QB,BAL,27.64,0.9736842105263158,7,lamar jackson,QB
+25.0,Kyren Williams,LAR,8,RB,29.0,25.0,18.0,25.0,21.0,26.0,24.0,26  -1,kyren williams,RB,kyren williams,37840,100,37840,Kyren Williams,RB,LA,17.4,0.8378378378378378,8,kyren williams,RB
 26.0,Ladd McConkey,LAC,12,WR,30.0,24.0,29.0,23.0,30.0,22.0,26.3,24  +2,ladd mcconkey,WR,ladd mcconkey,39915,100,39915,Ladd McConkey,WR,LAC,14.9,0.9444444444444444,12,ladd mcconkey,WR
 27.0,Trey McBride,ARI,8,TE,25.0,28.0,35.0,26.0,28.0,25.0,27.8,27,trey mcbride,TE,trey mcbride,37744,100,37744,Trey McBride,TE,ARI,11.3,0.9705882352941176,8,trey mcbride,TE
-28.0,James Cook,BUF,7,RB,32.0,32.0,26.0,30.0,27.0,35.0,30.3,29  -1,james cook,RB,james cook,37248,100,37248,James Cook,RB,BUF,14.0,0.9743589743589743,7,james cook,RB
+28.0,James Cook,BUF,7,RB,32.0,32.0,26.0,30.0,27.0,35.0,30.3,29  -1,james cook,RB,james cook,37248,100,37248,James Cook,RB,BUF,13.25,0.9743589743589743,7,james cook,RB
 29.0,Tee Higgins,CIN,10,WR,26.0,30.0,32.0,32.0,36.0,28.0,30.7,28  +1,tee higgins,WR,tee higgins,36410,100,36410,Tee Higgins,WR,CIN,13.35,0.7058823529411765,10,tee higgins,WR
-30.0,Jayden Daniels,WAS,12,QB,27.0,31.0,30.0,29.0,34.0,36.0,31.2,31  -1,jayden daniels,QB,jayden daniels,39910,100,39910,Jayden Daniels,QB,WAS,23.83,1.0,12,jayden daniels,QB
+30.0,Jayden Daniels,WAS,12,QB,27.0,31.0,30.0,29.0,34.0,36.0,31.2,31  -1,jayden daniels,QB,jayden daniels,39910,100,39910,Jayden Daniels,QB,WAS,27.64,1.0,12,jayden daniels,QB
 31.0,Tyreek Hill,MIA,12,WR,31.0,26.0,39.0,36.0,31.0,30.0,32.2,33  -2,tyreek hill,WR,tyreek hill,33040,100,33040,Tyreek Hill,WR,MIA,16.1,0.9714285714285714,12,tyreek hill,WR
-32.0,Joe Burrow,CIN,10,QB,33.0,36.0,25.0,35.0,37.0,38.0,34.0,43  -11,joe burrow,QB,joe burrow,36442,100,36442,Joe Burrow,QB,CIN,19.82,0.7941176470588235,10,joe burrow,QB
+32.0,Joe Burrow,CIN,10,QB,33.0,36.0,25.0,35.0,37.0,38.0,34.0,43  -11,joe burrow,QB,joe burrow,36442,100,36442,Joe Burrow,QB,CIN,23.82,0.7941176470588235,10,joe burrow,QB
 33.0,Jaxon Smith-Njigba,SEA,8,WR,37.0,29.0,40.0,39.0,35.0,27.0,34.5,30  +3,jaxon smith-njigba,WR,jaxon smith-njigba,38543,100,38543,Jaxon Smith-Njigba,WR,SEA,11.100000000000001,1.0,8,jaxon smith-njigba,WR
-34.0,Jalen Hurts,PHI,9,QB,28.0,33.0,31.0,34.0,43.0,41.0,35.0,35  -1,jalen hurts,QB,jalen hurts,36389,100,36389,Jalen Hurts,QB,PHI,21.92,0.9487179487179487,9,jalen hurts,QB
-35.0,Omarion Hampton,LAC,12,RB,39.0,41.0,37.0,45.0,26.0,31.0,36.5,32  +3,omarion hampton,RB,omarion hampton,40302,100,40302,Omarion Hampton,RB,LAC,14.916845188284519,R,12,omarion hampton,RB
-36.0,Alvin Kamara,NO,11,RB,38.0,38.0,28.0,44.0,29.0,43.0,36.7,41  -5,alvin kamara,RB,alvin kamara,33906,100,33906,Alvin Kamara,RB,NO,17.4,0.7941176470588235,11,alvin kamara,RB
+34.0,Jalen Hurts,PHI,9,QB,28.0,33.0,31.0,34.0,43.0,41.0,35.0,35  -1,jalen hurts,QB,jalen hurts,36389,100,36389,Jalen Hurts,QB,PHI,25.439999999999998,0.9487179487179487,9,jalen hurts,QB
+35.0,Omarion Hampton,LAC,12,RB,39.0,41.0,37.0,45.0,26.0,31.0,36.5,32  +3,omarion hampton,RB,omarion hampton,40302,100,40302,Omarion Hampton,RB,LAC,14.094121338912132,R,12,omarion hampton,RB
+36.0,Alvin Kamara,NO,11,RB,38.0,38.0,28.0,44.0,29.0,43.0,36.7,41  -5,alvin kamara,RB,alvin kamara,33906,100,33906,Alvin Kamara,RB,NO,17.0,0.7941176470588235,11,alvin kamara,RB
 37.0,Breece Hall,NYJ,9,RB,51.0,35.0,41.0,31.0,32.0,34.0,37.3,39  -2,breece hall,RB,breece hall,38120,100,38120,Breece Hall,RB,NYJ,14.0,0.9705882352941176,9,breece hall,RB
 38.0,George Kittle,SF,14,TE,35.0,37.0,38.0,38.0,41.0,40.0,38.2,36  +2,george kittle,TE,george kittle,33288,100,33288,George Kittle,TE,SF,14.95,0.918918918918919,14,george kittle,TE
 39.0,Mike Evans,TB,9,WR,42.0,39.0,36.0,33.0,48.0,37.0,39.2,34  +5,mike evans,WR,mike evans,31408,100,31408,Mike Evans,WR,TB,16.35,0.918918918918919,9,mike evans,WR
-40.0,Terry McLaurin,WAS,12,WR,36.0,42.0,45.0,28.0,40.0,45.0,39.3,37  +3,terry mclaurin,WR,terry mclaurin,35659,100,35659,Terry McLaurin,WR,WAS,15.9,1.0,12,terry mclaurin,WR
+40.0,Terry McLaurin,WAS,12,WR,36.0,42.0,45.0,28.0,40.0,45.0,39.3,37  +3,terry mclaurin,WR,terry mclaurin,35659,100,35659,Terry McLaurin,WR,WAS,15.8,1.0,12,terry mclaurin,WR
 41.0,Garrett Wilson,NYJ,9,WR,41.0,34.0,51.0,37.0,45.0,32.0,40.0,38  +3,garrett wilson,WR,garrett wilson,37740,100,37740,Garrett Wilson,WR,NYJ,13.700000000000001,1.0,9,garrett wilson,WR
 42.0,Davante Adams,LAR,8,WR,34.0,43.0,34.0,48.0,42.0,39.0,40.0,44  -2,davante adams,WR,davante adams,31381,100,31381,Davante Adams,WR,LA,13.2,0.6078431372549019,8,davante adams,WR
 43.0,Kenneth Walker III,SEA,8,RB,46.0,44.0,33.0,40.0,38.0,46.0,41.2,42  +1,kenneth walker,RB,kenneth walker,38134,100,38134,Kenneth Walker,RB,SEA,13.9,0.7647058823529411,8,kenneth walker,RB
 44.0,Marvin Harrison Jr.,ARI,8,WR,44.0,40.0,46.0,41.0,44.0,33.0,41.3,40  +4,marvin harrison,WR,marvin harrison,39849,100,39849,Marvin Harrison,WR,ARI,8.9,1.0,8,marvin harrison,WR
 45.0,Chuba Hubbard,CAR,14,RB,40.0,46.0,44.0,55.0,39.0,49.0,45.5,48  -3,chuba hubbard,RB,chuba hubbard,36555,100,36555,Chuba Hubbard,RB,CAR,11.400000000000002,0.9411764705882353,14,chuba hubbard,RB
-46.0,TreVeyon Henderson,NE,14,RB,48.0,54.0,43.0,54.0,33.0,42.0,45.7,45  +1,treveyon henderson,RB,treveyon henderson,40322,100,40322,TreVeyon Henderson,RB,NE,11.996903765690371,R,14,treveyon henderson,RB
-47.0,James Conner,ARI,8,RB,45.0,47.0,42.0,49.0,46.0,54.0,47.2,46  +1,james conner,RB,james conner,33553,100,33553,James Conner,RB,ARI,19.3,0.8529411764705882,8,james conner,RB
+46.0,TreVeyon Henderson,NE,14,RB,48.0,54.0,43.0,54.0,33.0,42.0,45.7,45  +1,treveyon henderson,RB,treveyon henderson,40322,100,40322,TreVeyon Henderson,RB,NE,11.845355648535556,R,14,treveyon henderson,RB
+47.0,James Conner,ARI,8,RB,45.0,47.0,42.0,49.0,46.0,54.0,47.2,46  +1,james conner,RB,james conner,33553,100,33553,James Conner,RB,ARI,16.6,0.8529411764705882,8,james conner,RB
 48.0,DK Metcalf,PIT,5,WR,47.0,45.0,48.0,52.0,54.0,51.0,49.5,47  +1,dk metcalf,WR,dk metcalf,35640,100,35640,DK Metcalf,WR,PIT,13.2,0.9117647058823529,5,dk metcalf,WR
-49.0,DJ Moore,CHI,5,WR,54.0,50.0,52.0,46.0,53.0,44.0,49.8,50  -1,dj moore,WR,d.j. moore,34827,100,34827,D.J. Moore,WR,CHI,12.650000000000002,1.0,5,d.j. moore,WR
-50.0,Patrick Mahomes II,KC,10,QB,43.0,49.0,47.0,42.0,62.0,58.0,50.2,52  -2,patrick mahomes,QB,patrick mahomes,33873,100,33873,Patrick Mahomes,QB,KC,17.44,0.9512195121951219,10,patrick mahomes,QB
+49.0,DJ Moore,CHI,5,WR,54.0,50.0,52.0,46.0,53.0,44.0,49.8,50  -1,dj moore,WR,d.j. moore,34827,100,34827,D.J. Moore,WR,CHI,12.65,1.0,5,d.j. moore,WR
+50.0,Patrick Mahomes II,KC,10,QB,43.0,49.0,47.0,42.0,62.0,58.0,50.2,52  -2,patrick mahomes,QB,patrick mahomes,33873,100,33873,Patrick Mahomes,QB,KC,20.88,0.9512195121951219,10,patrick mahomes,QB
 51.0,Courtland Sutton,DEN,12,WR,57.0,51.0,53.0,56.0,50.0,48.0,52.5,51,courtland sutton,WR,courtland sutton,34348,100,34348,Courtland Sutton,WR,DEN,14.600000000000001,0.9428571428571428,12,courtland sutton,WR
 52.0,Sam LaPorta,DET,8,TE,49.0,48.0,58.0,43.0,67.0,56.0,53.5,49  +3,sam laporta,TE,sam laporta,39065,100,39065,Sam LaPorta,TE,DET,12.2,0.9736842105263158,8,sam laporta,TE
 53.0,Xavier Worthy,KC,10,WR,50.0,57.0,50.0,68.0,56.0,47.0,54.7,55  -2,xavier worthy,WR,xavier worthy,39894,100,39894,Xavier Worthy,WR,KC,11.8,0.95,10,xavier worthy,WR
 54.0,D'Andre Swift,CHI,5,RB,53.0,68.0,49.0,58.0,47.0,69.0,57.3,62  -8,d'andre swift,RB,d'andre swift,36275,100,36275,D'Andre Swift,RB,CHI,10.55,0.9714285714285714,5,d'andre swift,RB
 55.0,DeVonta Smith,PHI,9,WR,61.0,55.0,59.0,60.0,61.0,50.0,57.7,54  +1,devonta smith,WR,devonta smith,36912,100,36912,DeVonta Smith,WR,PHI,14.850000000000001,0.8717948717948718,9,devonta smith,WR
-56.0,David Montgomery,DET,8,RB,59.0,53.0,57.0,67.0,59.0,62.0,59.5,63  -7,david montgomery,RB,david montgomery,35685,100,35685,David Montgomery,RB,DET,14.91,0.8421052631578947,8,david montgomery,RB
-57.0,Jameson Williams,DET,8,WR,66.0,64.0,64.0,51.0,60.0,53.0,59.7,59  -2,jameson williams,WR,jameson williams,37240,100,37240,Jameson Williams,WR,DET,9.600000000000001,0.8157894736842105,8,jameson williams,WR
-58.0,Isiah Pacheco,KC,10,RB,63.0,59.0,65.0,59.0,55.0,67.0,61.3,57  +1,isiah pacheco,RB,isiah pacheco,37197,100,37197,Isiah Pacheco,RB,KC,11.9,0.6829268292682927,10,isiah pacheco,RB
+56.0,David Montgomery,DET,8,RB,59.0,53.0,57.0,67.0,59.0,62.0,59.5,63  -7,david montgomery,RB,david montgomery,35685,100,35685,David Montgomery,RB,DET,14.95,0.8421052631578947,8,david montgomery,RB
+57.0,Jameson Williams,DET,8,WR,66.0,64.0,64.0,51.0,60.0,53.0,59.7,59  -2,jameson williams,WR,jameson williams,37240,100,37240,Jameson Williams,WR,DET,9.6,0.8157894736842105,8,jameson williams,WR
+58.0,Isiah Pacheco,KC,10,RB,63.0,59.0,65.0,59.0,55.0,67.0,61.3,57  +1,isiah pacheco,RB,isiah pacheco,37197,100,37197,Isiah Pacheco,RB,KC,11.15,0.6829268292682927,10,isiah pacheco,RB
 59.0,Zay Flowers,BAL,7,WR,55.0,56.0,63.0,73.0,69.0,55.0,61.8,64  -5,zay flowers,WR,zay flowers,39064,100,39064,Zay Flowers,WR,BAL,11.5,0.9210526315789473,7,zay flowers,WR
 60.0,Tetairoa McMillan,CAR,14,WR,71.0,62.0,66.0,72.0,52.0,52.0,62.5,53  +7,tetairoa mcmillan,WR,tetairoa mcmillan,40114,100,40114,Tetairoa McMillan,WR,CAR,14.210351562500001,R,14,tetairoa mcmillan,WR
-61.0,RJ Harvey,DEN,12,RB,75.0,63.0,55.0,70.0,49.0,64.0,62.7,56  +5,rj harvey,RB,r.j. harvey,40330,100,40330,R.J. Harvey,RB,DEN,10.03602510460251,R,12,r.j. harvey,RB
+61.0,RJ Harvey,DEN,12,RB,75.0,63.0,55.0,70.0,49.0,64.0,62.7,56  +5,rj harvey,RB,r.j. harvey,40330,100,40330,R.J. Harvey,RB,DEN,10.036025104602508,R,12,r.j. harvey,RB
 62.0,Travis Kelce,KC,10,TE,58.0,61.0,61.0,57.0,64.0,77.0,63.0,65  -3,travis kelce,TE,travis kelce,30506,100,30506,Travis Kelce,TE,KC,13.2,0.926829268292683,10,travis kelce,TE
-63.0,Baker Mayfield,TB,9,QB,52.0,65.0,54.0,61.0,73.0,74.0,63.2,71  -8,baker mayfield,QB,baker mayfield,34855,100,34855,Baker Mayfield,QB,TB,19.82,1.0,9,baker mayfield,QB
+63.0,Baker Mayfield,TB,9,QB,52.0,65.0,54.0,61.0,73.0,74.0,63.2,71  -8,baker mayfield,QB,baker mayfield,34855,100,34855,Baker Mayfield,QB,TB,25.0,1.0,9,baker mayfield,QB
 64.0,Calvin Ridley,TEN,10,WR,60.0,70.0,67.0,66.0,57.0,60.0,63.3,66  -2,calvin ridley,WR,calvin ridley,34837,100,34837,Calvin Ridley,WR,TEN,10.05,1.0,10,calvin ridley,WR
 65.0,T.J. Hockenson,MIN,6,TE,56.0,58.0,69.0,50.0,80.0,71.0,64.0,60  +5,t.j. hockenson,TE,t.j. hockenson,35229,100,35229,T.J. Hockenson,TE,MIN,11.25,0.7428571428571429,6,t.j. hockenson,TE
-66.0,George Pickens,DAL,10,WR,65.0,60.0,62.0,75.0,63.0,61.0,64.3,58  +8,george pickens,WR,george pickens,37247,100,37247,George Pickens,WR,DAL,9.5,0.9166666666666666,10,george pickens,WR
-67.0,Aaron Jones Sr.,MIN,6,RB,69.0,67.0,56.0,77.0,58.0,65.0,65.3,73  -6,aaron jones,RB,aaron jones,33293,100,33293,Aaron Jones,RB,MIN,12.3,0.8378378378378378,6,aaron jones,RB
-68.0,Tony Pollard,TEN,10,RB,70.0,73.0,60.0,78.0,51.0,68.0,66.7,61  +7,tony pollard,RB,tony pollard,35261,100,35261,Tony Pollard,RB,TEN,14.95,0.9714285714285714,10,tony pollard,RB
+66.0,George Pickens,DAL,10,WR,65.0,60.0,62.0,75.0,63.0,61.0,64.3,58  +8,george pickens,WR,george pickens,37247,100,37247,George Pickens,WR,DAL,9.2,0.9166666666666666,10,george pickens,WR
+67.0,Aaron Jones Sr.,MIN,6,RB,69.0,67.0,56.0,77.0,58.0,65.0,65.3,73  -6,aaron jones,RB,aaron jones,33293,100,33293,Aaron Jones,RB,MIN,12.299999999999999,0.8378378378378378,6,aaron jones,RB
+68.0,Tony Pollard,TEN,10,RB,70.0,73.0,60.0,78.0,51.0,68.0,66.7,61  +7,tony pollard,RB,tony pollard,35261,100,35261,Tony Pollard,RB,TEN,14.55,0.9714285714285714,10,tony pollard,RB
 69.0,Rashee Rice,KC,10,WR,62.0,52.0,83.0,47.0,79.0,84.0,67.8,72  -3,rashee rice,WR,rashee rice,39067,100,39067,Rashee Rice,WR,KC,12.600000000000001,0.5609756097560976,10,rashee rice,WR
 70.0,Travis Hunter,JAX,8,WR,74.0,66.0,84.0,62.0,71.0,59.0,69.3,67  +3,travis hunter,WR,travis hunter,40319,100,40319,Travis Hunter,WR,JAX,14.887500000000001,R,8,travis hunter,WR
-71.0,Bo Nix,DEN,12,QB,68.0,71.0,68.0,65.0,78.0,76.0,71.0,69  +2,bo nix,QB,bo nix,39732,100,39732,Bo Nix,QB,DEN,18.53,1.0,12,bo nix,QB
+71.0,Bo Nix,DEN,12,QB,68.0,71.0,68.0,65.0,78.0,76.0,71.0,69  +2,bo nix,QB,bo nix,39732,100,39732,Bo Nix,QB,DEN,21.41,1.0,12,bo nix,QB
 72.0,Jaylen Waddle,MIA,12,WR,64.0,69.0,80.0,84.0,75.0,57.0,71.5,68  +4,jaylen waddle,WR,jaylen waddle,36613,100,36613,Jaylen Waddle,WR,MIA,9.25,0.8571428571428571,12,jaylen waddle,WR
 73.0,Mark Andrews,BAL,7,TE,73.0,72.0,72.0,53.0,93.0,82.0,74.2,70  +3,mark andrews,TE,mark andrews,34753,100,34753,Mark Andrews,TE,BAL,11.7,0.7894736842105263,7,mark andrews,TE
 74.0,Jerry Jeudy,CLE,9,WR,67.0,74.0,70.0,99.0,65.0,70.0,74.2,78  -4,jerry jeudy,WR,jerry jeudy,36407,100,36407,Jerry Jeudy,WR,CLE,11.0,0.9705882352941176,9,jerry jeudy,WR
 75.0,Kaleb Johnson,PIT,5,RB,93.0,78.0,79.0,80.0,74.0,73.0,79.5,77  -2,kaleb johnson,RB,kaleb johnson,40122,100,40122,Kaleb Johnson,RB,PIT,7.3754811715481186,R,5,kaleb johnson,RB
-76.0,Tyrone Tracy Jr.,NYG,14,RB,81.0,87.0,71.0,101.0,66.0,79.0,80.8,79  -3,tyrone tracy,RB,tyrone tracy,39384,100,39384,Tyrone Tracy,RB,NYG,9.0,1.0,14,tyrone tracy,RB
+76.0,Tyrone Tracy Jr.,NYG,14,RB,81.0,87.0,71.0,101.0,66.0,79.0,80.8,79  -3,tyrone tracy,RB,tyrone tracy,39384,100,39384,Tyrone Tracy,RB,NYG,8.6,1.0,14,tyrone tracy,RB
 77.0,Rome Odunze,CHI,5,WR,76.0,80.0,99.0,89.0,82.0,63.0,81.5,75  +2,rome odunze,WR,rome odunze,39919,100,39919,Rome Odunze,WR,CHI,6.0,1.0,5,rome odunze,WR
 78.0,Chris Olave,NO,11,WR,84.0,76.0,101.0,87.0,77.0,66.0,81.8,76  +2,chris olave,WR,chris olave,37239,100,37239,Chris Olave,WR,NO,14.600000000000001,0.7058823529411765,11,chris olave,WR
 79.0,Deebo Samuel Sr.,WAS,12,WR,94.0,81.0,75.0,96.0,88.0,72.0,84.3,84  -5,deebo samuel,WR,deebo samuel,35719,100,35719,Deebo Samuel,WR,WAS,11.4,0.8648648648648649,12,deebo samuel,WR
 80.0,Evan Engram,DEN,12,TE,78.0,77.0,97.0,74.0,90.0,90.0,84.3,80,evan engram,TE,evan engram,33881,100,33881,Evan Engram,TE,DEN,11.100000000000001,0.7647058823529411,12,evan engram,TE
 81.0,David Njoku,CLE,9,TE,72.0,83.0,74.0,85.0,100.0,95.0,84.8,83  -2,david njoku,TE,david njoku,33885,100,33885,David Njoku,TE,CLE,12.25,0.8,9,david njoku,TE
 82.0,Stefon Diggs,NE,14,WR,88.0,88.0,91.0,95.0,85.0,78.0,87.5,87  -5,stefon diggs,WR,stefon diggs,31588,100,31588,Stefon Diggs,WR,NE,15.700000000000001,0.7105263157894737,14,stefon diggs,WR
-83.0,Kyler Murray,ARI,8,QB,77.0,94.0,81.0,81.0,106.0,88.0,87.8,90  -7,kyler murray,QB,kyler murray,35228,100,35228,Kyler Murray,QB,ARI,17.96,0.7352941176470589,8,kyler murray,QB
-84.0,Jaylen Warren,PIT,5,RB,85.0,95.0,88.0,107.0,72.0,83.0,88.3,85  -1,jaylen warren,RB,jaylen warren,37228,100,37228,Jaylen Warren,RB,PIT,8.7,0.9444444444444444,5,jaylen warren,RB
+83.0,Kyler Murray,ARI,8,QB,77.0,94.0,81.0,81.0,106.0,88.0,87.8,90  -7,kyler murray,QB,kyler murray,35228,100,35228,Kyler Murray,QB,ARI,20.78,0.7352941176470589,8,kyler murray,QB
+84.0,Jaylen Warren,PIT,5,RB,85.0,95.0,88.0,107.0,72.0,83.0,88.3,85  -1,jaylen warren,RB,jaylen warren,37228,100,37228,Jaylen Warren,RB,PIT,8.350000000000001,0.9444444444444444,5,jaylen warren,RB
 85.0,Ricky Pearsall,SF,14,WR,97.0,96.0,73.0,110.0,68.0,92.0,89.3,82  +3,ricky pearsall,WR,ricky pearsall,39916,100,39916,Ricky Pearsall,WR,SF,6.4,0.5882352941176471,14,ricky pearsall,WR
 87.0,Jakobi Meyers,LV,8,WR,82.0,82.0,85.0,119.0,95.0,75.0,89.7,89  -2,jakobi meyers,WR,jakobi meyers,34960,100,34960,Jakobi Meyers,WR,LV,13.7,0.9117647058823529,8,jakobi meyers,WR
 86.0,Emeka Egbuka,TB,9,WR,87.0,93.0,82.0,120.0,70.0,86.0,89.7,74  +12,emeka egbuka,WR,emeka egbuka,40117,100,40117,Emeka Egbuka,WR,TB,12.850000000000001,R,9,emeka egbuka,WR
 88.0,Cooper Kupp,SEA,8,WR,83.0,84.0,95.0,109.0,89.0,81.0,90.2,97  -9,cooper kupp,WR,cooper kupp,33908,100,33908,Cooper Kupp,WR,SEA,11.100000000000001,0.7297297297297297,8,cooper kupp,WR
-89.0,Tyler Warren,IND,11,TE,89.0,85.0,96.0,88.0,92.0,93.0,90.5,81  +8,tyler warren,TE,tyler warren,40116,100,40116,Tyler Warren,TE,IND,11.071887755102027,R,11,tyler warren,TE
+89.0,Tyler Warren,IND,11,TE,89.0,85.0,96.0,88.0,92.0,93.0,90.5,81  +8,tyler warren,TE,tyler warren,40116,100,40116,Tyler Warren,TE,IND,11.057091836734672,R,11,tyler warren,TE
 90.0,Matthew Golden,GB,5,WR,80.0,91.0,100.0,115.0,83.0,91.0,93.3,86  +4,matthew golden,WR,matthew golden,40303,100,40303,Matthew Golden,WR,GB,12.633837890625001,R,5,matthew golden,WR
 91.0,Jordan Addison,MIN,6,WR,109.0,86.0,103.0,94.0,97.0,80.0,94.8,92  -1,jordan addison,WR,jordan addison,38994,100,38994,Jordan Addison,WR,MIN,11.2,0.9428571428571428,6,jordan addison,WR
-92.0,Travis Etienne Jr.,JAX,8,RB,117.0,92.0,90.0,121.0,86.0,89.0,99.2,91  +1,travis etienne,RB,travis etienne,36973,100,36973,Travis Etienne,RB,JAX,11.45,0.9411764705882353,8,travis etienne,RB
-93.0,Brock Purdy,SF,14,QB,79.0,109.0,89.0,106.0,120.0,97.0,100.0,96  -3,brock purdy,QB,brock purdy,37834,100,37834,Brock Purdy,QB,SF,18.159999999999997,0.918918918918919,14,brock purdy,QB
-94.0,Dak Prescott,DAL,10,QB,101.0,114.0,78.0,117.0,94.0,106.0,101.7,93  +1,dak prescott,QB,dak prescott,33077,100,33077,Dak Prescott,QB,DAL,18.28,0.7428571428571429,10,dak prescott,QB
-95.0,Khalil Shakir,BUF,7,WR,106.0,98.0,118.0,103.0,103.0,85.0,102.2,100  -5,khalil shakir,WR,khalil shakir,37261,100,37261,Khalil Shakir,WR,BUF,10.399999999999999,0.9230769230769231,7,khalil shakir,WR
+92.0,Travis Etienne Jr.,JAX,8,RB,117.0,92.0,90.0,121.0,86.0,89.0,99.2,91  +1,travis etienne,RB,travis etienne,36973,100,36973,Travis Etienne,RB,JAX,10.95,0.9411764705882353,8,travis etienne,RB
+93.0,Brock Purdy,SF,14,QB,79.0,109.0,89.0,106.0,120.0,97.0,100.0,96  -3,brock purdy,QB,brock purdy,37834,100,37834,Brock Purdy,QB,SF,21.48,0.918918918918919,14,brock purdy,QB
+94.0,Dak Prescott,DAL,10,QB,101.0,114.0,78.0,117.0,94.0,106.0,101.7,93  +1,dak prescott,QB,dak prescott,33077,100,33077,Dak Prescott,QB,DAL,22.84,0.7428571428571429,10,dak prescott,QB
+95.0,Khalil Shakir,BUF,7,WR,106.0,98.0,118.0,103.0,103.0,85.0,102.2,100  -5,khalil shakir,WR,khalil shakir,37261,100,37261,Khalil Shakir,WR,BUF,10.4,0.9230769230769231,7,khalil shakir,WR
 96.0,Jacory Croskey-Merritt,WAS,12,RB,86.0,134.0,77.0,149.0,81.0,87.0,102.3,98  -2,jacory croskey-merritt,RB,jacory croskey-merritt,40153,100,40153,Jacory Croskey-Merritt,RB,WAS,1.8,R,12,jacory croskey-merritt,RB
 97.0,Chris Godwin Jr.,TB,9,WR,99.0,101.0,107.0,91.0,107.0,111.0,102.7,111  -14,chris godwin,WR,chris godwin,33921,100,33921,Chris Godwin,WR,TB,12.75,0.7027027027027027,9,chris godwin,WR
 98.0,Cam Skattebo,NYG,14,RB,107.0,100.0,117.0,100.0,98.0,98.0,103.3,101  -3,cam skattebo,RB,cam skattebo,40318,100,40318,Cam Skattebo,RB,NYG,5.834142259414228,R,14,cam skattebo,RB
 99.0,Jordan Mason,MIN,6,RB,123.0,106.0,98.0,124.0,76.0,94.0,103.5,88  +11,jordan mason,RB,jordan mason,37525,100,37525,Jordan Mason,RB,MIN,7.800000000000001,0.5675675675675675,6,jordan mason,RB
-100.0,Jared Goff,DET,8,QB,122.0,89.0,93.0,104.0,118.0,101.0,104.5,105  -5,jared goff,QB,jared goff,33106,100,33106,Jared Goff,QB,DET,15.91,1.0,8,jared goff,QB
-102.0,Joe Mixon,HOU,6,RB,110.0,75.0,76.0,64.0,102.0,209.0,106.0,112  -10,joe mixon,RB,joe mixon,33897,100,33897,Joe Mixon,RB,HOU,17.0,0.9166666666666666,6,joe mixon,RB
+100.0,Jared Goff,DET,8,QB,122.0,89.0,93.0,104.0,118.0,101.0,104.5,105  -5,jared goff,QB,jared goff,33106,100,33106,Jared Goff,QB,DET,20.549999999999997,1.0,8,jared goff,QB
+102.0,Joe Mixon,HOU,6,RB,110.0,75.0,76.0,64.0,102.0,209.0,106.0,112  -10,joe mixon,RB,joe mixon,33897,100,33897,Joe Mixon,RB,HOU,15.900000000000002,0.9166666666666666,6,joe mixon,RB
 104.0,J.K. Dobbins,DEN,12,RB,98.0,108.0,102.0,138.0,87.0,105.0,106.3,94  +10,j.k. dobbins,RB,j.k. dobbins,36158,100,36158,J.K. Dobbins,RB,DEN,11.7,0.40540540540540543,12,j.k. dobbins,RB
 105.0,Jauan Jennings,SF,14,WR,115.0,105.0,119.0,111.0,104.0,96.0,108.3,102  +3,jauan jennings,WR,jauan jennings,36259,100,36259,Jauan Jennings,WR,SF,7.850000000000001,0.8108108108108109,14,jauan jennings,WR
 106.0,Javonte Williams,DAL,10,RB,103.0,111.0,108.0,150.0,91.0,103.0,111.0,108  -2,javonte williams,RB,javonte williams,36997,100,36997,Javonte Williams,RB,DAL,9.45,0.9714285714285714,10,javonte williams,RB
 107.0,Tucker Kraft,GB,5,TE,105.0,116.0,115.0,116.0,110.0,108.0,111.7,99  +8,tucker kraft,TE,tucker kraft,38996,100,38996,Tucker Kraft,TE,GB,8.1,0.8108108108108109,5,tucker kraft,TE
 108.0,Zach Charbonnet,SEA,8,RB,132.0,110.0,92.0,153.0,84.0,100.0,111.8,95  +13,zach charbonnet,RB,zach charbonnet,39165,100,39165,Zach Charbonnet,RB,SEA,6.0,0.9705882352941176,8,zach charbonnet,RB
-109.0,Justin Herbert,LAC,12,QB,91.0,104.0,122.0,123.0,133.0,107.0,113.3,115  -6,justin herbert,QB,justin herbert,36355,100,36355,Justin Herbert,QB,LAC,18.76,0.8857142857142857,12,justin herbert,QB
+109.0,Justin Herbert,LAC,12,QB,91.0,104.0,122.0,123.0,133.0,107.0,113.3,115  -6,justin herbert,QB,justin herbert,36355,100,36355,Justin Herbert,QB,LAC,21.62,0.8857142857142857,12,justin herbert,QB
 110.0,Michael Pittman Jr.,IND,11,WR,92.0,119.0,94.0,165.0,111.0,99.0,113.3,116  -6,michael pittman,WR,michael pittman,36252,100,36252,Michael Pittman,WR,IND,12.85,0.9411764705882353,11,michael pittman,WR
 113.0,Rhamondre Stevenson,NE,14,RB,108.0,130.0,110.0,129.0,108.0,102.0,114.5,130  -17,rhamondre stevenson,RB,rhamondre stevenson,36875,100,36875,Rhamondre Stevenson,RB,NE,12.4,0.7941176470588235,14,rhamondre stevenson,RB
-112.0,Justin Fields,NYJ,9,QB,118.0,162.0,114.0,63.0,126.0,104.0,114.5,107  +5,justin fields,QB,justin fields,36945,100,36945,Justin Fields,QB,NYJ,13.24,0.6857142857142857,9,justin fields,QB
-114.0,Austin Ekeler,WAS,12,RB,95.0,123.0,86.0,146.0,96.0,147.0,115.5,106  +8,austin ekeler,RB,austin ekeler,33699,100,33699,Austin Ekeler,RB,WAS,10.799999999999999,0.7837837837837838,12,austin ekeler,RB
+112.0,Justin Fields,NYJ,9,QB,118.0,162.0,114.0,63.0,126.0,104.0,114.5,107  +5,justin fields,QB,justin fields,36945,100,36945,Justin Fields,QB,NYJ,16.96,0.6857142857142857,9,justin fields,QB
+114.0,Austin Ekeler,WAS,12,RB,95.0,123.0,86.0,146.0,96.0,147.0,115.5,106  +8,austin ekeler,RB,austin ekeler,33699,100,33699,Austin Ekeler,RB,WAS,10.8,0.7837837837837838,12,austin ekeler,RB
 115.0,Colston Loveland,CHI,5,TE,113.0,102.0,131.0,113.0,115.0,120.0,115.7,110  +5,colston loveland,TE,colston loveland,40115,100,40115,Colston Loveland,TE,CHI,11.2775,R,5,colston loveland,TE
-116.0,Quinshon Judkins,CLE,9,RB,142.0,79.0,109.0,98.0,122.0,154.0,117.3,113  +3,quinshon judkins,RB,quinshon judkins,40321,100,40321,Quinshon Judkins,RB,CLE,12.310836820083685,R,9,quinshon judkins,RB
+116.0,Quinshon Judkins,CLE,9,RB,142.0,79.0,109.0,98.0,122.0,154.0,117.3,113  +3,quinshon judkins,RB,quinshon judkins,40321,100,40321,Quinshon Judkins,RB,CLE,12.310836820083683,R,9,quinshon judkins,RB
 117.0,Keon Coleman,BUF,7,WR,112.0,124.0,113.0,139.0,117.0,110.0,119.2,114  +3,keon coleman,WR,keon coleman,39901,100,39901,Keon Coleman,WR,BUF,6.7,0.8,7,keon coleman,WR
-118.0,Caleb Williams,CHI,5,QB,111.0,143.0,120.0,114.0,112.0,128.0,121.3,129  -11,caleb williams,QB,caleb williams,39918,100,39918,Caleb Williams,QB,CHI,11.48,1.0,5,caleb williams,QB
-120.0,Brian Robinson Jr.,SF,14,RB,163.0,90.0,124.0,102.0,114.0,149.0,123.7,117  +3,brian robinson,RB,brian robinson,37746,100,37746,Brian Robinson,RB,WAS,11.65,0.8648648648648649,12,brian robinson,RB
+118.0,Caleb Williams,CHI,5,QB,111.0,143.0,120.0,114.0,112.0,128.0,121.3,129  -11,caleb williams,QB,caleb williams,39918,100,39918,Caleb Williams,QB,CHI,16.48,1.0,5,caleb williams,QB
+120.0,Brian Robinson Jr.,SF,14,RB,163.0,90.0,124.0,102.0,114.0,149.0,123.7,117  +3,brian robinson,RB,brian robinson,37746,100,37746,Brian Robinson,RB,WAS,11.150000000000002,0.8648648648648649,12,brian robinson,RB
 121.0,Jayden Reed,GB,5,WR,126.0,115.0,134.0,134.0,119.0,125.0,125.5,125  -4,jayden reed,WR,jayden reed,39146,100,39146,Jayden Reed,WR,GB,11.0,0.972972972972973,5,jayden reed,WR
 122.0,Josh Downs,IND,11,WR,136.0,122.0,129.0,140.0,121.0,112.0,126.7,118  +4,josh downs,WR,josh downs,38997,100,38997,Josh Downs,WR,IND,9.3,0.9117647058823529,11,josh downs,WR
 123.0,Dalton Kincaid,BUF,7,TE,125.0,113.0,142.0,128.0,142.0,124.0,129.0,119  +4,dalton kincaid,TE,dalton kincaid,38933,100,38933,Dalton Kincaid,TE,BUF,7.949999999999999,0.8717948717948718,7,dalton kincaid,TE
-124.0,Drake Maye,NE,14,QB,124.0,132.0,130.0,143.0,137.0,113.0,129.8,122  +2,drake maye,QB,drake maye,39851,100,39851,Drake Maye,QB,NE,15.740000000000002,0.7647058823529411,14,drake maye,QB
-126.0,C.J. Stroud,HOU,6,QB,133.0,120.0,135.0,132.0,153.0,122.0,132.5,136  -10,c.j. stroud,QB,c.j. stroud,39163,100,39163,C.J. Stroud,QB,HOU,14.34,0.9473684210526315,6,c.j. stroud,QB
+124.0,Drake Maye,NE,14,QB,124.0,132.0,130.0,143.0,137.0,113.0,129.8,122  +2,drake maye,QB,drake maye,39851,100,39851,Drake Maye,QB,NE,18.740000000000002,0.7647058823529411,14,drake maye,QB
+126.0,C.J. Stroud,HOU,6,QB,133.0,120.0,135.0,132.0,153.0,122.0,132.5,136  -10,c.j. stroud,QB,c.j. stroud,39163,100,39163,C.J. Stroud,QB,HOU,19.1,0.9473684210526315,6,c.j. stroud,QB
 128.0,Tank Bigsby,JAX,8,RB,128.0,138.0,105.0,209.0,99.0,121.0,133.3,124  +4,tank bigsby,RB,tank bigsby,38555,100,38555,Tank Bigsby,RB,JAX,2.8000000000000003,0.8235294117647058,8,tank bigsby,RB
 130.0,Najee Harris,LAC,12,RB,169.0,146.0,137.0,118.0,113.0,126.0,134.8,135  -5,najee harris,RB,najee harris,36893,100,36893,Najee Harris,RB,LAC,10.4,1.0,12,najee harris,RB
 131.0,Kyle Pitts Sr.,ATL,5,TE,139.0,112.0,148.0,130.0,141.0,140.0,135.0,120  +11,kyle pitts,TE,kyle pitts,36970,100,36970,Kyle Pitts,TE,ATL,6.75,1.0,5,kyle pitts,TE
 132.0,Nick Chubb,HOU,6,RB,141.0,121.0,112.0,176.0,101.0,163.0,135.7,123  +9,nick chubb,RB,nick chubb,34791,100,34791,Nick Chubb,RB,HOU,5.800000000000001,0.2857142857142857,6,nick chubb,RB
-134.0,Jordan Love,GB,5,QB,129.0,147.0,123.0,141.0,157.0,133.0,138.3,139  -5,jordan love,QB,jordan love,36264,100,36264,Jordan Love,QB,GB,16.8,0.9459459459459459,5,jordan love,QB
+134.0,Jordan Love,GB,5,QB,129.0,147.0,123.0,141.0,157.0,133.0,138.3,139  -5,jordan love,QB,jordan love,36264,100,36264,Jordan Love,QB,GB,21.56,0.9459459459459459,5,jordan love,QB
 135.0,Jake Ferguson,DAL,10,TE,134.0,131.0,140.0,159.0,132.0,136.0,138.7,127  +8,jake ferguson,TE,jake ferguson,38041,100,38041,Jake Ferguson,TE,DAL,9.15,0.9142857142857143,10,jake ferguson,TE
 136.0,Darnell Mooney,ATL,5,WR,138.0,142.0,121.0,183.0,134.0,116.0,139.0,137  -1,darnell mooney,WR,darnell mooney,36309,100,36309,Darnell Mooney,WR,ATL,6.800000000000001,0.8823529411764706,5,darnell mooney,WR
 138.0,Jaydon Blue,DAL,10,RB,159.0,144.0,138.0,155.0,109.0,142.0,141.2,148  -10,jaydon blue,RB,jaydon blue,40272,100,40272,Jaydon Blue,RB,DAL,3.3173221757322167,R,10,jaydon blue,RB
-139.0,Rachaad White,TB,9,RB,147.0,169.0,133.0,148.0,125.0,139.0,143.5,151  -12,rachaad white,RB,rachaad white,37256,100,37256,Rachaad White,RB,TB,14.100000000000001,0.9459459459459459,9,rachaad white,RB
+139.0,Rachaad White,TB,9,RB,147.0,169.0,133.0,148.0,125.0,139.0,143.5,151  -12,rachaad white,RB,rachaad white,37256,100,37256,Rachaad White,RB,TB,13.100000000000001,0.9459459459459459,9,rachaad white,RB
 140.0,Dallas Goedert,PHI,9,TE,130.0,148.0,125.0,142.0,175.0,145.0,144.2,140,dallas goedert,TE,dallas goedert,34351,100,34351,Dallas Goedert,TE,PHI,9.2,0.7435897435897436,9,dallas goedert,TE
 141.0,Braelon Allen,NYJ,9,RB,158.0,156.0,126.0,199.0,105.0,123.0,144.5,121  +20,braelon allen,RB,braelon allen,39794,100,39794,Braelon Allen,RB,NYJ,3.8,1.0,9,braelon allen,RB
-142.0,J.J. McCarthy,MIN,6,QB,135.0,151.0,152.0,154.0,146.0,130.0,144.7,152  -10,j.j. mccarthy,QB,j.j. mccarthy,40076,100,40076,J.J. McCarthy,QB,MIN,18.914032786885244,R,6,j.j. mccarthy,QB
+142.0,J.J. McCarthy,MIN,6,QB,135.0,151.0,152.0,154.0,146.0,130.0,144.7,152  -10,j.j. mccarthy,QB,j.j. mccarthy,40076,100,40076,J.J. McCarthy,QB,MIN,22.011499999999995,R,6,j.j. mccarthy,QB
 145.0,Brandon Aiyuk,SF,14,WR,166.0,140.0,162.0,127.0,139.0,138.0,145.3,142  +3,brandon aiyuk,WR,brandon aiyuk,36261,100,36261,Brandon Aiyuk,WR,SF,11.15,0.7027027027027027,14,brandon aiyuk,WR
 144.0,Rashid Shaheed,NO,11,WR,131.0,135.0,159.0,178.0,152.0,117.0,145.3,131  +13,rashid shaheed,WR,rashid shaheed,37545,100,37545,Rashid Shaheed,WR,NO,7.4,0.6176470588235294,11,rashid shaheed,WR
 147.0,Keenan Allen,LAC,12,WR,120.0,136.0,151.0,222.0,130.0,131.0,148.3,141  +6,keenan allen,WR,keenan allen,30279,100,30279,Keenan Allen,WR,CHI,13.5,0.8235294117647058,5,keenan allen,WR
 148.0,Jayden Higgins,HOU,6,WR,143.0,125.0,166.0,206.0,136.0,118.0,149.0,145  +3,jayden higgins,WR,jayden higgins,40118,100,40118,Jayden Higgins,WR,HOU,11.1890625,R,6,jayden higgins,WR
 149.0,Christian Kirk,HOU,6,WR,177.0,159.0,136.0,171.0,149.0,109.0,150.2,149,christian kirk,WR,christian kirk,34775,100,34775,Christian Kirk,WR,HOU,12.850000000000001,0.5882352941176471,6,christian kirk,WR
-150.0,Jonnu Smith,PIT,5,TE,185.0,128.0,181.0,90.0,155.0,165.0,150.7,162  -12,jonnu smith,TE,jonnu smith,33858,100,33858,Jonnu Smith,TE,PIT,10.15,0.9411764705882353,5,jonnu smith,TE
+150.0,Jonnu Smith,PIT,5,TE,185.0,128.0,181.0,90.0,155.0,165.0,150.7,162  -12,jonnu smith,TE,jonnu smith,33858,100,33858,Jonnu Smith,TE,PIT,9.65,0.9411764705882353,5,jonnu smith,TE
 151.0,Bhayshul Tuten,JAX,8,RB,164.0,172.0,146.0,163.0,129.0,132.0,151.0,143  +8,bhayshul tuten,RB,bhayshul tuten,40320,100,40320,Bhayshul Tuten,RB,JAX,5.89910041841004,R,8,bhayshul tuten,RB
 152.0,Marvin Mims Jr.,DEN,12,WR,167.0,150.0,170.0,174.0,131.0,115.0,151.2,153  -1,marvin mims,WR,marvin mims,38976,100,38976,Marvin Mims,WR,DEN,3.25,0.9142857142857143,12,marvin mims,WR
 153.0,Zach Ertz,WAS,12,TE,156.0,153.0,116.0,162.0,170.0,167.0,154.0,164  -11,zach ertz,TE,zach ertz,30061,100,30061,Zach Ertz,TE,WAS,9.0,0.7297297297297297,12,zach ertz,TE
 154.0,Trey Benson,ARI,8,RB,150.0,158.0,149.0,230.0,123.0,134.0,157.3,147  +7,trey benson,RB,trey benson,39921,100,39921,Trey Benson,RB,ARI,2.6500000000000004,0.7058823529411765,8,trey benson,RB
-155.0,Trevor Lawrence,JAX,8,QB,172.0,184.0,150.0,177.0,145.0,135.0,160.5,171  -16,trevor lawrence,QB,trevor lawrence,36971,100,36971,Trevor Lawrence,QB,JAX,15.73,0.7647058823529411,8,trevor lawrence,QB
+155.0,Trevor Lawrence,JAX,8,QB,172.0,184.0,150.0,177.0,145.0,135.0,160.5,171  -16,trevor lawrence,QB,trevor lawrence,36971,100,36971,Trevor Lawrence,QB,JAX,19.810000000000002,0.7647058823529411,8,trevor lawrence,QB
 220.0,Tre' Harris,LAC,12,WR,,165.0,,168.0,177.0,141.0,162.8,182  +38,tre' harris,WR,tre harris,40328,100,40328,Tre Harris,WR,LAC,9.1416015625,R,12,tre harris,WR
 157.0,Jerome Ford,CLE,9,RB,152.0,180.0,147.0,244.0,116.0,150.0,164.8,156  +1,jerome ford,RB,jerome ford,37267,100,37267,Jerome Ford,RB,CLE,9.75,0.9142857142857143,9,jerome ford,RB
 158.0,Hunter Henry,NE,14,TE,157.0,170.0,155.0,172.0,165.0,179.0,166.3,163  -5,hunter henry,TE,hunter henry,33090,100,33090,Hunter Henry,TE,NE,9.100000000000001,0.8529411764705882,14,hunter henry,TE
@@ -150,34 +150,34 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 160.0,Marquise Brown,KC,10,WR,171.0,194.0,215.0,125.0,164.0,143.0,168.7,178  -18,marquise brown,WR,marquise brown,35662,100,35662,Marquise Brown,WR,KC,8.25,0.4864864864864865,10,marquise brown,WR
 163.0,Tyler Allgeier,ATL,5,RB,160.0,190.0,173.0,184.0,147.0,162.0,169.3,166  -3,tyler allgeier,RB,tyler allgeier,37263,100,37263,Tyler Allgeier,RB,ATL,5.5,1.0,5,tyler allgeier,RB
 166.0,Luther Burden III,CHI,5,WR,191.0,152.0,174.0,210.0,160.0,144.0,171.8,167  -1,luther burden,WR,luther burden,40323,100,40323,Luther Burden,WR,CHI,11.01923828125,R,5,luther burden,WR
-169.0,Tua Tagovailoa,MIA,12,QB,165.0,207.0,154.0,193.0,162.0,152.0,172.2,191  -22,tua tagovailoa,QB,tua tagovailoa,36212,100,36212,Tua Tagovailoa,QB,MIA,14.88,0.8285714285714286,12,tua tagovailoa,QB
+169.0,Tua Tagovailoa,MIA,12,QB,165.0,207.0,154.0,193.0,162.0,152.0,172.2,191  -22,tua tagovailoa,QB,tua tagovailoa,36212,100,36212,Tua Tagovailoa,QB,MIA,18.98,0.8285714285714286,12,tua tagovailoa,QB
 168.0,Tyjae Spears,TEN,10,RB,155.0,171.0,161.0,197.0,148.0,201.0,172.2,172  -4,tyjae spears,RB,tyjae spears,39032,100,39032,Tyjae Spears,RB,TEN,7.300000000000001,0.8529411764705882,10,tyjae spears,RB
 170.0,Rashod Bateman,BAL,7,WR,176.0,166.0,144.0,185.0,205.0,161.0,172.8,160  +10,rashod bateman,WR,rashod bateman,36550,100,36550,Rashod Bateman,WR,BAL,6.9,0.9210526315789473,7,rashod bateman,WR
 171.0,Ray Davis,BUF,7,RB,190.0,189.0,165.0,215.0,138.0,146.0,173.8,175  -4,ray davis,RB,ray davis,39875,100,39875,Ray Davis,RB,BUF,3.8000000000000003,0.95,7,ray davis,RB
-173.0,Cam Ward,TEN,10,QB,173.0,167.0,184.0,166.0,201.0,158.0,174.8,179  -6,cam ward,QB,cameron ward,40308,100,40308,Cameron Ward,QB,TEN,19.82,R,10,cameron ward,QB
+173.0,Cam Ward,TEN,10,QB,173.0,167.0,184.0,166.0,201.0,158.0,174.8,179  -6,cam ward,QB,cameron ward,40308,100,40308,Cameron Ward,QB,TEN,24.646000000000004,R,10,cameron ward,QB
 174.0,Ollie Gordon II,MIA,12,RB,188.0,175.0,128.0,248.0,124.0,189.0,175.3,159  +15,ollie gordon,RB,ollie gordon,40134,100,40134,Ollie Gordon,RB,MIA,2.8,R,12,ollie gordon,RB
-177.0,Matthew Stafford,LAR,8,QB,162.0,202.0,169.0,167.0,187.0,185.0,178.7,189  -12,matthew stafford,QB,matthew stafford,26498,100,26498,Matthew Stafford,QB,LA,16.73,0.918918918918919,8,matthew stafford,QB
+177.0,Matthew Stafford,LAR,8,QB,162.0,202.0,169.0,167.0,187.0,185.0,178.7,189  -12,matthew stafford,QB,matthew stafford,26498,100,26498,Matthew Stafford,QB,LA,18.04,0.918918918918919,8,matthew stafford,QB
 178.0,Xavier Legette,CAR,14,WR,151.0,187.0,202.0,208.0,176.0,160.0,180.7,185  -7,xavier legette,WR,xavier legette,39342,100,39342,Xavier Legette,WR,CAR,7.5,0.8823529411764706,14,xavier legette,WR
 179.0,Dylan Sampson,CLE,9,RB,204.0,182.0,163.0,255.0,135.0,151.0,181.7,155  +24,dylan sampson,RB,dylan sampson,40124,100,40124,Dylan Sampson,RB,CLE,4.213347280334729,R,9,dylan sampson,RB
-181.0,Michael Penix Jr.,ATL,5,QB,179.0,188.0,176.0,189.0,191.0,188.0,185.2,205  -24,michael penix,QB,michael penix,39917,100,39917,Michael Penix,QB,ATL,6.38,0.29411764705882354,5,michael penix,QB
+181.0,Michael Penix Jr.,ATL,5,QB,179.0,188.0,176.0,189.0,191.0,188.0,185.2,205  -24,michael penix,QB,michael penix,39917,100,39917,Michael Penix,QB,ATL,5.38,0.29411764705882354,5,michael penix,QB
 182.0,Isaiah Likely,BAL,7,TE,201.0,173.0,189.0,160.0,181.0,208.0,185.3,200  -18,isaiah likely,TE,isaiah likely,37838,100,37838,Isaiah Likely,TE,BAL,7.95,0.8421052631578947,7,isaiah likely,TE
 206.0,Rico Dowdle,CAR,14,RB,,212.0,207.0,219.0,140.0,164.0,188.4,197  +9,rico dowdle,RB,rico dowdle,36139,100,36139,Rico Dowdle,RB,CAR,8.600000000000001,0.9428571428571428,14,rico dowdle,RB
-183.0,Bryce Young,CAR,14,QB,192.0,209.0,191.0,194.0,197.0,153.0,189.3,190  -7,bryce young,QB,bryce young,39150,100,39150,Bryce Young,QB,CAR,9.690000000000001,0.8823529411764706,14,bryce young,QB
+183.0,Bryce Young,CAR,14,QB,192.0,209.0,191.0,194.0,197.0,153.0,189.3,190  -7,bryce young,QB,bryce young,39150,100,39150,Bryce Young,QB,CAR,12.21,0.8823529411764706,14,bryce young,QB
 226.0,DeAndre Hopkins,BAL,7,WR,,214.0,,191.0,151.0,207.0,190.8,236  -10,deandre hopkins,WR,deandre hopkins,30564,100,30564,DeAndre Hopkins,WR,BAL,9.0,0.6666666666666666,7,deandre hopkins,WR
 207.0,Isaac Guerendo,SF,14,RB,,195.0,180.0,198.0,206.0,176.0,191.0,213  -6,isaac guerendo,RB,isaac guerendo,39363,100,39363,Isaac Guerendo,RB,SF,2.2,0.7647058823529411,14,isaac guerendo,RB
 184.0,Wan'Dale Robinson,NYG,14,WR,174.0,205.0,164.0,249.0,189.0,166.0,191.2,192  -8,wan'dale robinson,WR,wan'dale robinson,38117,100,38117,Wan'Dale Robinson,WR,NYG,9.7,0.9411764705882353,14,wan'dale robinson,WR
 227.0,Joshua Palmer,BUF,7,WR,,181.0,,235.0,184.0,175.0,193.8,180  +47,joshua palmer,WR,josh palmer,36988,100,36988,Josh Palmer,WR,BUF,8.100000000000001,0.7142857142857143,7,josh palmer,WR
 228.0,Chig Okonkwo,TEN,10,TE,,179.0,,220.0,179.0,198.0,194.0,186  +42,chig okonkwo,TE,chigoziem okonkwo,37809,100,37809,Chigoziem Okonkwo,TE,TEN,5.9,0.9705882352941176,10,chigoziem okonkwo,TE
 188.0,Darren Waller,MIA,12,TE,181.0,200.0,194.0,187.0,208.0,215.0,197.5,211  -23,darren waller,TE,darren waller,31610,100,31610,Darren Waller,TE,MIA,8.65,0.7058823529411765,12,darren waller,TE
-189.0,Geno Smith,LV,8,QB,205.0,239.0,177.0,205.0,213.0,157.0,199.3,229  -40,geno smith,QB,geno smith,30565,100,30565,Geno Smith,QB,LV,15.59,0.9411764705882353,8,geno smith,QB
+189.0,Geno Smith,LV,8,QB,205.0,239.0,177.0,205.0,213.0,157.0,199.3,229  -40,geno smith,QB,geno smith,30565,100,30565,Geno Smith,QB,LV,18.4,0.9411764705882353,8,geno smith,QB
 211.0,Pat Freiermuth,PIT,5,TE,199.0,219.0,,175.0,215.0,191.0,199.8,225  -14,pat freiermuth,TE,pat freiermuth,36894,100,36894,Pat Freiermuth,TE,PIT,7.300000000000001,0.8333333333333334,5,pat freiermuth,TE
 212.0,Cade Otton,TB,9,TE,194.0,216.0,,211.0,192.0,193.0,201.2,222  -10,cade otton,TE,cade otton,38129,100,38129,Cade Otton,TE,TB,8.5,0.8918918918918919,9,cade otton,TE
-229.0,Aaron Rodgers,PIT,5,QB,193.0,229.0,,192.0,,192.0,201.5,221  +8,aaron rodgers,QB,aaron rodgers,23459,100,23459,Aaron Rodgers,QB,PIT,14.57,0.5294117647058824,5,aaron rodgers,QB
+229.0,Aaron Rodgers,PIT,5,QB,193.0,229.0,,192.0,,192.0,201.5,221  +8,aaron rodgers,QB,aaron rodgers,23459,100,23459,Aaron Rodgers,QB,PIT,20.07,0.5294117647058824,5,aaron rodgers,QB
 213.0,Romeo Doubs,GB,5,WR,,210.0,204.0,224.0,200.0,171.0,201.8,188  +25,romeo doubs,WR,romeo doubs,37816,100,37816,Romeo Doubs,WR,GB,9.2,0.8918918918918919,5,romeo doubs,WR
 190.0,Brenton Strange,JAX,8,TE,209.0,192.0,187.0,253.0,193.0,177.0,201.8,195  -5,brenton strange,TE,brenton strange,38935,100,38935,Brenton Strange,TE,JAX,3.1,0.5588235294117647,8,brenton strange,TE
 230.0,Kyle Williams,NE,14,WR,,193.0,,226.0,217.0,173.0,202.3,202  +28,kyle williams,WR,kyle williams,40119,100,40119,Kyle Williams,WR,NE,7.9159179687500005,R,14,kyle williams,WR
-191.0,Cedric Tillman,CLE,9,WR,168.0,191.0,203.0,316.0,178.0,159.0,202.5,181  +10,cedric tillman,WR,cedric tillman,38979,100,38979,Cedric Tillman,WR,CLE,3.0500000000000003,0.5714285714285714,9,cedric tillman,WR
-214.0,Sam Darnold,SEA,8,QB,202.0,236.0,,201.0,202.0,174.0,203.0,224  -10,sam darnold,QB,sam darnold,34869,100,34869,Sam Darnold,QB,SEA,13.16,0.7368421052631579,8,sam darnold,QB
+191.0,Cedric Tillman,CLE,9,WR,168.0,191.0,203.0,316.0,178.0,159.0,202.5,181  +10,cedric tillman,WR,cedric tillman,38979,100,38979,Cedric Tillman,WR,CLE,2.65,0.5714285714285714,9,cedric tillman,WR
+214.0,Sam Darnold,SEA,8,QB,202.0,236.0,,201.0,202.0,174.0,203.0,224  -10,sam darnold,QB,sam darnold,34869,100,34869,Sam Darnold,QB,SEA,19.660000000000004,0.7368421052631579,8,sam darnold,QB
 193.0,Jaylen Wright,MIA,12,RB,189.0,215.0,210.0,240.0,204.0,178.0,206.0,234  -41,jaylen wright,RB,jaylen wright,39874,100,39874,Jaylen Wright,RB,MIA,1.7000000000000002,0.7647058823529411,12,jaylen wright,RB
 195.0,Kareem Hunt,KC,10,RB,266.0,183.0,213.0,204.0,161.0,219.0,207.7,198  -3,kareem hunt,RB,kareem hunt,33923,100,33923,Kareem Hunt,RB,KC,9.7,0.8421052631578947,10,kareem hunt,RB
 199.0,DeMario Douglas,NE,14,WR,255.0,203.0,200.0,261.0,172.0,184.0,212.5,196  +3,demario douglas,WR,demario douglas,38621,100,38621,Demario Douglas,WR,NE,7.95,0.8823529411764706,14,demario douglas,WR
@@ -190,15 +190,15 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 218.0,Isaac TeSlaa,DET,8,WR,215.0,196.0,,223.0,186.0,287.0,221.4,199  +19,isaac teslaa,WR,isaac teslaa,40305,100,40305,Isaac TeSlaa,WR,DET,7.850000000000001,R,8,isaac teslaa,WR
 270.0,Mike Gesicki,CIN,10,TE,,220.0,,265.0,,190.0,225.0,254  +16,mike gesicki,TE,mike gesicki,34829,100,34829,Mike Gesicki,TE,CIN,5.4,0.9117647058823529,10,mike gesicki,TE
 236.0,Quentin Johnston,LAC,12,WR,,249.0,195.0,280.0,,180.0,226.0,255  -19,quentin johnston,WR,quentin johnston,38544,100,38544,Quentin Johnston,WR,LAC,5.2,0.9428571428571428,12,quentin johnston,WR
-238.0,Raheem Mostert,LV,8,RB,,238.0,190.0,246.0,,232.0,226.5,223  +15,raheem mostert,RB,raheem mostert,31687,100,31687,Raheem Mostert,RB,LV,10.450000000000001,0.8,8,raheem mostert,RB
-240.0,Jaxson Dart,NYG,14,QB,206.0,228.0,,238.0,,237.0,227.3,243  -3,jaxson dart,QB,jaxson dart,40312,100,40312,Jaxson Dart,QB,NYG,18.08268852459016,R,14,jaxson dart,QB
-239.0,Mason Taylor,NYJ,9,TE,,213.0,,270.0,198.0,228.0,227.3,230  +9,mason taylor,TE,mason taylor,40325,100,40325,Mason Taylor,TE,NYJ,7.95,R,9,mason taylor,TE
-241.0,Shedeur Sanders,CLE,9,QB,208.0,206.0,,213.0,,288.0,228.8,262  -21,shedeur sanders,QB,shedeur sanders,40304,100,40304,Shedeur Sanders,QB,CLE,9.78886475409836,R,9,shedeur sanders,QB
+238.0,Raheem Mostert,LV,8,RB,,238.0,190.0,246.0,,232.0,226.5,223  +15,raheem mostert,RB,raheem mostert,31687,100,31687,Raheem Mostert,RB,LV,10.45,0.8,8,raheem mostert,RB
+240.0,Jaxson Dart,NYG,14,QB,206.0,228.0,,238.0,,237.0,227.3,243  -3,jaxson dart,QB,jaxson dart,40312,100,40312,Jaxson Dart,QB,NYG,21.158737704918032,R,14,jaxson dart,QB
+239.0,Mason Taylor,NYJ,9,TE,,213.0,,270.0,198.0,228.0,227.3,230  +9,mason taylor,TE,mason taylor,40325,100,40325,Mason Taylor,TE,NYJ,7.9465306122448975,R,9,mason taylor,TE
+241.0,Shedeur Sanders,CLE,9,QB,208.0,206.0,,213.0,,288.0,228.8,262  -21,shedeur sanders,QB,shedeur sanders,40304,100,40304,Shedeur Sanders,QB,CLE,12.969877049180328,R,9,shedeur sanders,QB
 242.0,Elijah Arroyo,SEA,8,TE,,211.0,,272.0,228.0,210.0,230.3,259  -17,elijah arroyo,TE,elijah arroyo,40327,100,40327,Elijah Arroyo,TE,SEA,7.4,R,8,elijah arroyo,TE
 243.0,Woody Marks,HOU,6,RB,,201.0,,339.0,158.0,227.0,231.3,209  +34,woody marks,RB,woody marks,40270,100,40270,Woody Marks,RB,HOU,4.9,R,6,woody marks,RB
 244.0,Alec Pierce,IND,11,WR,,251.0,,256.0,229.0,204.0,235.0,245  -1,alec pierce,WR,alec pierce,37664,100,37664,Alec Pierce,WR,IND,5.5,0.9705882352941176,11,alec pierce,WR
-245.0,Anthony Richardson Sr.,IND,11,QB,241.0,254.0,,227.0,,229.0,237.8,241  +4,anthony richardson,QB,anthony richardson,39164,100,39164,Anthony Richardson,QB,IND,14.38,0.4411764705882353,11,anthony richardson,QB
-246.0,Russell Wilson,NYG,14,QB,239.0,278.0,,225.0,,213.0,238.8,258  -12,russell wilson,QB,russell wilson,29263,100,29263,Russell Wilson,QB,NYG,16.759999999999998,0.7714285714285715,14,russell wilson,QB
+245.0,Anthony Richardson Sr.,IND,11,QB,241.0,254.0,,227.0,,229.0,237.8,241  +4,anthony richardson,QB,anthony richardson,39164,100,39164,Anthony Richardson,QB,IND,16.5,0.4411764705882353,11,anthony richardson,QB
+246.0,Russell Wilson,NYG,14,QB,239.0,278.0,,225.0,,213.0,238.8,258  -12,russell wilson,QB,russell wilson,29263,100,29263,Russell Wilson,QB,NYG,20.52,0.7714285714285715,14,russell wilson,QB
 247.0,DJ Giddens,IND,11,RB,,243.0,,315.0,196.0,202.0,239.0,228  +19,dj giddens,RB,d.j. giddens,40129,100,40129,D.J. Giddens,RB,IND,3.3,R,11,d.j. giddens,RB
 248.0,Keaton Mitchell,BAL,7,RB,,230.0,,285.0,199.0,253.0,241.8,261  -13,keaton mitchell,RB,keaton mitchell,38454,100,38454,Keaton Mitchell,RB,BAL,7.2,0.23684210526315788,7,keaton mitchell,RB
 275.0,Tyler Lockett,TEN,10,WR,,233.0,,237.0,,256.0,242.0,260  +15,tyler lockett,WR,tyler lockett,32211,100,32211,Tyler Lockett,WR,TEN,8.45,1.0,10,tyler lockett,WR
@@ -209,11 +209,11 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 425.0,Scott Matlock,LAC,12,DT,247.0,,,,,,247.0,,scott matlock,DT,scott matlock,39995,100,39995,Scott Matlock,RB,LAC,2.4543723849372387,R,12,scott matlock,RB
 277.0,Elic Ayomanor,TEN,10,WR,,204.0,,320.0,,221.0,248.3,227  +50,elic ayomanor,WR,elic ayomanor,40126,100,40126,Elic Ayomanor,WR,TEN,4.9,R,10,elic ayomanor,WR
 251.0,Cole Kmet,CHI,5,TE,224.0,310.0,,228.0,,233.0,248.8,270  -19,cole kmet,TE,cole kmet,36290,100,36290,Cole Kmet,TE,CHI,8.7,0.8529411764705882,5,cole kmet,TE
-252.0,Kyle Monangai,CHI,5,RB,,242.0,,332.0,143.0,282.0,249.8,249  +3,kyle monangai,RB,kyle monangai,40147,100,40147,Kyle Monangai,RB,CHI,1.9000000000000001,R,5,kyle monangai,RB
+252.0,Kyle Monangai,CHI,5,RB,,242.0,,332.0,143.0,282.0,249.8,249  +3,kyle monangai,RB,kyle monangai,40147,100,40147,Kyle Monangai,RB,CHI,1.9,R,5,kyle monangai,RB
 427.0,Kyle Juszczyk,SF,14,RB,,,,250.0,,,250.0,,kyle juszczyk,RB,kyle juszczyk,39922,100,39922,Kyle Juszczyk,RB,SF,4.010188284518829,R,14,kyle juszczyk,RB
 225.0,Dalton Schultz,HOU,6,TE,333.0,241.0,,216.0,235.0,231.0,251.2,244  -19,dalton schultz,TE,dalton schultz,34383,100,34383,Dalton Schultz,TE,HOU,7.4,0.9473684210526315,6,dalton schultz,TE
 279.0,Jalen McMillan,TB,9,WR,,247.0,,231.0,,289.0,255.7,231  +48,jalen mcmillan,WR,jalen mcmillan,39855,100,39855,Jalen McMillan,WR,TB,7.65,0.7777777777777778,9,jalen mcmillan,WR
-254.0,Daniel Jones,IND,11,QB,,325.0,156.0,310.0,,249.0,260.0,275  -21,daniel jones,QB,daniel jones,35710,100,35710,Daniel Jones,QB,IND,9.130000000000003,0.47058823529411764,11,daniel jones,QB
+254.0,Daniel Jones,IND,11,QB,,325.0,156.0,310.0,,249.0,260.0,275  -21,daniel jones,QB,daniel jones,35710,100,35710,Daniel Jones,QB,IND,12.88,0.47058823529411764,11,daniel jones,QB
 281.0,Calvin Austin III,PIT,5,WR,,265.0,,277.0,,243.0,261.7,,calvin austin,WR,calvin austin,37837,100,37837,Calvin Austin,WR,PIT,3.5,0.9166666666666666,5,calvin austin,WR
 255.0,MarShawn Lloyd,GB,5,RB,,279.0,216.0,318.0,,239.0,263.0,264  -9,marshawn lloyd,RB,marshawn lloyd,39811,100,39811,MarShawn Lloyd,RB,GB,2.8,0.05555555555555555,5,marshawn lloyd,RB
 256.0,Elijah Mitchell,KC,10,RB,,315.0,,254.0,231.0,252.0,263.0,,elijah mitchell,RB,elijah mitchell,36567,100,36567,Elijah Mitchell,RB,KC,2.3000000000000003,0.65,10,elijah mitchell,RB
@@ -221,71 +221,71 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 284.0,Ja'Tavion Sanders,CAR,14,TE,,267.0,,278.0,,255.0,266.7,279  +5,ja'tavion sanders,TE,ja'tavion sanders,39356,100,39356,Ja'Tavion Sanders,TE,CAR,3.6,0.8823529411764706,14,ja'tavion sanders,TE
 286.0,Andrei Iosivas,CIN,10,WR,,288.0,,266.0,,261.0,271.7,276  +10,andrei iosivas,WR,andrei iosivas,38619,100,38619,Andrei Iosivas,WR,CIN,5.6,0.7647058823529411,10,andrei iosivas,WR
 285.0,Dameon Pierce,HOU,6,RB,,,,290.0,194.0,331.0,271.7,238  +47,dameon pierce,RB,dameon pierce,37258,100,37258,Dameon Pierce,RB,HOU,2.6,0.6578947368421053,6,dameon pierce,RB
-447.0,Jordan Travis,,,QB,273.0,,,,,,273.0,,jordan travis,QB,jordan travis,40072,100,40072,Jordan Travis,QB,NYJ,8.375049180327869,R,9,jordan travis,QB
-260.0,Brashard Smith,KC,10,RB,,262.0,,380.0,220.0,230.0,273.0,281  -21,brashard smith,RB,brashard smith,40099,100,40099,Brashard Smith,RB,KC,1.9480962343096233,R,10,brashard smith,RB
+447.0,Jordan Travis,,,QB,273.0,,,,,,273.0,,jordan travis,QB,jordan travis,40072,100,40072,Jordan Travis,QB,NYJ,11.037073770491805,R,9,jordan travis,QB
+260.0,Brashard Smith,KC,10,RB,,262.0,,380.0,220.0,230.0,273.0,281  -21,brashard smith,RB,brashard smith,40099,100,40099,Brashard Smith,RB,KC,1.9000000000000001,R,10,brashard smith,RB
 288.0,Sean Tucker,TB,9,RB,,,,317.0,238.0,270.0,275.0,265  +23,sean tucker,RB,sean tucker,38951,100,38951,Sean Tucker,RB,TB,2.7,0.3783783783783784,9,sean tucker,RB
 289.0,Juwan Johnson,NO,11,TE,,300.0,,275.0,,250.0,275.0,,juwan johnson,TE,juwan johnson,36040,100,36040,Juwan Johnson,TE,NO,7.4,0.8235294117647058,11,juwan johnson,TE
-342.0,KaVontae Turpin,DAL,10,WR,,,,242.0,,310.0,276.0,,kavontae turpin,WR,kavontae turpin,37801,100,37801,Kavontae Turpin,WR,DAL,4.3,0.7714285714285715,10,kavontae turpin,WR
-449.0,Josh Johnson,,,WR,,277.0,,,,,277.0,,josh johnson,WR,josh johnson,26300,100,26300,Josh Johnson,QB,WAS,0.12000000000000001,0.21052631578947367,12,josh johnson,QB
-291.0,Chris Rodriguez Jr.,WAS,12,RB,,,,369.0,166.0,297.0,277.3,250  +41,chris rodriguez,RB,chris rodriguez,38611,100,38611,Chris Rodriguez,RB,WAS,3.0,0.3783783783783784,12,chris rodriguez,RB
-261.0,Joe Flacco,CLE,9,QB,246.0,324.0,,263.0,,280.0,278.3,,joe flacco,QB,joe flacco,26158,100,26158,Joe Flacco,QB,CLE,17.580000000000002,0.37142857142857144,9,joe flacco,QB
-292.0,Jaleel McLaughlin,DEN,12,RB,,338.0,,180.0,,320.0,279.3,218  +74,jaleel mclaughlin,RB,jaleel mclaughlin,38794,100,38794,Jaleel McLaughlin,RB,DEN,5.6,0.9714285714285714,12,jaleel mclaughlin,RB
+342.0,KaVontae Turpin,DAL,10,WR,,,,242.0,,310.0,276.0,,kavontae turpin,WR,kavontae turpin,37801,100,37801,Kavontae Turpin,WR,DAL,4.1,0.7714285714285715,10,kavontae turpin,WR
+449.0,Josh Johnson,,,WR,,277.0,,,,,277.0,,josh johnson,WR,josh johnson,26300,100,26300,Josh Johnson,QB,WAS,0.42000000000000004,0.21052631578947367,12,josh johnson,QB
+291.0,Chris Rodriguez Jr.,WAS,12,RB,,,,369.0,166.0,297.0,277.3,250  +41,chris rodriguez,RB,chris rodriguez,38611,100,38611,Chris Rodriguez,RB,WAS,2.85,0.3783783783783784,12,chris rodriguez,RB
+261.0,Joe Flacco,CLE,9,QB,246.0,324.0,,263.0,,280.0,278.3,,joe flacco,QB,joe flacco,26158,100,26158,Joe Flacco,QB,CLE,21.02,0.37142857142857144,9,joe flacco,QB
+292.0,Jaleel McLaughlin,DEN,12,RB,,338.0,,180.0,,320.0,279.3,218  +74,jaleel mclaughlin,RB,jaleel mclaughlin,38794,100,38794,Jaleel McLaughlin,RB,DEN,5.3,0.9714285714285714,12,jaleel mclaughlin,RB
 263.0,Pat Bryant,DEN,12,WR,,240.0,,374.0,244.0,259.0,279.3,263,pat bryant,WR,pat bryant,40120,100,40120,Pat Bryant,WR,DEN,7.510546875,R,12,pat bryant,WR
 343.0,Jalen Tolbert,DAL,10,WR,,,,284.0,,276.0,280.0,,jalen tolbert,WR,jalen tolbert,37666,100,37666,Jalen Tolbert,WR,DAL,6.9,0.8857142857142857,10,jalen tolbert,WR
-237.0,Tory Horton,SEA,8,WR,374.0,231.0,,323.0,210.0,266.0,280.8,253  -16,tory horton,WR,tory horton,40296,100,40296,Tory Horton,WR,SEA,3.9017578125000005,R,8,tory horton,WR
+237.0,Tory Horton,SEA,8,WR,374.0,231.0,,323.0,210.0,266.0,280.8,253  -16,tory horton,WR,tory horton,40296,100,40296,Tory Horton,WR,SEA,3.9000000000000004,R,8,tory horton,WR
 293.0,Theo Johnson,NYG,14,TE,,280.0,,300.0,,264.0,281.3,246  +47,theo johnson,TE,theo johnson,39847,100,39847,Theo Johnson,TE,NYG,6.7,0.5882352941176471,14,theo johnson,TE
-344.0,Devin Singletary,NYG,14,RB,,,,257.0,,307.0,282.0,,devin singletary,RB,devin singletary,35250,100,35250,Devin Singletary,RB,NYG,6.8500000000000005,0.9444444444444444,14,devin singletary,RB
+344.0,Devin Singletary,NYG,14,RB,,,,257.0,,307.0,282.0,,devin singletary,RB,devin singletary,35250,100,35250,Devin Singletary,RB,NYG,6.850000000000001,0.9444444444444444,14,devin singletary,RB
 294.0,Luke McCaffrey,WAS,12,WR,248.0,,,307.0,,292.0,282.3,,luke mccaffrey,WR,luke mccaffrey,39355,100,39355,Luke McCaffrey,WR,WAS,2.3,0.65,12,luke mccaffrey,WR
 295.0,Darius Slayton,NYG,14,WR,,290.0,,311.0,,248.0,283.0,239  +56,darius slayton,WR,darius slayton,35535,100,35535,Darius Slayton,WR,NYG,5.6,0.9705882352941176,14,darius slayton,WR
-296.0,Kirk Cousins,ATL,5,QB,229.0,,,281.0,,340.0,283.3,,kirk cousins,QB,kirk cousins,29604,100,29604,Kirk Cousins,QB,ATL,14.0,0.6470588235294118,5,kirk cousins,QB
+296.0,Kirk Cousins,ATL,5,QB,229.0,,,281.0,,340.0,283.3,,kirk cousins,QB,kirk cousins,29604,100,29604,Kirk Cousins,QB,ATL,14.3,0.6470588235294118,5,kirk cousins,QB
 265.0,Zack Moss,,,RB,258.0,364.0,,232.0,,281.0,283.8,,zack moss,RB,zack moss,36251,100,36251,Zack Moss,RB,CIN,9.0,0.6470588235294118,10,zack moss,RB
 456.0,Tevin Jones,,,WR,,284.0,,,,,284.0,,tevin jones,WR,tim jones,36497,85,36497,Tim Jones,WR,MIN,2.05,0.35294117647058826,6,tim jones,WR
-266.0,Trevor Etienne,CAR,14,RB,,349.0,,260.0,232.0,295.0,284.0,272  -6,trevor etienne,RB,trevor etienne,40294,100,40294,Trevor Etienne,RB,CAR,5.098075313807533,R,14,trevor etienne,RB
+266.0,Trevor Etienne,CAR,14,RB,,349.0,,260.0,232.0,295.0,284.0,272  -6,trevor etienne,RB,trevor etienne,40294,100,40294,Trevor Etienne,RB,CAR,5.032050209205022,R,14,trevor etienne,RB
 297.0,Michael Wilson,ARI,8,WR,,274.0,,335.0,,246.0,285.0,267  +30,michael wilson,WR,michael wilson,38559,100,38559,Michael Wilson,WR,ARI,7.4,0.8529411764705882,8,michael wilson,WR
 298.0,Adonai Mitchell,IND,11,WR,,248.0,,360.0,,247.0,285.0,269  +29,adonai mitchell,WR,adonai mitchell,39890,100,39890,Adonai Mitchell,WR,IND,2.9,1.0,11,adonai mitchell,WR
 268.0,Tahj Brooks,CIN,10,RB,,235.0,,435.0,233.0,257.0,290.0,274  -6,tahj brooks,RB,tahj brooks,40139,100,40139,Tahj Brooks,RB,CIN,2.6,R,10,tahj brooks,RB
-269.0,Jalen Milroe,SEA,8,QB,272.0,307.0,,296.0,,293.0,292.0,,jalen milroe,QB,jalen milroe,40307,100,40307,Jalen Milroe,QB,SEA,14.399340163934426,R,8,jalen milroe,QB
+269.0,Jalen Milroe,SEA,8,QB,272.0,307.0,,296.0,,293.0,292.0,,jalen milroe,QB,jalen milroe,40307,100,40307,Jalen Milroe,QB,SEA,18.27208196721311,R,8,jalen milroe,QB
 351.0,Tre Tucker,LV,8,WR,,,,299.0,,285.0,292.0,,tre tucker,WR,tre tucker,38563,100,38563,Tre Tucker,WR,LV,5.15,0.8823529411764706,8,tre tucker,WR
 301.0,Dawson Knox,BUF,7,TE,226.0,,,247.0,,404.0,292.3,,dawson knox,TE,dawson knox,35689,100,35689,Dawson Knox,TE,BUF,4.6,0.7435897435897436,7,dawson knox,TE
 302.0,Diontae Johnson,,,WR,,317.0,,286.0,,277.0,293.3,,diontae johnson,WR,diontae johnson,35216,100,35216,Diontae Johnson,WR,CLE,8.4,0.3561643835616438,9,diontae johnson,WR
 303.0,Dyami Brown,JAX,8,WR,,270.0,,366.0,,245.0,293.7,277  +26,dyami brown,WR,dyami brown,36626,100,36626,Dyami Brown,WR,JAX,3.4000000000000004,0.8378378378378378,8,dyami brown,WR
 304.0,Troy Franklin,DEN,12,WR,,327.0,,289.0,,275.0,297.0,273  +31,troy franklin,WR,troy franklin,39868,100,39868,Troy Franklin,WR,DEN,3.1,0.9444444444444444,12,troy franklin,WR
-272.0,Terrance Ferguson,LAR,8,TE,260.0,276.0,,358.0,,300.0,298.5,,terrance ferguson,TE,terrance ferguson,40326,100,40326,Terrance Ferguson,TE,LA,7.716785714285716,R,8,terrance ferguson,TE
+272.0,Terrance Ferguson,LAR,8,TE,260.0,276.0,,358.0,,300.0,298.5,,terrance ferguson,TE,terrance ferguson,40326,100,40326,Terrance Ferguson,TE,LA,7.703438775510206,R,8,terrance ferguson,TE
 306.0,JuJu Smith-Schuster,KC,10,WR,257.0,,,259.0,,385.0,300.3,,juju smith-schuster,WR,juju smith-schuster,33857,100,33857,JuJu Smith-Schuster,WR,KC,3.6,0.6756756756756757,10,juju smith-schuster,WR
-356.0,Jimmy Horn Jr.,CAR,14,WR,282.0,,,319.0,,,300.5,,jimmy horn,WR,jimmy horn,40142,100,40142,Jimmy Horn,WR,CAR,2.79443359375,R,14,jimmy horn,WR
+356.0,Jimmy Horn Jr.,CAR,14,WR,282.0,,,319.0,,,300.5,,jimmy horn,WR,jimmy horn,40142,100,40142,Jimmy Horn,WR,CAR,2.75,R,14,jimmy horn,WR
 307.0,Tyler Higbee,LAR,8,TE,,343.0,,283.0,,278.0,301.3,,tyler higbee,TE,tyler higbee,33110,100,33110,Tyler Higbee,TE,LA,7.6,0.5675675675675675,8,tyler higbee,TE
 310.0,Jordan James,SF,14,RB,,298.0,,336.0,,279.0,304.3,,jordan james,RB,jordan james,40128,100,40128,Jordan James,RB,SF,3.403933054393306,R,14,jordan james,RB
-311.0,Jameis Winston,NYG,14,QB,265.0,,,321.0,,329.0,305.0,,jameis winston,QB,jameis winston,31503,100,31503,Jameis Winston,QB,NYG,4.04,0.5,14,jameis winston,QB
+311.0,Jameis Winston,NYG,14,QB,265.0,,,321.0,,329.0,305.0,,jameis winston,QB,jameis winston,31503,100,31503,Jameis Winston,QB,NYG,5.04,0.5,14,jameis winston,QB
 359.0,Nick Westbrook-Ikhine,MIA,12,WR,,,,298.0,,313.0,305.5,,nick westbrook-ikhine,WR,nick westbrook-ikhine,36182,100,36182,Nick Westbrook-Ikhine,WR,MIA,8.0,0.7647058823529411,12,nick westbrook-ikhine,WR
 313.0,Elijah Moore,BUF,7,WR,271.0,,,303.0,,345.0,306.3,,elijah moore,WR,elijah moore,36980,100,36980,Elijah Moore,WR,BUF,6.1000000000000005,0.9714285714285714,7,elijah moore,WR
 363.0,Grant Calcaterra,PHI,9,TE,286.0,,,327.0,,,306.5,,grant calcaterra,TE,grant calcaterra,37086,100,37086,Grant Calcaterra,TE,PHI,3.7,0.41025641025641024,9,grant calcaterra,TE
 273.0,Jarquez Hunter,LAR,8,RB,,257.0,,528.0,203.0,242.0,307.5,280  -7,jarquez hunter,RB,jarquez hunter,40313,100,40313,Jarquez Hunter,RB,LA,4.9,R,8,jarquez hunter,RB
-314.0,Tyler Shough,NO,11,QB,,312.0,,372.0,,240.0,308.0,,tyler shough,QB,tyler shough,40324,100,40324,Tyler Shough,QB,NO,17.41562295081967,R,11,tyler shough,QB
+314.0,Tyler Shough,NO,11,QB,,312.0,,372.0,,240.0,308.0,,tyler shough,QB,tyler shough,40324,100,40324,Tyler Shough,QB,NO,20.639831967213112,R,11,tyler shough,QB
 476.0,Seth Green,,,TE,,308.0,,,,,308.0,,seth green,TE,seth green,39976,100,39976,Seth Green,TE,NO,5.2250000000000005,R,11,seth green,TE
 315.0,Tank Dell,HOU,6,WR,244.0,,,264.0,,422.0,310.0,,tank dell,WR,tank dell,38977,100,38977,Tank Dell,WR,HOU,10.0,0.631578947368421,6,tank dell,WR
 276.0,Tyler Conklin,LAC,12,TE,329.0,358.0,,262.0,,294.0,310.8,,tyler conklin,TE,tyler conklin,34270,100,34270,Tyler Conklin,TE,LAC,7.2,0.9705882352941176,12,tyler conklin,TE
 365.0,Brock Wright,DET,8,TE,277.0,,,345.0,,,311.0,,brock wright,TE,brock wright,36754,100,36754,Brock Wright,TE,DET,2.6,0.5,8,brock wright,TE
 368.0,Ray-Ray McCloud III,ATL,5,WR,,,,342.0,,283.0,312.5,,ray-ray mccloud,WR,ray-ray mccloud,34407,100,34407,Ray-Ray McCloud,WR,ATL,5.7,0.7027027027027027,5,ray-ray mccloud,WR
-316.0,Tutu Atwell,LAR,8,WR,,351.0,,325.0,,263.0,313.0,,tutu atwell,WR,tutu atwell,36849,100,36849,Tutu Atwell,WR,LA,6.8999999999999995,0.8378378378378378,8,tutu atwell,WR
+316.0,Tutu Atwell,LAR,8,WR,,351.0,,325.0,,263.0,313.0,,tutu atwell,WR,tutu atwell,36849,100,36849,Tutu Atwell,WR,LA,6.9,0.8378378378378378,8,tutu atwell,WR
 369.0,Brandin Cooks,NO,11,WR,,,,314.0,,312.0,313.0,,brandin cooks,WR,brandin cooks,31236,100,31236,Brandin Cooks,WR,NO,7.3,0.7714285714285715,11,brandin cooks,WR
 482.0,Anthony Firkser,,,TE,,313.0,,,,,313.0,,anthony firkser,TE,anthony firkser,33455,100,33455,Anthony Firkser,TE,KC,1.8,0.05,10,anthony firkser,TE
 371.0,Jalen Nailor,MIN,6,WR,,,,326.0,,302.0,314.0,,jalen nailor,WR,jalen nailor,37291,100,37291,Jalen Nailor,WR,MIN,5.2,0.5142857142857142,6,jalen nailor,WR
-317.0,Zamir White,LV,8,RB,228.0,,,356.0,,361.0,315.0,,zamir white,RB,zamir white,38040,100,38040,Zamir White,RB,LV,3.0,0.6176470588235294,8,zamir white,RB
+317.0,Zamir White,LV,8,RB,228.0,,,356.0,,361.0,315.0,,zamir white,RB,zamir white,38040,100,38040,Zamir White,RB,LV,2.9000000000000004,0.6176470588235294,8,zamir white,RB
 374.0,Ty Johnson,BUF,7,RB,,,,309.0,,322.0,315.5,,ty johnson,RB,ty johnson,35537,100,35537,Ty Johnson,RB,BUF,3.5,0.7435897435897436,7,ty johnson,RB
 318.0,Luke Musgrave,GB,5,TE,252.0,,,346.0,,351.0,316.3,,luke musgrave,TE,luke musgrave,39144,100,39144,Luke Musgrave,TE,GB,4.35,0.5405405405405406,5,luke musgrave,TE
 375.0,J.J. Taylor,,,RB,250.0,,,383.0,,,316.5,,j.j. taylor,RB,j.j. taylor,36096,100,36096,J.J. Taylor,RB,HOU,2.3,0.15789473684210525,6,j.j. taylor,RB
-280.0,Dontayvion Wicks,GB,5,WR,387.0,319.0,,328.0,,234.0,317.0,,dontayvion wicks,WR,dontayvion wicks,38393,100,38393,Dontayvion Wicks,WR,GB,6.9,0.9459459459459459,5,dontayvion wicks,WR
+280.0,Dontayvion Wicks,GB,5,WR,387.0,319.0,,328.0,,234.0,317.0,,dontayvion wicks,WR,dontayvion wicks,38393,100,38393,Dontayvion Wicks,WR,GB,5.9,0.9459459459459459,5,dontayvion wicks,WR
 322.0,Noah Fant,CIN,10,TE,,377.0,,258.0,,323.0,319.3,,noah fant,TE,noah fant,35644,100,35644,Noah Fant,TE,SEA,5.300000000000001,0.8235294117647058,8,noah fant,TE
-377.0,Deshaun Watson,CLE,9,QB,263.0,,,376.0,,,319.5,,deshaun watson,QB,deshaun watson,33537,100,33537,Deshaun Watson,QB,CLE,12.239999999999998,0.37142857142857144,9,deshaun watson,QB
+377.0,Deshaun Watson,CLE,9,QB,263.0,,,376.0,,,319.5,,deshaun watson,QB,deshaun watson,33537,100,33537,Deshaun Watson,QB,CLE,16.66,0.37142857142857144,9,deshaun watson,QB
 378.0,Devaughn Vele,NO,11,WR,,,,373.0,,267.0,320.0,,devaughn vele,WR,devaughn vele,39424,100,39424,Devaughn Vele,WR,DEN,7.95,0.7777777777777778,12,devaughn vele,WR
 382.0,Allen Lazard,NYJ,9,WR,,,,341.0,,301.0,321.0,,allen lazard,WR,allen lazard,34521,100,34521,Allen Lazard,WR,NYJ,5.1,0.7352941176470589,9,allen lazard,WR
-489.0,Gabe Davis,,,WR,,,,,,321.0,321.0,,gabe davis,WR,gabe davis,36196,100,36196,Gabe Davis,WR,JAX,4.800000000000001,0.6944444444444444,8,gabe davis,WR
+489.0,Gabe Davis,,,WR,,,,,,321.0,321.0,,gabe davis,WR,gabe davis,36196,100,36196,Gabe Davis,WR,JAX,4.1,0.6944444444444444,8,gabe davis,WR
 282.0,Jaylin Noel,HOU,6,WR,463.0,260.0,,359.0,,212.0,323.5,257  +25,jaylin noel,WR,jaylin noel,40121,100,40121,Jaylin Noel,WR,HOU,7.3,R,6,jaylin noel,WR
 324.0,Jahan Dotson,PHI,9,WR,230.0,,,291.0,,450.0,323.7,,jahan dotson,WR,jahan dotson,37741,100,37741,Jahan Dotson,WR,PHI,3.7,0.868421052631579,9,jahan dotson,WR
 325.0,Efton Chism III,NE,14,WR,242.0,,,305.0,,425.0,324.0,,efton chism,WR,efton chism,40261,100,40261,Efton Chism,WR,NE,7.850000000000001,R,14,efton chism,WR
-283.0,Taysom Hill,NO,11,TE,240.0,367.0,,295.0,,395.0,324.3,,taysom hill,TE,taysom hill,33357,100,33357,Taysom Hill,TE,NO,8.41,0.7058823529411765,11,taysom hill,TE
+283.0,Taysom Hill,NO,11,TE,240.0,367.0,,295.0,,395.0,324.3,,taysom hill,TE,taysom hill,33357,100,33357,Taysom Hill,TE,NO,7.91,0.7058823529411765,11,taysom hill,TE
 499.0,Michael Badgley,,,K,326.0,,,,,,326.0,,michael badgley,K,michael bandy,39961,86,39961,Michael Bandy,WR,DEN,7.850000000000001,R,12,michael bandy,WR
-328.0,KeAndre Lambert-Smith,LAC,12,WR,270.0,,,384.0,,326.0,326.7,,keandre lambert-smith,WR,keandre lambert-smith,40130,100,40130,KeAndre Lambert-Smith,WR,LAC,4.1,R,12,keandre lambert-smith,WR
+328.0,KeAndre Lambert-Smith,LAC,12,WR,270.0,,,384.0,,326.0,326.7,,keandre lambert-smith,WR,keandre lambert-smith,40130,100,40130,KeAndre Lambert-Smith,WR,LAC,4.050000000000001,R,12,keandre lambert-smith,WR
 501.0,Dominique Dafney,,,TE,327.0,,,,,,327.0,,dominique dafney,TE,dominique dafney,39949,100,39949,Dominique Dafney,TE,CAR,5.2250000000000005,R,14,dominique dafney,TE
 329.0,Antonio Gibson,NE,14,RB,378.0,,,297.0,,308.0,327.7,,antonio gibson,RB,antonio gibson,36328,100,36328,Antonio Gibson,RB,NE,6.699999999999999,0.9705882352941176,14,antonio gibson,RB
 386.0,Samaje Perine,CIN,10,RB,,,,308.0,,350.0,329.0,,samaje perine,RB,samaje perine,33526,100,33526,Samaje Perine,RB,CIN,4.9,1.0,10,samaje perine,RB
@@ -295,12 +295,12 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 332.0,A.J. Dillon,PHI,9,RB,388.0,,,312.0,,303.0,334.3,,a.j. dillon,RB,a.j. dillon,39944,100,39944,A.J. Dillon,RB,PHI,9.74244769874477,R,9,a.j. dillon,RB
 334.0,Michael Mayer,LV,8,TE,,378.0,,292.0,,341.0,337.0,,michael mayer,TE,michael mayer,39066,100,39066,Michael Mayer,TE,LV,2.9000000000000004,0.6764705882352942,8,michael mayer,TE
 335.0,Christian Watson,GB,5,WR,,333.0,,367.0,,315.0,338.3,,christian watson,WR,christian watson,38124,100,38124,Christian Watson,WR,GB,8.600000000000001,0.6756756756756757,5,christian watson,WR
-396.0,Spencer Rattler,NO,11,QB,,,,330.0,,349.0,339.5,,spencer rattler,QB,spencer rattler,39376,100,39376,Spencer Rattler,QB,NO,9.4,0.4117647058823529,11,spencer rattler,QB
+396.0,Spencer Rattler,NO,11,QB,,,,330.0,,349.0,339.5,,spencer rattler,QB,spencer rattler,39376,100,39376,Spencer Rattler,QB,NO,11.4,0.4117647058823529,11,spencer rattler,QB
 336.0,Olamide Zaccheaus,CHI,5,WR,314.0,,,364.0,,342.0,340.0,,olamide zaccheaus,WR,olamide zaccheaus,35208,100,35208,Olamide Zaccheaus,WR,CHI,3.9000000000000004,0.7894736842105263,5,olamide zaccheaus,WR
 300.0,Jalen Royals,KC,10,WR,418.0,255.0,,447.0,,241.0,340.3,278  +22,jalen royals,WR,jalen royals,40295,100,40295,Jalen Royals,WR,KC,5.1,R,10,jalen royals,WR
 337.0,Darnell Washington,PIT,5,TE,275.0,,,287.0,,465.0,342.3,,darnell washington,TE,darnell washington,38558,100,38558,Darnell Washington,TE,PIT,1.9,0.6388888888888888,5,darnell washington,TE
 399.0,AJ Barner,SEA,8,TE,,,,293.0,,394.0,343.5,,aj barner,TE,a.j. barner,39793,100,39793,A.J. Barner,TE,SEA,4.6,0.8235294117647058,8,a.j. barner,TE
-338.0,Joe Milton III,DAL,10,QB,303.0,,,329.0,,403.0,345.0,,joe milton,QB,joe milton,39398,100,39398,Joe Milton,QB,DAL,19.240000000000002,0.058823529411764705,10,joe milton,QB
+338.0,Joe Milton III,DAL,10,QB,303.0,,,329.0,,403.0,345.0,,joe milton,QB,joe milton,39398,100,39398,Joe Milton,QB,DAL,20.240000000000002,0.058823529411764705,10,joe milton,QB
 339.0,Will Dissly,LAC,12,TE,334.0,,,302.0,,400.0,345.3,,will dissly,TE,will dissly,34159,100,34159,Will Dissly,TE,LAC,4.0,0.8,12,will dissly,TE
 340.0,Tez Johnson,TB,9,WR,281.0,,,431.0,,330.0,347.3,,tez johnson,WR,tez johnson,40148,100,40148,Tez Johnson,WR,TB,2.3,R,9,tez johnson,WR
 403.0,Adam Trautman,DEN,12,TE,335.0,,,365.0,,,350.0,,adam trautman,TE,adam trautman,36422,100,36422,Adam Trautman,TE,DEN,1.55,0.8571428571428571,12,adam trautman,TE
@@ -308,76 +308,76 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 312.0,Audric Estime,PHI,9,RB,404.0,374.0,,349.0,,291.0,354.5,,audric estime,RB,audric estime,39373,100,39373,Audric Estime,RB,DEN,2.8,0.7222222222222222,12,audric estime,RB
 345.0,Kayshon Boutte,NE,14,WR,,370.0,,390.0,,304.0,354.7,,kayshon boutte,WR,kayshon boutte,38608,100,38608,Kayshon Boutte,WR,NE,4.8500000000000005,0.5294117647058824,14,kayshon boutte,WR
 532.0,Jordan Wilkins,,,RB,,357.0,,,,,357.0,,jordan wilkins,RB,jordan watkins,40127,86,40127,Jordan Watkins,WR,SF,4.856640625000001,R,14,jordan watkins,WR
-409.0,Kenneth Gainwell,PIT,5,RB,,,,276.0,,438.0,357.0,,kenneth gainwell,RB,kenneth gainwell,36919,100,36919,Kenneth Gainwell,RB,PIT,4.3,0.9487179487179487,5,kenneth gainwell,RB
+409.0,Kenneth Gainwell,PIT,5,RB,,,,276.0,,438.0,357.0,,kenneth gainwell,RB,kenneth gainwell,36919,100,36919,Kenneth Gainwell,RB,PIT,4.300000000000001,0.9487179487179487,5,kenneth gainwell,RB
 410.0,Emanuel Wilson,GB,5,RB,,,,370.0,,344.0,357.0,,emanuel wilson,RB,emanuel wilson,38797,100,38797,Emanuel Wilson,RB,GB,3.1,0.6756756756756757,5,emanuel wilson,RB
 347.0,Austin Hooper,NE,14,TE,294.0,,,333.0,,445.0,357.3,,austin hooper,TE,austin hooper,32392,100,32392,Austin Hooper,TE,NE,3.9000000000000004,0.9705882352941176,14,austin hooper,TE
-413.0,Malik Washington,MIA,12,WR,,,,406.0,,311.0,358.5,,malik washington,WR,malik washington,39880,100,39880,Malik Washington,WR,MIA,3.8499999999999996,0.7058823529411765,12,malik washington,WR
+413.0,Malik Washington,MIA,12,WR,,,,406.0,,311.0,358.5,,malik washington,WR,malik washington,39880,100,39880,Malik Washington,WR,MIA,3.8500000000000005,0.7058823529411765,12,malik washington,WR
 348.0,Mitchell Tinsley,CIN,10,WR,278.0,,,405.0,,393.0,358.7,,mitchell tinsley,WR,mitchell tinsley,40007,100,40007,Mitchell Tinsley,WR,CIN,7.850000000000001,R,10,mitchell tinsley,WR
 414.0,Parker Washington,JAX,8,WR,,,,402.0,,316.0,359.0,,parker washington,WR,parker washington,38606,100,38606,Parker Washington,WR,JAX,5.2,0.5588235294117647,8,parker washington,WR
 349.0,John Metchie III,PHI,9,WR,299.0,,,386.0,,392.0,359.0,,john metchie,WR,john metchie,37614,100,37614,John Metchie,WR,HOU,3.2,0.7105263157894737,6,john metchie,WR
-350.0,Jimmy Garoppolo,LAR,8,QB,288.0,,,392.0,,401.0,360.3,,jimmy garoppolo,QB,jimmy garoppolo,31345,100,31345,Jimmy Garoppolo,QB,LA,9.8,0.2222222222222222,8,jimmy garoppolo,QB
-415.0,Quinn Ewers,MIA,12,QB,318.0,,,404.0,,,361.0,,quinn ewers,QB,quinn ewers,40146,100,40146,Quinn Ewers,QB,MIA,3.3830573770491803,R,12,quinn ewers,QB
+350.0,Jimmy Garoppolo,LAR,8,QB,288.0,,,392.0,,401.0,360.3,,jimmy garoppolo,QB,jimmy garoppolo,31345,100,31345,Jimmy Garoppolo,QB,LA,12.3,0.2222222222222222,8,jimmy garoppolo,QB
+415.0,Quinn Ewers,MIA,12,QB,318.0,,,404.0,,,361.0,,quinn ewers,QB,quinn ewers,40146,100,40146,Quinn Ewers,QB,MIA,3.8334672131147514,R,12,quinn ewers,QB
 319.0,Marquez Valdes-Scantling,SF,14,WR,469.0,359.0,,322.0,,299.0,362.3,,marquez valdes-scantling,WR,marquez valdes-scantling,34272,100,34272,Marquez Valdes-Scantling,WR,SEA,2.9000000000000004,0.5689655172413793,8,marquez valdes-scantling,WR
-352.0,Joshua Dobbs,NE,14,QB,297.0,,,378.0,,413.0,362.7,,joshua dobbs,QB,joshua dobbs,33949,100,33949,Joshua Dobbs,QB,NE,16.939999999999998,0.29411764705882354,14,joshua dobbs,QB
+352.0,Joshua Dobbs,NE,14,QB,297.0,,,378.0,,413.0,362.7,,joshua dobbs,QB,joshua dobbs,33949,100,33949,Joshua Dobbs,QB,NE,20.14,0.29411764705882354,14,joshua dobbs,QB
 341.0,Devin Neal,NO,11,RB,,272.0,,545.0,,274.0,363.7,,devin neal,RB,devin neal,40135,100,40135,Devin Neal,RB,NO,2.8,R,11,devin neal,RB
 354.0,Damien Martinez,SEA,8,RB,432.0,,,408.0,,258.0,366.0,,damien martinez,RB,damien martinez,40298,100,40298,Damien Martinez,RB,SEA,2.1,R,8,damien martinez,RB
 355.0,Josh Oliver,MIN,6,TE,291.0,,,324.0,,483.0,366.0,,josh oliver,TE,josh oliver,35249,100,35249,Josh Oliver,TE,MIN,3.6,0.6857142857142857,6,josh oliver,TE
 552.0,Konata Mumpfield,LAR,8,WR,,,,,,368.0,368.0,,konata mumpfield,WR,konata mumpfield,40274,100,40274,Konata Mumpfield,WR,LA,2.12421875,R,8,konata mumpfield,WR
-357.0,Mason Rudolph,PIT,5,QB,324.0,,,363.0,,421.0,369.3,,mason rudolph,QB,mason rudolph,34771,100,34771,Mason Rudolph,QB,PIT,12.02,0.37142857142857144,5,mason rudolph,QB
+357.0,Mason Rudolph,PIT,5,QB,324.0,,,363.0,,421.0,369.3,,mason rudolph,QB,mason rudolph,34771,100,34771,Mason Rudolph,QB,PIT,16.02,0.37142857142857144,5,mason rudolph,QB
 358.0,Darius Cooper,PHI,9,WR,298.0,,,428.0,,384.0,370.0,,darius cooper,WR,darius cooper,40084,100,40084,Darius Cooper,WR,PHI,7.850000000000001,R,9,darius cooper,WR
 362.0,Elijah Higgins,ARI,8,TE,312.0,,,347.0,,453.0,370.7,,elijah higgins,TE,elijah higgins,39041,100,39041,Elijah Higgins,TE,ARI,3.3,0.6764705882352942,8,elijah higgins,TE
 361.0,Jake Bobo,SEA,8,WR,285.0,,,348.0,,479.0,370.7,,jake bobo,WR,jake bobo,38752,100,38752,Jake Bobo,WR,SEA,1.8,0.7352941176470589,8,jake bobo,WR
 364.0,LaJohntay Wester,BAL,7,WR,350.0,,,409.0,,355.0,371.3,,lajohntay wester,WR,lajohntay wester,40098,100,40098,LaJohntay Wester,WR,BAL,2.9,R,7,lajohntay wester,WR
 559.0,Malik Williams,,,WR,,372.0,,,,,372.0,,malik williams,WR,mike williams,33536,94,33536,Mike Williams,WR,LAC,4.7,0.3269230769230769,12,mike williams,WR
-366.0,Carson Wentz,MIN,6,QB,301.0,,,412.0,,410.0,374.3,,carson wentz,QB,carson wentz,32950,100,32950,Carson Wentz,QB,KC,3.92,0.07894736842105263,10,carson wentz,QB
+366.0,Carson Wentz,MIN,6,QB,301.0,,,412.0,,410.0,374.3,,carson wentz,QB,carson wentz,32950,100,32950,Carson Wentz,QB,KC,7.92,0.07894736842105263,10,carson wentz,QB
 367.0,Ty Chandler,MIN,6,RB,280.0,,,368.0,,476.0,374.7,,ty chandler,RB,ty chandler,37276,100,37276,Ty Chandler,RB,MIN,2.9,0.6571428571428571,6,ty chandler,RB
 370.0,Tim Patrick,JAX,8,WR,347.0,,,340.0,,440.0,375.7,,tim patrick,WR,tim patrick,33375,100,33375,Tim Patrick,WR,DET,4.0,0.8888888888888888,8,tim patrick,WR
 429.0,Kyle Allen,DET,8,QB,308.0,,,444.0,,,376.0,,kyle allen,QB,kyle allen,34577,100,34577,Kyle Allen,QB,DET,-0.2,0.1891891891891892,8,kyle allen,QB
 372.0,Craig Reynolds,DET,8,RB,306.0,,,395.0,,428.0,376.3,,craig reynolds,RB,craig reynolds,35567,100,35567,Craig Reynolds,RB,DET,3.4,0.3684210526315789,8,craig reynolds,RB
 373.0,Jalin Hyatt,NYG,14,WR,307.0,,,425.0,,398.0,376.7,,jalin hyatt,WR,jalin hyatt,38938,100,38938,Jalin Hyatt,WR,NYG,1.7000000000000002,0.6764705882352942,14,jalin hyatt,WR
 566.0,Jason Brownlee,KC,10,WR,,,,,,378.0,378.0,,jason brownlee,WR,jason brownlee,38492,100,38492,Jason Brownlee,WR,KC,4.4,0.23529411764705882,10,jason brownlee,WR
-432.0,Tommy DeVito,NE,14,QB,287.0,,,470.0,,,378.5,,tommy devito,QB,tommy devito,38476,100,38476,Tommy DeVito,QB,NYG,10.24,0.3235294117647059,14,tommy devito,QB
-568.0,Jaren Hall,,,QB,379.0,,,,,,379.0,,jaren hall,QB,jaren hall,38598,100,38598,Jaren Hall,QB,SEA,-0.9199999999999999,0.17647058823529413,8,jaren hall,QB
+432.0,Tommy DeVito,NE,14,QB,287.0,,,470.0,,,378.5,,tommy devito,QB,tommy devito,38476,100,38476,Tommy DeVito,QB,NYG,14.760000000000002,0.3235294117647059,14,tommy devito,QB
+568.0,Jaren Hall,,,QB,379.0,,,,,,379.0,,jaren hall,QB,jaren hall,38598,100,38598,Jaren Hall,QB,SEA,0.08000000000000007,0.17647058823529413,8,jaren hall,QB
 435.0,Tyquan Thornton,KC,10,WR,360.0,,,399.0,,,379.5,,tyquan thornton,WR,tyquan thornton,38104,100,38104,Tyquan Thornton,WR,KC,3.0,0.38235294117647056,10,tyquan thornton,WR
 434.0,Marcus Mariota,WAS,12,QB,,,,411.0,,348.0,379.5,,marcus mariota,QB,marcus mariota,32268,100,32268,Marcus Mariota,QB,WAS,1.2400000000000002,0.18421052631578946,12,marcus mariota,QB
-379.0,Malik Willis,GB,5,QB,316.0,,,398.0,,426.0,380.0,,malik willis,QB,malik willis,38128,100,38128,Malik Willis,QB,GB,4.2,0.22857142857142856,5,malik willis,QB
+379.0,Malik Willis,GB,5,QB,316.0,,,398.0,,426.0,380.0,,malik willis,QB,malik willis,38128,100,38128,Malik Willis,QB,GB,7.2,0.22857142857142856,5,malik willis,QB
 380.0,Ben Sinnott,WAS,12,TE,,330.0,,477.0,,334.0,380.3,,ben sinnott,TE,ben sinnott,39912,100,39912,Ben Sinnott,TE,WAS,2.2,0.25,12,ben sinnott,TE
-381.0,Tanner McKee,PHI,9,QB,332.0,,,403.0,,406.0,380.3,,tanner mckee,QB,tanner mckee,38400,100,38400,Tanner McKee,QB,PHI,14.41,0.09523809523809523,9,tanner mckee,QB
+381.0,Tanner McKee,PHI,9,QB,332.0,,,403.0,,406.0,380.3,,tanner mckee,QB,tanner mckee,38400,100,38400,Tanner McKee,QB,PHI,19.41,0.09523809523809523,9,tanner mckee,QB
 438.0,Connor Heyward,PIT,5,TE,375.0,,,387.0,,,381.0,,connor heyward,TE,connor heyward,37304,100,37304,Connor Heyward,TE,PIT,3.1,0.4722222222222222,5,connor heyward,TE
 385.0,Jordan Whittington,LAR,8,WR,,353.0,,475.0,,324.0,384.0,,jordan whittington,WR,jordan whittington,39751,100,39751,Jordan Whittington,WR,LA,5.800000000000001,0.3684210526315789,8,jordan whittington,WR
 445.0,Sterling Shepard,TB,9,WR,420.0,,,352.0,,,386.0,,sterling shepard,WR,sterling shepard,32385,100,32385,Sterling Shepard,WR,TB,4.4,0.6571428571428571,9,sterling shepard,WR
-387.0,Gardner Minshew II,KC,10,QB,309.0,,,419.0,,430.0,386.0,,gardner minshew,QB,gardner minshew,35289,100,35289,Gardner Minshew,QB,KC,12.32,0.7647058823529411,10,gardner minshew,QB
+387.0,Gardner Minshew II,KC,10,QB,309.0,,,419.0,,430.0,386.0,,gardner minshew,QB,gardner minshew,35289,100,35289,Gardner Minshew,QB,KC,15.21,0.7647058823529411,10,gardner minshew,QB
 448.0,Jeremy McNichols,WAS,12,RB,,,,393.0,,383.0,388.0,,jeremy mcnichols,RB,jeremy mcnichols,33955,100,33955,Jeremy McNichols,RB,WAS,2.6,0.8,12,jeremy mcnichols,RB
 389.0,Mack Hollins,NE,14,WR,354.0,,,354.0,,459.0,389.0,,mack hollins,WR,mack hollins,33555,100,33555,Mack Hollins,WR,NE,4.800000000000001,0.7567567567567568,14,mack hollins,WR
 451.0,Jha'Quan Jackson,,,WR,423.0,,,,,356.0,389.5,,jha'quan jackson,WR,jha'quan jackson,39392,100,39392,Jha'Quan Jackson,WR,TEN,0.65,0.11764705882352941,10,jha'quan jackson,WR
-450.0,C.J. Ham,MIN,6,RB,340.0,,,439.0,,,389.5,,c.j. ham,RB,c.j. ham,39924,100,39924,C.J. Ham,RB,MIN,9.0,R,6,c.j. ham,RB
-391.0,Cooper Rush,BAL,7,QB,346.0,,,394.0,,431.0,390.3,,cooper rush,QB,cooper rush,33662,100,33662,Cooper Rush,QB,BAL,1.2,0.5428571428571428,7,cooper rush,QB
+450.0,C.J. Ham,MIN,6,RB,340.0,,,439.0,,,389.5,,c.j. ham,RB,c.j. ham,39924,100,39924,C.J. Ham,RB,MIN,8.8,R,6,c.j. ham,RB
+391.0,Cooper Rush,BAL,7,QB,346.0,,,394.0,,431.0,390.3,,cooper rush,QB,cooper rush,33662,100,33662,Cooper Rush,QB,BAL,1.12,0.5428571428571428,7,cooper rush,QB
 392.0,Kalif Raymond,DET,8,WR,317.0,,,375.0,,482.0,391.3,,kalif raymond,WR,kalif raymond,32464,100,32464,Kalif Raymond,WR,DET,4.9,0.7368421052631579,8,kalif raymond,WR
 393.0,Skyy Moore,SF,14,WR,311.0,,,462.0,,402.0,391.7,,skyy moore,WR,skyy moore,38090,100,38090,Skyy Moore,WR,KC,1.9000000000000001,0.36585365853658536,10,skyy moore,WR
 394.0,Luke Schoonmaker,DAL,10,TE,315.0,,,389.0,,472.0,392.0,,luke schoonmaker,TE,luke schoonmaker,38547,100,38547,Luke Schoonmaker,TE,DAL,2.0,0.6285714285714286,10,luke schoonmaker,TE
 584.0,Jared Wayne,HOU,6,WR,393.0,,,,,,393.0,,jared wayne,WR,jared wayne,38728,100,38728,Jared Wayne,WR,HOU,0.0,0.05263157894736842,6,jared wayne,WR
 585.0,Trent Taylor,SF,14,WR,394.0,,,,,,394.0,,trent taylor,WR,trent taylor,33292,100,33292,Trent Taylor,WR,SF,0.0,0.11764705882352941,14,trent taylor,WR
-463.0,Frank Gore Jr.,BUF,7,RB,359.0,,,433.0,,,396.0,,frank gore,RB,frank gore,40038,100,40038,Frank Gore,RB,BUF,9.0,R,7,frank gore,RB
+463.0,Frank Gore Jr.,BUF,7,RB,359.0,,,433.0,,,396.0,,frank gore,RB,frank gore,40038,100,40038,Frank Gore,RB,BUF,8.8,R,7,frank gore,RB
 466.0,John FitzPatrick,GB,5,TE,,337.0,,456.0,,,396.5,,john fitzpatrick,TE,john fitzpatrick,37306,100,37306,John FitzPatrick,TE,GB,1.7000000000000002,0.05714285714285714,5,john fitzpatrick,TE
-467.0,Drew Lock,SEA,8,QB,413.0,,,381.0,,,397.0,,drew lock,QB,drew lock,35704,100,35704,Drew Lock,QB,SEA,7.819999999999999,0.3235294117647059,8,drew lock,QB
+467.0,Drew Lock,SEA,8,QB,413.0,,,381.0,,,397.0,,drew lock,QB,drew lock,35704,100,35704,Drew Lock,QB,SEA,8.82,0.3235294117647059,8,drew lock,QB
 400.0,Julian Hill,MIA,12,TE,292.0,,,430.0,,470.0,397.3,,julian hill,TE,julian hill,38720,100,38720,Julian Hill,TE,MIA,1.5,0.4857142857142857,12,julian hill,TE
 469.0,Noah Brown,WAS,12,WR,,,,377.0,,419.0,398.0,,noah brown,WR,noah brown,33591,100,33591,Noah Brown,WR,WAS,6.1000000000000005,0.5641025641025641,12,noah brown,WR
 401.0,Demarcus Robinson,SF,14,WR,427.0,,,353.0,,414.0,398.0,,demarcus robinson,WR,demarcus robinson,32775,100,32775,Demarcus Robinson,WR,SF,7.2,0.7567567567567568,14,demarcus robinson,WR
-402.0,Will Howard,PIT,5,QB,365.0,,,371.0,,458.0,398.0,,will howard,QB,will howard,40136,100,40136,Will Howard,QB,PIT,7.582737704918033,R,5,will howard,QB
-471.0,Kenny Pickett,LV,8,QB,,,,388.0,,409.0,398.5,,kenny pickett,QB,kenny pickett,38102,100,38102,Kenny Pickett,QB,CLE,6.640000000000001,0.48717948717948717,9,kenny pickett,QB
+402.0,Will Howard,PIT,5,QB,365.0,,,371.0,,458.0,398.0,,will howard,QB,will howard,40136,100,40136,Will Howard,QB,PIT,9.139098360655739,R,5,will howard,QB
+471.0,Kenny Pickett,LV,8,QB,,,,388.0,,409.0,398.5,,kenny pickett,QB,kenny pickett,38102,100,38102,Kenny Pickett,QB,CLE,8.14,0.48717948717948717,9,kenny pickett,QB
 404.0,Mitchell Trubisky,BUF,7,QB,367.0,,,440.0,,396.0,401.0,,mitchell trubisky,QB,mitchell trubisky,33869,100,33869,Mitchell Trubisky,QB,BUF,0.39999999999999997,0.3684210526315789,7,mitchell trubisky,QB
-406.0,Mac Jones,SF,14,QB,382.0,,,385.0,,441.0,402.7,,mac jones,QB,mac jones,36972,100,36972,Mac Jones,QB,SF,11.100000000000001,0.6176470588235294,14,mac jones,QB
+406.0,Mac Jones,SF,14,QB,382.0,,,385.0,,441.0,402.7,,mac jones,QB,mac jones,36972,100,36972,Mac Jones,QB,SF,12.100000000000001,0.6176470588235294,14,mac jones,QB
 475.0,D.J. Montgomery,IND,11,WR,304.0,,,503.0,,,403.5,,d.j. montgomery,WR,d.j. montgomery,35045,100,35045,D.J. Montgomery,WR,IND,7.300000000000001,0.11764705882352941,11,d.j. montgomery,WR
-408.0,Jarrett Stidham,DEN,12,QB,376.0,,,448.0,,388.0,404.0,,jarrett stidham,QB,jarrett stidham,35264,100,35264,Jarrett Stidham,QB,DEN,6.89,0.11428571428571428,12,jarrett stidham,QB
+408.0,Jarrett Stidham,DEN,12,QB,376.0,,,448.0,,388.0,404.0,,jarrett stidham,QB,jarrett stidham,35264,100,35264,Jarrett Stidham,QB,DEN,9.13,0.11428571428571428,12,jarrett stidham,QB
 480.0,Daniel Bellinger,NYG,14,TE,348.0,,,463.0,,,405.5,,daniel bellinger,TE,daniel bellinger,38115,100,38115,Daniel Bellinger,TE,NYG,2.8,0.5882352941176471,14,daniel bellinger,TE
 597.0,Ainias Smith,CAR,14,WR,,,,407.0,,,407.0,,ainias smith,WR,ainias smith,39747,100,39747,Ainias Smith,WR,PHI,2.6,0.14285714285714285,9,ainias smith,WR
 407.0,Khalil Herbert,,,RB,290.0,,,512.0,,420.0,407.3,,khalil herbert,RB,khalil herbert,36906,100,36906,Khalil Herbert,RB,IND,5.95,0.39215686274509803,11,khalil herbert,RB
-483.0,Patrick Ricard,BAL,7,RB,401.0,,,414.0,,,407.5,,patrick ricard,RB,patrick ricard,39925,100,39925,Patrick Ricard,RB,BAL,9.0,R,7,patrick ricard,RB
+483.0,Patrick Ricard,BAL,7,RB,401.0,,,414.0,,,407.5,,patrick ricard,RB,patrick ricard,39925,100,39925,Patrick Ricard,RB,BAL,8.8,R,7,patrick ricard,RB
 416.0,Deuce Vaughn,,,RB,357.0,,,400.0,,468.0,408.3,,deuce vaughn,RB,deuce vaughn,38622,100,38622,Deuce Vaughn,RB,DAL,2.2,0.3142857142857143,10,deuce vaughn,RB
 418.0,Gunnar Helm,TEN,10,TE,295.0,,,481.0,,452.0,409.3,,gunnar helm,TE,gunnar helm,40271,100,40271,Gunnar Helm,TE,TEN,3.422244897959181,R,10,gunnar helm,TE
-419.0,Cam Akers,,,RB,389.0,,,421.0,,418.0,409.3,,cam akers,RB,cam akers,36414,100,36414,Cam Akers,RB,NO,6.8,0.3194444444444444,11,cam akers,RB
-493.0,Hendon Hooker,CAR,14,QB,355.0,,,467.0,,,411.0,,hendon hooker,QB,hendon hooker,38550,100,38550,Hendon Hooker,QB,DET,0.66,0.16666666666666666,8,hendon hooker,QB
-457.0,Tyson Bagent,CHI,5,QB,284.0,,,538.0,,,411.0,,tyson bagent,QB,tyson bagent,38416,100,38416,Tyson Bagent,QB,CHI,5.720000000000001,0.2647058823529412,5,tyson bagent,QB
+419.0,Cam Akers,,,RB,389.0,,,421.0,,418.0,409.3,,cam akers,RB,cam akers,36414,100,36414,Cam Akers,RB,NO,7.1,0.3194444444444444,11,cam akers,RB
+493.0,Hendon Hooker,CAR,14,QB,355.0,,,467.0,,,411.0,,hendon hooker,QB,hendon hooker,38550,100,38550,Hendon Hooker,QB,DET,1.6600000000000001,0.16666666666666666,8,hendon hooker,QB
+457.0,Tyson Bagent,CHI,5,QB,284.0,,,538.0,,,411.0,,tyson bagent,QB,tyson bagent,38416,100,38416,Tyson Bagent,QB,CHI,4.720000000000001,0.2647058823529412,5,tyson bagent,QB
 497.0,Brandon Allen,TEN,10,QB,338.0,,,487.0,,,412.5,,brandon allen,QB,brandon allen,32434,100,32434,Brandon Allen,QB,TEN,-0.1,0.17647058823529413,10,brandon allen,QB
 502.0,Lil'Jordan Humphrey,NYG,14,WR,381.0,,,446.0,,,413.5,,lil'jordan humphrey,WR,lil'jordan humphrey,35406,100,35406,Lil'Jordan Humphrey,WR,NYG,2.4000000000000004,0.7142857142857143,14,lil'jordan humphrey,WR
 423.0,Curtis Samuel,BUF,7,WR,442.0,,,362.0,,439.0,414.3,,curtis samuel,WR,curtis samuel,33282,100,33282,Curtis Samuel,WR,BUF,6.2,0.8918918918918919,7,curtis samuel,WR
@@ -388,16 +388,16 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 610.0,Louis Rees-Zammit,,,RB,419.0,,,,,,419.0,,louis rees-zammit,RB,louis rees-zammit,40016,100,40016,Louis Rees-Zammit,WR,JAX,7.850000000000001,R,8,louis rees-zammit,WR
 611.0,Clyde Edwards-Helaire,KC,10,RB,,,,420.0,,,420.0,,clyde edwards-helaire,RB,clyde edwards-helaire,36360,100,36360,Clyde Edwards-Helaire,RB,NO,2.4000000000000004,0.5526315789473685,11,clyde edwards-helaire,RB
 521.0,Van Jefferson,TEN,10,WR,,,,396.0,,448.0,422.0,,van jefferson,WR,van jefferson,36415,100,36415,Van Jefferson,WR,TEN,3.75,0.5660377358490566,10,van jefferson,WR
-486.0,Tai Felton,MIN,6,WR,,,,532.0,,317.0,424.5,,tai felton,WR,tai felton,40123,100,40123,Tai Felton,WR,MIN,6.0972656249999995,R,6,tai felton,WR
-487.0,Stetson Bennett IV,LAR,8,QB,319.0,,,530.0,,,424.5,,stetson bennett,QB,stetson bennett,40015,100,40015,Stetson Bennett,QB,LA,11.549270491803282,R,8,stetson bennett,QB
+486.0,Tai Felton,MIN,6,WR,,,,532.0,,317.0,424.5,,tai felton,WR,tai felton,40123,100,40123,Tai Felton,WR,MIN,6.0,R,6,tai felton,WR
+487.0,Stetson Bennett IV,LAR,8,QB,319.0,,,530.0,,,424.5,,stetson bennett,QB,stetson bennett,40015,100,40015,Stetson Bennett,QB,LA,15.244635245901641,R,8,stetson bennett,QB
 526.0,Robert Woods,PIT,5,WR,,,,391.0,,460.0,425.5,,robert woods,WR,robert woods,30431,100,30431,Robert Woods,WR,PIT,4.1,0.7368421052631579,5,robert woods,WR
-528.0,Trey Lance,LAC,12,QB,428.0,,,424.0,,,426.0,,trey lance,QB,trey lance,37012,100,37012,Trey Lance,QB,LAC,0.34,0.23529411764705882,12,trey lance,QB
+528.0,Trey Lance,LAC,12,QB,428.0,,,424.0,,,426.0,,trey lance,QB,trey lance,37012,100,37012,Trey Lance,QB,LAC,0.8400000000000001,0.23529411764705882,12,trey lance,QB
 376.0,Xavier Restrepo,TEN,10,WR,485.0,320.0,,567.0,,332.0,426.0,,xavier restrepo,WR,xavier restrepo,40245,100,40245,Xavier Restrepo,WR,TEN,7.850000000000001,R,10,xavier restrepo,WR
 614.0,E.J. Jenkins,PHI,9,TE,,,,426.0,,,426.0,,e.j. jenkins,TE,e.j. jenkins,38498,100,38498,E.J. Jenkins,TE,PHI,3.85,0.09523809523809523,9,e.j. jenkins,TE
-616.0,Hunter Luepke,DAL,10,RB,,,,427.0,,,427.0,,hunter luepke,RB,hunter luepke,40000,100,40000,Hunter Luepke,RB,DAL,9.0,R,10,hunter luepke,RB
+616.0,Hunter Luepke,DAL,10,RB,,,,427.0,,,427.0,,hunter luepke,RB,hunter luepke,40000,100,40000,Hunter Luepke,RB,DAL,8.8,R,10,hunter luepke,RB
 436.0,Braxton Berrios,HOU,6,WR,259.0,,,596.0,,,427.5,,braxton berrios,WR,braxton berrios,34419,100,34419,Braxton Berrios,WR,HOU,2.9,0.4857142857142857,6,braxton berrios,WR
 619.0,Chris Brooks,GB,5,RB,,,,429.0,,,429.0,,chris brooks,RB,christopher brooks,38685,100,38685,Christopher Brooks,RB,GB,2.9,0.4166666666666667,5,christopher brooks,RB
-537.0,Tyler Badie,DEN,12,RB,403.0,,,457.0,,,430.0,,tyler badie,RB,tyler badie,37085,100,37085,Tyler Badie,RB,DEN,1.7999999999999998,0.2222222222222222,12,tyler badie,RB
+537.0,Tyler Badie,DEN,12,RB,403.0,,,457.0,,,430.0,,tyler badie,RB,tyler badie,37085,100,37085,Tyler Badie,RB,DEN,1.8000000000000003,0.2222222222222222,12,tyler badie,RB
 543.0,Tylan Wallace,BAL,7,WR,466.0,,,397.0,,,431.5,,tylan wallace,WR,tylan wallace,36630,100,36630,Tylan Wallace,WR,BAL,2.3,0.3157894736842105,7,tylan wallace,WR
 624.0,George Holani,SEA,8,RB,,,,432.0,,,432.0,,george holani,RB,george holani,39299,100,39299,George Holani,RB,SEA,0.95,0.11764705882352941,8,george holani,RB
 549.0,Kylen Granson,PHI,9,TE,410.0,,,455.0,,,432.5,,kylen granson,TE,kylen granson,36876,100,36876,Kylen Granson,TE,PHI,2.9,0.8529411764705882,9,kylen granson,TE
@@ -410,40 +410,40 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 481.0,Tommy Tremble,CAR,14,TE,411.0,,,454.0,,447.0,437.3,,tommy tremble,TE,tommy tremble,37005,100,37005,Tommy Tremble,TE,CAR,4.6,0.6764705882352942,14,tommy tremble,TE
 444.0,Tyrell Shavers,BUF,7,WR,407.0,,,543.0,,363.0,437.7,,tyrell shavers,WR,tyrell shavers,38679,100,38679,Tyrell Shavers,WR,BUF,13.9,0.05,7,tyrell shavers,WR
 567.0,Rasheen Ali,BAL,7,RB,406.0,,,472.0,,,439.0,,rasheen ali,RB,rasheen ali,39796,100,39796,Rasheen Ali,RB,BAL,0.1,0.21052631578947367,7,rasheen ali,RB
-495.0,Andy Dalton,CAR,14,QB,409.0,,,437.0,,477.0,441.0,,andy dalton,QB,andy dalton,27973,100,27973,Andy Dalton,QB,CAR,9.34,0.23529411764705882,14,andy dalton,QB
+495.0,Andy Dalton,CAR,14,QB,409.0,,,437.0,,477.0,441.0,,andy dalton,QB,andy dalton,27973,100,27973,Andy Dalton,QB,CAR,11.34,0.23529411764705882,14,andy dalton,QB
 452.0,Jermaine Burton,CIN,10,WR,457.0,379.0,,473.0,,471.0,445.0,,jermaine burton,WR,jermaine burton,39810,100,39810,Jermaine Burton,WR,CIN,3.6000000000000005,0.23529411764705882,10,jermaine burton,WR
-417.0,Jake Browning,CIN,10,QB,336.0,,,610.0,,389.0,445.0,,jake browning,QB,jake browning,35100,100,35100,Jake Browning,QB,CIN,17.4,0.3235294117647059,10,jake browning,QB
+417.0,Jake Browning,CIN,10,QB,336.0,,,610.0,,389.0,445.0,,jake browning,QB,jake browning,35100,100,35100,Jake Browning,QB,CIN,16.98,0.3235294117647059,10,jake browning,QB
 574.0,Terrace Marshall Jr.,,,WR,,,,511.0,,382.0,446.5,,terrace marshall,WR,terrace marshall,36955,100,36955,Terrace Marshall,WR,PHI,1.7000000000000002,0.38235294117647056,9,terrace marshall,WR
-587.0,Greg Dortch,ARI,8,WR,,,,445.0,,451.0,448.0,,greg dortch,WR,greg dortch,35500,100,35500,Greg Dortch,WR,ARI,3.85,0.7647058823529411,8,greg dortch,WR
-636.0,Dylan Laube,LV,8,RB,450.0,,,,,,450.0,,dylan laube,RB,dylan laube,39407,100,39407,Dylan Laube,RB,LV,-2.0,0.058823529411764705,8,dylan laube,RB
+587.0,Greg Dortch,ARI,8,WR,,,,445.0,,451.0,448.0,,greg dortch,WR,greg dortch,35500,100,35500,Greg Dortch,WR,ARI,3.65,0.7647058823529411,8,greg dortch,WR
+636.0,Dylan Laube,LV,8,RB,450.0,,,,,,450.0,,dylan laube,RB,dylan laube,39407,100,39407,Dylan Laube,RB,LV,-3.0,0.058823529411764705,8,dylan laube,RB
 592.0,Colby Parkinson,LAR,8,TE,,,,422.0,,478.0,450.0,,colby parkinson,TE,colby parkinson,36244,100,36244,Colby Parkinson,TE,LA,3.8,0.8611111111111112,8,colby parkinson,TE
 593.0,Charlie Kolar,BAL,7,TE,443.0,,,458.0,,,450.5,,charlie kolar,TE,charlie kolar,38046,100,38046,Charlie Kolar,TE,BAL,2.35,0.3684210526315789,7,charlie kolar,TE
 556.0,Derius Davis,LAC,12,WR,370.0,,,533.0,,,451.5,,derius davis,WR,derius davis,38573,100,38573,Derius Davis,WR,LAC,1.85,0.7428571428571429,12,derius davis,WR
 639.0,Jonathan Ward,,,RB,,,,453.0,,,453.0,,jonathan ward,RB,jonathan ward,35924,100,35924,Jonathan Ward,RB,PIT,1.1,0.08571428571428572,5,jonathan ward,RB
 596.0,Mecole Hardman Jr.,GB,5,WR,489.0,,,417.0,,,453.0,,mecole hardman,WR,mecole hardman,35140,100,35140,Mecole Hardman,WR,GB,3.2,0.29310344827586204,5,mecole hardman,WR
 598.0,Sione Vaki,DET,8,RB,433.0,,,474.0,,,453.5,,sione vaki,RB,sione vaki,39364,100,39364,Sione Vaki,RB,DET,1.8,0.2222222222222222,8,sione vaki,RB
-600.0,Michael Burton,DEN,12,RB,470.0,,,438.0,,,454.0,,michael burton,RB,michael burton,39923,100,39923,Michael Burton,RB,DEN,2.9945188284518833,R,12,michael burton,RB
+600.0,Michael Burton,DEN,12,RB,470.0,,,438.0,,,454.0,,michael burton,RB,michael burton,39923,100,39923,Michael Burton,RB,DEN,2.9,R,12,michael burton,RB
 544.0,Devontez Walker,BAL,7,WR,363.0,,,547.0,,,455.0,,devontez walker,WR,devontez walker,39792,100,39792,Devontez Walker,WR,BAL,4.55,0.10526315789473684,7,devontez walker,WR
 603.0,Drew Sample,CIN,10,TE,494.0,,,418.0,,,456.0,,drew sample,TE,drew sample,35631,100,35631,Drew Sample,TE,CIN,2.4,0.7352941176470589,10,drew sample,TE
-606.0,Dillon Gabriel,CLE,9,QB,,,,480.0,,433.0,456.5,,dillon gabriel,QB,dillon gabriel,40316,100,40316,Dillon Gabriel,QB,CLE,14.383479508196721,R,9,dillon gabriel,QB
+606.0,Dillon Gabriel,CLE,9,QB,,,,480.0,,433.0,456.5,,dillon gabriel,QB,dillon gabriel,40316,100,40316,Dillon Gabriel,QB,CLE,18.08175409836065,R,9,dillon gabriel,QB
 646.0,Tyreik McAllister,,,RB,459.0,,,,,,459.0,,tyreik mcallister,RB,tyreik mcallister,37450,100,37450,Tyreik McAllister,RB,LV,1.1,0.058823529411764705,8,tyreik mcallister,RB
 648.0,Tyler Goodson,IND,11,RB,,,,460.0,,,460.0,,tyler goodson,RB,tyler goodson,37120,100,37120,Tyler Goodson,RB,IND,2.2,0.4411764705882353,11,tyler goodson,RB
 650.0,Hassan Haskins,LAC,12,RB,,,,461.0,,,461.0,,hassan haskins,RB,hassan haskins,37617,100,37617,Hassan Haskins,RB,LAC,0.5,0.6666666666666666,12,hassan haskins,RB
 496.0,Jaylin Lane,WAS,12,WR,391.0,,,562.0,,432.0,461.7,,jaylin lane,WR,jaylin lane,40125,100,40125,Jaylin Lane,WR,WAS,5.2,R,12,jaylin lane,WR
-572.0,Donovan Edwards,WAS,12,RB,380.0,,,544.0,,,462.0,,donovan edwards,RB,donovan edwards,40211,100,40211,Donovan Edwards,RB,NYJ,9.0,R,9,donovan edwards,RB
+572.0,Donovan Edwards,WAS,12,RB,380.0,,,544.0,,,462.0,,donovan edwards,RB,donovan edwards,40211,100,40211,Donovan Edwards,RB,NYJ,8.8,R,9,donovan edwards,RB
 578.0,Nikko Remigio,KC,10,WR,385.0,,,540.0,,,462.5,,nikko remigio,WR,nikko remigio,38519,100,38519,Nikko Remigio,WR,KC,6.800000000000001,0.05,10,nikko remigio,WR
 586.0,Davis Allen,LAR,8,TE,395.0,,,531.0,,,463.0,,davis allen,TE,davis allen,39074,100,39074,Davis Allen,TE,LA,2.0,0.32432432432432434,8,davis allen,TE
 617.0,Kendrick Bourne,,,WR,,,,442.0,,485.0,463.5,,kendrick bourne,WR,kendrick bourne,33307,100,33307,Kendrick Bourne,WR,NE,6.6,0.5882352941176471,14,kendrick bourne,WR
 607.0,Trey Sermon,PIT,5,RB,,,,515.0,,415.0,465.0,,trey sermon,RB,trey sermon,36984,100,36984,Trey Sermon,RB,PIT,2.15,0.6470588235294118,5,trey sermon,RB
-545.0,Jalen White,,,RB,,,,566.0,,364.0,465.0,,jalen white,RB,jalen white,40089,100,40089,Jalen White,RB,GB,9.0,R,5,jalen white,RB
+545.0,Jalen White,,,RB,,,,566.0,,364.0,465.0,,jalen white,RB,jalen white,40089,100,40089,Jalen White,RB,GB,8.8,R,5,jalen white,RB
 657.0,Sincere McCormick,SF,14,RB,,,,465.0,,,465.0,,sincere mccormick,RB,sincere mccormick,37509,100,37509,Sincere McCormick,RB,LV,6.5,0.23529411764705882,8,sincere mccormick,RB
 623.0,Ian Thomas,LV,8,TE,435.0,,,496.0,,,465.5,,ian thomas,TE,ian thomas,34365,100,34365,Ian Thomas,TE,LV,1.55,0.29411764705882354,8,ian thomas,TE
-660.0,Dorian Thompson-Robinson,,,QB,,,,466.0,,,466.0,,dorian thompson-robinson,QB,dorian thompson-robinson,38583,100,38583,Dorian Thompson-Robinson,QB,PHI,1.2400000000000002,0.37142857142857144,9,dorian thompson-robinson,QB
+660.0,Dorian Thompson-Robinson,,,QB,,,,466.0,,,466.0,,dorian thompson-robinson,QB,dorian thompson-robinson,38583,100,38583,Dorian Thompson-Robinson,QB,PHI,2.24,0.37142857142857144,9,dorian thompson-robinson,QB
 625.0,Kimani Vidal,LAC,12,RB,,,,476.0,,457.0,466.5,,kimani vidal,RB,kimani vidal,39391,100,39391,Kimani Vidal,RB,LAC,2.4000000000000004,0.5,12,kimani vidal,RB
 662.0,River Cracraft,,,WR,467.0,,,,,,467.0,,river cracraft,WR,river cracraft,34054,100,34054,River Cracraft,WR,MIA,2.8,0.3142857142857143,12,river cracraft,WR
 663.0,Xavier Hutchinson,HOU,6,WR,,,,468.0,,,468.0,,xavier hutchinson,WR,xavier hutchinson,38618,100,38618,Xavier Hutchinson,WR,HOU,1.8,0.7631578947368421,6,xavier hutchinson,WR
 553.0,Teddy Bridgewater,TB,9,QB,368.0,,,569.0,,,468.5,,teddy bridgewater,QB,teddy bridgewater,31237,100,31237,Teddy Bridgewater,QB,DET,-0.04000000000000001,0.05263157894736842,8,teddy bridgewater,QB
-665.0,Aidan O'Connell,LV,8,QB,,,,469.0,,,469.0,,aidan o'connell,QB,aidan o'connell,38579,100,38579,Aidan O'Connell,QB,LV,9.48,0.5882352941176471,8,aidan o'connell,QB
+665.0,Aidan O'Connell,LV,8,QB,,,,469.0,,,469.0,,aidan o'connell,QB,aidan o'connell,38579,100,38579,Aidan O'Connell,QB,LV,12.75,0.5882352941176471,8,aidan o'connell,QB
 443.0,Avery Williams,,,RB,417.0,,,649.0,,352.0,472.7,,avery williams,RB,avery williams,39960,100,39960,Avery Williams,RB,PHI,2.8,R,9,avery williams,RB
 668.0,Jalin Conyers,MIA,12,TE,,,,,,474.0,474.0,,jalin conyers,TE,jalin conyers,40172,100,40172,Jalin Conyers,TE,MIA,5.2250000000000005,R,12,jalin conyers,TE
 669.0,Chandler Brayboy,JAX,8,WR,474.0,,,,,,474.0,,chandler brayboy,WR,chandler brayboy,40178,100,40178,Chandler Brayboy,WR,JAX,7.850000000000001,R,8,chandler brayboy,WR
@@ -454,35 +454,35 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 652.0,Foster Moreau,NO,11,TE,,,,500.0,,462.0,481.0,,foster moreau,TE,foster moreau,34981,100,34981,Foster Moreau,TE,NO,5.550000000000001,0.7647058823529411,11,foster moreau,TE
 629.0,Jeremy Ruckert,NYJ,9,TE,440.0,,,522.0,,,481.0,,jeremy ruckert,TE,jeremy ruckert,37805,100,37805,Jeremy Ruckert,TE,NYJ,2.2,0.6764705882352942,9,jeremy ruckert,TE
 679.0,Armani Rogers,,,TE,482.0,,,,,,482.0,,armani rogers,TE,armani rogers,39970,100,39970,Armani Rogers,TE,BUF,5.2250000000000005,R,7,armani rogers,TE
-680.0,Tyrod Taylor,NYJ,9,QB,,,,483.0,,,483.0,,tyrod taylor,QB,tyrod taylor,28118,100,28118,Tyrod Taylor,QB,NYJ,7.779999999999999,0.35294117647058826,9,tyrod taylor,QB
+680.0,Tyrod Taylor,NYJ,9,QB,,,,483.0,,,483.0,,tyrod taylor,QB,tyrod taylor,28118,100,28118,Tyrod Taylor,QB,NYJ,9.28,0.35294117647058826,9,tyrod taylor,QB
 474.0,John Bates,WAS,12,TE,302.0,,,666.0,,,484.0,,john bates,TE,john bates,36628,100,36628,John Bates,TE,WAS,1.6,0.7297297297297297,12,john bates,TE
-464.0,Zach Wilson,MIA,12,QB,343.0,,,663.0,,449.0,485.0,,zach wilson,QB,zach wilson,37013,100,37013,Zach Wilson,QB,MIA,8.48,0.7058823529411765,12,zach wilson,QB
+464.0,Zach Wilson,MIA,12,QB,343.0,,,663.0,,449.0,485.0,,zach wilson,QB,zach wilson,37013,100,37013,Zach Wilson,QB,MIA,12.98,0.7058823529411765,12,zach wilson,QB
 659.0,Devin Duvernay,CHI,5,WR,465.0,,,505.0,,,485.0,,devin duvernay,WR,devin duvernay,36331,100,36331,Devin Duvernay,WR,CHI,1.1,0.4444444444444444,5,devin duvernay,WR
 682.0,Cordarrelle Patterson,,,RB,,,,485.0,,,485.0,,cordarrelle patterson,RB,cordarrelle patterson,30578,100,30578,Cordarrelle Patterson,RB,PIT,1.7000000000000002,0.7142857142857143,5,cordarrelle patterson,RB
 620.0,Emari Demercado,ARI,8,RB,,,,542.0,,429.0,485.5,,emari demercado,RB,emari demercado,38705,100,38705,Emari Demercado,RB,ARI,3.0500000000000003,0.7058823529411765,8,emari demercado,RB
 562.0,Zay Jones,ARI,8,WR,437.0,,,583.0,,437.0,485.7,,zay jones,WR,zay jones,33891,100,33891,Zay Jones,WR,ARI,6.0,0.4411764705882353,8,zay jones,WR
-683.0,Jacoby Brissett,ARI,8,QB,,,,486.0,,,486.0,,jacoby brissett,QB,jacoby brissett,33119,100,33119,Jacoby Brissett,QB,ARI,8.04,0.2647058823529412,8,jacoby brissett,QB
-626.0,Jonathan Mingo,DAL,10,WR,491.0,,,525.0,,444.0,486.7,,jonathan mingo,WR,jonathan mingo,39062,100,39062,Jonathan Mingo,WR,DAL,4.1,0.5686274509803921,10,jonathan mingo,WR
+683.0,Jacoby Brissett,ARI,8,QB,,,,486.0,,,486.0,,jacoby brissett,QB,jacoby brissett,33119,100,33119,Jacoby Brissett,QB,ARI,9.4,0.2647058823529412,8,jacoby brissett,QB
+626.0,Jonathan Mingo,DAL,10,WR,491.0,,,525.0,,444.0,486.7,,jonathan mingo,WR,jonathan mingo,39062,100,39062,Jonathan Mingo,WR,DAL,3.7,0.5686274509803921,10,jonathan mingo,WR
 685.0,Eric Saubert,SEA,8,TE,,,,488.0,,,488.0,,eric saubert,TE,eric saubert,33576,100,33576,Eric Saubert,TE,SEA,1.5,0.3055555555555556,8,eric saubert,TE
-455.0,Sam Howell,PHI,9,QB,366.0,,,683.0,,417.0,488.7,,sam howell,QB,sam howell,37077,100,37077,Sam Howell,QB,MIN,18.04,0.5294117647058824,6,sam howell,QB
+455.0,Sam Howell,PHI,9,QB,366.0,,,683.0,,417.0,488.7,,sam howell,QB,sam howell,37077,100,37077,Sam Howell,QB,MIN,20.96,0.5294117647058824,6,sam howell,QB
 687.0,Johnny Mundt,JAX,8,TE,,,,491.0,,,491.0,,johnny mundt,TE,johnny mundt,33246,100,33246,Johnny Mundt,TE,JAX,2.8,0.6571428571428571,8,johnny mundt,TE
 688.0,Robert Tonyan,KC,10,TE,,,,492.0,,,492.0,,robert tonyan,TE,robert tonyan,33757,100,33757,Robert Tonyan,TE,KC,2.1,0.6470588235294118,10,robert tonyan,TE
 589.0,Nick Mullens,JAX,8,QB,,,,588.0,,397.0,492.5,,nick mullens,QB,nick mullens,33319,100,33319,Nick Mullens,QB,JAX,3.3200000000000003,0.2571428571428571,8,nick mullens,QB
 690.0,Dare Ogunbowale,HOU,6,RB,,,,493.0,,,493.0,,dare ogunbowale,RB,dare ogunbowale,33854,100,33854,Dare Ogunbowale,RB,HOU,1.9,0.6578947368421053,6,dare ogunbowale,RB
 692.0,Michael Gallup,,,WR,,,,494.0,,,494.0,,michael gallup,WR,michael gallup,34764,100,34764,Michael Gallup,WR,WAS,3.9000000000000004,0.9444444444444444,12,michael gallup,WR
-541.0,Ben DiNucci,,,QB,362.0,,,627.0,,,494.5,,ben dinucci,QB,ben dinucci,39947,100,39947,Ben DiNucci,QB,NO,3.3830573770491803,R,11,ben dinucci,QB
+541.0,Ben DiNucci,,,QB,362.0,,,627.0,,,494.5,,ben dinucci,QB,ben dinucci,39947,100,39947,Ben DiNucci,QB,NO,3.8334672131147514,R,11,ben dinucci,QB
 677.0,Tyler Johnson,NYJ,9,WR,,,,508.0,,481.0,494.5,,tyler johnson,WR,tyler johnson,36427,100,36427,Tyler Johnson,WR,NYJ,5.25,0.32432432432432434,9,tyler johnson,WR
 654.0,Josh Whyle,GB,5,TE,,,,529.0,,463.0,496.0,,josh whyle,TE,josh whyle,38589,100,38589,Josh Whyle,TE,TEN,2.1500000000000004,0.6470588235294118,10,josh whyle,TE
 695.0,Jeff Wilson Jr.,MIA,12,RB,,,,497.0,,,497.0,,jeff wilson,RB,jeffery wilson,34115,100,34115,Jeffery Wilson,RB,MIA,2.1,0.4857142857142857,12,jeffery wilson,RB
-696.0,Michael Pratt,,,QB,498.0,,,,,,498.0,,michael pratt,QB,michael pratt,40019,100,40019,Michael Pratt,QB,TB,1.2400000000000002,R,9,michael pratt,QB
+696.0,Michael Pratt,,,QB,498.0,,,,,,498.0,,michael pratt,QB,michael pratt,40019,100,40019,Michael Pratt,QB,TB,1.7759999999999998,R,9,michael pratt,QB
 697.0,Caden Prieskorn,,,TE,,,,498.0,,,498.0,,caden prieskorn,TE,caden prieskorn,40207,100,40207,Caden Prieskorn,TE,DEN,5.2250000000000005,R,12,caden prieskorn,TE
 631.0,Isaiah Davis,NYJ,9,RB,,,,554.0,,442.0,498.0,,isaiah davis,RB,isaiah davis,39798,100,39798,Isaiah Davis,RB,NYJ,3.6000000000000005,0.5294117647058824,9,isaiah davis,RB
 651.0,Trey Palmer,NO,11,WR,,,,536.0,,461.0,498.5,,trey palmer,WR,trey palmer,39052,100,39052,Trey Palmer,WR,TB,4.9,0.7837837837837838,9,trey palmer,WR
-698.0,Alec Ingold,MIA,12,RB,,,,499.0,,,499.0,,alec ingold,RB,alec ingold,39930,100,39930,Alec Ingold,RB,MIA,9.0,R,12,alec ingold,RB
-575.0,Cam Miller,LV,8,QB,383.0,,,621.0,,,502.0,,cam miller,QB,cam miller,40144,100,40144,Cam Miller,QB,LV,4.0608524590163935,R,8,cam miller,QB
-602.0,Cedrick Wilson Jr.,NO,11,WR,,,,595.0,,411.0,503.0,,cedrick wilson,WR,cedrick wilson,34418,100,34418,Cedrick Wilson,WR,NO,5.1,0.6285714285714286,11,cedrick wilson,WR
-546.0,Raheim Sanders,CLE,9,RB,364.0,,,642.0,,,503.0,,raheim sanders,RB,raheim sanders,40231,100,40231,Raheim Sanders,RB,LAC,9.0,R,12,raheim sanders,RB
-701.0,Jakob Johnson,HOU,6,RB,,,,504.0,,,504.0,,jakob johnson,RB,jakob johnson,39937,100,39937,Jakob Johnson,RB,HOU,9.0,R,6,jakob johnson,RB
+698.0,Alec Ingold,MIA,12,RB,,,,499.0,,,499.0,,alec ingold,RB,alec ingold,39930,100,39930,Alec Ingold,RB,MIA,8.8,R,12,alec ingold,RB
+575.0,Cam Miller,LV,8,QB,383.0,,,621.0,,,502.0,,cam miller,QB,cam miller,40144,100,40144,Cam Miller,QB,LV,5.583311475409834,R,8,cam miller,QB
+602.0,Cedrick Wilson Jr.,NO,11,WR,,,,595.0,,411.0,503.0,,cedrick wilson,WR,cedrick wilson,34418,100,34418,Cedrick Wilson,WR,NO,5.3500000000000005,0.6285714285714286,11,cedrick wilson,WR
+546.0,Raheim Sanders,CLE,9,RB,364.0,,,642.0,,,503.0,,raheim sanders,RB,raheim sanders,40231,100,40231,Raheim Sanders,RB,LAC,8.8,R,12,raheim sanders,RB
+701.0,Jakob Johnson,HOU,6,RB,,,,504.0,,,504.0,,jakob johnson,RB,jakob johnson,39937,100,39937,Jakob Johnson,RB,HOU,8.8,R,6,jakob johnson,RB
 702.0,Harrison Bryant,HOU,6,TE,,,,506.0,,,506.0,,harrison bryant,TE,harrison bryant,36232,100,36232,Harrison Bryant,TE,PHI,1.6,0.5428571428571428,9,harrison bryant,TE
 582.0,Thomas Fidone II,NYG,14,TE,499.0,,,631.0,,391.0,507.0,,thomas fidone,TE,thomas fidone,40145,100,40145,Thomas Fidone,TE,NYG,1.9,R,14,thomas fidone,TE
 653.0,Robbie Ouzts,SEA,8,TE,462.0,,,556.0,,,509.0,,robbie ouzts,TE,robbie ouzts,40297,100,40297,Robbie Ouzts,RB,SEA,2.8000000000000003,R,8,robbie ouzts,RB
@@ -490,22 +490,22 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 560.0,Luke Farrell,SF,14,TE,372.0,,,655.0,,,513.5,,luke farrell,TE,luke farrell,36887,100,36887,Luke Farrell,TE,SF,1.9,0.5588235294117647,14,luke farrell,TE
 705.0,Ben Skowronek,PIT,5,WR,,,,514.0,,,514.0,,ben skowronek,WR,ben skowronek,36862,100,36862,Ben Skowronek,WR,PIT,2.1,0.3888888888888889,5,ben skowronek,WR
 706.0,Mitch Van Vooren,,,WR,,,,516.0,,,516.0,,mitch van vooren,WR,mitchell van vooren,40314,91,40314,Mitchell Van Vooren,TE,SEA,5.2250000000000005,R,8,mitchell van vooren,TE
-473.0,Kyle McCord,PHI,9,QB,300.0,,,734.0,,,517.0,,kyle mccord,QB,kyle mccord,40082,100,40082,Kyle McCord,QB,PHI,7.784721311475409,R,9,kyle mccord,QB
+473.0,Kyle McCord,PHI,9,QB,300.0,,,734.0,,,517.0,,kyle mccord,QB,kyle mccord,40082,100,40082,Kyle McCord,QB,PHI,9.294163934426228,R,9,kyle mccord,QB
 644.0,Laquon Treadwell,IND,11,WR,456.0,,,579.0,,,517.5,,laquon treadwell,WR,laquon treadwell,32951,100,32951,Laquon Treadwell,WR,IND,2.6,0.05263157894736842,11,laquon treadwell,WR
 608.0,Gavin Bartholomew,MIN,6,TE,415.0,,,623.0,,,519.0,,gavin bartholomew,TE,gavin bartholomew,40141,100,40141,Gavin Bartholomew,TE,MIN,2.1,R,6,gavin bartholomew,TE
 707.0,Drew Ogletree,IND,11,TE,,,,519.0,,,519.0,,drew ogletree,TE,andrew ogletree,37292,100,37292,Andrew Ogletree,TE,IND,2.1,0.6176470588235294,11,andrew ogletree,TE
 640.0,Zach Pascal,,,WR,453.0,,,587.0,,,520.0,,zach pascal,WR,zach pascal,33251,100,33251,Zach Pascal,WR,NYG,0.0,0.5294117647058824,14,zach pascal,WR
-604.0,Tommy Mellott,,,WR,412.0,,,628.0,,,520.0,,tommy mellott,WR,tommy mellott,40143,100,40143,Tommy Mellott,WR,LV,2.714990234375,R,8,tommy mellott,WR
-708.0,Skylar Thompson,PIT,5,QB,,,,520.0,,,520.0,,skylar thompson,QB,skylar thompson,37327,100,37327,Skylar Thompson,QB,PIT,3.9400000000000004,0.11764705882352941,5,skylar thompson,QB
+604.0,Tommy Mellott,,,WR,412.0,,,628.0,,,520.0,,tommy mellott,WR,tommy mellott,40143,100,40143,Tommy Mellott,WR,LV,2.7,R,8,tommy mellott,WR
+708.0,Skylar Thompson,PIT,5,QB,,,,520.0,,,520.0,,skylar thompson,QB,skylar thompson,37327,100,37327,Skylar Thompson,QB,PIT,6.94,0.11764705882352941,5,skylar thompson,QB
 709.0,Pierre Strong Jr.,,,RB,,,,521.0,,,521.0,,pierre strong,RB,pierre strong,38098,100,38098,Pierre Strong,RB,CLE,2.5,0.6857142857142857,9,pierre strong,RB
 484.0,Ricky White III,SEA,8,WR,487.0,,,751.0,,328.0,522.0,,ricky white,WR,ricky white,40299,100,40299,Ricky White,WR,SEA,2.2355468750000003,R,8,ricky white,WR
 710.0,Tyrion Davis-Price,,,RB,,,,523.0,,,523.0,,tyrion davis-price,RB,tyrion davis-price,37827,100,37827,Tyrion Davis-Price,RB,TEN,1.4000000000000001,0.04878048780487805,10,tyrion davis-price,RB
 498.0,Beaux Collins,NYG,14,WR,325.0,,,722.0,,,523.5,,beaux collins,WR,beaux collins,40221,100,40221,Beaux Collins,WR,NYG,7.850000000000001,R,14,beaux collins,WR
-440.0,Savion Williams,GB,5,WR,449.0,,,809.0,,314.0,524.0,,savion williams,WR,savion williams,40081,100,40081,Savion Williams,WR,GB,6.87392578125,R,5,savion williams,WR
+440.0,Savion Williams,GB,5,WR,449.0,,,809.0,,314.0,524.0,,savion williams,WR,savion williams,40081,100,40081,Savion Williams,WR,GB,6.800000000000001,R,5,savion williams,WR
 711.0,Tre Watson,KC,10,TE,,,,524.0,,,524.0,,tre watson,TE,tre watson,40104,100,40104,Tre Watson,TE,KC,5.2250000000000005,R,10,tre watson,TE
 712.0,Jalen Brooks,DAL,10,WR,,,,526.0,,,526.0,,jalen brooks,WR,jalen brooks,38640,100,38640,Jalen Brooks,WR,DAL,2.5,0.42857142857142855,10,jalen brooks,WR
-555.0,Riley Leonard,IND,11,QB,369.0,,,687.0,,,528.0,,riley leonard,QB,riley leonard,40138,100,40138,Riley Leonard,QB,IND,7.001868852459021,R,11,riley leonard,QB
-564.0,Jashaun Corbin,,,RB,,,,692.0,,375.0,533.5,,jashaun corbin,RB,jashaun corbin,37410,100,37410,Jashaun Corbin,RB,ATL,4.3,0.058823529411764705,5,jashaun corbin,RB
+555.0,Riley Leonard,IND,11,QB,369.0,,,687.0,,,528.0,,riley leonard,QB,riley leonard,40138,100,40138,Riley Leonard,QB,IND,8.821016393442624,R,11,riley leonard,QB
+564.0,Jashaun Corbin,,,RB,,,,692.0,,375.0,533.5,,jashaun corbin,RB,jashaun corbin,37410,100,37410,Jashaun Corbin,RB,ATL,4.300000000000001,0.058823529411764705,5,jashaun corbin,RB
 713.0,Ronnie Bell,DET,8,WR,,,,534.0,,,534.0,,ronnie bell,WR,ronnie bell,38647,100,38647,Ronnie Bell,WR,DET,2.0,0.2972972972972973,8,ronnie bell,WR
 655.0,Trayveon Williams,CLE,9,RB,464.0,,,608.0,,,536.0,,trayveon williams,RB,trayveon williams,35291,100,35291,Trayveon Williams,RB,NE,0.8,0.8235294117647058,14,trayveon williams,RB
 714.0,Payne Durham,TB,9,TE,,,,537.0,,,537.0,,payne durham,TE,payne durham,39050,100,39050,Payne Durham,TE,TB,3.05,0.32432432432432434,9,payne durham,TE
@@ -515,89 +515,89 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 666.0,Irv Smith Jr.,HOU,6,TE,471.0,,,611.0,,,541.0,,irv smith,TE,irv smith,34970,100,34970,Irv Smith,TE,HOU,2.9,0.2777777777777778,6,irv smith,TE
 691.0,Durham Smythe,CHI,5,TE,493.0,,,594.0,,,543.5,,durham smythe,TE,durham smythe,34798,100,34798,Durham Smythe,TE,CHI,1.8,0.7714285714285715,5,durham smythe,TE
 583.0,Charlie Jones,CIN,10,WR,392.0,,,700.0,,,546.0,,charlie jones,WR,charlie jones,38576,100,38576,Charlie Jones,WR,CIN,1.5,0.20588235294117646,10,charlie jones,WR
-534.0,Kazmeir Allen,,,WR,,,,737.0,,358.0,547.5,,kazmeir allen,WR,kazmeir allen,40006,100,40006,Kazmeir Allen,RB,WAS,9.0,R,12,kazmeir allen,RB
-717.0,Jacardia Wright,SEA,8,RB,,,,550.0,,,550.0,,jacardia wright,RB,jacardia wright,40097,100,40097,Jacardia Wright,RB,SEA,9.0,R,8,jacardia wright,RB
+534.0,Kazmeir Allen,,,WR,,,,737.0,,358.0,547.5,,kazmeir allen,WR,kazmeir allen,40006,100,40006,Kazmeir Allen,RB,WAS,8.8,R,12,kazmeir allen,RB
+717.0,Jacardia Wright,SEA,8,RB,,,,550.0,,,550.0,,jacardia wright,RB,jacardia wright,40097,100,40097,Jacardia Wright,RB,SEA,8.8,R,8,jacardia wright,RB
 718.0,Jaheim Bell,,,TE,,,,552.0,,,552.0,,jaheim bell,TE,jaheim bell,39420,100,39420,Jaheim Bell,TE,NE,1.1,0.17647058823529413,14,jaheim bell,TE
 720.0,Jacob Cowing,SF,14,WR,,,,555.0,,,555.0,,jacob cowing,WR,jacob cowing,39365,100,39365,Jacob Cowing,WR,SF,5.7,0.17647058823529413,14,jacob cowing,WR
-721.0,Kendall Milton,CIN,10,RB,,,,557.0,,,557.0,,kendall milton,RB,kendall milton,40022,100,40022,Kendall Milton,RB,CIN,9.0,R,10,kendall milton,RB
+721.0,Kendall Milton,CIN,10,RB,,,,557.0,,,557.0,,kendall milton,RB,kendall milton,40022,100,40022,Kendall Milton,RB,CIN,8.8,R,10,kendall milton,RB
 488.0,Jahdae Walker,CHI,5,WR,320.0,,,797.0,,,558.5,,jahdae walker,WR,jahdae walker,40163,100,40163,Jahdae Walker,WR,CHI,7.850000000000001,R,5,jahdae walker,WR
 722.0,Bryce Oliver,TEN,10,WR,,,,560.0,,,560.0,,bryce oliver,WR,bryce oliver,39650,100,39650,Bryce Oliver,WR,TEN,2.6,0.29411764705882354,10,bryce oliver,WR
 723.0,Terique Owens,,,WR,,,,561.0,,,561.0,,terique owens,WR,terique owens,40064,100,40064,Terique Owens,WR,SF,7.850000000000001,R,14,terique owens,WR
 576.0,Dominic Lovett,DET,8,WR,476.0,,,806.0,,407.0,563.0,,dominic lovett,WR,dominic lovett,40152,100,40152,Dominic Lovett,WR,DET,2.1,R,8,dominic lovett,WR
-725.0,Case Keenum,CHI,5,QB,,,,568.0,,,568.0,,case keenum,QB,case keenum,28986,100,28986,Case Keenum,QB,CHI,4.87,0.10526315789473684,5,case keenum,QB
-726.0,Ja'Quinden Jackson,JAX,8,RB,,,,570.0,,,570.0,,ja'quinden jackson,RB,ja'quinden jackson,40183,100,40183,Ja'Quinden Jackson,RB,JAX,9.0,R,8,ja'quinden jackson,RB
+725.0,Case Keenum,CHI,5,QB,,,,568.0,,,568.0,,case keenum,QB,case keenum,28986,100,28986,Case Keenum,QB,CHI,7.37,0.10526315789473684,5,case keenum,QB
+726.0,Ja'Quinden Jackson,JAX,8,RB,,,,570.0,,,570.0,,ja'quinden jackson,RB,ja'quinden jackson,40183,100,40183,Ja'Quinden Jackson,RB,JAX,8.8,R,8,ja'quinden jackson,RB
 727.0,Nick Kallerup,SEA,8,TE,,,,573.0,,,573.0,,nick kallerup,TE,nick kallerup,40095,100,40095,Nick Kallerup,TE,SEA,5.2250000000000005,R,8,nick kallerup,TE
 728.0,Silas Bolden,,,WR,,,,574.0,,,574.0,,silas bolden,WR,silas bolden,40237,100,40237,Silas Bolden,WR,MIN,7.850000000000001,R,6,silas bolden,WR
 730.0,DeAndre Carter,CLE,9,WR,,,,576.0,,,576.0,,deandre carter,WR,deandre carter,31763,100,31763,DeAndre Carter,WR,CLE,1.5,0.38235294117647056,9,deandre carter,WR
-538.0,Marcus Major Jr.,,,RB,,,,793.0,,360.0,576.5,,marcus major,RB,marcus major,40108,100,40108,Marcus Major,RB,BAL,9.0,R,7,marcus major,RB
-731.0,Taylor Heinicke,,,QB,,,,577.0,,,577.0,,taylor heinicke,QB,taylor heinicke,31800,100,31800,Taylor Heinicke,QB,LAC,9.600000000000001,0.2571428571428571,12,taylor heinicke,QB
+538.0,Marcus Major Jr.,,,RB,,,,793.0,,360.0,576.5,,marcus major,RB,marcus major,40108,100,40108,Marcus Major,RB,BAL,8.8,R,7,marcus major,RB
+731.0,Taylor Heinicke,,,QB,,,,577.0,,,577.0,,taylor heinicke,QB,taylor heinicke,31800,100,31800,Taylor Heinicke,QB,LAC,14.6,0.2571428571428571,12,taylor heinicke,QB
 601.0,Jamari Thrash,CLE,9,WR,,,,746.0,,408.0,577.0,,jamari thrash,WR,jamari thrash,39379,100,39379,Jamari Thrash,WR,CLE,0.0,0.35294117647058826,9,jamari thrash,WR
 732.0,Chris Moore,WAS,12,WR,,,,578.0,,,578.0,,chris moore,WR,chris moore,32398,100,32398,Chris Moore,WR,WAS,4.2,0.8823529411764706,12,chris moore,WR
 734.0,Tyler Boyd,,,WR,,,,581.0,,,581.0,,tyler boyd,WR,tyler boyd,33009,100,33009,Tyler Boyd,WR,TEN,5.65,0.9411764705882353,10,tyler boyd,WR
 735.0,Ketron Jackson Jr.,,,WR,,,,584.0,,,584.0,,ketron jackson,WR,ketron jackson,40282,100,40282,Ketron Jackson,WR,LV,7.850000000000001,R,8,ketron jackson,WR
-736.0,Jamal Agnew,ATL,5,WR,,,,586.0,,,586.0,,jamal agnew,WR,jamal agnew,33572,100,33572,Jamal Agnew,WR,ATL,4.550000000000001,0.47058823529411764,5,jamal agnew,WR
+736.0,Jamal Agnew,ATL,5,WR,,,,586.0,,,586.0,,jamal agnew,WR,jamal agnew,33572,100,33572,Jamal Agnew,WR,ATL,4.050000000000001,0.47058823529411764,5,jamal agnew,WR
 737.0,Pharaoh Brown,,,TE,,,,589.0,,,589.0,,pharaoh brown,TE,pharaoh brown,33439,100,33439,Pharaoh Brown,TE,MIA,1.7000000000000002,0.5,12,pharaoh brown,TE
-569.0,Phil Mafah,DAL,10,RB,,,,803.0,,379.0,591.0,,phil mafah,RB,phil mafah,40083,100,40083,Phil Mafah,RB,DAL,1.8198326359832637,R,10,phil mafah,RB
+569.0,Phil Mafah,DAL,10,RB,,,,803.0,,379.0,591.0,,phil mafah,RB,phil mafah,40083,100,40083,Phil Mafah,RB,DAL,1.8099163179916322,R,10,phil mafah,RB
 739.0,John Kelly Jr.,,,RB,,,,591.0,,,591.0,,john kelly,RB,josh kelly,40092,90,40092,Josh Kelly,WR,DAL,7.850000000000001,R,10,josh kelly,WR
 504.0,Dennis Houston,TB,9,WR,,328.0,,854.0,,,591.0,,dennis houston,WR,dennis houston,39980,100,39980,Dennis Houston,WR,TB,7.850000000000001,R,9,dennis houston,WR
 740.0,Anthony Miller,BAL,7,WR,,,,592.0,,,592.0,,anthony miller,WR,anthony miller,34353,100,34353,Anthony Miller,WR,BAL,2.6,0.15789473684210525,7,anthony miller,WR
 741.0,Dante Pettis,,,WR,,,,593.0,,,593.0,,dante pettis,WR,dante pettis,34860,100,34860,Dante Pettis,WR,NO,3.95,0.47058823529411764,11,dante pettis,WR
-627.0,Josh Williams,TB,9,RB,436.0,,,752.0,,,594.0,,josh williams,RB,josh williams,40218,100,40218,Josh Williams,RB,TB,9.0,R,9,josh williams,RB
+627.0,Josh Williams,TB,9,RB,436.0,,,752.0,,,594.0,,josh williams,RB,josh williams,40218,100,40218,Josh Williams,RB,TB,8.8,R,9,josh williams,RB
 672.0,Malik Heath,GB,5,WR,478.0,,,714.0,,,596.0,,malik heath,WR,malik heath,38465,100,38465,Malik Heath,WR,GB,2.85,0.4864864864864865,5,malik heath,WR
 661.0,Arian Smith,NYJ,9,WR,,,,727.0,,466.0,596.5,,arian smith,WR,arian smith,40269,100,40269,Arian Smith,WR,NYJ,5.7,R,9,arian smith,WR
 742.0,Ross Dwelley,,,TE,,,,597.0,,,597.0,,ross dwelley,TE,ross dwelley,34073,100,34073,Ross Dwelley,TE,SF,1.5,0.08108108108108109,14,ross dwelley,TE
 743.0,Russell Gage Jr.,SF,14,WR,,,,598.0,,,598.0,,russell gage,WR,russell gage,39926,100,39926,Russell Gage,WR,SF,3.19375,R,14,russell gage,WR
 579.0,Ja'Corey Brooks,WAS,12,WR,386.0,,,811.0,,,598.5,,ja'corey brooks,WR,ja'corey brooks,40176,100,40176,Ja'Corey Brooks,WR,WAS,7.850000000000001,R,12,ja'corey brooks,WR
-744.0,Tim Boyle,,,QB,,,,599.0,,,599.0,,tim boyle,QB,tim boyle,34177,100,34177,Tim Boyle,QB,TEN,3.9400000000000004,0.11764705882352941,10,tim boyle,QB
+744.0,Tim Boyle,,,QB,,,,599.0,,,599.0,,tim boyle,QB,tim boyle,34177,100,34177,Tim Boyle,QB,TEN,4.4399999999999995,0.11764705882352941,10,tim boyle,QB
 675.0,Brady Russell,SEA,8,TE,480.0,,,719.0,,,599.5,,brady russell,TE,brady russell,39990,100,39990,Brady Russell,TE,SEA,5.2250000000000005,R,8,brady russell,TE
 580.0,Kalel Mullings,TEN,10,RB,,,,813.0,,386.0,599.5,,kalel mullings,RB,kalel mullings,40137,100,40137,Kalel Mullings,RB,TEN,2.664205020920502,R,10,kalel mullings,RB
 745.0,Trent Sherfield Sr.,DEN,12,WR,,,,602.0,,,602.0,,trent sherfield,WR,trent sherfield,34487,100,34487,Trent Sherfield,WR,DEN,1.9,0.5135135135135135,12,trent sherfield,WR
 634.0,Brenden Rice,,,WR,447.0,,,760.0,,,603.5,,brenden rice,WR,brenden rice,40033,100,40033,Brenden Rice,WR,LAC,2.56865234375,R,12,brenden rice,WR
 746.0,KhaDarel Hodge,ATL,5,WR,,,,604.0,,,604.0,,khadarel hodge,WR,khadarel hodge,34854,100,34854,KhaDarel Hodge,WR,ATL,2.1,0.5588235294117647,5,khadarel hodge,WR
 664.0,Jonathon Brooks,CAR,14,RB,468.0,,,743.0,,,605.5,,jonathon brooks,RB,jonathon brooks,39344,100,39344,Jonathon Brooks,RB,CAR,0.7000000000000001,0.17647058823529413,14,jonathon brooks,RB
-748.0,Will Grier,DAL,10,QB,,,,606.0,,,606.0,,will grier,QB,will grier,39931,100,39931,Will Grier,QB,DAL,14.18017213114754,R,10,will grier,QB
+748.0,Will Grier,DAL,10,QB,,,,606.0,,,606.0,,will grier,QB,will grier,39931,100,39931,Will Grier,QB,DAL,17.531114754098358,R,10,will grier,QB
 749.0,Miles Boykin,CHI,5,WR,,,,609.0,,,609.0,,miles boykin,WR,miles boykin,35703,100,35703,Miles Boykin,WR,CHI,1.55,0.2222222222222222,5,miles boykin,WR
 750.0,Trenton Irwin,,,WR,,,,612.0,,,612.0,,trenton irwin,WR,trenton irwin,35341,100,35341,Trenton Irwin,WR,JAX,3.5,0.4117647058823529,8,trenton irwin,WR
 751.0,Juwann Winfree,HOU,6,WR,,,,613.0,,,613.0,,juwann winfree,WR,juwann winfree,35593,100,35593,Juwann Winfree,WR,IND,0.0,0.058823529411764705,11,juwann winfree,WR
-752.0,Elijah Young,,,RB,,,,614.0,,,614.0,,elijah young,RB,elijah young,40105,100,40105,Elijah Young,RB,KC,9.0,R,10,elijah young,RB
+752.0,Elijah Young,,,RB,,,,614.0,,,614.0,,elijah young,RB,elijah young,40105,100,40105,Elijah Young,RB,KC,8.8,R,10,elijah young,RB
 753.0,Malik Taylor,,,WR,,,,615.0,,,615.0,,malik taylor,WR,malik taylor,35480,100,35480,Malik Taylor,WR,DET,1.6500000000000001,0.11764705882352941,8,malik taylor,WR
-632.0,Colson Yankoff,WAS,12,TE,444.0,,,787.0,,,615.5,,colson yankoff,TE,colson yankoff,40062,100,40062,Colson Yankoff,RB,WAS,9.0,R,12,colson yankoff,RB
+632.0,Colson Yankoff,WAS,12,TE,444.0,,,787.0,,,615.5,,colson yankoff,TE,colson yankoff,40062,100,40062,Colson Yankoff,RB,WAS,8.8,R,12,colson yankoff,RB
 754.0,Steven Sims Jr.,,,WR,,,,616.0,,,616.0,,steven sims,WR,steven sims,34928,100,34928,Steven Sims,WR,SEA,1.25,0.10526315789473684,8,steven sims,WR
 605.0,Tyree Jackson,WAS,12,TE,,,,820.0,,412.0,616.0,,tyree jackson,TE,tyree jackson,39933,100,39933,Tyree Jackson,TE,WAS,5.2250000000000005,R,12,tyree jackson,TE
 755.0,Jimmy Holiday,KC,10,WR,,,,617.0,,,617.0,,jimmy holiday,WR,jimmy holiday,40112,100,40112,Jimmy Holiday,WR,KC,7.850000000000001,R,10,jimmy holiday,WR
 561.0,Dallin Holker,,,TE,373.0,,,862.0,,,617.5,,dallin holker,TE,dallin holker,39613,100,39613,Dallin Holker,TE,NO,2.55,0.11764705882352941,11,dallin holker,TE
 756.0,Alex Bachman,LV,8,WR,,,,618.0,,,618.0,,alex bachman,WR,alex bachman,35602,100,35602,Alex Bachman,WR,LV,6.1,0.058823529411764705,8,alex bachman,WR
 757.0,Tom Kennedy,DET,8,WR,,,,619.0,,,619.0,,tom kennedy,WR,tom kennedy,35544,100,35544,Tom Kennedy,WR,DET,0.0,0.05555555555555555,8,tom kennedy,WR
-758.0,LeQuint Allen Jr.,JAX,8,RB,,,,620.0,,,620.0,,lequint allen,RB,lequint allen,40149,100,40149,LeQuint Allen,RB,JAX,1.9,R,8,lequint allen,RB
-759.0,Tyler Huntley,BAL,7,QB,,,,622.0,,,622.0,,tyler huntley,QB,tyler huntley,35993,100,35993,Tyler Huntley,QB,MIA,7.57,0.2777777777777778,12,tyler huntley,QB
+758.0,LeQuint Allen Jr.,JAX,8,RB,,,,620.0,,,620.0,,lequint allen,RB,lequint allen,40149,100,40149,LeQuint Allen,RB,JAX,1.8748744769874475,R,8,lequint allen,RB
+759.0,Tyler Huntley,BAL,7,QB,,,,622.0,,,622.0,,tyler huntley,QB,tyler huntley,35993,100,35993,Tyler Huntley,QB,MIA,10.07,0.2777777777777778,12,tyler huntley,QB
 535.0,Jordan Moore,CIN,10,WR,,,,886.0,,359.0,622.5,,jordan moore,WR,jordan moore,40198,100,40198,Jordan Moore,WR,CIN,7.850000000000001,R,10,jordan moore,WR
 637.0,Jackson Hawes,BUF,7,TE,451.0,,,794.0,,,622.5,,jackson hawes,TE,jackson hawes,40133,100,40133,Jackson Hawes,TE,BUF,2.509081632653061,R,7,jackson hawes,TE
 760.0,Isaiah Hodgins,,,WR,,,,624.0,,,624.0,,isaiah hodgins,WR,isaiah hodgins,36165,100,36165,Isaiah Hodgins,WR,SF,3.05,0.47058823529411764,14,isaiah hodgins,WR
 761.0,Giovanni Ricci,,,TE,,,,625.0,,,625.0,,giovanni ricci,TE,giovanni ricci,35956,100,35956,Giovanni Ricci,TE,MIN,1.2,0.058823529411764705,6,giovanni ricci,TE
-577.0,D.J. Williams,,,RB,384.0,,,868.0,,,626.0,,d.j. williams,RB,d.j. williams,40053,100,40053,D.J. Williams,RB,TB,9.0,R,9,d.j. williams,RB
+577.0,D.J. Williams,,,RB,384.0,,,868.0,,,626.0,,d.j. williams,RB,d.j. williams,40053,100,40053,D.J. Williams,RB,TB,8.8,R,9,d.j. williams,RB
 681.0,Baylor Cupp,,,TE,484.0,,,769.0,,,626.5,,baylor cupp,TE,baylor cupp,39316,100,39316,Baylor Cupp,TE,KC,0.0,0.05,10,baylor cupp,TE
 763.0,KJ Hamler,,,WR,,,,629.0,,,629.0,,kj hamler,WR,k.j. hamler,39948,89,39948,K.J. Hamler,WR,BUF,9.83359375,R,7,k.j. hamler,WR
 764.0,Albert Okwuegbunam Jr.,LV,8,TE,,,,630.0,,,630.0,,albert okwuegbunam,TE,albert okwuegbunam,36423,100,36423,Albert Okwuegbunam,TE,IND,0.0,0.05555555555555555,11,albert okwuegbunam,TE
-765.0,Laviska Shenault Jr.,,,WR,,,,632.0,,,632.0,,laviska shenault,WR,laviska shenault,39945,100,39945,Laviska Shenault,WR,BUF,10.423437499999999,R,7,laviska shenault,WR
+765.0,Laviska Shenault Jr.,,,WR,,,,632.0,,,632.0,,laviska shenault,WR,laviska shenault,39945,100,39945,Laviska Shenault,WR,BUF,10.4234375,R,7,laviska shenault,WR
 766.0,Cody White,SEA,8,WR,,,,633.0,,,633.0,,cody white,WR,cody white,35891,100,35891,Cody White,WR,SEA,6.4,0.058823529411764705,8,cody white,WR
 767.0,Trishton Jackson,ARI,8,WR,,,,634.0,,,634.0,,trishton jackson,WR,trishton jackson,35934,100,35934,Trishton Jackson,WR,ARI,2.45,0.11764705882352941,8,trishton jackson,WR
 769.0,K.J. Osborn,,,WR,,,,636.0,,,636.0,,k.j. osborn,WR,k.j. osborn,36345,100,36345,K.J. Osborn,WR,WAS,5.5,0.6176470588235294,12,k.j. osborn,WR
-770.0,Jalen Reagor,LAC,12,WR,,,,637.0,,,637.0,,jalen reagor,WR,jalen reagor,36387,100,36387,Jalen Reagor,WR,LAC,2.1,0.45714285714285713,12,jalen reagor,WR
-656.0,Chimere Dike,TEN,10,WR,,,,812.0,,464.0,638.0,,chimere dike,WR,chimere dike,40317,100,40317,Chimere Dike,WR,TEN,6.02548828125,R,10,chimere dike,WR
+770.0,Jalen Reagor,LAC,12,WR,,,,637.0,,,637.0,,jalen reagor,WR,jalen reagor,36387,100,36387,Jalen Reagor,WR,LAC,2.0500000000000007,0.45714285714285713,12,jalen reagor,WR
+656.0,Chimere Dike,TEN,10,WR,,,,812.0,,464.0,638.0,,chimere dike,WR,chimere dike,40317,100,40317,Chimere Dike,WR,TEN,6.0,R,10,chimere dike,WR
 772.0,JaMycal Hasty,MIA,12,RB,,,,639.0,,,639.0,,jamycal hasty,RB,jamycal hasty,35806,100,35806,Jamycal Hasty,RB,NE,1.1,0.29411764705882354,14,jamycal hasty,RB
 773.0,Charlie Woerner,ATL,5,TE,,,,640.0,,,640.0,,charlie woerner,TE,charlie woerner,36429,100,36429,Charlie Woerner,TE,ATL,1.6,0.2972972972972973,5,charlie woerner,TE
-774.0,DeeJay Dallas,CAR,14,RB,,,,641.0,,,641.0,,deejay dallas,RB,deejay dallas,36425,100,36425,DeeJay Dallas,RB,ARI,1.0,0.5,8,deejay dallas,RB
-775.0,Reggie Gilliam,BUF,7,RB,,,,643.0,,,643.0,,reggie gilliam,RB,reggie gilliam,39940,100,39940,Reggie Gilliam,RB,BUF,9.0,R,7,reggie gilliam,RB
+774.0,DeeJay Dallas,CAR,14,RB,,,,641.0,,,641.0,,deejay dallas,RB,deejay dallas,36425,100,36425,DeeJay Dallas,RB,ARI,1.5,0.5,8,deejay dallas,RB
+775.0,Reggie Gilliam,BUF,7,RB,,,,643.0,,,643.0,,reggie gilliam,RB,reggie gilliam,39940,100,39940,Reggie Gilliam,RB,BUF,8.8,R,7,reggie gilliam,RB
 776.0,Lawrence Cager,WAS,12,WR,,,,644.0,,,644.0,,lawrence cager,WR,lawrence cager,36145,100,36145,Lawrence Cager,TE,WAS,3.7,0.17647058823529413,12,lawrence cager,TE
 777.0,Tarik Black,,,WR,,,,646.0,,,646.0,,tarik black,WR,tarik black,39950,100,39950,Tarik Black,WR,MIA,7.850000000000001,R,12,tarik black,WR
 779.0,Kenny Yeboah,DET,8,TE,,,,648.0,,,648.0,,kenny yeboah,TE,kenny yeboah,36510,100,36510,Kenny Yeboah,TE,DET,1.8,0.23529411764705882,8,kenny yeboah,TE
 780.0,Patrick Herbert,JAX,8,TE,,,,650.0,,,650.0,,patrick herbert,TE,patrick herbert,40182,100,40182,Patrick Herbert,TE,JAX,5.2250000000000005,R,8,patrick herbert,TE
-674.0,Andrew Beck,NYJ,9,TE,479.0,,,822.0,,,650.5,,andrew beck,TE,andrew beck,39928,100,39928,Andrew Beck,RB,NYJ,9.0,R,9,andrew beck,RB
+674.0,Andrew Beck,NYJ,9,TE,479.0,,,822.0,,,650.5,,andrew beck,TE,andrew beck,39928,100,39928,Andrew Beck,RB,NYJ,8.8,R,9,andrew beck,RB
 694.0,Caleb Lohner,DEN,12,TE,496.0,,,805.0,,,650.5,,caleb lohner,TE,caleb lohner,40151,100,40151,Caleb Lohner,TE,DEN,1.7328571428571438,R,12,caleb lohner,TE
 781.0,Simi Fehoko,ARI,8,WR,,,,651.0,,,651.0,,simi fehoko,WR,simi fehoko,36646,100,36646,Simi Fehoko,WR,ARI,4.550000000000001,0.17142857142857143,8,simi fehoko,WR
 782.0,Dez Fitzpatrick,,,WR,,,,652.0,,,652.0,,dez fitzpatrick,WR,dez fitzpatrick,39951,100,39951,Dez Fitzpatrick,WR,LAC,5.7,R,12,dez fitzpatrick,WR
-783.0,Davis Mills,HOU,6,QB,,,,653.0,,,653.0,,davis mills,QB,davis mills,36898,100,36898,Davis Mills,QB,HOU,0.18,0.2631578947368421,6,davis mills,QB
-784.0,Sam Ehlinger,DEN,12,QB,,,,654.0,,,654.0,,sam ehlinger,QB,sam ehlinger,39959,100,39959,Sam Ehlinger,QB,DEN,3.973729508196722,R,12,sam ehlinger,QB
+783.0,Davis Mills,HOU,6,QB,,,,653.0,,,653.0,,davis mills,QB,davis mills,36898,100,36898,Davis Mills,QB,HOU,0.86,0.2631578947368421,6,davis mills,QB
+784.0,Sam Ehlinger,DEN,12,QB,,,,654.0,,,654.0,,sam ehlinger,QB,sam ehlinger,39959,100,39959,Sam Ehlinger,QB,DEN,5.154680327868854,R,12,sam ehlinger,QB
 689.0,Ashton Dulin,IND,11,WR,492.0,,,823.0,,,657.5,,ashton dulin,WR,ashton dulin,35021,100,35021,Ashton Dulin,WR,IND,0.9,0.5294117647058824,11,ashton dulin,WR
 670.0,David Bell,CLE,9,WR,,,,840.0,,475.0,657.5,,david bell,WR,david bell,37257,100,37257,David Bell,WR,CLE,3.2,0.3142857142857143,9,david bell,WR
 787.0,Hunter Long,JAX,8,TE,,,,658.0,,,658.0,,hunter long,TE,hunter long,37004,100,37004,Hunter Long,TE,JAX,1.9,0.42105263157894735,8,hunter long,TE
@@ -608,15 +608,15 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 791.0,Dee Eskridge,MIA,12,WR,,,,664.0,,,664.0,,dee eskridge,WR,d'wayne eskridge,36620,91,36620,D'Wayne Eskridge,WR,MIA,1.3,0.17647058823529413,12,d'wayne eskridge,WR
 792.0,Kyle Trask,,,QB,,,,665.0,,,665.0,,kyle trask,QB,kyle trask,36928,100,36928,Kyle Trask,QB,TB,-0.1,0.13513513513513514,9,kyle trask,QB
 793.0,Jack Stoll,NO,11,TE,,,,667.0,,,667.0,,jack stoll,TE,jack stoll,36741,100,36741,Jack Stoll,TE,NO,1.6,0.1794871794871795,11,jack stoll,TE
-794.0,Jaret Patterson,,,RB,,,,668.0,,,668.0,,jaret patterson,RB,jaret patterson,39957,100,39957,Jaret Patterson,RB,LAC,9.0,R,12,jaret patterson,RB
+794.0,Jaret Patterson,,,RB,,,,668.0,,,668.0,,jaret patterson,RB,jaret patterson,39957,100,39957,Jaret Patterson,RB,LAC,8.8,R,12,jaret patterson,RB
 795.0,Shane Zylstra,DET,8,TE,,,,669.0,,,669.0,,shane zylstra,TE,shane zylstra,36534,100,36534,Shane Zylstra,TE,DET,3.2,0.05555555555555555,8,shane zylstra,TE
 797.0,Velus Jones Jr.,NO,11,WR,,,,671.0,,,671.0,,velus jones,WR,velus jones,37745,100,37745,Velus Jones,RB,NO,1.0,0.23529411764705882,11,velus jones,RB
 799.0,Greg Dulcich,MIA,12,TE,,,,673.0,,,673.0,,greg dulcich,TE,greg dulcich,37252,100,37252,Greg Dulcich,TE,NYG,3.2,0.14285714285714285,14,greg dulcich,TE
 800.0,Jelani Woods,NYJ,9,TE,,,,675.0,,,675.0,,jelani woods,TE,jelani woods,39982,100,39982,Jelani Woods,TE,IND,5.367142857142858,R,11,jelani woods,TE
 801.0,Nick Muse,,,TE,,,,677.0,,,677.0,,nick muse,TE,nick muse,37317,100,37317,Nick Muse,TE,PHI,3.2,0.058823529411764705,9,nick muse,TE
-802.0,Bailey Zappe,CLE,9,QB,,,,678.0,,,678.0,,bailey zappe,QB,bailey zappe,38108,100,38108,Bailey Zappe,QB,KC,7.000000000000001,0.3235294117647059,10,bailey zappe,QB
+802.0,Bailey Zappe,CLE,9,QB,,,,678.0,,,678.0,,bailey zappe,QB,bailey zappe,38108,100,38108,Bailey Zappe,QB,KC,8.0,0.3235294117647059,10,bailey zappe,QB
 676.0,Nick Nash,ATL,5,WR,,,,876.0,,480.0,678.0,,nick nash,WR,nick nash,40255,100,40255,Nick Nash,WR,ATL,7.850000000000001,R,5,nick nash,WR
-803.0,Zonovan Knight,ARI,8,RB,,,,679.0,,,679.0,,zonovan knight,RB,zonovan knight,39969,100,39969,Zonovan Knight,RB,ARI,9.0,R,8,zonovan knight,RB
+803.0,Zonovan Knight,ARI,8,RB,,,,679.0,,,679.0,,zonovan knight,RB,zonovan knight,39969,100,39969,Zonovan Knight,RB,ARI,8.8,R,8,zonovan knight,RB
 804.0,Britain Covey,PHI,9,WR,,,,680.0,,,680.0,,britain covey,WR,britain covey,37132,100,37132,Britain Covey,WR,LA,2.1,0.1282051282051282,8,britain covey,WR
 805.0,Bo Melton,GB,5,WR,,,,681.0,,,681.0,,bo melton,WR,bo melton,37091,100,37091,Bo Melton,WR,GB,2.4000000000000004,0.4864864864864865,5,bo melton,WR
 806.0,Dareke Young,SEA,8,WR,,,,682.0,,,682.0,,dareke young,WR,dareke young,37093,100,37093,Dareke Young,WR,SEA,0.0,0.058823529411764705,8,dareke young,WR
@@ -638,20 +638,20 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 824.0,Will Mallory,IND,11,TE,,,,704.0,,,704.0,,will mallory,TE,will mallory,38394,100,38394,Will Mallory,TE,IND,1.7000000000000002,0.5294117647058824,11,will mallory,TE
 825.0,Zach Evans,,,RB,,,,705.0,,,705.0,,zach evans,RB,zach evans,39136,100,39136,Zach Evans,RB,NYJ,0.45000000000000007,0.2222222222222222,9,zach evans,RB
 827.0,Xavier Smith,LAR,8,WR,,,,707.0,,,707.0,,xavier smith,WR,xavier smith,38359,100,38359,Xavier Smith,WR,LA,2.6,0.15789473684210525,8,xavier smith,WR
-828.0,Jake Haener,NO,11,QB,,,,708.0,,,708.0,,jake haener,QB,jake haener,38998,100,38998,Jake Haener,QB,NO,0.33,0.47058823529411764,11,jake haener,QB
-829.0,Eric Gray,NYG,14,RB,,,,709.0,,,709.0,,eric gray,RB,eric gray,38396,100,38396,Eric Gray,RB,NYG,1.9000000000000001,0.4411764705882353,14,eric gray,RB
+828.0,Jake Haener,NO,11,QB,,,,708.0,,,708.0,,jake haener,QB,jake haener,38998,100,38998,Jake Haener,QB,NO,1.34,0.47058823529411764,11,jake haener,QB
+829.0,Eric Gray,NYG,14,RB,,,,709.0,,,709.0,,eric gray,RB,eric gray,38396,100,38396,Eric Gray,RB,NYG,1.9,0.4411764705882353,14,eric gray,RB
 830.0,Israel Abanikanda,GB,5,RB,,,,710.0,,,710.0,,israel abanikanda,RB,israel abanikanda,38389,100,38389,Israel Abanikanda,RB,SF,3.25,0.35294117647058826,14,israel abanikanda,RB
-831.0,Max Brosmer,MIN,6,QB,,,,711.0,,,711.0,,max brosmer,QB,max brosmer,40238,100,40238,Max Brosmer,QB,MIN,15.825000000000001,R,6,max brosmer,QB
+831.0,Max Brosmer,MIN,6,QB,,,,711.0,,,711.0,,max brosmer,QB,max brosmer,40238,100,40238,Max Brosmer,QB,MIN,19.535000000000004,R,6,max brosmer,QB
 832.0,Brayden Willis,SF,14,TE,,,,712.0,,,712.0,,brayden willis,TE,brayden willis,38643,100,38643,Brayden Willis,TE,SF,0.0,0.058823529411764705,14,brayden willis,TE
-833.0,Zavier Scott,MIN,6,WR,,,,715.0,,,715.0,,zavier scott,WR,zavier scott,39988,100,39988,Zavier Scott,RB,MIN,9.0,R,6,zavier scott,RB
-834.0,Brock Lampe,NE,14,RB,,,,716.0,,,716.0,,brock lampe,RB,brock lampe,40263,100,40263,Brock Lampe,RB,NE,9.0,R,14,brock lampe,RB
+833.0,Zavier Scott,MIN,6,WR,,,,715.0,,,715.0,,zavier scott,WR,zavier scott,39988,100,39988,Zavier Scott,RB,MIN,8.8,R,6,zavier scott,RB
+834.0,Brock Lampe,NE,14,RB,,,,716.0,,,716.0,,brock lampe,RB,brock lampe,40263,100,40263,Brock Lampe,RB,NE,8.8,R,14,brock lampe,RB
 835.0,Xavier Gipson,NYJ,9,WR,,,,717.0,,,717.0,,xavier gipson,WR,xavier gipson,38496,100,38496,Xavier Gipson,WR,NYJ,2.7,0.6176470588235294,9,xavier gipson,WR
-836.0,Ben VanSumeren,PHI,9,LB,,,,718.0,,,718.0,,ben vansumeren,LB,ben vansumeren,39991,100,39991,Ben VanSumeren,RB,PHI,9.0,R,9,ben vansumeren,RB
+836.0,Ben VanSumeren,PHI,9,LB,,,,718.0,,,718.0,,ben vansumeren,LB,ben vansumeren,39991,100,39991,Ben VanSumeren,RB,PHI,8.8,R,9,ben vansumeren,RB
 837.0,Jordan Mims,TEN,10,RB,,,,720.0,,,720.0,,jordan mims,RB,jordan mims,38678,100,38678,Jordan Mims,RB,NO,3.0999999999999996,0.23529411764705882,11,jordan mims,RB
 838.0,Shedrick Jackson,LV,8,WR,,,,721.0,,,721.0,,shedrick jackson,WR,shedrick jackson,38891,100,38891,Shedrick Jackson,WR,LV,0.0,0.058823529411764705,8,shedrick jackson,WR
 839.0,Princeton Fant,DAL,10,TE,,,,723.0,,,723.0,,princeton fant,TE,princeton fant,39999,100,39999,Princeton Fant,TE,DAL,5.2250000000000005,R,10,princeton fant,TE
-840.0,Brady Cook,NYJ,9,QB,,,,724.0,,,724.0,,brady cook,QB,brady cook,40210,100,40210,Brady Cook,QB,NYJ,15.825000000000001,R,9,brady cook,QB
-841.0,Marcus Yarns,,,RB,,,,725.0,,,725.0,,marcus yarns,RB,marcus yarns,40253,100,40253,Marcus Yarns,RB,NO,9.0,R,11,marcus yarns,RB
+840.0,Brady Cook,NYJ,9,QB,,,,724.0,,,724.0,,brady cook,QB,brady cook,40210,100,40210,Brady Cook,QB,NYJ,19.535000000000004,R,9,brady cook,QB
+841.0,Marcus Yarns,,,RB,,,,725.0,,,725.0,,marcus yarns,RB,marcus yarns,40253,100,40253,Marcus Yarns,RB,NO,8.8,R,11,marcus yarns,RB
 842.0,Giles Jackson,,,WR,,,,726.0,,,726.0,,giles jackson,WR,giles jackson,40111,100,40111,Giles Jackson,WR,PHI,7.850000000000001,R,9,giles jackson,WR
 843.0,Elijah Cooks,PHI,9,WR,,,,728.0,,,728.0,,elijah cooks,WR,elijah cooks,38667,100,38667,Elijah Cooks,WR,PHI,3.4000000000000004,0.11764705882352941,9,elijah cooks,WR
 844.0,Blake Whiteheart,CLE,9,TE,,,,729.0,,,729.0,,blake whiteheart,TE,blake whiteheart,38710,100,38710,Blake Whiteheart,TE,CLE,1.1,0.4117647058823529,9,blake whiteheart,TE
@@ -664,63 +664,63 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 851.0,Roc Taylor,,,WR,,,,738.0,,,738.0,,roc taylor,WR,roc taylor,40248,100,40248,Roc Taylor,WR,PIT,7.850000000000001,R,5,roc taylor,WR
 853.0,Jase McClellan,,,RB,,,,740.0,,,740.0,,jase mcclellan,RB,jase mcclellan,39393,100,39393,Jase McClellan,RB,ATL,1.6,0.11764705882352941,5,jase mcclellan,RB
 854.0,Casey Washington,ATL,5,WR,,,,741.0,,,741.0,,casey washington,WR,casey washington,39394,100,39394,Casey Washington,WR,ATL,1.2000000000000002,0.11764705882352941,5,casey washington,WR
-855.0,Devin Leary,,,QB,,,,742.0,,,742.0,,devin leary,QB,devin leary,40073,100,40073,Devin Leary,QB,BAL,3.973729508196722,R,7,devin leary,QB
+855.0,Devin Leary,,,QB,,,,742.0,,,742.0,,devin leary,QB,devin leary,40073,100,40073,Devin Leary,QB,BAL,5.154680327868854,R,7,devin leary,QB
 856.0,Erick All Jr.,CIN,10,TE,,,,744.0,,,744.0,,erick all,TE,erick all,39814,100,39814,Erick All,TE,CIN,4.800000000000001,0.47058823529411764,10,erick all,TE
-857.0,Corey Kiner,SF,14,RB,,,,745.0,,,745.0,,corey kiner,RB,corey kiner,40258,100,40258,Corey Kiner,RB,SF,9.0,R,14,corey kiner,RB
+857.0,Corey Kiner,SF,14,RB,,,,745.0,,,745.0,,corey kiner,RB,corey kiner,40258,100,40258,Corey Kiner,RB,SF,8.8,R,14,corey kiner,RB
 858.0,Ryan Flournoy,DAL,10,WR,,,,747.0,,,747.0,,ryan flournoy,WR,ryan flournoy,39410,100,39410,Ryan Flournoy,WR,DAL,2.3,0.4117647058823529,10,ryan flournoy,WR
 859.0,Jawhar Jordan,HOU,6,RB,,,,748.0,,,748.0,,jawhar jordan,RB,jawhar jordan,40032,100,40032,Jawhar Jordan,RB,HOU,2.3922175732217585,R,6,jawhar jordan,RB
 860.0,Anthony Gould,IND,11,WR,,,,749.0,,,749.0,,anthony gould,WR,anthony gould,39816,100,39816,Anthony Gould,WR,IND,3.3000000000000003,0.058823529411764705,11,anthony gould,WR
-861.0,Keilan Robinson,,,RB,,,,750.0,,,750.0,,keilan robinson,RB,keilan robinson,40029,100,40029,Keilan Robinson,RB,PHI,3.0,R,9,keilan robinson,RB
+861.0,Keilan Robinson,,,RB,,,,750.0,,,750.0,,keilan robinson,RB,keilan robinson,40029,100,40029,Keilan Robinson,RB,PHI,2.9,R,9,keilan robinson,RB
 862.0,Javon Baker,PHI,9,WR,,,,753.0,,,753.0,,javon baker,WR,javon baker,39853,100,39853,Javon Baker,WR,NE,0.0,0.23529411764705882,14,javon baker,WR
 863.0,Bub Means,NO,11,WR,,,,755.0,,,755.0,,bub means,WR,bub means,39386,100,39386,Bub Means,WR,NO,5.65,0.23529411764705882,11,bub means,WR
-864.0,Dante Miller,NYG,14,RB,,,,756.0,,,756.0,,dante miller,RB,dante miller,40017,100,40017,Dante Miller,RB,NYG,9.0,R,14,dante miller,RB
+864.0,Dante Miller,NYG,14,RB,,,,756.0,,,756.0,,dante miller,RB,dante miller,40017,100,40017,Dante Miller,RB,NYG,8.8,R,14,dante miller,RB
 865.0,Malachi Corley,CLE,9,WR,,,,757.0,,,757.0,,malachi corley,WR,malachi corley,39920,100,39920,Malachi Corley,WR,NYJ,1.4,0.29411764705882354,9,malachi corley,WR
 866.0,Tip Reiman,ARI,8,TE,,,,759.0,,,759.0,,tip reiman,TE,tip reiman,39737,100,39737,Tip Reiman,TE,ARI,1.9,0.29411764705882354,8,tip reiman,TE
 867.0,Devin Culp,TB,9,TE,,,,761.0,,,761.0,,devin culp,TE,devin culp,39754,100,39754,Devin Culp,TE,TB,6.8999999999999995,0.1111111111111111,9,devin culp,TE
-869.0,DJ Uiagalelei,LAC,12,QB,,,,763.0,,,763.0,,dj uiagalelei,QB,d.j. uiagalelei,40230,100,40230,D.J. Uiagalelei,QB,LAC,15.825000000000001,R,12,d.j. uiagalelei,QB
-870.0,Ben Wooldridge,,,QB,,,,764.0,,,764.0,,ben wooldridge,QB,ben wooldridge,40265,100,40265,Ben Wooldridge,QB,NE,15.825000000000001,R,14,ben wooldridge,QB
-871.0,Graham Mertz,HOU,6,QB,,,,765.0,,,765.0,,graham mertz,QB,graham mertz,40140,100,40140,Graham Mertz,QB,HOU,6.6110163934426245,R,6,graham mertz,QB
-872.0,Emory Jones,ATL,5,QB,,,,766.0,,,766.0,,emory jones,QB,emory jones,40028,100,40028,Emory Jones,QB,ATL,15.825000000000001,R,5,emory jones,QB
-873.0,Emani Bailey,,,RB,,,,768.0,,,768.0,,emani bailey,RB,emani bailey,40026,100,40026,Emani Bailey,RB,CAR,9.0,R,14,emani bailey,RB
-874.0,Austin Reed,,,QB,,,,770.0,,,770.0,,austin reed,QB,austin reed,40036,100,40036,Austin Reed,QB,CHI,15.825000000000001,R,5,austin reed,QB
-875.0,Ian Wheeler,,,RB,,,,771.0,,,771.0,,ian wheeler,RB,ian wheeler,40037,100,40037,Ian Wheeler,RB,CHI,9.0,R,5,ian wheeler,RB
+869.0,DJ Uiagalelei,LAC,12,QB,,,,763.0,,,763.0,,dj uiagalelei,QB,d.j. uiagalelei,40230,100,40230,D.J. Uiagalelei,QB,LAC,19.535000000000004,R,12,d.j. uiagalelei,QB
+870.0,Ben Wooldridge,,,QB,,,,764.0,,,764.0,,ben wooldridge,QB,ben wooldridge,40265,100,40265,Ben Wooldridge,QB,NE,19.535000000000004,R,14,ben wooldridge,QB
+871.0,Graham Mertz,HOU,6,QB,,,,765.0,,,765.0,,graham mertz,QB,graham mertz,40140,100,40140,Graham Mertz,QB,HOU,7.991081967213115,R,6,graham mertz,QB
+872.0,Emory Jones,ATL,5,QB,,,,766.0,,,766.0,,emory jones,QB,emory jones,40028,100,40028,Emory Jones,QB,ATL,19.535000000000004,R,5,emory jones,QB
+873.0,Emani Bailey,,,RB,,,,768.0,,,768.0,,emani bailey,RB,emani bailey,40026,100,40026,Emani Bailey,RB,CAR,8.8,R,14,emani bailey,RB
+874.0,Austin Reed,,,QB,,,,770.0,,,770.0,,austin reed,QB,austin reed,40036,100,40036,Austin Reed,QB,CHI,19.535000000000004,R,5,austin reed,QB
+875.0,Ian Wheeler,,,RB,,,,771.0,,,771.0,,ian wheeler,RB,ian wheeler,40037,100,40037,Ian Wheeler,RB,CHI,8.8,R,5,ian wheeler,RB
 876.0,Cole Burgess,,,WR,,,,772.0,,,772.0,,cole burgess,WR,cole burgess,40056,100,40056,Cole Burgess,WR,CIN,7.850000000000001,R,10,cole burgess,WR
 877.0,Cam Grandy,CIN,10,TE,,,,773.0,,,773.0,,cam grandy,TE,cam grandy,39631,100,39631,Cam Grandy,TE,CIN,1.8,0.23529411764705882,10,cam grandy,TE
 878.0,Brevyn Spann-Ford,DAL,10,TE,,,,774.0,,,774.0,,brevyn spann-ford,TE,brevyn spann-ford,39530,100,39530,Brevyn Spann-Ford,TE,DAL,2.6,0.35294117647058826,10,brevyn spann-ford,TE
 879.0,Blake Watson,,,RB,,,,775.0,,,775.0,,blake watson,RB,blake watson,39573,100,39573,Blake Watson,RB,DEN,3.3,0.05555555555555555,12,blake watson,RB
 880.0,Thomas Yassmin,LAC,12,TE,,,,776.0,,,776.0,,thomas yassmin,TE,thomas yassmin,40077,100,40077,Thomas Yassmin,TE,DEN,5.2250000000000005,R,12,thomas yassmin,TE
 881.0,Isaiah Williams,CIN,10,WR,,,,777.0,,,777.0,,isaiah williams,WR,isaiah williams,39451,100,39451,Isaiah Williams,WR,CIN,2.6,0.05555555555555555,10,isaiah williams,WR
-882.0,Kedon Slovis,ARI,8,QB,,,,778.0,,,778.0,,kedon slovis,QB,kedon slovis,40051,100,40051,Kedon Slovis,QB,HOU,15.825000000000001,R,6,kedon slovis,QB
+882.0,Kedon Slovis,ARI,8,QB,,,,778.0,,,778.0,,kedon slovis,QB,kedon slovis,40051,100,40051,Kedon Slovis,QB,HOU,19.535000000000004,R,6,kedon slovis,QB
 884.0,Mason Tipton,NO,11,WR,,,,780.0,,,780.0,,mason tipton,WR,mason tipton,39623,100,39623,Mason Tipton,WR,NO,1.6,0.5294117647058824,11,mason tipton,WR
 885.0,Xavier Weaver,ARI,8,WR,,,,781.0,,,781.0,,xavier weaver,WR,xavier weaver,39521,100,39521,Xavier Weaver,WR,ARI,0.0,0.11764705882352941,8,xavier weaver,WR
-886.0,Jabari Small,,,RB,,,,782.0,,,782.0,,jabari small,RB,jabari small,40057,100,40057,Jabari Small,RB,TEN,9.0,R,10,jabari small,RB
-887.0,Tanner Mordecai,,,QB,,,,783.0,,,783.0,,tanner mordecai,QB,tanner mordecai,40063,100,40063,Tanner Mordecai,QB,SF,15.825000000000001,R,14,tanner mordecai,QB
+886.0,Jabari Small,,,RB,,,,782.0,,,782.0,,jabari small,RB,jabari small,40057,100,40057,Jabari Small,RB,TEN,8.8,R,10,jabari small,RB
+887.0,Tanner Mordecai,,,QB,,,,783.0,,,783.0,,tanner mordecai,QB,tanner mordecai,40063,100,40063,Tanner Mordecai,QB,SF,19.535000000000004,R,14,tanner mordecai,QB
 888.0,Cody Schrader,LAR,8,RB,,,,784.0,,,784.0,,cody schrader,RB,cody schrader,39703,100,39703,Cody Schrader,RB,LA,1.9000000000000001,0.05263157894736842,8,cody schrader,RB
 889.0,Kameron Johnson,TB,9,WR,,,,785.0,,,785.0,,kameron johnson,WR,kameron johnson,39589,100,39589,Kameron Johnson,WR,TB,0.0,0.16666666666666666,9,kameron johnson,WR
-890.0,Sam Hartman,WAS,12,QB,,,,786.0,,,786.0,,sam hartman,QB,sam hartman,40060,100,40060,Sam Hartman,QB,WAS,15.825000000000001,R,12,sam hartman,QB
+890.0,Sam Hartman,WAS,12,QB,,,,786.0,,,786.0,,sam hartman,QB,sam hartman,40060,100,40060,Sam Hartman,QB,WAS,19.535000000000004,R,12,sam hartman,QB
 891.0,British Brooks,HOU,6,RB,,,,788.0,,,788.0,,british brooks,RB,british brooks,39603,100,39603,British Brooks,RB,HOU,0.2,0.05263157894736842,6,british brooks,RB
 892.0,Shawn Bowman,,,TE,,,,789.0,,,789.0,,shawn bowman,TE,shawn bowman,40047,100,40047,Shawn Bowman,TE,JAX,5.2250000000000005,R,8,shawn bowman,TE
 894.0,Jahmal Banks,,,WR,,,,792.0,,,792.0,,jahmal banks,WR,jahmal banks,40106,100,40106,Jahmal Banks,WR,BAL,7.850000000000001,R,7,jahmal banks,WR
-895.0,Kayron Lynch-Adams,,,RB,,,,795.0,,,795.0,,kayron lynch-adams,RB,kay'ron lynch-adams,40167,86,40167,Kay'Ron Lynch-Adams,RB,CAR,9.0,R,14,kay'ron lynch-adams,RB
-896.0,Deion Hankins,CHI,5,RB,,,,796.0,,,796.0,,deion hankins,RB,deion hankins,40161,100,40161,Deion Hankins,RB,CHI,9.0,R,5,deion hankins,RB
-897.0,Quali Conley,,,RB,,,,798.0,,,798.0,,quali conley,RB,quali conley,40196,100,40196,Quali Conley,RB,CIN,9.0,R,10,quali conley,RB
-898.0,Ahmani Marshall,CLE,9,RB,,,,800.0,,,800.0,,ahmani marshall,RB,ahmani marshall,40159,100,40159,Ahmani Marshall,RB,CLE,9.0,R,9,ahmani marshall,RB
+895.0,Kayron Lynch-Adams,,,RB,,,,795.0,,,795.0,,kayron lynch-adams,RB,kay'ron lynch-adams,40167,86,40167,Kay'Ron Lynch-Adams,RB,CAR,8.8,R,14,kay'ron lynch-adams,RB
+896.0,Deion Hankins,CHI,5,RB,,,,796.0,,,796.0,,deion hankins,RB,deion hankins,40161,100,40161,Deion Hankins,RB,CHI,8.8,R,5,deion hankins,RB
+897.0,Quali Conley,,,RB,,,,798.0,,,798.0,,quali conley,RB,quali conley,40196,100,40196,Quali Conley,RB,CIN,8.8,R,10,quali conley,RB
+898.0,Ahmani Marshall,CLE,9,RB,,,,800.0,,,800.0,,ahmani marshall,RB,ahmani marshall,40159,100,40159,Ahmani Marshall,RB,CLE,8.8,R,9,ahmani marshall,RB
 899.0,Rivaldo Fairweather,DAL,10,TE,,,,801.0,,,801.0,,rivaldo fairweather,TE,rivaldo fairweather,40090,100,40090,Rivaldo Fairweather,TE,DAL,5.2250000000000005,R,10,rivaldo fairweather,TE
 900.0,Traeshon Holden,DAL,10,WR,,,,802.0,,,802.0,,traeshon holden,WR,traeshon holden,40091,100,40091,Traeshon Holden,WR,DAL,7.850000000000001,R,10,traeshon holden,WR
 901.0,Courtney Jackson,SEA,8,WR,,,,804.0,,,804.0,,courtney jackson,WR,courtney jackson,40224,100,40224,Courtney Jackson,WR,DEN,7.850000000000001,R,12,courtney jackson,WR
-902.0,Amar Johnson,,,RB,,,,808.0,,,808.0,,amar johnson,RB,amar johnson,40088,100,40088,Amar Johnson,RB,GB,9.0,R,5,amar johnson,RB
-903.0,Micah Bernard,,,RB,,,,810.0,,,810.0,,micah bernard,RB,micah bernard,40244,100,40244,Micah Bernard,RB,TEN,9.0,R,10,micah bernard,RB
+902.0,Amar Johnson,,,RB,,,,808.0,,,808.0,,amar johnson,RB,amar johnson,40088,100,40088,Amar Johnson,RB,GB,8.8,R,5,amar johnson,RB
+903.0,Micah Bernard,,,RB,,,,810.0,,,810.0,,micah bernard,RB,micah bernard,40244,100,40244,Micah Bernard,RB,TEN,8.8,R,10,micah bernard,RB
 904.0,Nick Vannett,MIN,6,TE,,,,814.0,,,814.0,,nick vannett,TE,nick vannett,32394,100,32394,Nick Vannett,TE,TEN,1.7000000000000002,0.38235294117647056,10,nick vannett,TE
 906.0,Mike Boone,,,RB,,,,816.0,,,816.0,,mike boone,RB,mike boone,34208,100,34208,Mike Boone,RB,CAR,1.25,0.3333333333333333,14,mike boone,RB
-909.0,Kelvin Harmon,,,WR,,,,821.0,,,821.0,,kelvin harmon,WR,kelvin harmon,39932,100,39932,Kelvin Harmon,WR,DAL,2.8662109375,R,10,kelvin harmon,WR
-911.0,Brett Rypien,CIN,10,QB,,,,825.0,,,825.0,,brett rypien,QB,brett rypien,34955,100,34955,Brett Rypien,QB,MIN,3.39,0.1111111111111111,6,brett rypien,QB
+909.0,Kelvin Harmon,,,WR,,,,821.0,,,821.0,,kelvin harmon,WR,kelvin harmon,39932,100,39932,Kelvin Harmon,WR,DAL,2.8162109374999997,R,10,kelvin harmon,WR
+911.0,Brett Rypien,CIN,10,QB,,,,825.0,,,825.0,,brett rypien,QB,brett rypien,34955,100,34955,Brett Rypien,QB,MIN,3.89,0.1111111111111111,6,brett rypien,QB
 912.0,Seth Williams,LV,8,WR,,,,826.0,,,826.0,,seth williams,WR,seth williams,39953,100,39953,Seth Williams,WR,DAL,2.6,R,10,seth williams,WR
 913.0,Ihmir Smith-Marsette,NYG,14,WR,,,,827.0,,,827.0,,ihmir smith-marsette,WR,ihmir smith-marsette,36635,100,36635,Ihmir Smith-Marsette,WR,NYG,2.0,0.23529411764705882,14,ihmir smith-marsette,WR
 915.0,Quintin Morris,JAX,8,TE,,,,831.0,,,831.0,,quintin morris,TE,quintin morris,36590,100,36590,Quintin Morris,TE,JAX,2.4000000000000004,0.1794871794871795,8,quintin morris,TE
 916.0,Feleipe Franks,ATL,5,QB,,,,832.0,,,832.0,,feleipe franks,QB,feleipe franks,36825,100,36825,Feleipe Franks,TE,ATL,0.0,0.17647058823529413,5,feleipe franks,TE
 917.0,Brandon Smith,NYJ,9,WR,,,,833.0,,,833.0,,brandon smith,WR,brandon smith,39958,100,39958,Brandon Smith,WR,NYJ,7.850000000000001,R,9,brandon smith,WR
-918.0,Adam Prentice,DEN,12,RB,,,,834.0,,,834.0,,adam prentice,RB,adam prentice,39956,100,39956,Adam Prentice,RB,NO,9.0,R,11,adam prentice,RB
-919.0,Shane Buechele,BUF,7,QB,,,,835.0,,,835.0,,shane buechele,QB,shane buechele,39955,100,39955,Shane Buechele,QB,BUF,15.825000000000001,R,7,shane buechele,QB
+918.0,Adam Prentice,DEN,12,RB,,,,834.0,,,834.0,,adam prentice,RB,adam prentice,39956,100,39956,Adam Prentice,RB,NO,8.8,R,11,adam prentice,RB
+919.0,Shane Buechele,BUF,7,QB,,,,835.0,,,835.0,,shane buechele,QB,shane buechele,39955,100,39955,Shane Buechele,QB,BUF,19.535000000000004,R,7,shane buechele,QB
 921.0,Sal Cannella,CLE,9,TE,,,,837.0,,,837.0,,sal cannella,TE,sal cannella,39963,100,39963,Sal Cannella,TE,CLE,5.2250000000000005,R,9,sal cannella,TE
 922.0,Michael Jacobson,,,TE,,,,838.0,,,838.0,,michael jacobson,TE,michael jacobson,39965,100,39965,Michael Jacobson,TE,NO,5.2250000000000005,R,11,michael jacobson,TE
 923.0,Jake Tonges,SF,14,TE,,,,839.0,,,839.0,,jake tonges,TE,jake tonges,39968,100,39968,Jake Tonges,TE,SF,5.2250000000000005,R,14,jake tonges,TE
@@ -730,23 +730,23 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 927.0,Lance McCutcheon,,,WR,,,,844.0,,,844.0,,lance mccutcheon,WR,lance mccutcheon,39967,100,39967,Lance McCutcheon,WR,PIT,7.850000000000001,R,5,lance mccutcheon,WR
 928.0,Erik Ezukanma,JAX,8,WR,,,,845.0,,,845.0,,erik ezukanma,WR,erik ezukanma,38092,100,38092,Erik Ezukanma,WR,MIA,0.5,0.08571428571428572,12,erik ezukanma,WR
 930.0,Irvin Charles,NYJ,9,WR,,,,847.0,,,847.0,,irvin charles,WR,irvin charles,37156,100,37156,Irvin Charles,WR,NYJ,0.0,0.058823529411764705,9,irvin charles,WR
-931.0,Chris Oladokun,KC,10,QB,,,,848.0,,,848.0,,chris oladokun,QB,chris oladokun,37324,100,37324,Chris Oladokun,QB,KC,0.5,0.05,10,chris oladokun,QB
+931.0,Chris Oladokun,KC,10,QB,,,,848.0,,,848.0,,chris oladokun,QB,chris oladokun,37324,100,37324,Chris Oladokun,QB,KC,1.5,0.05,10,chris oladokun,QB
 932.0,Ko Kieft,TB,9,TE,,,,849.0,,,849.0,,ko kieft,TE,ko kieft,37311,100,37311,Ko Kieft,TE,TB,0.0,0.15789473684210525,9,ko kieft,TE
 933.0,Justyn Ross,,,WR,,,,850.0,,,850.0,,justyn ross,WR,justyn ross,37216,100,37216,Justyn Ross,WR,KC,1.4,0.14634146341463414,10,justyn ross,WR
 934.0,Kendric Pryor,,,WR,,,,851.0,,,851.0,,kendric pryor,WR,kendric pryor,37422,100,37422,Kendric Pryor,WR,CIN,1.9,0.058823529411764705,10,kendric pryor,WR
 935.0,Zaire Mitchell-Paden,BAL,7,TE,,,,852.0,,,852.0,,zaire mitchell-paden,TE,zaire mitchell-paden,39973,100,39973,Zaire Mitchell-Paden,TE,BAL,5.2250000000000005,R,7,zaire mitchell-paden,TE
-936.0,Malik Davis,DAL,10,RB,,,,853.0,,,853.0,,malik davis,RB,malik davis,39979,100,39979,Malik Davis,RB,DAL,9.0,R,10,malik davis,RB
+936.0,Malik Davis,DAL,10,RB,,,,853.0,,,853.0,,malik davis,RB,malik davis,39979,100,39979,Malik Davis,RB,DAL,8.8,R,10,malik davis,RB
 937.0,JaQuae Jackson,LAC,12,WR,,,,855.0,,,855.0,,jaquae jackson,WR,jaquae jackson,40067,100,40067,JaQuae Jackson,WR,NE,7.850000000000001,R,14,jaquae jackson,WR
 938.0,Xavier Johnson,,,WR,,,,856.0,,,856.0,,xavier johnson,WR,xavier johnson,40039,100,40039,Xavier Johnson,WR,HOU,7.850000000000001,R,6,xavier johnson,WR
-939.0,Jack Plummer,,,QB,,,,857.0,,,857.0,,jack plummer,QB,jack plummer,40041,100,40041,Jack Plummer,QB,CAR,15.825000000000001,R,14,jack plummer,QB
+939.0,Jack Plummer,,,QB,,,,857.0,,,857.0,,jack plummer,QB,jack plummer,40041,100,40041,Jack Plummer,QB,CAR,19.535000000000004,R,14,jack plummer,QB
 940.0,Brenden Bates,CLE,9,TE,,,,858.0,,,858.0,,brenden bates,TE,brenden bates,39458,100,39458,Brenden Bates,TE,CLE,0.0,0.058823529411764705,9,brenden bates,TE
-941.0,Jason Bean,,,QB,,,,859.0,,,859.0,,jason bean,QB,jason bean,40050,100,40050,Jason Bean,QB,IND,15.825000000000001,R,11,jason bean,QB
+941.0,Jason Bean,,,QB,,,,859.0,,,859.0,,jason bean,QB,jason bean,40050,100,40050,Jason Bean,QB,IND,19.535000000000004,R,11,jason bean,QB
 942.0,Joshua Cephus,JAX,8,WR,,,,860.0,,,860.0,,joshua cephus,WR,joshua cephus,40048,100,40048,Joshua Cephus,WR,JAX,7.850000000000001,R,8,joshua cephus,WR
 943.0,David Martin-Robinson,TEN,10,TE,,,,863.0,,,863.0,,david martin-robinson,TE,david martin-robinson,39648,100,39648,David Martin-Robinson,TE,TEN,0.8,0.11764705882352941,10,david martin-robinson,TE
 945.0,John Jiles,NE,14,WR,,,,865.0,,,865.0,,john jiles,WR,john jiles,40042,100,40042,John Jiles,WR,NE,7.850000000000001,R,14,john jiles,WR
 946.0,John Rhys Plumlee,,,QB,,,,866.0,,,866.0,,john rhys plumlee,QB,john rhys plumlee,40035,100,40035,John Rhys Plumlee,WR,SEA,7.850000000000001,R,8,john rhys plumlee,WR
 947.0,Mason Pline,NO,11,TE,,,,867.0,,,867.0,,mason pline,TE,mason pline,40065,100,40065,Mason Pline,TE,SF,5.2250000000000005,R,14,mason pline,TE
-948.0,Michael Wiley,,,RB,,,,869.0,,,869.0,,michael wiley,RB,michael wiley,40061,100,40061,Michael Wiley,RB,WAS,9.0,R,12,michael wiley,RB
+948.0,Michael Wiley,,,RB,,,,869.0,,,869.0,,michael wiley,RB,michael wiley,40061,100,40061,Michael Wiley,RB,WAS,8.8,R,12,michael wiley,RB
 949.0,Neal Johnson,,,TE,,,,870.0,,,870.0,,neal johnson,TE,neal johnson,40071,100,40071,Neal Johnson,TE,NYJ,5.2250000000000005,R,9,neal johnson,TE
 950.0,Drake Stoops,,,WR,,,,871.0,,,871.0,,drake stoops,WR,drake stoops,40070,100,40070,Drake Stoops,WR,LA,7.850000000000001,R,8,drake stoops,WR
 951.0,Hayden Rucci,MIA,12,TE,,,,872.0,,,872.0,,hayden rucci,TE,hayden rucci,40040,100,40040,Hayden Rucci,TE,MIA,5.2250000000000005,R,12,hayden rucci,TE
@@ -754,7 +754,7 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 953.0,Kevin Foelsch,,,TE,,,,874.0,,,874.0,,kevin foelsch,TE,kevin foelsch,40054,100,40054,Kevin Foelsch,TE,KC,5.2250000000000005,R,10,kevin foelsch,TE
 954.0,Geor'Quarius Spivey,,,TE,,,,875.0,,,875.0,,geor'quarius spivey,TE,geor'quarius spivey,40078,100,40078,Geor'quarius Spivey,TE,KC,5.2250000000000005,R,10,geor'quarius spivey,TE
 955.0,Xavier Guillory,,,WR,,,,877.0,,,877.0,,xavier guillory,WR,xavier guillory,40107,100,40107,Xavier Guillory,WR,BAL,7.850000000000001,R,7,xavier guillory,WR
-956.0,Lucas Scott,BAL,7,RB,,,,879.0,,,879.0,,lucas scott,RB,lucas scott,40293,100,40293,Lucas Scott,RB,BAL,9.0,R,7,lucas scott,RB
+956.0,Lucas Scott,BAL,7,RB,,,,879.0,,,879.0,,lucas scott,RB,lucas scott,40293,100,40293,Lucas Scott,RB,BAL,8.8,R,7,lucas scott,RB
 957.0,Kelly Akharaiyi,,,WR,,,,880.0,,,880.0,,kelly akharaiyi,WR,kelly akharaiyi,40192,100,40192,Kelly Akharaiyi,WR,BUF,7.850000000000001,R,7,kelly akharaiyi,WR
 958.0,Keleki Latu,BUF,7,TE,,,,881.0,,,881.0,,keleki latu,TE,keleki latu,40194,100,40194,Keleki Latu,TE,BUF,5.2250000000000005,R,7,keleki latu,TE
 959.0,Hal Presley,,,WR,,,,882.0,,,882.0,,hal presley,WR,hal presley,40195,100,40195,Hal Presley,WR,BUF,7.850000000000001,R,7,hal presley,WR
@@ -762,7 +762,7 @@ Rank,Player,Team,Bye,Pos,ESPN,Sleeper,CBS,NFL,RTSports,Fantrax,adp,Real-Time (?)
 961.0,Bryce Pierre,CAR,14,TE,,,,884.0,,,884.0,,bryce pierre,TE,bryce pierre,40169,100,40169,Bryce Pierre,TE,CAR,5.2250000000000005,R,14,bryce pierre,TE
 962.0,Jamoi Mayes,,,WR,,,,885.0,,,885.0,,jamoi mayes,WR,jamoi mayes,40197,100,40197,Jamoi Mayes,WR,CIN,7.850000000000001,R,10,jamoi mayes,WR
 963.0,Rashod Owens,,,WR,,,,887.0,,,887.0,,rashod owens,WR,rashod owens,40199,100,40199,Rashod Owens,WR,CIN,7.850000000000001,R,10,rashod owens,WR
-964.0,Payton Thorne,,,QB,,,,888.0,,,888.0,,payton thorne,QB,payton thorne,40201,100,40201,Payton Thorne,QB,CIN,15.825000000000001,R,10,payton thorne,QB
+964.0,Payton Thorne,,,QB,,,,888.0,,,888.0,,payton thorne,QB,payton thorne,40201,100,40201,Payton Thorne,QB,CIN,19.535000000000004,R,10,payton thorne,QB
 965.0,Luke Floriea,,,WR,,,,889.0,,,889.0,,luke floriea,WR,luke floriea,40287,100,40287,Luke Floriea,WR,CLE,7.850000000000001,R,9,luke floriea,WR
 966.0,Gage Larvadain,CLE,9,WR,,,,890.0,,,890.0,,gage larvadain,WR,gage larvadain,40158,100,40158,Gage Larvadain,WR,CLE,7.850000000000001,R,9,gage larvadain,WR
 967.0,Ja'seem Reed,CAR,14,WR,,,,891.0,,,891.0,,ja'seem reed,WR,ja'seem reed,40160,100,40160,Ja'seem Reed,WR,CLE,7.850000000000001,R,9,ja'seem reed,WR
