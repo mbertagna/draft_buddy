@@ -2,6 +2,7 @@ import os
 import json
 import glob
 from datetime import datetime
+import re
 
 def get_run_name(config):
     """Generates a descriptive name for the training run based on config."""
@@ -53,6 +54,9 @@ def save_run_metadata(config, run_name, version, run_version_dir):
 def find_latest_checkpoint(config):
     """
     Finds the latest model checkpoint across all versions for the current run name.
+    
+    This function now finds the latest checkpoint based on the highest episode number
+    found in the filename, which is a more reliable approach than using file modification time.
     """
     run_name = get_run_name(config)
     base_run_dir = os.path.join(config.MODELS_DIR, run_name)
@@ -61,14 +65,28 @@ def find_latest_checkpoint(config):
         return None
 
     # Search for all checkpoint files in all version subdirectories
-    # Use glob with ** to search recursively, with recursive=True
     checkpoints = glob.glob(os.path.join(base_run_dir, '**', 'checkpoint_episode_*.pth'), recursive=True)
     
     if not checkpoints:
         print(f"No checkpoint files found for run '{run_name}'.")
         return None
+
+    # Find the checkpoint with the highest episode number in its filename
+    latest_checkpoint = None
+    latest_episode_num = -1
     
-    # Return the path to the most recently modified checkpoint file.
-    latest_checkpoint = max(checkpoints, key=os.path.getmtime)
-    print(f"Found latest checkpoint: {latest_checkpoint}")
+    for checkpoint_path in checkpoints:
+        # Use a regular expression to extract the episode number
+        match = re.search(r'checkpoint_episode_(\d+)\.pth$', os.path.basename(checkpoint_path))
+        if match:
+            episode_num = int(match.group(1))
+            if episode_num > latest_episode_num:
+                latest_episode_num = episode_num
+                latest_checkpoint = checkpoint_path
+    
+    if latest_checkpoint:
+        print(f"Found latest checkpoint (episode {latest_episode_num}): {latest_checkpoint}")
+    else:
+        print(f"No checkpoint files with episode numbers found for run '{run_name}'.")
+    
     return latest_checkpoint

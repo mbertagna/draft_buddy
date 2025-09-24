@@ -89,7 +89,8 @@ def get_draft_state():
                 for week in set(p.bye_week for p in roster_data['PLAYERS'] if p.bye_week and not np.isnan(p.bye_week))
             }
             for team_id, roster_data in draft_env.teams_rosters.items()
-        }
+        },
+        'agent_start_position': draft_env.config.AGENT_START_POSITION,
     }
 
 # API route for backend status

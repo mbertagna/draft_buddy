@@ -1,207 +1,151 @@
-# Draft Buddy – RL-powered Fantasy Draft Assistant
+# Draft Buddy 🏈 - An AI-Powered Fantasy Football Draft Assistant
 
-Draft Buddy is a complete system for simulating, training, and running a fantasy football draft assistant. It combines a custom OpenAI Gym environment, a REINFORCE policy network, opponent strategy personalities, and a simple web UI to let you run mock drafts, visualize rosters, and train an agent to draft intelligently.
+Draft Buddy is a complete system for simulating, training, and running a fantasy football draft assistant. It leverages reinforcement learning to train an AI agent to draft an optimal team by understanding player value, positional scarcity, and opponent behavior.
 
----
+This project is more than just a draft simulator; it's a powerful tool for aspiring GMs to test strategies, train a personalized AI advisor, and get real-time suggestions during a live draft.
 
-## Key Features
+-----
 
-- Custom Gym environment modeling a multi-team snake draft with realistic roster rules
-- Rich observation space (VORP, scarcity, top-k points, opponent threat, bye weeks, etc.)
-- Pluggable opponent strategies: HEURISTIC, ADP, RANDOM, and optional agent-model opponents
-- Optional opponent randomization per episode for training diversity
-- Configurable reward function with season simulation bonuses and per-pick shaping
-- Flask backend + lightweight frontend to run manual/sim drafts with AI suggestions
-- Save/Load draft state, manual override per pick, undo, CSV export
-- Fast season simulation (parallelized subprocess) using weekly points-by-position rules
-- Training utilities with logging and plotting; checkpoint resume support
+## ✨ Key Features
 
----
+  * **Customizable Draft Environment**: A custom OpenAI Gym environment models a multi-team snake draft with realistic roster rules, including a FLEX position.
+  * **Intelligent Opponent Strategies**: Pit your AI against a range of opponent "personalities" from rule-based strategies (`ADP`, `HEURISTIC`, `RANDOM`) to other trained AI models. These can be randomized on the fly for robust training.
+  * **Rich State Representation**: The agent's decision-making is powered by a comprehensive observation space that includes player value (`VORP`), positional scarcity, and opponent roster composition.
+  * **Advanced Reward Functions**: Train your agent with flexible reward configurations, including per-pick shaping and a unique end-of-episode reward based on a full-season simulation. This rewards the agent for building a team that actually wins games, not just one with the highest projected points.
+  * **Interactive Web UI**: A simple Flask backend and lightweight frontend allow you to run mock drafts, manually make picks, get real-time AI suggestions, and view detailed roster breakdowns.
+  * **Extensive Analytics**: Simulate entire seasons to evaluate team performance, analyze draft results with CSV exports, and visualize training progress with intuitive plots.
+  * **Docker-Ready**: The entire system is containerized, ensuring a consistent and isolated environment for all dependencies and making it easy to run anywhere.
 
-## Project Structure
+-----
+
+## 🚀 Getting Started
+
+The easiest way to get started is by using Docker.
+
+### Prerequisites
+
+  * [Docker](https://www.docker.com/get-started) installed on your system.
+
+### Installation & Setup
+
+1.  **Clone the repository**:
+
+    ```bash
+    git clone https://github.com/your-username/draft-buddy.git
+    cd draft-buddy
+    ```
+
+2.  **Build the Docker image**:
+    This command builds the Docker image and installs all necessary Python and system dependencies.
+
+    ```bash
+    ./build.sh
+    ```
+
+3.  **Run the container**:
+    This command starts a container, mounts your local project directory inside, and drops you into a shell. Any changes you make locally will be immediately reflected in the container.
+
+    ```bash
+    ./run.sh
+    ```
+
+-----
+
+## 🕹️ Running the Web App (UI)
+
+Once inside the Docker container, you can start the Flask web server.
+
+1.  **Start the server**:
+
+    ```bash
+    python app.py
+    ```
+
+2.  **Open the web UI**:
+    Open your browser and navigate to `http://localhost:8000`.
+
+The UI provides real-time controls and visualizations:
+
+  * `Start New Draft`: Clears the current state and begins a new draft.
+  * `Sim Pick`: Has the current team on the clock make an automatic selection.
+  * `Undo`: Reverts the last pick.
+  * `CSV`: Exports the entire draft history to a CSV file.
+  * **Player List**: Filter, search, and sort through the available player pool.
+  * **Team Rosters**: See a live breakdown of each team's roster, including starters, bench, and bye week conflicts.
+  * **AI Suggestions**: Get real-time AI recommendations for the team on the clock.
+  * **Sim Season**: Run a full season simulation based on current rosters to test the effectiveness of your draft.
+
+-----
+
+## 📈 Training the AI Agent
+
+The core of Draft Buddy is the reinforcement learning agent trained with the REINFORCE algorithm.
+
+1.  **Prepare your configuration**:
+    Open `config.py` and adjust parameters such as `TOTAL_EPISODES`, `LEARNING_RATE`, and `ENABLED_STATE_FEATURES`. Pay special attention to the `ENABLE_SEASON_SIM_REWARD` flag if you want to train the agent to win a simulated season.
+
+2.  **Start training**:
+    From the Docker shell, run the `train.py` script.
+
+    ```bash
+    python train.py
+    ```
+
+    Training progress, including rewards and losses, will be logged to the `logs/` directory.
+
+3.  **Resume training**:
+    Set `RESUME_TRAINING = True` in `config.py` and the script will automatically find and load the latest checkpoint to continue training.
+
+4.  **Plotting results**:
+    To visualize your training metrics without starting a new training run, use the `-p` flag.
+
+    ```bash
+    python train.py -p
+    ```
+
+    This generates an interactive HTML dashboard in the `logs/` directory.
+
+-----
+
+## 🧪 Simulation & Evaluation
+
+Use a trained model to run multiple mock drafts and evaluate its performance.
+
+1.  **Update the model path**:
+    In `config.py`, ensure `MODEL_PATH_TO_LOAD` points to the `.pth` file of the trained agent you want to evaluate.
+
+2.  **Run the simulation**:
+
+    ```bash
+    python simulate.py
+    ```
+
+    The script will output a detailed log of each pick and a summary of final team scores across all simulation runs, allowing you to see how your agent stacks up against its opponents.
+
+-----
+
+## 🛠️ Project Structure
 
 ```
 .
-├── app.py                         # Flask API and static file server
-├── fantasy_draft_env.py           # Gym environment (core draft logic + rewards)
-├── policy_network.py              # Policy network used by agent/opponents
-├── reinforce_agent.py             # REINFORCE training loop
-├── train.py                       # CLI to train agent and plot latest logs
-├── simulate.py                    # Simulate drafts using a trained policy
-├── utils/
-│   ├── season_simulation_utils.py # Season sim orchestration & helpers
-│   └── fast_solve_matchups.py     # Parallel solver for weekly matchups
-├── data_utils.py                  # Player data loading and structures
-├── config.py                      # Central configuration
-├── frontend/
-│   └── index.html                 # UI (served by Flask)
-├── data/                          # CSV inputs (players, matchups) and saved draft state
-└── logs/, models/                 # Training outputs
+├── app.py                      # Flask API and web UI backend
+├── config.py                   # Central configuration for all components
+├── data/                       # Stores player data, draft states, and matchup files
+├── data_driver.py              # Script to process raw data and generate a player pool
+├── fantasy_draft_env.py        # The core OpenAI Gym environment
+├── policy_network.py           # The neural network architecture for the agent
+├── reinforce_agent.py          # The REINFORCE training algorithm implementation
+├── requirements.txt            # Python dependencies
+├── run.sh, build.sh            # Scripts for managing the Docker environment
+├── simulate.py                 # Script to evaluate a trained model on mock drafts
+├── train.py                    # Script to train the reinforcement learning agent
+└── utils/                      # Helper scripts for data processing, simulation, etc.
 ```
 
----
+-----
 
-## Requirements & Installation
+## 📄 License & Acknowledgments
 
-- Docker installed on your system
-- Recommended: Docker Desktop for easier management
+This project is open-sourced under the **MIT License**.
 
-```bash
-# Build the Docker image
-./build.sh
-
-# Run the Docker container (interactive shell with mounted volume)
-./run.sh
-```
-
-The Docker setup automatically handles all Python dependencies and provides an isolated environment. Your project directory is mounted at `/app` in the container, so changes are reflected immediately.
-
----
-
-## Data
-
-Place player and matchup CSVs in `data/`:
-
-- `generated_player_data.csv` (required): columns include `player_id, name, position, projected_points, [adp], [games_played_frac], [bye_week], [team]`.
-  - If `adp` is missing, a mock ADP is generated per `Config.MOCK_ADP_CONFIG`.
-- `red_league_matchups_2025.csv` (optional): enables season simulation rewards.
-
-A saved draft state is written to `data/draft_state.json` by the UI.
-
----
-
-## Running the Web App (UI)
-
-```
-python app.py
-# open http://localhost:8000
-```
-
-UI highlights:
-- Header shows current pick number, team on the clock, and AI suggestion for that team.
-- Team buttons show the snake order; the current team is highlighted. Full teams are visibly styled.
-- Controls: Start New Draft, Undo, Simulate Pick, CSV Export.
-- Player list can be filtered by position, searched by name, and sorted (e.g., by VORP).
-- Manual override: select a team to pick next (useful even after the scheduled snake draft is over to fill rosters).
-
----
-
-## API Endpoints (selected)
-
-- `GET /api/draft/state` – full state for UI
-- `POST /api/draft/new` – reset to a fresh draft
-- `POST /api/draft/pick` – draft a player for the current team (JSON: `{ player_id }`)
-- `POST /api/draft/undo` – undo last pick
-- `POST /api/draft/simulate_pick` – simulate one pick for team on clock
-- `POST /api/draft/override_team` – set the next picking team (JSON: `{ team_id }`)
-- `GET /api/draft/ai_suggestion` – AI suggestion for team on clock
-- `GET /api/draft/ai_suggestion_for_team?team_id=ID` – AI suggestion from a specific team’s perspective
-- `GET /api/players?position=WR,TE&search=...&sort_by=vorp&sort_dir=desc` – player catalog with VORP sorting
-
----
-
-## The Draft Environment
-
-- Action space: 4 discrete actions → pick by position: QB, RB, WR, TE
-- Draft order: N-team snake (generated per `ROSTER_STRUCTURE` and `TOTAL_BENCH_SIZE`)
-- Roster rules:
-  - Starters: QB, RB×2, WR×2, TE×1, FLEX×3 (RB/WR/TE)
-  - Positional bench caps and total bench size enforced for AI; manual picks allow bench-only constraint to keep UI flexible
-- Opponents:
-  - `HEURISTIC`, `ADP`, `RANDOM`, or `AGENT_MODEL`
-  - Optional per-episode randomization from `Config.OPPONENT_STRATEGY_TEMPLATES` for training diversity
-
-### Observation space (selected)
-- Best-available points per position, VORP per position
-- Current roster counts and available slots
-- Draft context: current pick number, agent start position
-- Scarcity, top-k points, imminent opponent threat
-- Full bye-week vector (weeks 4–14)
-
----
-
-## Rewards
-
-Terminal reward (always included):
-- Roster-slot weighted points (starters × `STARTER_POINTS_WEIGHT`, bench × `BENCH_POINTS_WEIGHT`)
-- Optional season simulation bonus (`SEASON_SIM_REWARDS`) using `red_league_matchups_2025.csv`
-
-Per-pick shaping (small, to accelerate learning):
-- Starter lineup delta: reward += max(0, Δ starter points) × `PICK_SHAPING_STARTER_DELTA_WEIGHT`
-- VORP shaping: reward += max(0, drafted_points − baseline) × `VORP_PICK_SHAPING_WEIGHT`
-
-Other knobs:
-- Competitive difference modes (max or average opponent) – distinct from season sim mode
-- Invalid action penalties (disabled by default)
-
-All knobs are in `config.py`.
-
----
-
-## Training
-
-```
-python train.py               # full training run per current Config
-python train.py -plc          # only plot latest logs (auto-discovers latest logs dir)
-```
-
-Training outputs:
-- Models saved under `models/<run_name>/v<version>/`
-- Logs (raw CSVs and plots) under `logs/<run_name>/v<version>/`
-
-Tips:
-- If your real draft slot is fixed (e.g., pick 10), pretrain with a mix of slots (biased to 10), then fine-tune at slot 10.
-- If the policy over-picks TE early, reduce `VORP_PICK_SHAPING_WEIGHT` (e.g., 0.03) and/or remove `te_scarcity` from enabled features.
-
----
-
-## Simulation of Drafts (Evaluation)
-
-Use a trained model to run multiple complete mock drafts and print detailed logs:
-
-```
-python simulate.py
-```
-
-This reports pick-by-pick logs, final roster points per team, and averages across runs.
-
----
-
-## Configuration Highlights (`config.py`)
-
-- Team & draft:
-  - `NUM_TEAMS`, `AGENT_START_POSITION`
-  - `ROSTER_STRUCTURE`, `BENCH_MAXES`, `TOTAL_BENCH_SIZE`
-- Opponents:
-  - `OPPONENT_TEAM_STRATEGIES` (+ `DEFAULT_OPPONENT_STRATEGY`)
-  - Randomization: `RANDOMIZE_OPPONENT_STRATEGIES`, `RANDOMIZE_ONLY_DURING_TRAINING`, `OPPONENT_STRATEGY_TEMPLATES`
-- State features: `ALL_STATE_FEATURES`, `ENABLED_STATE_FEATURES`, `STATE_NORMALIZATION_METHOD`
-- Rewards:
-  - `ENABLE_ROSTER_SLOT_WEIGHTED_REWARD`, `STARTER_POINTS_WEIGHT`, `BENCH_POINTS_WEIGHT`
-  - `ENABLE_SEASON_SIM_REWARD`, `SEASON_SIM_REWARDS`
-  - `ENABLE_PICK_SHAPING_REWARD`, `PICK_SHAPING_STARTER_DELTA_WEIGHT`
-  - `ENABLE_VORP_PICK_SHAPING`, `VORP_PICK_SHAPING_WEIGHT`
-  - Competitive: `ENABLE_COMPETITIVE_REWARD`, `COMPETITIVE_REWARD_MODE`
-- Training: `TOTAL_EPISODES`, `LEARNING_RATE`, `DISCOUNT_FACTOR`, `HIDDEN_DIM`
-
----
-
-## Troubleshooting
-
-- Gym/Gymnasium API mismatch: the env uses the newer `(obs, reward, done, truncated, info)` return signature; ensure your installed Gym version matches requirements.
-- Torch model device: models are loaded with `map_location='cpu'` to avoid CUDA issues on CPU.
-- “AI model not loaded”: set `MODEL_PATH_TO_LOAD` to a valid `.pth` file or disable AI suggestions.
-- Season sim: ensure `data/red_league_matchups_2025.csv` exists (or disable season sim rewards).
-
----
-
-## License
-
-MIT License (see `LICENSE`).
-
----
-
-## Acknowledgments
-
-- Thanks to open-source contributors behind Gym, PyTorch, and Flask.
-- Player projections and matchup logic should be adapted to your league’s data.
+A special thanks to the open-source community behind Python, Gym, PyTorch, Pandas, Flask, and the various data sources used in this project. All player projections and logic should be adapted to your specific league's rules and data sources.

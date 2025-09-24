@@ -479,7 +479,6 @@
         const seasonResultsDiv = document.getElementById('season-simulation-results');
 
         let currentDraftState = null;
-        const MAIN_TEAM_ID = 10; // Define the main team ID
 
         let currentSortBy = 'vorp';
         let currentSortDir = 'desc'; // 'asc' or 'desc'
@@ -907,12 +906,14 @@
             const snakePickTeam = state.draft_order[state.current_pick_number - 1];
             const teamOnClock = state.current_team_picking;
             const numTeams = Number(state.num_teams) || Object.keys(state.team_rosters || {}).length || 10;
+            const agentTeamId = state.agent_start_position; // GET THE VALUE DYNAMICALLY
+
             for (let i = 1; i <= numTeams; i++) {
                 const button = document.createElement('button');
                 button.innerText = `Team ${i}`;
                 button.classList.add('team-button');
 
-                if (i === MAIN_TEAM_ID) {
+                if (i === agentTeamId) {
                     button.classList.add('main-team');
                 }
 
