@@ -4,6 +4,10 @@ Draft Buddy is a complete system for simulating, training, and running a fantasy
 
 This project is more than just a draft simulator; it's a powerful tool for aspiring GMs to test strategies, train a personalized AI advisor, and get real-time suggestions during a live draft.
 
+![ui](images/ui.png)
+![loss](images/loss.png)
+![reward](images/reward.png)
+
 -----
 
 ## ✨ Key Features
