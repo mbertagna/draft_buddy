@@ -147,3 +147,53 @@ def _create_dummy_csv(filepath: str):
     with open(filepath, 'w') as f:
         f.write(dummy_data)
     print(f"Dummy CSV created at: {filepath}")
+
+
+def calculate_stack_count(roster_players: List[Player]) -> int:
+    """
+    Calculate the total number of valid QB-WR/TE stacks on a given roster.
+    
+    A valid stack is defined as a Quarterback and a Wide Receiver or Tight End 
+    sharing the same NFL team identifier.
+    
+    Parameters
+    ----------
+    roster_players : List[Player]
+        List of Player objects representing the current roster
+        
+    Returns
+    -------
+    int
+        Total number of valid stacks found on the roster
+        
+    Examples
+    --------
+    >>> qb = Player(1, "Josh Allen", "QB", 350.0, team="BUF")
+    >>> wr = Player(2, "Stefon Diggs", "WR", 280.0, team="BUF") 
+    >>> te = Player(3, "Dawson Knox", "TE", 150.0, team="BUF")
+    >>> rb = Player(4, "James Cook", "RB", 200.0, team="BUF")
+    >>> calculate_stack_count([qb, wr, te, rb])
+    2
+    """
+    if not roster_players:
+        return 0
+    
+    # Group players by team
+    team_positions = {}
+    for player in roster_players:
+        if player.team is None:
+            continue
+        if player.team not in team_positions:
+            team_positions[player.team] = {'QB': 0, 'WR': 0, 'TE': 0}
+        if player.position in ['QB', 'WR', 'TE']:
+            team_positions[player.team][player.position] += 1
+    
+    # Count stacks for each team
+    total_stacks = 0
+    for team, positions in team_positions.items():
+        qb_count = positions['QB']
+        stack_targets = positions['WR'] + positions['TE']
+        # Each QB can stack with each WR/TE on the same team
+        total_stacks += qb_count * stack_targets
+    
+    return total_stacks

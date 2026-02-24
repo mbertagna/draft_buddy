@@ -9,7 +9,7 @@ from typing import Optional, Dict, List, Tuple
 import os
 
 from config import Config
-from data_utils import load_player_data, Player
+from data_utils import load_player_data, Player, calculate_stack_count
 from policy_network import PolicyNetwork # Import PolicyNetwork
 import json
 from utils.season_simulation_fast import simulate_season_fast, generate_round_robin_schedule
@@ -122,6 +122,10 @@ class FantasyFootballDraftEnv(gym.Env):
             "bye_week_12_count": lambda: self._get_agent_bye_week_vector()[8],
             "bye_week_13_count": lambda: self._get_agent_bye_week_vector()[9],
             "bye_week_14_count": lambda: self._get_agent_bye_week_vector()[10],
+
+            # 5. Positional Stacking Features
+            "current_stack_count": lambda: self._get_current_stack_count(),
+            "stack_target_available_flag": lambda: self._get_stack_target_available_flag(),
         }
         self.observation_space_dim = len(config.ENABLED_STATE_FEATURES)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.observation_space_dim,), dtype=np.float32)
@@ -795,6 +799,49 @@ class FantasyFootballDraftEnv(gym.Env):
 
         return bye_week_vector
 
+    def _get_current_stack_count(self) -> int:
+        """
+        Returns the count of existing QB-WR/TE stacks currently on the agent's roster.
+        
+        Returns
+        -------
+        int
+            Number of valid stacks on the current roster
+        """
+        agent_roster = self.teams_rosters[self.agent_team_id]['PLAYERS']
+        return calculate_stack_count(agent_roster)
+
+    def _get_stack_target_available_flag(self) -> int:
+        """
+        Returns a binary flag indicating whether a valid stacking target 
+        (a WR or TE from the same NFL team as a QB currently on the agent's roster)
+        is available in the remaining draft pool.
+        
+        Returns
+        -------
+        int
+            1 if a valid stacking target is available, 0 otherwise
+        """
+        agent_roster = self.teams_rosters[self.agent_team_id]['PLAYERS']
+        
+        # Get teams of QBs on the agent's roster
+        qb_teams = set()
+        for player in agent_roster:
+            if player.position == 'QB' and player.team:
+                qb_teams.add(player.team)
+        
+        if not qb_teams:
+            return 0
+        
+        # Check if any available WR/TE shares a team with a rostered QB
+        for player_id in self.available_players_ids:
+            player = self.player_map[player_id]
+            if (player.position in ['WR', 'TE'] and 
+                player.team and 
+                player.team in qb_teams):
+                return 1
+        
+        return 0
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None):
         super().reset(seed=seed)
@@ -949,6 +996,24 @@ class FantasyFootballDraftEnv(gym.Env):
                 vorp_shaping = max(0.0, drafted_player.projected_points - baseline)
                 reward += vorp_shaping * self.config.VORP_PICK_SHAPING_WEIGHT
                 info['pick_shaping_vorp'] = vorp_shaping
+
+            # Stacking reward: Check if the pick increased stack count
+            if self.config.ENABLE_STACKING_REWARD:
+                agent_roster = self.teams_rosters[self.agent_team_id]['PLAYERS']
+                
+                # Calculate stack count before and after the pick
+                # Before: current roster minus the just-drafted player
+                pre_pick_roster = [p for p in agent_roster if p.player_id != drafted_player.player_id]
+                pre_stack_count = calculate_stack_count(pre_pick_roster)
+                post_stack_count = calculate_stack_count(agent_roster)
+                
+                stack_increase = post_stack_count - pre_stack_count
+                if stack_increase > 0:
+                    stacking_reward = stack_increase * self.config.STACKING_REWARD_WEIGHT
+                    reward += stacking_reward
+                    info['stacking_reward'] = stacking_reward
+                    info['stack_increase'] = stack_increase
+                    info['post_stack_count'] = post_stack_count
 
 
         self.current_pick_idx += 1
@@ -1381,6 +1446,9 @@ class FantasyFootballDraftEnv(gym.Env):
             "bye_week_10_count": self.total_roster_size_per_team, "bye_week_11_count": self.total_roster_size_per_team,
             "bye_week_12_count": self.total_roster_size_per_team, "bye_week_13_count": self.total_roster_size_per_team,
             "bye_week_14_count": self.total_roster_size_per_team,
+            # Stacking Features
+            "current_stack_count": 10.0,  # Max possible stacks (conservative estimate: 2 QBs * 5 WR/TE)
+            "stack_target_available_flag": 1.0,  # Binary flag
         }
         min_values = {k: 0.0 for k in max_values}
         min_values.update({

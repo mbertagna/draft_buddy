@@ -313,6 +313,10 @@ class Config:
         "bye_week_12_count",
         "bye_week_13_count",
         "bye_week_14_count",
+
+        # 5. Positional Stacking Features
+        "current_stack_count",
+        "stack_target_available_flag",
     ]
     ENABLED_STATE_FEATURES = [
         # --- Original Tier 1 Features ---
@@ -392,6 +396,10 @@ class Config:
         "bye_week_12_count",
         "bye_week_13_count",
         "bye_week_14_count",
+
+        # 5. Positional Stacking Features
+        "current_stack_count",
+        "stack_target_available_flag",
     ]
     STATE_NORMALIZATION_METHOD = 'min_max'
 
@@ -483,3 +491,7 @@ class Config:
     ENABLE_OPPONENT_STD_DEV_PENALTY = False # If True, will apply a penalty based on opponent score std dev
     OPPONENT_STD_DEV_PENALTY_WEIGHT = 0.05 # A positive value to penalize high std dev (adjust as needed!)
                                             # Using a smaller value here as a starting point.
+
+    # --- Positional Stacking Reward Parameters ---
+    ENABLE_STACKING_REWARD = True # Enable QB-WR/TE stacking reward mechanism
+    STACKING_REWARD_WEIGHT = 5.0 # Multiplier for stacking reward when completing a stack
