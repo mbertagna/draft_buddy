@@ -1,0 +1,39 @@
+[project]
+name = "draft-buddy"
+version = "0.1.0"
+description = "A Reinforcement Learning based Fantasy Football Draft AI"
+authors = [
+    { name = "Michael Bertagna" }
+]
+dependencies = [
+    "pandas",
+    "numpy",
+    "torch",
+    "gym",
+    "matplotlib",
+    "Flask",
+    "requests",
+    "tqdm",
+    "fuzzywuzzy",
+    "python-Levenshtein",
+    "beautifulsoup4",
+    "bokeh",
+    "pytest",
+]
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N"]
+ignore = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

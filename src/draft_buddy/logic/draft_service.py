@@ -6,10 +6,9 @@ without global mutable state.
 """
 
 import threading
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable, Any
 
-from config import Config
-from fantasy_draft_env import FantasyFootballDraftEnv
+from draft_buddy.config import Config
 
 
 class DraftService:
@@ -20,7 +19,7 @@ class DraftService:
     allowing concurrent draft sessions without race conditions.
     """
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, env_factory: Callable[[Config, bool], Any]):
         """
         Initialize the draft service.
 
@@ -28,12 +27,16 @@ class DraftService:
         ----------
         config : Config
             Application configuration.
+        env_factory : callable
+            Factory function that creates a draft environment instance.
+            Signature: (config: Config, training: bool) -> environment
         """
         self._config = config
-        self._drafts: Dict[str, FantasyFootballDraftEnv] = {}
+        self._env_factory = env_factory
+        self._drafts: Dict[str, Any] = {}
         self._lock = threading.Lock()
 
-    def get_or_create_draft(self, session_id: str) -> FantasyFootballDraftEnv:
+    def get_or_create_draft(self, session_id: str) -> Any:
         """
         Returns the draft environment for the session, creating one if needed.
 
@@ -44,20 +47,20 @@ class DraftService:
 
         Returns
         -------
-        FantasyFootballDraftEnv
+        environment
             The draft environment for this session.
         """
         with self._lock:
             if session_id not in self._drafts:
-                env = FantasyFootballDraftEnv(self._config, training=False)
-                env.load_state(self._config.DRAFT_STATE_FILE)
+                env = self._env_factory(self._config, False)
+                env.load_state(self._config.paths.DRAFT_STATE_FILE)
                 if not env.draft_order:
                     env.reset()
-                    env.save_state(self._config.DRAFT_STATE_FILE)
+                    env.save_state(self._config.paths.DRAFT_STATE_FILE)
                 self._drafts[session_id] = env
             return self._drafts[session_id]
 
-    def get_draft(self, session_id: str) -> Optional[FantasyFootballDraftEnv]:
+    def get_draft(self, session_id: str) -> Optional[Any]:
         """
         Returns the draft for the session if it exists.
 
@@ -68,13 +71,13 @@ class DraftService:
 
         Returns
         -------
-        FantasyFootballDraftEnv or None
+        environment or None
             The draft environment, or None if not found.
         """
         with self._lock:
             return self._drafts.get(session_id)
 
-    def create_new_draft(self, session_id: str) -> FantasyFootballDraftEnv:
+    def create_new_draft(self, session_id: str) -> Any:
         """
         Archives the current draft (if any) and creates a fresh one.
 
@@ -85,7 +88,7 @@ class DraftService:
 
         Returns
         -------
-        FantasyFootballDraftEnv
+        environment
             The new draft environment.
         """
         import datetime
@@ -101,8 +104,8 @@ class DraftService:
                 existing.save_state(archive_path)
                 print(f"Saved current draft state to {archive_path}")
 
-            env = FantasyFootballDraftEnv(self._config, training=False)
+            env = self._env_factory(self._config, False)
             env.reset()
-            env.save_state(self._config.DRAFT_STATE_FILE)
+            env.save_state(self._config.paths.DRAFT_STATE_FILE)
             self._drafts[session_id] = env
             return env

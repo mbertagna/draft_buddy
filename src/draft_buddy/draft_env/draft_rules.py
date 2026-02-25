@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from draft_state import DraftState
+    from draft_buddy.draft_env.draft_state import DraftState
 
 
 class DraftRules(ABC):
@@ -102,17 +102,36 @@ class FantasyDraftRules(DraftRules):
             for pid in available_ids
         )
 
-    def _can_team_draft_position_impl(
-        self,
-        state: "DraftState",
-        team_id: int,
-        position: str,
-        player_map: dict,
-        is_manual_pick: bool,
+    def _validate_manual_constraints(
+        self, roster_counts: dict, position: str, current_bench: int, total_starters: int
     ) -> bool:
-        """
-        Core logic for position draft validation.
-        """
+        """Validates constraints specifically for manual picks."""
+        if roster_counts.get(position, 0) < self._roster_structure.get(position, 0):
+            return True
+        if position in ["RB", "WR", "TE"] and roster_counts.get("FLEX", 0) < self._roster_structure.get("FLEX", 0):
+            return True
+        if current_bench < (self._total_roster_size - total_starters):
+            return True
+        return False
+
+    def _validate_simulated_constraints(
+        self, roster_counts: dict, position: str, current_bench: int, total_starters: int
+    ) -> bool:
+        """Validates constraints specifically for simulated/AI picks."""
+        if roster_counts.get(position, 0) < self._roster_structure.get(position, 0):
+            return True
+        if position in ["RB", "WR", "TE"] and roster_counts.get("FLEX", 0) < self._roster_structure.get("FLEX", 0):
+            return True
+        pos_max = self._roster_structure.get(position, 0) + self._bench_maxes.get(position, 0)
+        bench_max = self._total_roster_size - total_starters
+        if roster_counts.get(position, 0) < pos_max and current_bench < bench_max:
+            return True
+        return False
+
+    def can_draft_manual(
+        self, state: "DraftState", team_id: int, position: str, player_map: dict
+    ) -> bool:
+        """Validates manual pick."""
         rosters = state.get_rosters()
         roster_counts = rosters[team_id]
         current_total = len(roster_counts["PLAYERS"])
@@ -127,37 +146,24 @@ class FantasyDraftRules(DraftRules):
         ):
             return False
 
-        if is_manual_pick:
-            if roster_counts.get(position, 0) < self._roster_structure.get(position, 0):
-                return True
-            if position in ["RB", "WR", "TE"] and roster_counts.get("FLEX", 0) < self._roster_structure.get("FLEX", 0):
-                return True
-            if current_bench < (self._total_roster_size - total_starters):
-                return True
-            return False
-        else:
-            if roster_counts.get(position, 0) < self._roster_structure.get(position, 0):
-                return True
-            if position in ["RB", "WR", "TE"] and roster_counts.get("FLEX", 0) < self._roster_structure.get("FLEX", 0):
-                return True
-            pos_max = self._roster_structure.get(position, 0) + self._bench_maxes.get(position, 0)
-            bench_max = self._total_roster_size - total_starters
-            if roster_counts.get(position, 0) < pos_max and current_bench < bench_max:
-                return True
-            return False
-
-    def can_draft_manual(
-        self, state: "DraftState", team_id: int, position: str, player_map: dict
-    ) -> bool:
-        """Validates manual pick."""
-        return self._can_team_draft_position_impl(
-            state, team_id, position, player_map, is_manual_pick=True
-        )
+        return self._validate_manual_constraints(roster_counts, position, current_bench, total_starters)
 
     def can_draft_simulated(
         self, state: "DraftState", team_id: int, position: str, player_map: dict
     ) -> bool:
         """Validates simulated/AI pick."""
-        return self._can_team_draft_position_impl(
-            state, team_id, position, player_map, is_manual_pick=False
-        )
+        rosters = state.get_rosters()
+        roster_counts = rosters[team_id]
+        current_total = len(roster_counts["PLAYERS"])
+        total_starters = sum(self._roster_structure.values())
+        current_bench = current_total - total_starters
+
+        if current_total >= self._total_roster_size:
+            return False
+
+        if not self._has_position_available(
+            position, state.get_available_player_ids(), player_map
+        ):
+            return False
+
+        return self._validate_simulated_constraints(roster_counts, position, current_bench, total_starters)

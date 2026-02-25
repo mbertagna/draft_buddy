@@ -693,15 +693,14 @@
         const GREEN = [200, 245, 200]; // light green
         const RED = [245, 200, 200];   // light red
         // Dynamic, multi-stop color scale: green (good) -> yellow -> orange -> red (bad)
-        function dynamicMetricColor(value, minVal, maxVal, invert=false) {
+        function _computeMetricColor(value, minVal, maxVal, tMapper) {
             if (
                 value === null || value === undefined || Number.isNaN(value) ||
                 minVal === null || maxVal === null || maxVal === minVal
             ) return '';
 
             const tRaw = (value - minVal) / (maxVal - minVal);
-            let t = clamp(tRaw, 0, 1);
-            if (invert) t = 1 - t; // e.g., ADP lower is better
+            const t = clamp(tMapper(tRaw), 0, 1);
 
             const RED = [245, 200, 200];
             const ORANGE = [255, 218, 185];
@@ -716,6 +715,14 @@
             } else {
                 return lerpColor(YELLOW, GREEN, (t - 2/3) * 3);
             }
+        }
+
+        function getStandardMetricColor(value, minVal, maxVal) {
+            return _computeMetricColor(value, minVal, maxVal, t => t);
+        }
+
+        function getInvertedMetricColor(value, minVal, maxVal) {
+            return _computeMetricColor(value, minVal, maxVal, t => 1 - t);
         }
 
         function openPlayerInfo(playerName) {
@@ -806,7 +813,7 @@
                     gpCell.style.color = '';
                     gpCell.style.fontWeight = '';
                     if (gpValNum !== null) {
-                        gpCell.style.background = dynamicMetricColor(gpValNum, gpMin, gpMax, /*invert*/ false);
+                        gpCell.style.background = getStandardMetricColor(gpValNum, gpMin, gpMax);
                     } else {
                         gpCell.style.background = '';
                     }
@@ -834,9 +841,9 @@
                 infoCell.appendChild(infoBtn);
 
                 // ----- Conditional Coloring -----
-                if (adpValNum !== null) adpCell.style.background = dynamicMetricColor(adpValNum, adpMin, adpMax, /*invert*/ true);
-                ptsCell.style.background = dynamicMetricColor(ptsVal, ptsMin, ptsMax, /*invert*/ false);
-                vorpCell.style.background = dynamicMetricColor(vorpVal, vorpMin, vorpMax, /*invert*/ false);
+                if (adpValNum !== null) adpCell.style.background = getInvertedMetricColor(adpValNum, adpMin, adpMax);
+                ptsCell.style.background = getStandardMetricColor(ptsVal, ptsMin, ptsMax);
+                vorpCell.style.background = getStandardMetricColor(vorpVal, vorpMin, vorpMax);
 
                 const posColor = POS_COLORS[player.position];
                 if (posColor) {
@@ -854,10 +861,6 @@
 
                 row.addEventListener('click', () => draftPlayer(player.player_id));
             });
-        };
-
-        const checkBackendStatus = async () => {
-            // Not used
         };
 
         // Event Listeners

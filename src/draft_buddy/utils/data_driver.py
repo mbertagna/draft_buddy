@@ -1,7 +1,7 @@
 import argparse
 import pandas as pd
-from utils.data_processor import FantasyDataProcessor
-from config import Config
+from draft_buddy.utils.data_processor import FantasyDataProcessor
+from draft_buddy.config import Config
 
 def main(output_path, draft_year, rookie_projection_method):
     """
@@ -149,6 +149,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     config = Config()
-    output_file_path = config.PLAYER_DATA_CSV
+    output_file_path = config.paths.PLAYER_DATA_CSV
     
     main(output_path=output_file_path, draft_year=args.year, rookie_projection_method=args.rookie_projection_method)

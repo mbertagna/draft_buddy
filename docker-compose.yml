@@ -1,0 +1,25 @@
+services:
+  api:
+    build: .
+    ports:
+      - "5001:5001"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_APP=api/app.py
+      - FLASK_ENV=development
+    command: python api/app.py
+
+  simulation:
+    build: .
+    volumes:
+      - .:/app
+    command: python scripts/simulate.py
+
+  test:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app/src
+    command: python -m pytest tests/

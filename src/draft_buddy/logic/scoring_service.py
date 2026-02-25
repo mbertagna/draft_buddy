@@ -10,7 +10,7 @@ from typing import Dict, Optional
 
 import pandas as pd
 
-from utils.scoring_utils import ScoringEngine
+from draft_buddy.utils.scoring_utils import ScoringEngine
 
 
 def generate_weekly_projections(df: pd.DataFrame) -> Dict:
@@ -111,24 +111,6 @@ class ScoringService:
         else:
             scored["total_pts"] = pd.to_numeric(scored["total_pts"], errors="coerce").fillna(0.0)
         return scored
-
-    def generate_weekly_projections(self, df: pd.DataFrame) -> Dict:
-        """
-        Build week-to-week point projections from a draft players DataFrame.
-
-        Delegates to the module-level generate_weekly_projections helper.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Must have columns: player_id, position, total_pts, bye_week.
-
-        Returns
-        -------
-        dict
-            Mapping player_id -> {'position': str, 1: float, 2: float, ... 18: float}.
-        """
-        return generate_weekly_projections(df)
 
     def calculate_games_played_frac(self, historical_df: pd.DataFrame) -> pd.DataFrame:
         """

@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from typing import Dict, Optional, Iterable
 
 class ScoringEngine:
@@ -19,7 +18,7 @@ class ScoringEngine:
         df = df.copy()
 
         # Helpers
-        def _g(col, default=0):
+        def get_stat_or_default(col, default=0):
             return df[col].fillna(default) if col in df.columns else default
 
         # Yardage bonuses (default rules)
@@ -52,7 +51,7 @@ class ScoringEngine:
 
         # Total fumbles lost (default rules)
         df['total_fumbles_lost'] = (
-            _g('sack_fumbles_lost') + _g('rushing_fumbles_lost') + _g('receiving_fumbles_lost')
+            get_stat_or_default('sack_fumbles_lost') + get_stat_or_default('rushing_fumbles_lost') + get_stat_or_default('receiving_fumbles_lost')
         )
 
         # Normalize synonyms (so rules can use either)
@@ -66,7 +65,7 @@ class ScoringEngine:
 
         # Sum 0-39 bucket (your code relied on this)
         df['fg_made_0_39'] = (
-            _g('fg_made_0_19') + _g('fg_made_20_29') + _g('fg_made_30_39')
+            get_stat_or_default('fg_made_0_19') + get_stat_or_default('fg_made_20_29') + get_stat_or_default('fg_made_30_39')
         )
 
         # 2) FG made yardage for new rules (per-yard scoring)
@@ -81,7 +80,7 @@ class ScoringEngine:
 
         # Two-point conversions unified (new rules key)
         df['two_point_conversions'] = (
-            _g('passing_2pt_conversions') + _g('rushing_2pt_conversions') + _g('receiving_2pt_conversions')
+            get_stat_or_default('passing_2pt_conversions') + get_stat_or_default('rushing_2pt_conversions') + get_stat_or_default('receiving_2pt_conversions')
         )
 
         # Touchdown synonyms (default uses *_tds; new uses *_touchdowns)

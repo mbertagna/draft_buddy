@@ -8,14 +8,14 @@ import torch # Import torch for loading models
 from typing import Optional, Dict, List, Tuple
 import os
 
-from config import Config
-from data_utils import load_player_data, Player, calculate_stack_count
-from draft_rules import FantasyDraftRules
-from draft_state import DraftState
-from opponent_strategies import create_opponent_strategy, OpponentStrategy
-from policy_network import PolicyNetwork
+from draft_buddy.config import Config
+from draft_buddy.utils.data_utils import load_player_data, Player, calculate_stack_count
+from draft_buddy.draft_env.draft_rules import FantasyDraftRules
+from draft_buddy.draft_env.draft_state import DraftState
+from draft_buddy.logic.opponent_strategies import create_opponent_strategy, OpponentStrategy
+from draft_buddy.models.policy_network import PolicyNetwork
 import json
-from utils.season_simulation_fast import simulate_season_fast, generate_round_robin_schedule
+from draft_buddy.utils.season_simulation_fast import simulate_season_fast, generate_round_robin_schedule
 import pandas as pd
 
 class FantasyFootballDraftEnv(gym.Env):
@@ -29,10 +29,10 @@ class FantasyFootballDraftEnv(gym.Env):
         super(FantasyFootballDraftEnv, self).__init__()
         self.config = config
         self.training = training
-        self.manual_draft_teams = set(config.MANUAL_DRAFT_TEAMS) # Teams controlled by the user
+        self.manual_draft_teams = set(config.draft.MANUAL_DRAFT_TEAMS) # Teams controlled by the user
 
         # --- Load Players Data ---
-        self.all_players_data = load_player_data(config.PLAYER_DATA_CSV, config.MOCK_ADP_CONFIG)
+        self.all_players_data = load_player_data(config.paths.PLAYER_DATA_CSV, config.draft.MOCK_ADP_CONFIG)
         self.player_map = {p.player_id: p for p in self.all_players_data}
 
         # --- Environment Dimensions ---
@@ -63,11 +63,11 @@ class FantasyFootballDraftEnv(gym.Env):
             "current_roster_wr_count": lambda: self.teams_rosters[self.agent_team_id]['WR'],
             "current_roster_te_count": lambda: self.teams_rosters[self.agent_team_id]['TE'],
             # Available Roster Slots (for agent's team)
-            "available_roster_slots_qb": lambda: self.config.ROSTER_STRUCTURE['QB'] + self.config.BENCH_MAXES['QB'] - self.teams_rosters[self.agent_team_id]['QB'],
-            "available_roster_slots_rb": lambda: self.config.ROSTER_STRUCTURE['RB'] + self.config.BENCH_MAXES['RB'] - self.teams_rosters[self.agent_team_id]['RB'],
-            "available_roster_slots_wr": lambda: self.config.ROSTER_STRUCTURE['WR'] + self.config.BENCH_MAXES['WR'] - self.teams_rosters[self.agent_team_id]['WR'],
-            "available_roster_slots_te": lambda: self.config.ROSTER_STRUCTURE['TE'] + self.config.BENCH_MAXES['TE'] - self.teams_rosters[self.agent_team_id]['TE'],
-            "available_roster_slots_flex": lambda: self.config.ROSTER_STRUCTURE['FLEX'] - self.teams_rosters[self.agent_team_id]['FLEX'], # Simplified flex calculation
+            "available_roster_slots_qb": lambda: self.config.draft.ROSTER_STRUCTURE['QB'] + self.config.draft.BENCH_MAXES['QB'] - self.teams_rosters[self.agent_team_id]['QB'],
+            "available_roster_slots_rb": lambda: self.config.draft.ROSTER_STRUCTURE['RB'] + self.config.draft.BENCH_MAXES['RB'] - self.teams_rosters[self.agent_team_id]['RB'],
+            "available_roster_slots_wr": lambda: self.config.draft.ROSTER_STRUCTURE['WR'] + self.config.draft.BENCH_MAXES['WR'] - self.teams_rosters[self.agent_team_id]['WR'],
+            "available_roster_slots_te": lambda: self.config.draft.ROSTER_STRUCTURE['TE'] + self.config.draft.BENCH_MAXES['TE'] - self.teams_rosters[self.agent_team_id]['TE'],
+            "available_roster_slots_flex": lambda: self.config.draft.ROSTER_STRUCTURE['FLEX'] - self.teams_rosters[self.agent_team_id]['FLEX'], # Simplified flex calculation
             # Draft Progression Context
             "current_pick_number": lambda: self.current_pick_number,
             "agent_start_position": lambda: self.agent_team_id,
@@ -130,25 +130,25 @@ class FantasyFootballDraftEnv(gym.Env):
             "current_stack_count": lambda: self._get_current_stack_count(),
             "stack_target_available_flag": lambda: self._get_stack_target_available_flag(),
         }
-        self.observation_space_dim = len(config.ENABLED_STATE_FEATURES)
+        self.observation_space_dim = len(config.training.ENABLED_STATE_FEATURES)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.observation_space_dim,), dtype=np.float32)
 
-        total_roster_size_per_team = sum(self.config.ROSTER_STRUCTURE.values()) + self.config.TOTAL_BENCH_SIZE
+        total_roster_size_per_team = sum(self.config.draft.ROSTER_STRUCTURE.values()) + self.config.draft.TOTAL_BENCH_SIZE
         self.total_roster_size_per_team = total_roster_size_per_team
 
         all_player_ids = {p.player_id for p in self.all_players_data}
-        draft_order = self._generate_snake_draft_order(self.config.NUM_TEAMS, total_roster_size_per_team)
+        draft_order = self._generate_snake_draft_order(self.config.draft.NUM_TEAMS, total_roster_size_per_team)
         self._state = DraftState(
             all_player_ids=all_player_ids,
             draft_order=draft_order,
-            roster_structure=self.config.ROSTER_STRUCTURE,
-            bench_maxes=self.config.BENCH_MAXES,
+            roster_structure=self.config.draft.ROSTER_STRUCTURE,
+            bench_maxes=self.config.draft.BENCH_MAXES,
             total_roster_size_per_team=total_roster_size_per_team,
-            agent_team_id=self.config.AGENT_START_POSITION,
+            agent_team_id=self.config.draft.AGENT_START_POSITION,
         )
         self._rules = FantasyDraftRules(
-            roster_structure=self.config.ROSTER_STRUCTURE,
-            bench_maxes=self.config.BENCH_MAXES,
+            roster_structure=self.config.draft.ROSTER_STRUCTURE,
+            bench_maxes=self.config.draft.BENCH_MAXES,
             total_roster_size_per_team=total_roster_size_per_team,
         )
 
@@ -160,16 +160,16 @@ class FantasyFootballDraftEnv(gym.Env):
         self._load_agent_model()
 
         if getattr(self.config, "USE_RANDOM_MATCHUPS", False):
-            manager_names = [self.config.TEAM_MANAGER_MAPPING.get(tid) for tid in range(1, self.config.NUM_TEAMS + 1)]
+            manager_names = [self.config.draft.TEAM_MANAGER_MAPPING.get(tid) for tid in range(1, self.config.draft.NUM_TEAMS + 1)]
             manager_names = [m for m in manager_names if m]
             num_weeks = int(getattr(self.config, "NUM_REGULAR_SEASON_WEEKS", 14))
             self.matchups_df = generate_round_robin_schedule(manager_names, num_weeks)
         else:
             default_matchups_filename = "red_league_matchups_2025.csv"
-            size_specific_filename = f"red_league_matchups_2025_{self.config.NUM_TEAMS}_team.csv"
+            size_specific_filename = f"red_league_matchups_2025_{self.config.draft.NUM_TEAMS}_team.csv"
             candidate_paths = [
-                os.path.join(self.config.DATA_DIR, size_specific_filename),
-                os.path.join(self.config.DATA_DIR, default_matchups_filename),
+                os.path.join(self.config.paths.DATA_DIR, size_specific_filename),
+                os.path.join(self.config.paths.DATA_DIR, default_matchups_filename),
             ]
             matchups_path = None
             for path in candidate_paths:
@@ -177,16 +177,18 @@ class FantasyFootballDraftEnv(gym.Env):
                     matchups_path = path
                     break
             if matchups_path is None:
-                matchups_path = os.path.join(self.config.DATA_DIR, default_matchups_filename)
+                matchups_path = os.path.join(self.config.paths.DATA_DIR, default_matchups_filename)
             try:
                 self.matchups_df = pd.read_csv(matchups_path)
             except FileNotFoundError:
                 self.matchups_df = pd.DataFrame()
-                if self.config.ENABLE_SEASON_SIM_REWARD:
+                if self.config.reward.ENABLE_SEASON_SIM_REWARD:
                     print(f"Warning: ENABLE_SEASON_SIM_REWARD is True, but matchups file not found at {matchups_path}. Season sim rewards will be disabled.")
 
         self.weekly_projections = self._create_weekly_projections()
         self._sorted_available_by_pos_cache: Dict[str, List[Player]] = {}
+        from draft_buddy.utils.state_normalizer import StateNormalizer
+        self._state_normalizer = StateNormalizer(self.config)
 
     @property
     def available_players_ids(self):
@@ -243,6 +245,26 @@ class FantasyFootballDraftEnv(gym.Env):
     def _draft_history(self):
         """Delegates to DraftState."""
         return self._state.get_draft_history()
+
+    @property
+    def roster_structure(self) -> Dict[str, int]:
+        """Returns the league roster structure."""
+        return self.config.draft.ROSTER_STRUCTURE
+
+    @property
+    def bench_maxes(self) -> Dict[str, int]:
+        """Returns the league bench maximums."""
+        return self.config.draft.BENCH_MAXES
+
+    @property
+    def num_teams(self) -> int:
+        """Returns the number of teams in the league."""
+        return self.config.draft.NUM_TEAMS
+
+    @property
+    def team_manager_mapping(self) -> Dict[int, str]:
+        """Returns the mapping of team IDs to manager names."""
+        return self.config.draft.TEAM_MANAGER_MAPPING
 
     def _get_bye_week_conflict_count(self, position: str) -> int:
         """
@@ -314,16 +336,16 @@ class FantasyFootballDraftEnv(gym.Env):
 
     def _load_agent_model(self):
         """Loads the primary agent model for AI suggestions."""
-        input_dim = len(self.config.ENABLED_STATE_FEATURES)
+        input_dim = len(self.config.training.ENABLED_STATE_FEATURES)
         output_dim = self.action_space.n
-        model_path = self.config.MODEL_PATH_TO_LOAD
+        model_path = self.config.training.MODEL_PATH_TO_LOAD
 
         if not model_path or not os.path.exists(model_path):
             print(f"Warning: Agent model for suggestions not found at {model_path}. AI suggestions will be disabled.")
             return
 
         try:
-            self.agent_model = PolicyNetwork(input_dim, output_dim, self.config.HIDDEN_DIM)
+            self.agent_model = PolicyNetwork(input_dim, output_dim, self.config.training.HIDDEN_DIM)
             self.agent_model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
             self.agent_model.eval()
             print(f"Successfully loaded agent model for suggestions from {model_path}")
@@ -337,23 +359,23 @@ class FantasyFootballDraftEnv(gym.Env):
         Loads trained PolicyNetwork models for opponents specified in config.
         Only loads models for teams explicitly marked with 'AGENT_MODEL' logic.
         """
-        input_dim = len(self.config.ENABLED_STATE_FEATURES)
+        input_dim = len(self.config.training.ENABLED_STATE_FEATURES)
         output_dim = self.action_space.n
 
-        for team_id in range(1, self.config.NUM_TEAMS + 1):
-            if team_id == self.config.AGENT_START_POSITION:
+        for team_id in range(1, self.config.draft.NUM_TEAMS + 1):
+            if team_id == self.config.draft.AGENT_START_POSITION:
                 continue # Skip loading a model for the agent's own team
 
-            opponent_strategy = self.config.OPPONENT_TEAM_STRATEGIES.get(
-                team_id, self.config.DEFAULT_OPPONENT_STRATEGY
+            opponent_strategy = self.config.opponent.OPPONENT_TEAM_STRATEGIES.get(
+                team_id, self.config.opponent.DEFAULT_OPPONENT_STRATEGY
             )
 
             if opponent_strategy['logic'] == 'AGENT_MODEL':
                 model_path_key = opponent_strategy.get('model_path_key')
-                if model_path_key and model_path_key in self.config.OPPONENT_MODEL_PATHS:
-                    model_path = self.config.OPPONENT_MODEL_PATHS[model_path_key]
+                if model_path_key and model_path_key in self.config.opponent.OPPONENT_MODEL_PATHS:
+                    model_path = self.config.opponent.OPPONENT_MODEL_PATHS[model_path_key]
                     try:
-                        model = PolicyNetwork(input_dim, output_dim, self.config.HIDDEN_DIM)
+                        model = PolicyNetwork(input_dim, output_dim, self.config.training.HIDDEN_DIM)
                         model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
                         model.eval() # Set to evaluation mode
                         self.opponent_models[team_id] = model
@@ -361,16 +383,16 @@ class FantasyFootballDraftEnv(gym.Env):
                     except FileNotFoundError:
                         print(f"Warning: Opponent model not found at {model_path} for Team {team_id}. Falling back to DEFAULT_OPPONENT_STRATEGY.")
                         # If model not found, revert this opponent to default heuristic
-                        self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
+                        self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
                     except Exception as e:
                         print(f"Error loading opponent model for Team {team_id} from {model_path}: {e}. Falling back to DEFAULT_OPPONENT_STRATEGY.")
-                        self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
+                        self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
                 else:
                     print(f"Warning: 'model_path_key' missing or invalid for Team {team_id} configured as 'AGENT_MODEL'. Falling back to DEFAULT_OPPONENT_STRATEGY.")
-                    self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
+                    self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
 
         # Optional: Randomize non-agent opponent strategies per episode
-        if self.config.RANDOMIZE_OPPONENT_STRATEGIES and (not self.config.RANDOMIZE_ONLY_DURING_TRAINING or self.training):
+        if self.config.opponent.RANDOMIZE_OPPONENT_STRATEGIES and (not self.config.opponent.RANDOMIZE_ONLY_DURING_TRAINING or self.training):
             self._randomize_opponent_strategies()
 
         # Build strategy instances for each opponent team
@@ -382,11 +404,11 @@ class FantasyFootballDraftEnv(gym.Env):
         templates = getattr(self.config, 'OPPONENT_STRATEGY_TEMPLATES', [])
         if not templates:
             return
-        for team_id in range(1, self.config.NUM_TEAMS + 1):
-            if team_id == self.config.AGENT_START_POSITION:
+        for team_id in range(1, self.config.draft.NUM_TEAMS + 1):
+            if team_id == self.config.draft.AGENT_START_POSITION:
                 continue
-            current = self.config.OPPONENT_TEAM_STRATEGIES.get(team_id, self.config.DEFAULT_OPPONENT_STRATEGY)
-            if current.get('logic') == 'AGENT_MODEL' and not self.config.RANDOMIZE_INCLUDE_AGENT_MODELS:
+            current = self.config.opponent.OPPONENT_TEAM_STRATEGIES.get(team_id, self.config.opponent.DEFAULT_OPPONENT_STRATEGY)
+            if current.get('logic') == 'AGENT_MODEL' and not self.config.opponent.RANDOMIZE_INCLUDE_AGENT_MODELS:
                 continue
             tpl = _rnd.choice(templates)
             # Sample parameters
@@ -401,15 +423,15 @@ class FantasyFootballDraftEnv(gym.Env):
                 'suboptimal_strategy': sampled_subopt,
                 'positional_priority': sampled_priority,
             }
-            self.config.OPPONENT_TEAM_STRATEGIES[team_id] = randomized
+            self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = randomized
 
     def _build_opponent_strategies(self) -> None:
         """Builds OpponentStrategy instances for each opponent team."""
-        for team_id in range(1, self.config.NUM_TEAMS + 1):
-            if team_id == self.config.AGENT_START_POSITION:
+        for team_id in range(1, self.config.draft.NUM_TEAMS + 1):
+            if team_id == self.config.draft.AGENT_START_POSITION:
                 continue
-            strategy_config = self.config.OPPONENT_TEAM_STRATEGIES.get(
-                team_id, self.config.DEFAULT_OPPONENT_STRATEGY
+            strategy_config = self.config.opponent.OPPONENT_TEAM_STRATEGIES.get(
+                team_id, self.config.opponent.DEFAULT_OPPONENT_STRATEGY
             )
             self._opponent_strategies[team_id] = create_opponent_strategy(
                 logic=strategy_config["logic"],
@@ -426,9 +448,9 @@ class FantasyFootballDraftEnv(gym.Env):
             return 0.0
 
         num_starters_needed = 0
-        if position in self.config.ROSTER_STRUCTURE:
-            required_starters = self.config.ROSTER_STRUCTURE[position]
-            for team_id in range(1, self.config.NUM_TEAMS + 1):
+        if position in self.config.draft.ROSTER_STRUCTURE:
+            required_starters = self.config.draft.ROSTER_STRUCTURE[position]
+            for team_id in range(1, self.config.draft.NUM_TEAMS + 1):
                 roster_counts = self.teams_rosters[team_id]
                 num_on_roster = roster_counts.get(position, 0)
                 if num_on_roster < required_starters:
@@ -616,7 +638,7 @@ class FantasyFootballDraftEnv(gym.Env):
         intervening_picks = self.draft_order[self.current_pick_idx + 1: next_pick_idx]
         opponent_teams_in_window = set(intervening_picks)
 
-        needed_starters = self.config.ROSTER_STRUCTURE.get(position, 0)
+        needed_starters = self.config.draft.ROSTER_STRUCTURE.get(position, 0)
         if needed_starters == 0:
             return 0
 
@@ -629,7 +651,7 @@ class FantasyFootballDraftEnv(gym.Env):
     def _compute_global_state_features(self) -> Dict[str, float]:
         """
         Computes and returns state feature values that are global (independent of team perspective)
-        for the features listed in config.ENABLED_STATE_FEATURES.
+        for the features listed in config.training.ENABLED_STATE_FEATURES.
         Relies on the per-step sorted cache.
         """
         self._build_sorted_available_cache()
@@ -640,7 +662,7 @@ class FantasyFootballDraftEnv(gym.Env):
 
         globals_map: Dict[str, float] = {}
 
-        enabled = set(self.config.ENABLED_STATE_FEATURES)
+        enabled = set(self.config.training.ENABLED_STATE_FEATURES)
 
         # Best available points
         if 'best_available_qb_points' in enabled: globals_map['best_available_qb_points'] = get_k('QB', 1)
@@ -695,7 +717,7 @@ class FantasyFootballDraftEnv(gym.Env):
         with efficiently computed team-specific features. Applies configured normalization.
         """
         state_values_map: Dict[str, float] = dict(global_features) if global_features else {}
-        enabled = self.config.ENABLED_STATE_FEATURES
+        enabled = self.config.training.ENABLED_STATE_FEATURES
 
         # Team-specific simple counts
         roster_counts = self.teams_rosters[team_id]
@@ -706,15 +728,15 @@ class FantasyFootballDraftEnv(gym.Env):
 
         # Available roster slots
         if 'available_roster_slots_qb' in enabled:
-            state_values_map['available_roster_slots_qb'] = float(self.config.ROSTER_STRUCTURE['QB'] + self.config.BENCH_MAXES['QB'] - roster_counts['QB'])
+            state_values_map['available_roster_slots_qb'] = float(self.config.draft.ROSTER_STRUCTURE['QB'] + self.config.draft.BENCH_MAXES['QB'] - roster_counts['QB'])
         if 'available_roster_slots_rb' in enabled:
-            state_values_map['available_roster_slots_rb'] = float(self.config.ROSTER_STRUCTURE['RB'] + self.config.BENCH_MAXES['RB'] - roster_counts['RB'])
+            state_values_map['available_roster_slots_rb'] = float(self.config.draft.ROSTER_STRUCTURE['RB'] + self.config.draft.BENCH_MAXES['RB'] - roster_counts['RB'])
         if 'available_roster_slots_wr' in enabled:
-            state_values_map['available_roster_slots_wr'] = float(self.config.ROSTER_STRUCTURE['WR'] + self.config.BENCH_MAXES['WR'] - roster_counts['WR'])
+            state_values_map['available_roster_slots_wr'] = float(self.config.draft.ROSTER_STRUCTURE['WR'] + self.config.draft.BENCH_MAXES['WR'] - roster_counts['WR'])
         if 'available_roster_slots_te' in enabled:
-            state_values_map['available_roster_slots_te'] = float(self.config.ROSTER_STRUCTURE['TE'] + self.config.BENCH_MAXES['TE'] - roster_counts['TE'])
+            state_values_map['available_roster_slots_te'] = float(self.config.draft.ROSTER_STRUCTURE['TE'] + self.config.draft.BENCH_MAXES['TE'] - roster_counts['TE'])
         if 'available_roster_slots_flex' in enabled:
-            state_values_map['available_roster_slots_flex'] = float(self.config.ROSTER_STRUCTURE['FLEX'] - roster_counts['FLEX'])
+            state_values_map['available_roster_slots_flex'] = float(self.config.draft.ROSTER_STRUCTURE['FLEX'] - roster_counts['FLEX'])
 
         # Agent start position from team's perspective
         if 'agent_start_position' in enabled:
@@ -778,9 +800,9 @@ class FantasyFootballDraftEnv(gym.Env):
         state_array = np.array(raw_state, dtype=np.float32)
 
         # Normalize
-        if self.config.STATE_NORMALIZATION_METHOD == 'min_max':
+        if self.config.training.STATE_NORMALIZATION_METHOD == 'min_max':
             state_array = self._normalize_min_max(state_array)
-        elif self.config.STATE_NORMALIZATION_METHOD == 'z_score':
+        elif self.config.training.STATE_NORMALIZATION_METHOD == 'z_score':
             state_array = self._normalize_z_score(state_array)
 
         return state_array
@@ -827,7 +849,7 @@ class FantasyFootballDraftEnv(gym.Env):
         opponent_teams_in_window = set(intervening_picks)
 
         # Count how many of those opponents need a starter for the position
-        needed_starters = self.config.ROSTER_STRUCTURE.get(position, 0)
+        needed_starters = self.config.draft.ROSTER_STRUCTURE.get(position, 0)
         if needed_starters == 0:
             return 0
 
@@ -904,12 +926,12 @@ class FantasyFootballDraftEnv(gym.Env):
         super().reset(seed=seed)
 
         all_player_ids = {p.player_id for p in self.all_players_data}
-        draft_order = self._generate_snake_draft_order(self.config.NUM_TEAMS, self.total_roster_size_per_team)
+        draft_order = self._generate_snake_draft_order(self.config.draft.NUM_TEAMS, self.total_roster_size_per_team)
         if getattr(self.config, "RANDOMIZE_AGENT_START_POSITION", False) and self.training:
             import random as _rnd
-            agent_team_id = _rnd.randint(1, self.config.NUM_TEAMS)
+            agent_team_id = _rnd.randint(1, self.config.draft.NUM_TEAMS)
         else:
-            agent_team_id = self.config.AGENT_START_POSITION
+            agent_team_id = self.config.draft.AGENT_START_POSITION
 
         self._state.reset(all_player_ids, draft_order, agent_team_id)
         self._invalidate_sorted_available_cache()
@@ -967,14 +989,15 @@ class FantasyFootballDraftEnv(gym.Env):
 
         # --- 1. Agent's Turn ---
         # Compute starter points BEFORE pick (for shaping)
-        pre_starter_points = None
-        if self.config.ENABLE_PICK_SHAPING_REWARD and self.config.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
-            pre_starters, _, _ = self._categorize_roster_by_slots(
+        pre_starter_points = 0.0
+        if self.config.reward.ENABLE_PICK_SHAPING_REWARD and self.config.reward.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
+            from draft_buddy.utils.roster_utils import calculate_roster_scores
+            curr_scores = calculate_roster_scores(
                 self.teams_rosters[self.agent_team_id]['PLAYERS'],
-                self.config.ROSTER_STRUCTURE,
-                self.config.BENCH_MAXES
+                self.config.draft.ROSTER_STRUCTURE,
+                self.config.draft.BENCH_MAXES
             )
-            pre_starter_points = sum(p.projected_points for pos_list in pre_starters.values() for p in pos_list)
+            pre_starter_points = curr_scores['starters_total_points']
 
         is_valid_pick, drafted_player = self._try_select_player_for_team(
             self.agent_team_id, selected_position, self.available_players_ids
@@ -983,15 +1006,15 @@ class FantasyFootballDraftEnv(gym.Env):
         if not is_valid_pick:
             # If invalid action, episode terminates.
             # Apply penalty only if ENABLE_INVALID_ACTION_PENALTIES is True.
-            if self.config.ENABLE_INVALID_ACTION_PENALTIES:
+            if self.config.reward.ENABLE_INVALID_ACTION_PENALTIES:
                 penalty_key = f'roster_full_{selected_position}'
                 if not self._get_best_available_player_by_pos(selected_position):
                     penalty_key = 'no_players_available'
-                reward += self.config.INVALID_ACTION_PENALTIES.get(penalty_key, self.config.INVALID_ACTION_PENALTIES['default_invalid'])
+                reward += self.config.reward.INVALID_ACTION_PENALTIES.get(penalty_key, self.config.reward.INVALID_ACTION_PENALTIES['default_invalid'])
             
             done = True # Invalid action still ends the episode for safety/clarity
             info['invalid_action'] = True
-            info['reason'] = f"Invalid pick: {selected_position} - {'Penalty applied' if self.config.ENABLE_INVALID_ACTION_PENALTIES else 'No penalty'}"
+            info['reason'] = f"Invalid pick: {selected_position} - {'Penalty applied' if self.config.reward.ENABLE_INVALID_ACTION_PENALTIES else 'No penalty'}"
         else:
             self._state.add_player_to_roster(self.agent_team_id, drafted_player)
             info["drafted_player"] = drafted_player.name
@@ -1001,58 +1024,13 @@ class FantasyFootballDraftEnv(gym.Env):
 
             self._invalidate_sorted_available_cache()
 
-            # Apply intermediate reward based on configuration
-            if self.config.ENABLE_INTERMEDIATE_REWARD:
-                if self.config.INTERMEDIATE_REWARD_MODE == 'STATIC':
-                    reward += self.config.INTERMEDIATE_REWARD_VALUE
-                elif self.config.INTERMEDIATE_REWARD_MODE == 'PROPORTIONAL':
-                    reward += drafted_player.projected_points * self.config.PROPORTIONAL_REWARD_SCALING_FACTOR
-                else:
-                    print(f"Warning: Unknown INTERMEDIATE_REWARD_MODE: {self.config.INTERMEDIATE_REWARD_MODE}. No intermediate reward applied.")
-
-            # Per-pick shaping: starter lineup delta and VORP component
-            if self.config.ENABLE_PICK_SHAPING_REWARD and self.config.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
-                post_starters, _, _ = self._categorize_roster_by_slots(
-                    self.teams_rosters[self.agent_team_id]['PLAYERS'],
-                    self.config.ROSTER_STRUCTURE,
-                    self.config.BENCH_MAXES
-                )
-                post_starter_points = sum(p.projected_points for pos_list in post_starters.values() for p in pos_list)
-                if pre_starter_points is not None:
-                    delta = max(0.0, post_starter_points - pre_starter_points)
-                    reward += delta * self.config.PICK_SHAPING_STARTER_DELTA_WEIGHT
-                    info['pick_shaping_starter_delta'] = delta
-
-            if self.config.ENABLE_VORP_PICK_SHAPING:
-                # Use VORP for the selected position based on current availability after the pick.
-                # To approximate the marginal value, compute VORP using the drafted player's projected points vs replacement baseline
-                # by temporarily reinserting the player to compute baseline if needed.
-                pos = drafted_player.position
-                # Build a small baseline using existing helper on remaining players
-                baselines = self.get_positional_baselines()
-                baseline = baselines.get(pos, 0.0)
-                vorp_shaping = max(0.0, drafted_player.projected_points - baseline)
-                reward += vorp_shaping * self.config.VORP_PICK_SHAPING_WEIGHT
-                info['pick_shaping_vorp'] = vorp_shaping
-
-            # Stacking reward: Check if the pick increased stack count
-            if self.config.ENABLE_STACKING_REWARD:
-                agent_roster = self.teams_rosters[self.agent_team_id]['PLAYERS']
-                
-                # Calculate stack count before and after the pick
-                # Before: current roster minus the just-drafted player
-                pre_pick_roster = [p for p in agent_roster if p.player_id != drafted_player.player_id]
-                pre_stack_count = calculate_stack_count(pre_pick_roster)
-                post_stack_count = calculate_stack_count(agent_roster)
-                
-                stack_increase = post_stack_count - pre_stack_count
-                if stack_increase > 0:
-                    stacking_reward = stack_increase * self.config.STACKING_REWARD_WEIGHT
-                    reward += stacking_reward
-                    info['stacking_reward'] = stacking_reward
-                    info['stack_increase'] = stack_increase
-                    info['post_stack_count'] = post_stack_count
-
+            # Delegate Step Reward Calculation
+            from draft_buddy.utils.reward_calculator import RewardCalculator
+            step_reward, step_info = RewardCalculator.calculate_step_reward(
+                self.config, self, drafted_player, pre_starter_points
+            )
+            reward += step_reward
+            info.update(step_info)
 
         self._state.advance_pick()
 
@@ -1087,125 +1065,12 @@ class FantasyFootballDraftEnv(gym.Env):
 
         # --- 4. Final Reward Calculation if Done ---
         if done:
-            agent_final_weighted_score = 0
-            if self.config.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
-                starters_dict, all_non_starters_list, _ = self._categorize_roster_by_slots(
-                    self.teams_rosters[self.agent_team_id]['PLAYERS'],
-                    self.config.ROSTER_STRUCTURE,
-                    self.config.BENCH_MAXES
-                )
-                starter_points = sum(p.projected_points for pos_list in starters_dict.values() for p in pos_list)
-                bench_points = sum(p.projected_points for p in all_non_starters_list)
-                
-                agent_final_weighted_score = (starter_points * self.config.STARTER_POINTS_WEIGHT) + \
-                                             (bench_points * self.config.BENCH_POINTS_WEIGHT)
-                info['raw_starter_points'] = starter_points
-                info['raw_bench_points'] = bench_points
-            else:
-                agent_final_weighted_score = sum(p.projected_points for p in self.teams_rosters[self.agent_team_id]['PLAYERS'])
-            
-            info['final_score_agent'] = agent_final_weighted_score # Store for info
-
-            # Apply bonus for full roster
-            if 'draft_complete' in info and self.config.BONUS_FOR_FULL_ROSTER > 0:
-                reward += self.config.BONUS_FOR_FULL_ROSTER
-
-            # --- Final Reward Calculation ---
-            # Optionally include the base final roster score in the reward.
-            if getattr(self.config, 'ENABLE_FINAL_BASE_REWARD', True):
-                base_reward = agent_final_weighted_score
-                reward += base_reward
-                info['base_reward_component'] = base_reward
-            else:
-                info['base_reward_component'] = 0.0
-
-            # --- Competitive Reward (Opponent Difference) ---
-            if self.config.ENABLE_COMPETITIVE_REWARD:
-                opponent_scores = []
-                for team_id, roster_data in self.teams_rosters.items():
-                    if team_id != self.agent_team_id:
-                        if self.config.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
-                            opp_starters_dict, opp_all_non_starters_list, _ = self._categorize_roster_by_slots(
-                                roster_data['PLAYERS'],
-                                self.config.ROSTER_STRUCTURE,
-                                self.config.BENCH_MAXES
-                            )
-                            opp_starter_points = sum(p.projected_points for pos_list in opp_starters_dict.values() for p in pos_list)
-                            opp_bench_points = sum(p.projected_points for p in opp_all_non_starters_list)
-                            opponent_score = (opp_starter_points * self.config.STARTER_POINTS_WEIGHT) + \
-                                             (opp_bench_points * self.config.BENCH_POINTS_WEIGHT)
-                        else:
-                            opponent_score = sum(p.projected_points for p in roster_data['PLAYERS'])
-                        opponent_scores.append(opponent_score)
-
-                if opponent_scores:
-                    opponent_scores_np = np.array(opponent_scores)
-                    competitive_reward_component = 0
-
-                    if self.config.COMPETITIVE_REWARD_MODE == 'MAX_OPPONENT_DIFFERENCE':
-                        max_opponent_score = np.max(opponent_scores_np)
-                        competitive_reward_component = agent_final_weighted_score - max_opponent_score
-                        info['competitive_mode'] = 'Max Opponent Difference'
-                        info['target_opponent_score'] = max_opponent_score
-                    elif self.config.COMPETITIVE_REWARD_MODE == 'AVG_OPPONENT_DIFFERENCE':
-                        avg_opponent_score = np.mean(opponent_scores_np)
-                        competitive_reward_component = agent_final_weighted_score - avg_opponent_score
-                        info['competitive_mode'] = 'Average Opponent Difference'
-                        info['target_opponent_score'] = avg_opponent_score
-                    
-                    # Only add competitive reward if it's not season sim mode, which is handled next
-                    if self.config.COMPETITIVE_REWARD_MODE != 'SEASON_SIM':
-                        reward += competitive_reward_component
-                        info['competitive_reward_component'] = competitive_reward_component
-
-                    if self.config.ENABLE_OPPONENT_STD_DEV_PENALTY and len(opponent_scores_np) > 1:
-                        opponent_std_dev = np.std(opponent_scores_np)
-                        std_dev_penalty = opponent_std_dev * self.config.OPPONENT_STD_DEV_PENALTY_WEIGHT
-                        reward -= std_dev_penalty
-                        info['opponent_std_dev_penalty'] = std_dev_penalty
-                        info['opponent_std_dev_applied'] = True
-            else:
-                info['competitive_mode'] = 'Disabled'
-
-            # --- Season Simulation Reward ---
-            if (self.config.COMPETITIVE_REWARD_MODE == 'SEASON_SIM' or self.config.ENABLE_SEASON_SIM_REWARD) and self.matchups_df is not None and not self.matchups_df.empty:
-                sim_rosters = {self.config.TEAM_MANAGER_MAPPING.get(tid): [p.player_id for p in r['PLAYERS']] for tid, r in self.teams_rosters.items() if self.config.TEAM_MANAGER_MAPPING.get(tid)}
-                
-                try:
-                    # Pass dynamic number of playoff teams
-                    num_playoff_teams = int(getattr(self.config, 'REGULAR_SEASON_REWARD', {}).get('NUM_PLAYOFF_TEAMS', 6))
-                    regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season_fast(
-                        self.weekly_projections, self.matchups_df, sim_rosters, 2025, "", False, num_playoff_teams
-                    )
-                    sim_reward = 0.0
-                    agent_manager_name = self.config.TEAM_MANAGER_MAPPING.get(self.agent_team_id)
-
-                    # --- Regular Season Reward (Playoff Qualification & Seeding) ---
-                    seed_reward, made_playoffs, seed_value = self._compute_regular_season_reward(regular_records, agent_manager_name)
-                    sim_reward += seed_reward
-                    info['made_playoffs'] = bool(made_playoffs)
-                    if made_playoffs:
-                        info['playoff_seed'] = int(seed_value)
-                        info['regular_season_seed_reward'] = float(seed_reward)
-                        if seed_value == 1:
-                            info['regular_season_winner'] = True
-
-                    # --- Playoff Placement Reward ---
-                    placement_reward, placement_label = self._compute_playoff_placement_reward(
-                        regular_records, playoff_results_df, winner, agent_manager_name
-                    )
-                    sim_reward += placement_reward
-                    info['playoff_placement'] = placement_label
-                    info['playoff_placement_reward'] = float(placement_reward)
-                    if placement_label == 'CHAMPION':
-                        info['playoff_winner'] = True
-
-                    # Accumulate
-                    reward += sim_reward
-                    info['season_sim_reward'] = sim_reward
-                except Exception as e:
-                    print(f"Error during season simulation: {e}")
-                
+            from draft_buddy.utils.reward_calculator import RewardCalculator
+            final_reward, final_info = RewardCalculator.calculate_final_reward(
+                self.config, self, self.matchups_df
+            )
+            reward += final_reward
+            info.update(final_info)
             info['final_reward_total'] = reward # The total reward given to the agent
 
         # --- 5. Get Next State and Action Mask ---
@@ -1216,150 +1081,15 @@ class FantasyFootballDraftEnv(gym.Env):
         self._invalidate_sorted_available_cache()
         return observation, reward, done, False, info
 
+
     # -------------------- Season Reward Helpers --------------------
-    def _compute_regular_season_reward(self, regular_records, agent_manager_name: str):
-        """
-        Returns (seed_reward, made_playoffs_flag, seed) based on config.REGULAR_SEASON_REWARD.
-        - If not in playoffs, returns (0.0, False, None).
-        - If in playoffs, reward = MAKE_PLAYOFFS_BONUS + seed_component.
-        Seed component from LINEAR or MAPPING mode.
-        """
-        cfg = getattr(self.config, 'REGULAR_SEASON_REWARD', None)
-        if not cfg:
-            return 0.0, False, None
-
-        num_playoff_teams = int(cfg.get('NUM_PLAYOFF_TEAMS', 6))
-        seeding_list = [record[0] for record in regular_records[:num_playoff_teams]]
-
-        if agent_manager_name not in seeding_list:
-            return 0.0, False, None
-
-        seed_index = seeding_list.index(agent_manager_name) # 0-based
-        seed = seed_index + 1
-
-        # Base bonus for making playoffs
-        total_reward = float(cfg.get('MAKE_PLAYOFFS_BONUS', 0.0))
-
-        mode = cfg.get('SEED_REWARD_MODE', 'LINEAR').upper()
-        if mode == 'MAPPING':
-            mapping = cfg.get('SEED_REWARD_MAPPING', {})
-            seed_component = float(mapping.get(seed, 0.0))
-        else: # LINEAR
-            seed_max = float(cfg.get('SEED_REWARD_MAX', 0.0))
-            seed_min = float(cfg.get('SEED_REWARD_MIN', 0.0))
-            if num_playoff_teams <= 1:
-                seed_component = seed_max
-            else:
-                # Linear interpolation from 1..N -> max..min
-                t = (seed - 1) / (num_playoff_teams - 1)
-                seed_component = seed_max + (seed_min - seed_max) * t
-
-        total_reward += seed_component
-        return total_reward, True, seed
-
-    def _compute_playoff_placement_reward(self, regular_records, playoff_results_df, winner: str, agent_manager_name: str):
-        """
-        Returns (placement_reward, placement_label) for playoff placement.
-        Placement labels: 'CHAMPION', 'RUNNER_UP', 'SEMIFINALIST', 'QUARTERFINALIST', 'NON_PLAYOFF'.
-        Uses config.PLAYOFF_PLACEMENT_REWARDS.
-        """
-        cfg = getattr(self.config, 'PLAYOFF_PLACEMENT_REWARDS', None)
-        if not cfg:
-            return 0.0, 'NON_PLAYOFF'
-
-        # Determine whether the agent made playoffs and identify round reached.
-        num_playoff_teams = int(getattr(self.config, 'REGULAR_SEASON_REWARD', {}).get('NUM_PLAYOFF_TEAMS', 6))
-        playoff_teams = [record[0] for record in regular_records[:num_playoff_teams]]
-        if agent_manager_name not in playoff_teams:
-            return float(cfg.get('NON_PLAYOFF', 0.0)), 'NON_PLAYOFF'
-
-        # If champion
-        if winner == agent_manager_name:
-            return float(cfg.get('CHAMPION', 0.0)), 'CHAMPION'
-
-        # Determine runner-up vs earlier exit using playoff_results_df
-        # playoff_results_df has rows per game with Week and scores; last row is the final.
-        # Identify the finalist (loser of last game):
-        try:
-            last_row = playoff_results_df.iloc[-1]
-            finalist = last_row['Home Manager(s)'] if last_row['Home Manager(s)'] != winner else last_row['Away Manager(s)']
-        except Exception:
-            finalist = None
-
-        if finalist == agent_manager_name:
-            return float(cfg.get('RUNNER_UP', 0.0)), 'RUNNER_UP'
-
-        # Determine if agent reached semifinals or exited in quarters
-        # For 6-team bracket with byes: our helper upstream generated quarters (round 1), semis (round 2), final (round 3).
-        # Count how many playoff rows feature the agent to infer deepest round.
-        try:
-            appears_mask = (playoff_results_df['Home Manager(s)'] == agent_manager_name) | (playoff_results_df['Away Manager(s)'] == agent_manager_name)
-            appearances = playoff_results_df[appears_mask]
-            if appearances.empty:
-                return float(cfg.get('NON_PLAYOFF', 0.0)), 'NON_PLAYOFF'
-
-            # Determine last week agent appeared in
-            last_week = appearances['Week'].max()
-            max_week = playoff_results_df['Week'].max()
-            min_week = playoff_results_df['Week'].min()
-
-            # Map week depth to label; assumes three playoff weeks produced by utils
-            if last_week == max_week:
-                # Handled runner-up/champion above; reaching final but not runner-up implies data issue
-                return float(cfg.get('RUNNER_UP', 0.0)), 'RUNNER_UP'
-            elif last_week == max_week - 1:
-                return float(cfg.get('SEMIFINALIST', 0.0)), 'SEMIFINALIST'
-            else:
-                return float(cfg.get('QUARTERFINALIST', 0.0)), 'QUARTERFINALIST'
-        except Exception:
-            # Fallback if structure unexpected
-            return float(cfg.get('QUARTERFINALIST', 0.0)), 'QUARTERFINALIST'
-
     def _categorize_roster_by_slots(self, team_roster: List[Player], roster_structure: Dict, bench_maxes: Dict) -> Tuple[Dict[str, List[Player]], List[Player], List[Player]]:
         """
         Categorizes players into starters, bench, and flex players based on roster structure
         and projected points, ensuring no player is double-counted.
         """
-        starters = defaultdict(list)
-        bench = []
-        flex_players = []
-
-        # Create a copy of the roster to avoid modifying the original list
-        sorted_roster = sorted(team_roster, key=lambda p: p.projected_points, reverse=True)
-        
-        # A set to keep track of players who have already been assigned a spot
-        assigned_player_ids = set()
-
-        # --- 1. Fill mandatory starter positions ---
-        for pos in roster_structure.keys():
-            if pos == 'FLEX': continue # Handle FLEX separately
-            
-            # Find the best players for this position
-            pos_players = [p for p in sorted_roster if p.position == pos and p.player_id not in assigned_player_ids]
-            
-            # Assign the required number of starters
-            num_starters_for_pos = roster_structure.get(pos, 0)
-            for i in range(min(len(pos_players), num_starters_for_pos)):
-                player = pos_players[i]
-                starters[pos].append(player)
-                assigned_player_ids.add(player.player_id)
-
-        # --- 2. Identify candidates for FLEX and Bench ---
-        remaining_players = [p for p in sorted_roster if p.player_id not in assigned_player_ids]
-        flex_candidates = [p for p in remaining_players if p.position in ['RB', 'WR', 'TE']]
-
-        # --- 3. Fill FLEX spots from the best candidates ---
-        num_flex_spots = roster_structure.get('FLEX', 0)
-        flex_players = sorted(flex_candidates, key=lambda p: p.projected_points, reverse=True)[:num_flex_spots]
-        for player in flex_players:
-            starters['FLEX'].append(player)
-            assigned_player_ids.add(player.player_id)
-
-        # --- 4. Assign all remaining players to the bench ---
-        bench = [p for p in sorted_roster if p.player_id not in assigned_player_ids]
-
-        return starters, bench, flex_players
-
+        from draft_buddy.utils.roster_utils import categorize_roster_by_slots
+        return categorize_roster_by_slots(team_roster, roster_structure, bench_maxes)
 
     def _generate_snake_draft_order(self, num_teams, total_picks_per_team):
         """Generates a snake draft order for all picks."""
@@ -1396,136 +1126,92 @@ class FantasyFootballDraftEnv(gym.Env):
         return {
             'current_pick_number': self.current_pick_number,
             'current_team_picking': team_on_clock,
-            'agent_roster_size': len(self.teams_rosters[self.config.AGENT_START_POSITION]['PLAYERS']),
+            'agent_roster_size': len(self.teams_rosters[self.config.draft.AGENT_START_POSITION]['PLAYERS']),
             'available_players_count': len(self.available_players_ids),
             'manual_draft_teams': list(self.manual_draft_teams)
         }
 
     def _get_state(self) -> np.ndarray:
         """
-        Constructs the state vector based on enabled features and normalizes it.
+        Constructs and returns the normalized state vector for the current team on clock.
+
+        Returns
+        -------
+        np.ndarray
+            Normalized state vector.
         """
-        # Build per-step cache of sorted available players to accelerate feature computation
-        self._build_sorted_available_cache()
-
-        state_values = []
-        for feature_name in self.config.ENABLED_STATE_FEATURES:
-            if feature_name in self.state_features_map:
-                value = self.state_features_map[feature_name]()
-                state_values.append(value)
-            else:
-                # This should ideally not happen if ENABLED_STATE_FEATURES is subset of ALL_STATE_FEATURES
-                # and all mappings are correctly defined.
-                print(f"Warning: Unknown state feature '{feature_name}' requested. Appending 0.")
-                state_values.append(0)
-
-        state_array = np.array(state_values, dtype=np.float32)
-
-        # Normalize the state array
-        if self.config.STATE_NORMALIZATION_METHOD == 'min_max':
-            state_array = self._normalize_min_max(state_array)
-        elif self.config.STATE_NORMALIZATION_METHOD == 'z_score':
-            state_array = self._normalize_z_score(state_array)
-        # 'none' means no normalization
-
-        return state_array
-
-    def _normalize_min_max(self, state_array: np.ndarray) -> np.ndarray:
-        # These max values should be estimated based on your player data's expected ranges.
-        # It's good practice to run some data analysis to set these accurately.
-        max_values = {
-            "best_available_qb_points": 400.0, "best_available_rb_points": 350.0,
-            "best_available_wr_points": 350.0, "best_available_te_points": 300.0,
-            "best_available_qb_vorp": 200.0, "best_available_rb_vorp": 200.0,
-            "best_available_wr_vorp": 200.0, "best_available_te_vorp": 150.0,
-            "current_roster_qb_count": self.config.ROSTER_STRUCTURE['QB'] + self.config.BENCH_MAXES['QB'],
-            "current_roster_rb_count": self.config.ROSTER_STRUCTURE['RB'] + self.config.BENCH_MAXES['RB'],
-            "current_roster_wr_count": self.config.ROSTER_STRUCTURE['WR'] + self.config.BENCH_MAXES['WR'],
-            "current_roster_te_count": self.config.ROSTER_STRUCTURE['TE'] + self.config.BENCH_MAXES['TE'],
-            "available_roster_slots_qb": self.config.ROSTER_STRUCTURE['QB'] + self.config.BENCH_MAXES['QB'],
-            "available_roster_slots_rb": self.config.ROSTER_STRUCTURE['RB'] + self.config.BENCH_MAXES['RB'],
-            "available_roster_slots_wr": self.config.ROSTER_STRUCTURE['WR'] + self.config.BENCH_MAXES['WR'],
-            "available_roster_slots_te": self.config.ROSTER_STRUCTURE['TE'] + self.config.BENCH_MAXES['TE'],
-            "available_roster_slots_flex": self.config.ROSTER_STRUCTURE['FLEX'],
-            "qb_available_flag": 1.0, "rb_available_flag": 1.0,
-            "wr_available_flag": 1.0, "te_available_flag": 1.0,
-            "current_pick_number": len(self.draft_order) if self.draft_order else 1.0, # Max possible pick number
-            "agent_start_position": float(self.config.NUM_TEAMS), # Max team number
-            # New features max values
-            "second_best_available_qb_points": 400.0, # Same max as best for now
-            "second_best_available_rb_points": 350.0, # Same max as best for now
-            "second_best_available_wr_points": 350.0, # Same max as best for now
-            "second_best_available_te_points": 300.0, # Same max as best for now
-            "next_pick_opponent_qb_count": self.config.ROSTER_STRUCTURE['QB'] + self.config.BENCH_MAXES['QB'],
-            "next_pick_opponent_rb_count": self.config.ROSTER_STRUCTURE['RB'] + self.config.BENCH_MAXES['RB'],
-            "next_pick_opponent_wr_count": self.config.ROSTER_STRUCTURE['WR'] + self.config.BENCH_MAXES['WR'],
-            "next_pick_opponent_te_count": self.config.ROSTER_STRUCTURE['TE'] + self.config.BENCH_MAXES['TE'],
-            "best_qb_bye_week_conflict": self.total_roster_size_per_team,
-            "best_rb_bye_week_conflict": self.total_roster_size_per_team,
-            "best_wr_bye_week_conflict": self.total_roster_size_per_team,
-            "best_te_bye_week_conflict": self.total_roster_size_per_team,
-            # Tier 2 Features
-            "qb_scarcity": 150.0, "rb_scarcity": 150.0, "wr_scarcity": 150.0, "te_scarcity": 100.0,
-            "top_3_qb_points_1": 400.0, "top_3_qb_points_2": 400.0, "top_3_qb_points_3": 400.0,
-            "top_3_rb_points_1": 350.0, "top_3_rb_points_2": 350.0, "top_3_rb_points_3": 350.0,
-            "top_3_wr_points_1": 350.0, "top_3_wr_points_2": 350.0, "top_3_wr_points_3": 350.0,
-            "top_3_te_points_1": 300.0, "top_3_te_points_2": 300.0, "top_3_te_points_3": 300.0,
-            "qb_imminent_threat": self.config.NUM_TEAMS - 1,
-            "rb_imminent_threat": self.config.NUM_TEAMS - 1,
-            "wr_imminent_threat": self.config.NUM_TEAMS - 1,
-            "te_imminent_threat": self.config.NUM_TEAMS - 1,
-            "bye_week_4_count": self.total_roster_size_per_team, "bye_week_5_count": self.total_roster_size_per_team,
-            "bye_week_6_count": self.total_roster_size_per_team, "bye_week_7_count": self.total_roster_size_per_team,
-            "bye_week_8_count": self.total_roster_size_per_team, "bye_week_9_count": self.total_roster_size_per_team,
-            "bye_week_10_count": self.total_roster_size_per_team, "bye_week_11_count": self.total_roster_size_per_team,
-            "bye_week_12_count": self.total_roster_size_per_team, "bye_week_13_count": self.total_roster_size_per_team,
-            "bye_week_14_count": self.total_roster_size_per_team,
-            # Stacking Features
-            "current_stack_count": 10.0,  # Max possible stacks (conservative estimate: 2 QBs * 5 WR/TE)
-            "stack_target_available_flag": 1.0,  # Binary flag
-        }
-        min_values = {k: 0.0 for k in max_values}
-        min_values.update({
-            "best_available_qb_vorp": -50.0,
-            "best_available_rb_vorp": -50.0,
-            "best_available_wr_vorp": -50.0,
-            "best_available_te_vorp": -50.0,
-        })
+        state_values_map = self._compute_global_state_features()
+        perspective_team_id = (
+            self.draft_order[self.current_pick_idx] 
+            if self.current_pick_idx < len(self.draft_order) 
+            else self.agent_team_id
+        )
         
-        normalized_state = []
-        for i, feature_name in enumerate(self.config.ENABLED_STATE_FEATURES):
-            val = state_array[i]
-            max_val = max_values.get(feature_name)
-            min_val = min_values.get(feature_name)
+        # Build map for the normalizer
+        full_state_map = self._build_state_map_for_team(perspective_team_id, state_values_map)
+        return self._state_normalizer.normalize(full_state_map)
 
-            if max_val is None or min_val is None:
-                # Fallback for features not explicitly in max_values, treat as boolean/flag if reasonable
-                if 'flag' in feature_name:
-                    max_val = 1.0
-                    min_val = 0.0
-                else: # Generic fallback for unknown numerics
-                    print(f"Warning: No explicit min/max for '{feature_name}'. Using 0-1 range if value is 0 or 1, else using value as is.")
-                    if val == 0.0 or val == 1.0: # Assume it's a flag if its value is 0 or 1 and no specific range
-                        max_val = 1.0
-                        min_val = 0.0
-                    else: # If it's a number outside 0/1 and no range, return as is (no norm)
-                        normalized_state.append(val)
-                        continue # Skip to next feature
+    def _build_state_map_for_team(self, team_id: int, global_features: Dict[str, float]) -> Dict[str, float]:
+        """
+        Combines global features with team-specific features into a single map.
+        """
+        state_values_map = global_features.copy()
+        enabled = set(self.config.training.ENABLED_STATE_FEATURES)
 
-            if max_val == min_val:
-                normalized_state.append(0.0);
-            else:
-                normalized_state.append((val - min_val) / (max_val - min_val))
-        return np.array(normalized_state, dtype=np.float32)
+        # Team-specific simple counts
+        roster_counts = self.teams_rosters[team_id]
+        if 'current_roster_qb_count' in enabled: state_values_map['current_roster_qb_count'] = float(roster_counts['QB'])
+        if 'current_roster_rb_count' in enabled: state_values_map['current_roster_rb_count'] = float(roster_counts['RB'])
+        if 'current_roster_wr_count' in enabled: state_values_map['current_roster_wr_count'] = float(roster_counts['WR'])
+        if 'current_roster_te_count' in enabled: state_values_map['current_roster_te_count'] = float(roster_counts['TE'])
 
-    def _normalize_z_score(self, state_array: np.ndarray) -> np.ndarray:
-        # Placeholder for z-score. For proper implementation, you'd collect
-        # mean and std deviation over many episodes.
-        mean = np.zeros_like(state_array)
-        std = np.ones_like(state_array)
-        # Avoid division by zero
-        std[std == 0] = 1.0 # If std is 0, set to 1 to avoid error. Will result in 0 after subtraction.
-        return (state_array - mean) / std
+        # Available roster slots
+        if 'available_roster_slots_qb' in enabled:
+            state_values_map['available_roster_slots_qb'] = float(self.config.draft.ROSTER_STRUCTURE['QB'] + self.config.draft.BENCH_MAXES['QB'] - roster_counts['QB'])
+        if 'available_roster_slots_rb' in enabled:
+            state_values_map['available_roster_slots_rb'] = float(self.config.draft.ROSTER_STRUCTURE['RB'] + self.config.draft.BENCH_MAXES['RB'] - roster_counts['RB'])
+        if 'available_roster_slots_wr' in enabled:
+            state_values_map['available_roster_slots_wr'] = float(self.config.draft.ROSTER_STRUCTURE['WR'] + self.config.draft.BENCH_MAXES['WR'] - roster_counts['WR'])
+        if 'available_roster_slots_te' in enabled:
+            state_values_map['available_roster_slots_te'] = float(self.config.draft.ROSTER_STRUCTURE['TE'] + self.config.draft.BENCH_MAXES['TE'] - roster_counts['TE'])
+        if 'available_roster_slots_flex' in enabled:
+            state_values_map['available_roster_slots_flex'] = float(self.config.draft.ROSTER_STRUCTURE['FLEX'] - roster_counts['FLEX'])
+
+        if 'current_pick_number' in enabled: state_values_map['current_pick_number'] = float(self.current_pick_number)
+        if 'agent_start_position' in enabled: state_values_map['agent_start_position'] = float(self.agent_team_id)
+
+        # Imminent threats from perspectives of next teams
+        next_opp_id = self._get_next_opponent_team_id_for(team_id)
+        if 'next_pick_opponent_qb_count' in enabled: state_values_map['next_pick_opponent_qb_count'] = float(self._get_opponent_roster_count(next_opp_id, 'QB'))
+        if 'next_pick_opponent_rb_count' in enabled: state_values_map['next_pick_opponent_rb_count'] = float(self._get_opponent_roster_count(next_opp_id, 'RB'))
+        if 'next_pick_opponent_wr_count' in enabled: state_values_map['next_pick_opponent_wr_count'] = float(self._get_opponent_roster_count(next_opp_id, 'WR'))
+        if 'next_pick_opponent_te_count' in enabled: state_values_map['next_pick_opponent_te_count'] = float(self._get_opponent_roster_count(next_opp_id, 'TE'))
+
+        # Team specific conflicts
+        if 'best_qb_bye_week_conflict' in enabled: state_values_map['best_qb_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'QB'))
+        if 'best_rb_bye_week_conflict' in enabled: state_values_map['best_rb_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'RB'))
+        if 'best_wr_bye_week_conflict' in enabled: state_values_map['best_wr_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'WR'))
+        if 'best_te_bye_week_conflict' in enabled: state_values_map['best_te_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'TE'))
+
+        # TIER 2 features
+        if 'qb_imminent_threat' in enabled: state_values_map['qb_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'QB'))
+        if 'rb_imminent_threat' in enabled: state_values_map['rb_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'RB'))
+        if 'wr_imminent_threat' in enabled: state_values_map['wr_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'WR'))
+        if 'te_imminent_threat' in enabled: state_values_map['te_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'TE'))
+
+        # Bye week vector for team
+        team_bye_vec = self._get_bye_week_vector_for_team(team_id)
+        for i in range(4, 15):
+            fname = f"bye_week_{i}_count"
+            if fname in enabled: state_values_map[fname] = float(team_bye_vec[i-4])
+
+        # Stacking features
+        if 'current_stack_count' in enabled:
+            state_values_map['current_stack_count'] = float(self._get_current_stack_count())
+        if 'stack_target_available_flag' in enabled:
+            state_values_map['stack_target_available_flag'] = float(self._get_stack_target_available_flag())
+
+        return state_values_map
 
     # Original _get_best_available_player_by_pos is now generalized by _get_kth_best_available_player_by_pos
     def _get_best_available_player_by_pos(self, position: str) -> Optional[Player]:
@@ -1592,8 +1278,8 @@ class FantasyFootballDraftEnv(gym.Env):
         strategy = self._opponent_strategies.get(team_id)
         if not strategy:
             strategy = create_opponent_strategy(
-                logic=self.config.DEFAULT_OPPONENT_STRATEGY["logic"],
-                config=self.config.DEFAULT_OPPONENT_STRATEGY,
+                logic=self.config.opponent.DEFAULT_OPPONENT_STRATEGY["logic"],
+                config=self.config.opponent.DEFAULT_OPPONENT_STRATEGY,
                 opponent_models=self.opponent_models,
                 team_id=team_id,
                 action_to_position=self.action_to_position,
@@ -1627,8 +1313,8 @@ class FantasyFootballDraftEnv(gym.Env):
             available_player_ids=self.available_players_ids,
             player_map=self.player_map,
             roster_counts=self.teams_rosters[team_id],
-            roster_structure=self.config.ROSTER_STRUCTURE,
-            bench_maxes=self.config.BENCH_MAXES,
+            roster_structure=self.config.draft.ROSTER_STRUCTURE,
+            bench_maxes=self.config.draft.BENCH_MAXES,
             can_draft_position_fn=can_draft,
             try_select_player_fn=try_select,
             build_state_fn=build_state,
@@ -1718,8 +1404,8 @@ class FantasyFootballDraftEnv(gym.Env):
         Sets the current team on the clock to the specified team_id for the *next* pick only.
         This is primarily for manual override from the frontend.
         """
-        if team_id not in range(1, self.config.NUM_TEAMS + 1):
-            raise ValueError(f"Invalid team ID: {team_id}. Must be between 1 and {self.config.NUM_TEAMS}.")
+        if team_id not in range(1, self.config.draft.NUM_TEAMS + 1):
+            raise ValueError(f"Invalid team ID: {team_id}. Must be between 1 and {self.config.draft.NUM_TEAMS}.")
         
         # For UI flexibility, allow setting an override even if no scheduled picks remain.
         # Manual drafting can continue post-schedule to fill rosters.
@@ -1831,7 +1517,7 @@ class FantasyFootballDraftEnv(gym.Env):
         If ignore_player_ids is provided, those players will be treated as unavailable
         for the purpose of computing this suggestion only (no state mutation).
         """
-        if not (1 <= team_id <= self.config.NUM_TEAMS):
+        if not (1 <= team_id <= self.config.draft.NUM_TEAMS):
             return {"error": f"Invalid team id {team_id}"}
         if not self.agent_model:
             return {"error": "AI model not loaded."}
@@ -1867,7 +1553,7 @@ class FantasyFootballDraftEnv(gym.Env):
         if not self.agent_model:
             return {"error": "AI model not loaded."}
         suggestions: Dict[int, Dict[str, float]] = {}
-        for team_id in range(1, self.config.NUM_TEAMS + 1):
+        for team_id in range(1, self.config.draft.NUM_TEAMS + 1):
             suggestions[team_id] = self.get_ai_suggestion_for_team(team_id)
         return suggestions
 
@@ -1902,17 +1588,14 @@ class FantasyFootballDraftEnv(gym.Env):
         agent_roster_data = self.teams_rosters[self.agent_team_id]
         print(f"Agent's Roster (Team {self.agent_team_id}):")
         roster_summary = []
-        for pos_type, count_needed in self.config.ROSTER_STRUCTURE.items():
+        for pos_type, count_needed in self.config.draft.ROSTER_STRUCTURE.items():
             if pos_type == 'FLEX':
                 roster_summary.append(f"{pos_type}: {agent_roster_data['FLEX']}/{count_needed}")
             else:
-                bench_max = self.config.BENCH_MAXES.get(pos_type, 0)
+                bench_max = self.config.draft.BENCH_MAXES.get(pos_type, 0)
                 current_total = agent_roster_data[pos_type]
                 roster_summary.append(f"{pos_type}: {current_total}/{count_needed + bench_max}")
         print("  " + " | ".join(roster_summary))
-        
-        # Optionally, list players
-        # print("  Players:", [p.name for p in agent_roster_data['PLAYERS']])
 
         # Display top available players by position (optional)
         print("\nTop Available Players (by Projected Points):")
@@ -1978,7 +1661,7 @@ if __name__ == '__main__':
                 print(f"Opponent score std dev penalty applied: {info['opponent_std_dev_penalty']:.2f}")
             
             # Print final rosters for all teams
-            for team_id in range(1, config.NUM_TEAMS + 1):
+            for team_id in range(1, config.draft.NUM_TEAMS + 1):
                 roster_data = env.teams_rosters[team_id]
                 team_score = sum(p.projected_points for p in roster_data['PLAYERS'])
                 print(f"\nTeam {team_id} Roster (Total Raw Points: {team_score:.2f}):")

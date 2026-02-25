@@ -44,7 +44,6 @@ def _optimal_lineup_points(pos_points_for_week: Dict[str, List[float]]) -> float
         'TE': list(pos_points_for_week.get('TE', [])),
     }
 
-    selected_ids = set()
     total_points = 0.0
 
     # Select required starters first
@@ -253,7 +252,6 @@ def generate_and_resolve_playoffs(precomputed_pos_points: Dict[str, List[Dict[st
     cols = ['Week', 'Matchup', 'Away Manager(s)', 'Away Score', 'Home Score', 'Home Manager(s)']
     playoff_rows = []
 
-    import math as _math
     if len(seeds) <= 1:
         return pd.DataFrame(columns=cols)
     next_pow2 = 1 << (len(seeds) - 1).bit_length()
@@ -315,11 +313,11 @@ def generate_and_resolve_playoffs(precomputed_pos_points: Dict[str, List[Dict[st
     return pd.DataFrame(columns=cols)
 
 
-def _pad(s: str, max_length: int, pad_char='0', shift_neg=True):
+def pad_string_length(s: str, max_length: int, pad_char='0', shift_neg=True):
     return '-' + (max_length - len(s)) * pad_char + s[1:] if shift_neg and s[0] == '-' else (max_length - len(s)) * pad_char + s
 
 
-def _tree_string(tree_array: list, lines=True):
+def format_playoff_tree_string(tree_array: list, lines=True):
     n_elements = len(tree_array)
     n_layers = int(np.floor(np.log2(n_elements)) + 1)
 
@@ -353,7 +351,7 @@ def _tree_string(tree_array: list, lines=True):
         tree_str += start_spaces
 
         for e in range(2 ** (layer - 1)):
-            tree_str += _pad(str(tree_array[tree_idx]), max_length, pad_char=' ')
+            tree_str += pad_string_length(str(tree_array[tree_idx]), max_length, pad_char=' ')
             tree_idx += 1
             if n_elements <= tree_idx:
                 break
@@ -374,7 +372,7 @@ def _get_playoffs_tree(playoffs: pd.DataFrame):
     tree_list.append(winner)
     tree_list.reverse()
     tree_list = [str(v) for v in tree_list]
-    return _tree_string(tree_list), winner
+    return format_playoff_tree_string(tree_list), winner
 
 
 def _precompute_manager_weekly_points(weekly_projections: Dict[int, dict], rosters: Dict[str, List[int]], max_week: int) -> Dict[str, List[Dict[str, List[float]]]]:
@@ -441,7 +439,6 @@ def simulate_season_fast(weekly_projections: Dict[int, dict], matchups: pd.DataF
     """
     # Determine how many weeks to precompute (regular max + playoff rounds)
     regular_max_week = int(matchups['Week'].max()) if not matchups.empty else 14
-    import math as _math
     playoff_rounds = max(1, int(np.ceil(np.log2(max(2, int(num_playoff_teams))))))
     max_week_needed = min(18, regular_max_week + playoff_rounds + 1)
 

@@ -24,11 +24,11 @@ This project is more than just a draft simulator; it's a powerful tool for aspir
 
 ## 🚀 Getting Started
 
-The easiest way to get started is by using Docker.
+The easiest way to get started is by using Docker Compose.
 
 ### Prerequisites
 
-  * [Docker](https://www.docker.com/get-started) installed on your system.
+  * [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your system.
 
 ### Installation & Setup
 
@@ -39,34 +39,28 @@ The easiest way to get started is by using Docker.
     cd draft-buddy
     ```
 
-2.  **Build the Docker image**:
-    This command builds the Docker image and installs all necessary Python and system dependencies.
+2.  **Start the application**:
+    This command builds the Docker image and starts the Flask backend.
 
     ```bash
-    ./build.sh
-    ```
-
-3.  **Run the container**:
-    This command starts a container, mounts your local project directory inside, and drops you into a shell. Any changes you make locally will be immediately reflected in the container.
-
-    ```bash
-    ./run.sh
+    docker-compose up api
     ```
 
 -----
 
 ## 🕹️ Running the Web App (UI)
 
-Once inside the Docker container, you can start the Flask web server.
+If you prefer to run from the shell (inside Docker or a virtual environment):
 
 1.  **Start the server**:
 
     ```bash
-    python app.py
+    export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+    python api/app.py
     ```
 
 2.  **Open the web UI**:
-    Open your browser and navigate to `http://localhost:8000`.
+    Open your browser and navigate to `http://localhost:5001`.
 
 The UI provides real-time controls and visualizations:
 
@@ -86,13 +80,13 @@ The UI provides real-time controls and visualizations:
 The core of Draft Buddy is the reinforcement learning agent trained with the REINFORCE algorithm.
 
 1.  **Prepare your configuration**:
-    Open `config.py` and adjust parameters such as `TOTAL_EPISODES`, `LEARNING_RATE`, and `ENABLED_STATE_FEATURES`. Pay special attention to the `ENABLE_SEASON_SIM_REWARD` flag if you want to train the agent to win a simulated season.
+    Open `src/draft_buddy/config.py` and adjust parameters such as `TOTAL_EPISODES`, `LEARNING_RATE`, and `ENABLED_STATE_FEATURES`.
 
 2.  **Start training**:
-    From the Docker shell, run the `train.py` script.
 
     ```bash
-    python train.py
+    export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+    python scripts/train.py
     ```
 
     Training progress, including rewards and losses, will be logged to the `logs/` directory.
@@ -104,7 +98,7 @@ The core of Draft Buddy is the reinforcement learning agent trained with the REI
     To visualize your training metrics without starting a new training run, use the `-p` flag.
 
     ```bash
-    python train.py -p
+    python scripts/train.py -p
     ```
 
     This generates an interactive HTML dashboard in the `logs/` directory.
@@ -121,7 +115,8 @@ Use a trained model to run multiple mock drafts and evaluate its performance.
 2.  **Run the simulation**:
 
     ```bash
-    python simulate.py
+    export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+    python scripts/simulate.py
     ```
 
     The script will output a detailed log of each pick and a summary of final team scores across all simulation runs, allowing you to see how your agent stacks up against its opponents.
@@ -132,18 +127,19 @@ Use a trained model to run multiple mock drafts and evaluate its performance.
 
 ```
 .
-├── app.py                      # Flask API and web UI backend
-├── config.py                   # Central configuration for all components
-├── data/                       # Stores player data, draft states, and matchup files
-├── data_driver.py              # Script to process raw data and generate a player pool
-├── fantasy_draft_env.py        # The core OpenAI Gym environment
-├── policy_network.py           # The neural network architecture for the agent
-├── reinforce_agent.py          # The REINFORCE training algorithm implementation
-├── requirements.txt            # Python dependencies
-├── run.sh, build.sh            # Scripts for managing the Docker environment
-├── simulate.py                 # Script to evaluate a trained model on mock drafts
-├── train.py                    # Script to train the reinforcement learning agent
-└── utils/                      # Helper scripts for data processing, simulation, etc.
+├── api/                        # Web API (Flask app)
+├── data/                       # Draft data, matchups, and states
+├── frontend/                   # UI static files
+├── scripts/                    # Training and simulation scripts
+├── src/draft_buddy/            # Main source package
+│   ├── config.py               # Central configuration
+│   ├── draft_env/              # Core RL environment
+│   ├── logic/                  # Draft services and strategies
+│   ├── models/                 # Neural networks and agents
+│   └── utils/                  # Utilities and data processors
+├── Dockerfile                  # Container definition
+├── docker-compose.yml          # Service orchestration
+└── pyproject.toml              # Modern Python packaging
 ```
 
 -----

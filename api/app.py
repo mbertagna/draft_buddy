@@ -6,18 +6,22 @@ import numpy as np
 import pandas as pd
 from flask import Flask, jsonify, make_response, request, send_from_directory, session
 
-from config import Config
-from data_utils import load_player_data
-from draft_service import DraftService
-from utils.season_simulation_fast import simulate_season_fast
+from draft_buddy.config import Config
+from draft_buddy.utils.data_utils import load_player_data
+from draft_buddy.logic.draft_service import DraftService
+from draft_buddy.logic.season_simulation_service import SeasonSimulationService
+from draft_buddy.logic.draft_presentation_service import DraftPresentationService
+from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
+from draft_buddy.utils.season_simulation_fast import simulate_season_fast
 
-app = Flask(__name__, static_folder="frontend")
+app = Flask(__name__, static_folder="../frontend")
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
 
 config = Config()
-draft_service = DraftService(config)
+draft_service = DraftService(config, env_factory=FantasyFootballDraftEnv)
+season_simulation_service = SeasonSimulationService(config)
 
-all_players = load_player_data(config.PLAYER_DATA_CSV, config.MOCK_ADP_CONFIG)
+all_players = load_player_data(config.paths.PLAYER_DATA_CSV, config.draft.MOCK_ADP_CONFIG)
 player_map = {p.player_id: p for p in all_players}
 
 
@@ -64,74 +68,10 @@ def _get_draft_state():
     Returns
     -------
     dict
-        Draft state with keys: draft_order, current_pick_number,
-        current_team_picking, team_rosters, roster_counts,
-        team_projected_points, manual_draft_teams, roster_structure,
-        team_is_full, team_points_summary, num_teams, team_bye_weeks,
-        agent_start_position.
+        Draft state.
     """
     draft_env = _get_draft_env()
-    team_on_clock = (
-        draft_env._overridden_team_id
-        if draft_env._overridden_team_id is not None
-        else (
-            draft_env.draft_order[draft_env.current_pick_idx]
-            if draft_env.current_pick_idx < len(draft_env.draft_order)
-            else None
-        )
-    )
-
-    structured_rosters = {}
-    team_points_summary = {}
-    team_is_full = {}
-
-    for team_id, roster_data in draft_env.teams_rosters.items():
-        starters, bench, _ = draft_env._categorize_roster_by_slots(
-            roster_data['PLAYERS'],
-            draft_env.config.ROSTER_STRUCTURE,
-            draft_env.config.BENCH_MAXES
-        )
-
-        # Calculate starter points
-        starter_points = sum(p.projected_points for pos_list in starters.values() for p in pos_list)
-        
-        # Calculate bench points
-        bench_points = sum(p.projected_points for p in bench)
-
-        team_points_summary[team_id] = {
-            'starters_total': starter_points,
-            'bench_total': bench_points
-        }
-
-        structured_rosters[team_id] = {
-            'starters': {pos: [p.to_dict() for p in players] for pos, players in starters.items()},
-            'bench': [p.to_dict() for p in bench]
-        }
-
-        # Determine if team is full (starters + bench)
-        team_is_full[team_id] = (len(roster_data['PLAYERS']) >= draft_env.total_roster_size_per_team)
-
-    return {
-        'draft_order': draft_env.draft_order,
-        'current_pick_number': draft_env.current_pick_number,
-        'current_team_picking': team_on_clock,
-        'team_rosters': structured_rosters,
-        'roster_counts': {team_id: {pos: roster_data[pos] for pos in ['QB', 'RB', 'WR', 'TE', 'FLEX']} for team_id, roster_data in draft_env.teams_rosters.items()},
-        'team_projected_points': {team_id: sum(p.projected_points for p in roster_data['PLAYERS']) for team_id, roster_data in draft_env.teams_rosters.items()},
-        'manual_draft_teams': list(draft_env.manual_draft_teams),
-        'roster_structure': draft_env.config.ROSTER_STRUCTURE,
-        'team_is_full': team_is_full,
-        'team_points_summary': team_points_summary,
-        'num_teams': draft_env.config.NUM_TEAMS,
-        'team_bye_weeks': { 
-            team_id: {
-                week: {pos: int(count) for pos, count in zip(*np.unique([p.position for p in roster_data['PLAYERS'] if p.bye_week == week], return_counts=True))}
-                for week in set(p.bye_week for p in roster_data['PLAYERS'] if p.bye_week and not np.isnan(p.bye_week))
-            }
-            for team_id, roster_data in draft_env.teams_rosters.items()
-        },
-        'agent_start_position': draft_env.config.AGENT_START_POSITION,
-    }
+    return DraftPresentationService.get_ui_state(draft_env)
 
 # API route for backend status
 @app.route('/api/hello')
@@ -141,7 +81,7 @@ def hello_world():
 @app.route("/api/draft/new", methods=["POST"])
 def create_new_draft():
     """Archives the current draft and creates a fresh one for this session."""
-    draft_env = draft_service.create_new_draft(_get_session_id())
+    draft_service.create_new_draft(_get_session_id())
     return jsonify(_get_draft_state())
 
 @app.route("/api/draft/state")
@@ -159,7 +99,7 @@ def draft_pick():
 
     try:
         draft_env.draft_player(player_id)
-        draft_env.save_state(config.DRAFT_STATE_FILE)
+        draft_env.save_state(config.paths.DRAFT_STATE_FILE)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
@@ -170,7 +110,7 @@ def undo_pick():
     draft_env = _get_draft_env()
     try:
         draft_env.undo_last_pick()
-        draft_env.save_state(config.DRAFT_STATE_FILE)
+        draft_env.save_state(config.paths.DRAFT_STATE_FILE)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
@@ -185,7 +125,7 @@ def override_team():
         return jsonify({"error": "Team ID is required"}), 400
     try:
         draft_env.set_current_team_picking(team_id)
-        draft_env.save_state(config.DRAFT_STATE_FILE)
+        draft_env.save_state(config.paths.DRAFT_STATE_FILE)
     except ValueError as e:
         return jsonify({"warning": str(e), "info": "Override allowed for manual post-draft picks"}), 200
 
@@ -196,7 +136,7 @@ def simulate_pick():
     draft_env = _get_draft_env()
     try:
         draft_env.simulate_single_pick()
-        draft_env.save_state(config.DRAFT_STATE_FILE)
+        draft_env.save_state(config.paths.DRAFT_STATE_FILE)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
@@ -284,67 +224,13 @@ def export_csv():
 def simulate_season():
     """Runs a full season simulation using current in-memory draft state."""
     draft_env = _get_draft_env()
-
-    rosters = {}
-    for team_id, roster_data in draft_env.teams_rosters.items():
-        manager_name = config.TEAM_MANAGER_MAPPING.get(team_id)
-        if not manager_name:
-            continue
-        rosters[manager_name] = [p.player_id for p in roster_data['PLAYERS']]
-
-    # Load matchups: prefer size-specific file when available
-    default_matchups_filename = 'red_league_matchups_2025.csv'
-    size_specific_filename = f"red_league_matchups_2025_{config.NUM_TEAMS}_team.csv"
-    candidates = [
-        os.path.join(config.DATA_DIR, size_specific_filename),
-        os.path.join(config.DATA_DIR, default_matchups_filename),
-    ]
-    matchups_path = None
-    for p in candidates:
-        if os.path.exists(p):
-            matchups_path = p
-            break
-    if matchups_path is None:
-        matchups_path = os.path.join(config.DATA_DIR, default_matchups_filename)
     try:
-        matchups_df = pd.read_csv(matchups_path)
-    except FileNotFoundError:
-        return jsonify({'error': f'Matchups file not found at {matchups_path}'}), 400
-
-    # Week-to-week points. Prefer env's prepared projections if available
-    weekly_projections = getattr(draft_env, 'weekly_projections', None)
-    if weekly_projections is None:
-        weekly_projections = {p.player_id: {'pts': [p.projected_points] * 18, 'pos': p.position} for p in draft_env.all_players_data}
-
-    try:
-        num_playoff_teams = int(getattr(config, 'REGULAR_SEASON_REWARD', {}).get('NUM_PLAYOFF_TEAMS', 6))
-        regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season_fast(
-            weekly_projections, matchups_df, rosters, 2025, '', False, num_playoff_teams
-        )
+        results = season_simulation_service.simulate_season(draft_env)
+        return jsonify(results)
+    except FileNotFoundError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': f'Season simulation failed: {e}'}), 500
-
-    # Convert playoff results to structured JSON for nicer UI
-    playoff_results = []
-    try:
-        for _, row in playoff_results_df.iterrows():
-            playoff_results.append({
-                'week': int(row['Week']),
-                'matchup': int(row['Matchup']),
-                'away_manager': None if pd.isna(row['Away Manager(s)']) else str(row['Away Manager(s)']),
-                'away_score': None if pd.isna(row['Away Score']) else float(row['Away Score']),
-                'home_manager': None if pd.isna(row['Home Manager(s)']) else str(row['Home Manager(s)']),
-                'home_score': None if pd.isna(row['Home Score']) else float(row['Home Score'])
-            })
-    except Exception:
-        playoff_results = []
-
-    return jsonify({
-        'regular_season_records': regular_records,
-        'playoff_tree': playoffs_tree,
-        'playoff_results': playoff_results,
-        'winner': winner
-    })
 
 @app.route("/api/players")
 def get_players():
@@ -438,4 +324,5 @@ def serve(path):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 5001))
+    app.run(debug=True, host="0.0.0.0", port=port)

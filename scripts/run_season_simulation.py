@@ -4,10 +4,10 @@ import pandas as pd
 import tqdm
 import numpy as np
 
-from config import Config
-from fantasy_draft_env import FantasyFootballDraftEnv
-from utils import player_data_utils
-from utils.season_simulation_fast import simulate_season_fast
+from draft_buddy.config import Config
+from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
+from draft_buddy.utils import player_data_utils
+from draft_buddy.utils.season_simulation_fast import simulate_season_fast
 
 def run_full_season_simulation(config: Config, num_simulations: int):
     """
@@ -16,36 +16,19 @@ def run_full_season_simulation(config: Config, num_simulations: int):
     print(f"--- Starting {num_simulations} Full Season Simulations ---")
 
     # --- Data Setup ---
-    # This part can be further refactored to be more aligned with the new config-driven approach
     season = 2024
     ps_start_year = 2021
-    team_abbreviations = {
-        "Detroit Lions": "DET", "Los Angeles Chargers": "LAC", "Philadelphia Eagles": "PHI",
-        "Tennessee Titans": "TEN", "Kansas City Chiefs": "KC", "Los Angeles Rams": "LA",
-        "Miami Dolphins": "MIA", "Minnesota Vikings": "MIN", "Chicago Bears": "CHI",
-        "Dallas Cowboys": "DAL", "Pittsburgh Steelers": "PIT", "San Francisco 49ers": "SF",
-        "Cleveland Browns": "CLE", "Green Bay Packers": "GB", "Las Vegas Raiders": "LV",
-        "Seattle Seahawks": "SEA", "Arizona Cardinals": "ARI", "Carolina Panthers": "CAR",
-        "New York Giants": "NYG", "Tampa Bay Buccaneers": "TB", "Atlanta Falcons": "ATL",
-        "Buffalo Bills": "BUF", "Cincinnati Bengals": "CIN", "Jacksonville Jaguars": "JAX",
-        "New Orleans Saints": "NO", "New York Jets": "NYJ", "Baltimore Ravens": "BAL",
-        "Denver Broncos": "DEN", "Houston Texans": "HOU", "Indianapolis Colts": "IND",
-        "New England Patriots": "NE", "Washington Commanders": "WAS"
-    }
-    team_bye_weeks_2024 = {
-        5: ["Detroit Lions", "Los Angeles Chargers", "Philadelphia Eagles", "Tennessee Titans"],
-        6: ["Kansas City Chiefs", "Los Angeles Rams", "Miami Dolphins", "Minnesota Vikings"],
-        7: ["Chicago Bears", "Dallas Cowboys"],
-        9: ["Pittsburgh Steelers", "San Francisco 49ers"],
-        10: ["Cleveland Browns", "Green Bay Packers", "Las Vegas Raiders", "Seattle Seahawks"],
-        11: ["Arizona Cardinals", "Carolina Panthers", "New York Giants", "Tampa Bay Buccaneers"],
-        12: ["Atlanta Falcons", "Buffalo Bills", "Cincinnati Bengals", "Jacksonville Jaguars", "New Orleans Saints", "New York Jets"],
-        14: ["Baltimore Ravens", "Denver Broncos", "Houston Texans", "Indianapolis Colts", "New England Patriots", "Washington Commanders"]
-    }
+    
+    # Use centralized configuration data
+    team_abbreviations = config.draft.TEAM_ABBREVIATIONS
+    team_bye_weeks_2024 = config.draft.TEAM_BYE_WEEKS_2024
+    
     bye_weeks_2024 = {}
     for week, team_list in team_bye_weeks_2024.items():
         for team in team_list:
-            bye_weeks_2024[team_abbreviations[team]] = week
+            abbr = team_abbreviations.get(team)
+            if abbr:
+                bye_weeks_2024[abbr] = week
 
     # --- Get Player Data ---
     print("Fetching player data for simulation...")
@@ -58,7 +41,7 @@ def run_full_season_simulation(config: Config, num_simulations: int):
     print("Loading matchup data...")
     # Prefer size-specific matchup file if available
     default_matchups_filename = 'red_league_matchups_2025.csv'
-    size_specific_filename = f"red_league_matchups_2025_{config.NUM_TEAMS}_team.csv"
+    size_specific_filename = f"red_league_matchups_2025_{config.draft.NUM_TEAMS}_team.csv"
     candidates = [f"data/{size_specific_filename}", f"data/{default_matchups_filename}"]
     matchups_path = None
     for p in candidates:
@@ -76,7 +59,7 @@ def run_full_season_simulation(config: Config, num_simulations: int):
         return
 
     # Use manager mapping from config for flexible team sizes
-    draft_order_dict = config.TEAM_MANAGER_MAPPING
+    draft_order_dict = config.draft.TEAM_MANAGER_MAPPING
 
     # --- Simulation Loop ---
     win_dict = {name: 0 for name in draft_order_dict.values()}

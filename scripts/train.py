@@ -1,14 +1,12 @@
-import torch
 import os
 import matplotlib.pyplot as plt
-import numpy as np
 import datetime
 import argparse
 
-from config import Config
-from fantasy_draft_env import FantasyFootballDraftEnv
-from reinforce_agent import ReinforceAgent
-from utils.run_utils import setup_run_directories, save_run_metadata, find_latest_checkpoint, get_run_name
+from draft_buddy.config import Config
+from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
+from draft_buddy.models.reinforce_agent import ReinforceAgent
+from draft_buddy.utils.run_utils import setup_run_directories, save_run_metadata, find_latest_checkpoint, get_run_name
 
 from bokeh.plotting import figure, output_file, save
 from bokeh.models import HoverTool
@@ -158,13 +156,13 @@ def main():
         config = Config()
         # Aggregate across all versions under the run's logs root
         run_name = get_run_name(config)
-        run_logs_root = os.path.join(config.LOGS_DIR, run_name)
+        run_logs_root = os.path.join(config.paths.LOGS_DIR, run_name)
         version_dirs = find_version_dirs_with_csvs(run_logs_root)
         if not version_dirs:
             # fallback to legacy behavior of searching entire logs root
-            latest_logs_dir = find_latest_logs_dir_with_csvs(config.LOGS_DIR)
+            latest_logs_dir = find_latest_logs_dir_with_csvs(config.paths.LOGS_DIR)
             if not latest_logs_dir:
-                print(f"No logs directory with both CSVs found under '{config.LOGS_DIR}'.")
+                print(f"No logs directory with both CSVs found under '{config.paths.LOGS_DIR}'.")
                 return
             rewards_csv = os.path.join(latest_logs_dir, "all_episode_rewards.csv")
             losses_csv = os.path.join(latest_logs_dir, "all_policy_losses.csv")
@@ -221,7 +219,7 @@ def main():
 
     # 5. Load Checkpoint if Resuming
     start_episode = 1
-    if config.RESUME_TRAINING:
+    if config.training.RESUME_TRAINING:
         latest_checkpoint = find_latest_checkpoint(config)
         if latest_checkpoint:
             print(f"\nResuming training from checkpoint: {latest_checkpoint}")

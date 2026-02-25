@@ -7,8 +7,8 @@ import re
 def get_run_name(config):
     """Generates a descriptive name for the training run based on config."""
     if getattr(config, 'RANDOMIZE_AGENT_START_POSITION', False):
-        return f"{config.NUM_TEAMS}_teams_random_start"
-    return f"{config.NUM_TEAMS}_teams_pos_{config.AGENT_START_POSITION}"
+        return f"{config.draft.NUM_TEAMS}_teams_random_start"
+    return f"{config.draft.NUM_TEAMS}_teams_pos_{config.draft.AGENT_START_POSITION}"
 
 def get_next_version(run_dir):
     """Finds the next version number (e.g., v1, v2) for a given run."""
@@ -25,12 +25,12 @@ def get_next_version(run_dir):
 def setup_run_directories(config):
     """Creates the directory structure for a new training run or version."""
     run_name = get_run_name(config)
-    base_run_dir = os.path.join(config.MODELS_DIR, run_name)
+    base_run_dir = os.path.join(config.paths.MODELS_DIR, run_name)
     
     version = get_next_version(base_run_dir)
     
     run_version_dir = os.path.join(base_run_dir, version)
-    logs_dir = os.path.join(config.LOGS_DIR, run_name, version)
+    logs_dir = os.path.join(config.paths.LOGS_DIR, run_name, version)
     
     os.makedirs(run_version_dir, exist_ok=True)
     os.makedirs(logs_dir, exist_ok=True)
@@ -43,7 +43,7 @@ def save_run_metadata(config, run_name, version, run_version_dir):
         'run_name': run_name,
         'version': version,
         'timestamp': datetime.now().isoformat(),
-        'config': {k: v for k, v in config.__class__.__dict__.items() if not k.startswith('__') and isinstance(v, (int, float, str, bool, list, dict))}
+        'config': config.to_dict() if hasattr(config, 'to_dict') else {k: v for k, v in config.__class__.__dict__.items() if not k.startswith('__') and isinstance(v, (int, float, str, bool, list, dict))}
     }
     
     metadata_path = os.path.join(run_version_dir, 'metadata.json')
@@ -59,7 +59,7 @@ def find_latest_checkpoint(config):
     found in the filename, which is a more reliable approach than using file modification time.
     """
     run_name = get_run_name(config)
-    base_run_dir = os.path.join(config.MODELS_DIR, run_name)
+    base_run_dir = os.path.join(config.paths.MODELS_DIR, run_name)
     
     if not os.path.exists(base_run_dir):
         return None

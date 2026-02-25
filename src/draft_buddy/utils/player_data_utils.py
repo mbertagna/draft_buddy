@@ -9,7 +9,7 @@ from typing import Dict, Tuple
 
 import pandas as pd
 
-from utils.data_processor import FantasyDataProcessor
+from draft_buddy.utils.data_processor import FantasyDataProcessor
 
 
 def _convert_to_simulation_format(weekly_projections: Dict) -> Dict:
