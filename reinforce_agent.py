@@ -1,42 +1,56 @@
-import torch
-import torch.optim as optim
-import numpy as np
-from typing import List, Tuple
 import os
 import signal
 
+import numpy as np
+import torch
+import torch.optim as optim
+from typing import List, Optional, Tuple
+
+from checkpoint_manager import CheckpointManager
+from config import Config
+from fantasy_draft_env import FantasyFootballDraftEnv
+from metrics_logger import MetricsLogger
 from policy_network import PolicyNetwork
-from fantasy_draft_env import FantasyFootballDraftEnv # Import our environment
-from config import Config # Import our configuration
+
 
 class ReinforceAgent:
     """
     Implements the REINFORCE (Monte Carlo Policy Gradient) algorithm.
     """
-    def __init__(self, env: FantasyFootballDraftEnv, config: Config):
+    def __init__(
+        self,
+        env: FantasyFootballDraftEnv,
+        config: Config,
+        metrics_logger: Optional[MetricsLogger] = None,
+        checkpoint_manager: Optional[CheckpointManager] = None,
+    ):
         """
         Initializes the REINFORCE Agent.
 
-        Args:
-            env (FantasyFootballDraftEnv): The OpenAI Gym environment.
-            config (Config): The project configuration object.
+        Parameters
+        ----------
+        env : FantasyFootballDraftEnv
+            The OpenAI Gym environment.
+        config : Config
+            The project configuration object.
+        metrics_logger : MetricsLogger, optional
+            Handles CSV logging. If None, created from logs_dir when train() is called.
+        checkpoint_manager : CheckpointManager, optional
+            Handles model checkpoint I/O. If None, created from policy/value/optimizer.
         """
         self.env = env
         self.config = config
 
-        # Determine input and output dimensions for the policy network
         input_dim = len(config.ENABLED_STATE_FEATURES)
-        output_dim = env.action_space.n # Number of discrete actions (QB, RB, WR, TE)
+        output_dim = env.action_space.n
 
-        # Initialize the Policy Network (actor) and Value Network (baseline)
         self.policy_network = PolicyNetwork(input_dim, output_dim, config.HIDDEN_DIM)
         self.value_network = torch.nn.Sequential(
             torch.nn.Linear(input_dim, config.HIDDEN_DIM),
             torch.nn.ReLU(),
             torch.nn.Linear(config.HIDDEN_DIM, 1),
         )
-        # Initialize the optimizer with separate LRs for policy and value
-        value_lr_multiplier = getattr(self.config, 'VALUE_LR_MULTIPLIER', 2.0)
+        value_lr_multiplier = getattr(self.config, "VALUE_LR_MULTIPLIER", 2.0)
         self.optimizer = optim.Adam(
             [
                 {"params": self.policy_network.parameters(), "lr": config.LEARNING_RATE},
@@ -44,9 +58,13 @@ class ReinforceAgent:
             ]
         )
 
-        # Store rewards and log probabilities for each episode
+        self._metrics_logger = metrics_logger
+        self._checkpoint_manager = checkpoint_manager or CheckpointManager(
+            self.policy_network, self.value_network, self.optimizer
+        )
+
         self.episode_log_probs: List[torch.Tensor] = []
-        self.episode_rewards: List[float] = [] # Raw rewards received at each step
+        self.episode_rewards: List[float] = []
         self.episode_entropies: List[torch.Tensor] = []
         self.episode_states: List[torch.Tensor] = []
 
@@ -78,16 +96,7 @@ class ReinforceAgent:
         all_policy_losses = []
         all_episode_actual_points = []
 
-        # Prepare log file paths
-        rewards_data_path = os.path.join(logs_dir, 'all_episode_rewards.csv') if logs_dir else None
-        losses_data_path = os.path.join(logs_dir, 'all_policy_losses.csv') if logs_dir else None
-        if logs_dir:
-            os.makedirs(logs_dir, exist_ok=True)
-            # Ensure files exist so external tools can see them immediately
-            for path in [rewards_data_path, losses_data_path]:
-                if path and not os.path.exists(path):
-                    with open(path, 'w') as _f:
-                        _f.write("")
+        metrics_logger = self._metrics_logger or MetricsLogger(logs_dir)
 
         # Saving interval (episodes)
         interval = getattr(self.config, 'LOG_SAVE_INTERVAL_EPISODES', 128)
@@ -277,11 +286,10 @@ class ReinforceAgent:
                         f"EV={ev_for_log if not np.isnan(ev_for_log) else float('nan'):.3f}"
                     )
 
-                # If a stop was requested (e.g., Ctrl+C), finish after saving this episode
-                if stop_requested['value']:
+                if stop_requested["value"]:
                     try:
-                        self._write_list_to_csv_atomic(rewards_data_path, all_episode_rewards)
-                        self._write_list_to_csv_atomic(losses_data_path, all_policy_losses)
+                        metrics_logger.write_rewards(all_episode_rewards)
+                        metrics_logger.write_losses(all_policy_losses)
                     except Exception:
                         pass
                     try:
@@ -296,15 +304,11 @@ class ReinforceAgent:
             print("\nKeyboardInterrupt detected. Saving progress...")
         finally:
             try:
-                # Always snapshot logs atomically at the end
-                if rewards_data_path:
-                    self._write_list_to_csv_atomic(rewards_data_path, all_episode_rewards)
-                if losses_data_path:
-                    self._write_list_to_csv_atomic(losses_data_path, all_policy_losses)
+                metrics_logger.write_rewards(all_episode_rewards)
+                metrics_logger.write_losses(all_policy_losses)
             except Exception:
                 pass
             try:
-                # Save a final checkpoint with current progress
                 current_episode = len(all_episode_rewards) if all_episode_rewards else start_episode
                 self.save_checkpoint(run_version_dir, logs_dir, current_episode, all_episode_rewards, all_policy_losses)
             except Exception:
@@ -355,48 +359,16 @@ class ReinforceAgent:
         print(f"Optimizer state loaded from {filepath}")
 
     def save_checkpoint(self, run_version_dir, logs_dir, episode, all_episode_rewards, all_policy_losses):
-        """Saves training artifacts and ensures training data are persisted atomically.
-
-        Artifacts saved:
-        - Policy network (model) to checkpoint_episode_{episode}.pth (unchanged for inference users)
-        - Value network to value_episode_{episode}.pth
-        - Optimizer to optimizer_episode_{episode}.pt
-        - Rewards/Losses CSVs written atomically
-        """
+        """Saves training artifacts and ensures training data are persisted atomically."""
         if run_version_dir:
-            checkpoint_path = os.path.join(run_version_dir, f'checkpoint_episode_{episode}.pth')
-            self.save_model(checkpoint_path)
-            # Save additional training states for smooth resume
-            value_path = os.path.join(run_version_dir, f'value_episode_{episode}.pth')
-            self.save_value_network(value_path)
-            optimizer_path = os.path.join(run_version_dir, f'optimizer_episode_{episode}.pt')
-            self.save_optimizer(optimizer_path)
+            self._checkpoint_manager.save_checkpoint(run_version_dir, episode)
+            policy_path = os.path.join(run_version_dir, f"checkpoint_episode_{episode}.pth")
+            print(f"Model saved to {policy_path}")
 
         if logs_dir:
-            os.makedirs(logs_dir, exist_ok=True)
-            rewards_data_path = os.path.join(logs_dir, 'all_episode_rewards.csv')
-            losses_data_path = os.path.join(logs_dir, 'all_policy_losses.csv')
-            # Rewrite full CSVs atomically to avoid duplication and partial writes
-            self._write_list_to_csv_atomic(rewards_data_path, all_episode_rewards)
-            self._write_list_to_csv_atomic(losses_data_path, all_policy_losses)
-            print(f"Raw training data saved to {rewards_data_path} and {losses_data_path}")
-
-    def _write_list_to_csv_atomic(self, path: str, values: List[float]):
-        """Writes an entire list of floats to a CSV file atomically."""
-        if not path:
-            return
-        tmp_path = f"{path}.tmp"
-        try:
-            with open(tmp_path, 'w') as f:
-                for v in values:
-                    f.write(f"{v}\n")
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(tmp_path, path)
-        finally:
-            # Best-effort cleanup
-            try:
-                if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
-            except Exception:
-                pass
+            metrics = self._metrics_logger or MetricsLogger(logs_dir)
+            metrics.write_rewards(all_episode_rewards)
+            metrics.write_losses(all_policy_losses)
+            rp, lp = metrics.get_rewards_path(), metrics.get_losses_path()
+            if rp and lp:
+                print(f"Raw training data saved to {rp} and {lp}")

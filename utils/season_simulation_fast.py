@@ -377,7 +377,7 @@ def _get_playoffs_tree(playoffs: pd.DataFrame):
     return _tree_string(tree_list), winner
 
 
-def _precompute_manager_weekly_points(wtw_dict: Dict[int, dict], rosters: Dict[str, List[int]], max_week: int) -> Dict[str, List[Dict[str, List[float]]]]:
+def _precompute_manager_weekly_points(weekly_projections: Dict[int, dict], rosters: Dict[str, List[int]], max_week: int) -> Dict[str, List[Dict[str, List[float]]]]:
     """
     Precompute, for each manager and each week, sorted points list per position.
     Returns: manager -> [week_indexed (0-based) dict of pos->sorted_desc_points]
@@ -389,7 +389,7 @@ def _precompute_manager_weekly_points(wtw_dict: Dict[int, dict], rosters: Dict[s
         for w in range(max_week):
             weekly.append({'QB': [], 'RB': [], 'WR': [], 'TE': []})
         for pid in player_ids:
-            p = wtw_dict.get(pid)
+            p = weekly_projections.get(pid)
             if not p:
                 continue
             pos = p.get('pos')
@@ -413,20 +413,31 @@ def _precompute_manager_weekly_points(wtw_dict: Dict[int, dict], rosters: Dict[s
     return managers_map
 
 
-def simulate_season_fast(wtw_dict: Dict[int, dict], matchups: pd.DataFrame, rosters: Dict[str, List[int]], season: int, output_file_prefix: str = '', save_data: bool = False, num_playoff_teams: int = 6):
+def simulate_season_fast(weekly_projections: Dict[int, dict], matchups: pd.DataFrame, rosters: Dict[str, List[int]], season: int, output_file_prefix: str = '', save_data: bool = False, num_playoff_teams: int = 6):
     """
     Single-process season simulation with optimal weekly lineups and optional bye handling.
 
-    Args:
-        wtw_dict: dict mapping player_id -> {'pos': str, 'pts': List[float], optional 'bye' or 'bye_week': int}
-        matchups: DataFrame with columns ['Week','Matchup','Away Manager(s)','Away Score','Home Score','Home Manager(s)']
-        rosters: dict mapping manager name -> list of player_ids
-        season: season year (unused but kept for API parity)
-        output_file_prefix: if save_data=True, base path used for CSV outputs
-        save_data: whether to write CSV outputs
+    Parameters
+    ----------
+    weekly_projections : dict
+        Mapping player_id -> {'pos': str, 'pts': List[float], optional 'bye' or 'bye_week': int}
+    matchups : pd.DataFrame
+        DataFrame with columns ['Week','Matchup','Away Manager(s)','Away Score','Home Score','Home Manager(s)']
+    rosters : dict
+        Mapping manager name -> list of player_ids
+    season : int
+        Season year (unused but kept for API parity)
+    output_file_prefix : str, optional
+        If save_data=True, base path used for CSV outputs
+    save_data : bool, optional
+        Whether to write CSV outputs
+    num_playoff_teams : int, optional
+        Number of teams to advance to playoffs
 
-    Returns:
-        regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner
+    Returns
+    -------
+    tuple
+        (regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner)
     """
     # Determine how many weeks to precompute (regular max + playoff rounds)
     regular_max_week = int(matchups['Week'].max()) if not matchups.empty else 14
@@ -434,7 +445,7 @@ def simulate_season_fast(wtw_dict: Dict[int, dict], matchups: pd.DataFrame, rost
     playoff_rounds = max(1, int(np.ceil(np.log2(max(2, int(num_playoff_teams))))))
     max_week_needed = min(18, regular_max_week + playoff_rounds + 1)
 
-    precomp = _precompute_manager_weekly_points(wtw_dict, rosters, max_week_needed)
+    precomp = _precompute_manager_weekly_points(weekly_projections, rosters, max_week_needed)
 
     regular_results = _solve_matchups_single_thread(precomp, matchups)
     regular_records = _get_records_from_matchups_results_df(regular_results)

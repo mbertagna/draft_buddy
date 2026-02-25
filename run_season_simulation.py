@@ -49,7 +49,7 @@ def run_full_season_simulation(config: Config, num_simulations: int):
 
     # --- Get Player Data ---
     print("Fetching player data for simulation...")
-    _, wtw_pts_dict = player_data_utils.get_simulation_dfs(
+    _, weekly_projections = player_data_utils.get_simulation_dfs(
         season, ps_start_year, measure_of_center='median', custom_bye_weeks=bye_weeks_2024, custom_roster=season
     )
     print("Player data loaded.")
@@ -122,7 +122,7 @@ def run_full_season_simulation(config: Config, num_simulations: int):
 
         # 3. Simulate the season
         _, _, _, _, winner = simulate_season_fast(
-            wtw_pts_dict,
+            weekly_projections,
             matchups_df.copy(deep=True), # Use a copy to avoid modification issues
             rosters,
             season,

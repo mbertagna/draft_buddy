@@ -10,7 +10,10 @@ import os
 
 from config import Config
 from data_utils import load_player_data, Player, calculate_stack_count
-from policy_network import PolicyNetwork # Import PolicyNetwork
+from draft_rules import FantasyDraftRules
+from draft_state import DraftState
+from opponent_strategies import create_opponent_strategy, OpponentStrategy
+from policy_network import PolicyNetwork
 import json
 from utils.season_simulation_fast import simulate_season_fast, generate_round_robin_schedule
 import pandas as pd
@@ -130,37 +133,39 @@ class FantasyFootballDraftEnv(gym.Env):
         self.observation_space_dim = len(config.ENABLED_STATE_FEATURES)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.observation_space_dim,), dtype=np.float32)
 
-        # --- Internal Game State (will be reset for each episode) ---
-        self.available_players_ids = set() # Set of player_ids currently available
-        self.teams_rosters = defaultdict(lambda: {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'FLEX': 0, 'PLAYERS': []}) # Tracks counts and actual players for each team
-        self.draft_order = [] # List of team_id in draft order for current episode
-        self.current_pick_idx = 0 # Index in self.draft_order
-        self.current_pick_number = 0 # Global pick number (1-indexed)
-        self.agent_team_id = self.config.AGENT_START_POSITION # Default; may be randomized during reset in training
-        self._draft_history = [] # Stores (player_id, team_id, previous_state_info) for undo functionality
-        self._overridden_team_id = None # Stores team ID for a single-pick override
-        self._previous_pick_state = [] # Stores (current_pick_idx, current_pick_number, overridden_team_id) before each pick
+        total_roster_size_per_team = sum(self.config.ROSTER_STRUCTURE.values()) + self.config.TOTAL_BENCH_SIZE
+        self.total_roster_size_per_team = total_roster_size_per_team
 
-        # Pre-calculate total roster size for done check
-        self.total_roster_size_per_team = sum(self.config.ROSTER_STRUCTURE.values()) + self.config.TOTAL_BENCH_SIZE
+        all_player_ids = {p.player_id for p in self.all_players_data}
+        draft_order = self._generate_snake_draft_order(self.config.NUM_TEAMS, total_roster_size_per_team)
+        self._state = DraftState(
+            all_player_ids=all_player_ids,
+            draft_order=draft_order,
+            roster_structure=self.config.ROSTER_STRUCTURE,
+            bench_maxes=self.config.BENCH_MAXES,
+            total_roster_size_per_team=total_roster_size_per_team,
+            agent_team_id=self.config.AGENT_START_POSITION,
+        )
+        self._rules = FantasyDraftRules(
+            roster_structure=self.config.ROSTER_STRUCTURE,
+            bench_maxes=self.config.BENCH_MAXES,
+            total_roster_size_per_team=total_roster_size_per_team,
+        )
 
-        # New: Load opponent models
         self.opponent_models: Dict[int, PolicyNetwork] = {}
+        self._opponent_strategies: Dict[int, OpponentStrategy] = {}
         self._load_opponent_models()
-        
-        # New: Load agent model for suggestions
+
         self.agent_model: Optional[PolicyNetwork] = None
         self._load_agent_model()
 
-        # --- Season Simulation Data ---
-        if getattr(self.config, 'USE_RANDOM_MATCHUPS', False):
+        if getattr(self.config, "USE_RANDOM_MATCHUPS", False):
             manager_names = [self.config.TEAM_MANAGER_MAPPING.get(tid) for tid in range(1, self.config.NUM_TEAMS + 1)]
             manager_names = [m for m in manager_names if m]
-            num_weeks = int(getattr(self.config, 'NUM_REGULAR_SEASON_WEEKS', 14))
+            num_weeks = int(getattr(self.config, "NUM_REGULAR_SEASON_WEEKS", 14))
             self.matchups_df = generate_round_robin_schedule(manager_names, num_weeks)
         else:
-            # Choose matchup file based on league size; prefer size-specific file when configured
-            default_matchups_filename = 'red_league_matchups_2025.csv'
+            default_matchups_filename = "red_league_matchups_2025.csv"
             size_specific_filename = f"red_league_matchups_2025_{self.config.NUM_TEAMS}_team.csv"
             candidate_paths = [
                 os.path.join(self.config.DATA_DIR, size_specific_filename),
@@ -176,14 +181,68 @@ class FantasyFootballDraftEnv(gym.Env):
             try:
                 self.matchups_df = pd.read_csv(matchups_path)
             except FileNotFoundError:
-                self.matchups_df = pd.DataFrame() # Initialize as empty DataFrame if not found
+                self.matchups_df = pd.DataFrame()
                 if self.config.ENABLE_SEASON_SIM_REWARD:
                     print(f"Warning: ENABLE_SEASON_SIM_REWARD is True, but matchups file not found at {matchups_path}. Season sim rewards will be disabled.")
-        
-        self.wtw_dict = self._create_wtw_points_dict()
 
-        # Cache: per-step sorted available players by position (descending by projected_points)
+        self.weekly_projections = self._create_weekly_projections()
         self._sorted_available_by_pos_cache: Dict[str, List[Player]] = {}
+
+    @property
+    def available_players_ids(self):
+        """Delegates to DraftState."""
+        return self._state.get_available_player_ids()
+
+    @property
+    def teams_rosters(self):
+        """Delegates to DraftState."""
+        return self._state.get_rosters()
+
+    @property
+    def draft_order(self):
+        """Delegates to DraftState."""
+        return self._state.get_draft_order()
+
+    @property
+    def current_pick_idx(self):
+        """Delegates to DraftState."""
+        return self._state.get_current_pick_idx()
+
+    @current_pick_idx.setter
+    def current_pick_idx(self, value):
+        self._state.set_current_pick_idx(value)
+
+    @property
+    def current_pick_number(self):
+        """Delegates to DraftState."""
+        return self._state.get_current_pick_number()
+
+    @current_pick_number.setter
+    def current_pick_number(self, value):
+        self._state.set_current_pick_number(value)
+
+    @property
+    def agent_team_id(self):
+        """Delegates to DraftState."""
+        return self._state.get_agent_team_id()
+
+    @agent_team_id.setter
+    def agent_team_id(self, value):
+        self._state.set_agent_team_id(value)
+
+    @property
+    def _overridden_team_id(self):
+        """Delegates to DraftState."""
+        return self._state.get_overridden_team_id()
+
+    @_overridden_team_id.setter
+    def _overridden_team_id(self, value):
+        self._state.set_overridden_team_id(value)
+
+    @property
+    def _draft_history(self):
+        """Delegates to DraftState."""
+        return self._state.get_draft_history()
 
     def _get_bye_week_conflict_count(self, position: str) -> int:
         """
@@ -199,15 +258,15 @@ class FantasyFootballDraftEnv(gym.Env):
         )
         return conflict_count
 
-    def _create_wtw_points_dict(self):
-        wtw_dict = {}
+    def _create_weekly_projections(self):
+        """Build week-to-week point projections for each player."""
+        weekly_projections = {}
         for player in self.all_players_data:
-            # Use player's average projected points for all weeks, as requested.
-            wtw_dict[player.player_id] = {
+            weekly_projections[player.player_id] = {
                 'pts': [player.projected_points] * 18,
                 'pos': player.position
             }
-        return wtw_dict
+        return weekly_projections
 
     def save_state(self, file_path: str):
         """Saves the current draft state to a file using an atomic write."""
@@ -244,33 +303,12 @@ class FantasyFootballDraftEnv(gym.Env):
             print("No saved draft state found.")
             return
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 state = json.load(f)
-            self.available_players_ids = set(state.get('available_players_ids', []))
-            
-            # Reconstruct Player objects from dictionaries, ensuring team IDs are integers
-            reconstructed_rosters = defaultdict(lambda: {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'FLEX': 0, 'PLAYERS': []})
-            if 'teams_rosters' in state:
-                for team_id_str, roster_data in state['teams_rosters'].items():
-                    try:
-                        int_team_id = int(team_id_str)
-                        reconstructed_rosters[int_team_id] = roster_data.copy()
-                        reconstructed_rosters[int_team_id]['PLAYERS'] = [Player(**p) for p in roster_data.get('PLAYERS', [])]
-                    except (ValueError, TypeError):
-                        print(f"Warning: Could not parse team_id '{team_id_str}'. Skipping this team.")
-                        continue
-            self.teams_rosters = reconstructed_rosters
-
-            self.draft_order = state.get('draft_order', [])
-            self.current_pick_idx = state.get('current_pick_idx', 0)
-            self.current_pick_number = state.get('current_pick_number', 1)
-            self._draft_history = state.get('_draft_history', [])
-            self._overridden_team_id = state.get('_overridden_team_id', None)
-            # Invalidate cache after loading state
+            self._state.load_from_serialized(state, lambda p: Player(**p))
             self._invalidate_sorted_available_cache()
         except (json.JSONDecodeError, KeyError) as e:
             print(f"Warning: Could not load draft state from {file_path} due to error: {e}. Starting fresh.")
-            # If loading fails, reset the environment to a clean state
             self.reset()
 
 
@@ -335,6 +373,9 @@ class FantasyFootballDraftEnv(gym.Env):
         if self.config.RANDOMIZE_OPPONENT_STRATEGIES and (not self.config.RANDOMIZE_ONLY_DURING_TRAINING or self.training):
             self._randomize_opponent_strategies()
 
+        # Build strategy instances for each opponent team
+        self._build_opponent_strategies()
+
     def _randomize_opponent_strategies(self) -> None:
         """Randomizes opponent strategies from templates for diversity in training/interaction."""
         import random as _rnd
@@ -361,6 +402,22 @@ class FantasyFootballDraftEnv(gym.Env):
                 'positional_priority': sampled_priority,
             }
             self.config.OPPONENT_TEAM_STRATEGIES[team_id] = randomized
+
+    def _build_opponent_strategies(self) -> None:
+        """Builds OpponentStrategy instances for each opponent team."""
+        for team_id in range(1, self.config.NUM_TEAMS + 1):
+            if team_id == self.config.AGENT_START_POSITION:
+                continue
+            strategy_config = self.config.OPPONENT_TEAM_STRATEGIES.get(
+                team_id, self.config.DEFAULT_OPPONENT_STRATEGY
+            )
+            self._opponent_strategies[team_id] = create_opponent_strategy(
+                logic=strategy_config["logic"],
+                config=strategy_config,
+                opponent_models=self.opponent_models,
+                team_id=team_id,
+                action_to_position=self.action_to_position,
+            )
 
     def _get_dynamic_baseline_for_position(self, position: str, available_for_pos: List[Player]) -> float:
         """Calculates the smoothed baseline score for a list of pre-sorted players."""
@@ -846,59 +903,44 @@ class FantasyFootballDraftEnv(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None):
         super().reset(seed=seed)
 
-        # Reset all internal game state variables
-        self.available_players_ids = {p.player_id for p in self.all_players_data}
-        self.teams_rosters = defaultdict(lambda: {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'FLEX': 0, 'PLAYERS': []})
-        self.current_pick_idx = 0
-        self.current_pick_number = 1 # Start at pick 1
-        self._draft_history = [] # Clear draft history on reset
-        self._overridden_team_id = None # Clear any override on reset
+        all_player_ids = {p.player_id for p in self.all_players_data}
+        draft_order = self._generate_snake_draft_order(self.config.NUM_TEAMS, self.total_roster_size_per_team)
+        if getattr(self.config, "RANDOMIZE_AGENT_START_POSITION", False) and self.training:
+            import random as _rnd
+            agent_team_id = _rnd.randint(1, self.config.NUM_TEAMS)
+        else:
+            agent_team_id = self.config.AGENT_START_POSITION
+
+        self._state.reset(all_player_ids, draft_order, agent_team_id)
         self._invalidate_sorted_available_cache()
 
-        # Randomize agent start position in training if enabled
-        if getattr(self.config, 'RANDOMIZE_AGENT_START_POSITION', False) and self.training:
-            import random as _rnd
-            self.agent_team_id = _rnd.randint(1, self.config.NUM_TEAMS)
-        else:
-            self.agent_team_id = self.config.AGENT_START_POSITION
-
-        # Generate draft order (snake draft)
-        self.draft_order = self._generate_snake_draft_order(self.config.NUM_TEAMS, self.total_roster_size_per_team)
-
-        # If in training mode, simulate opponent picks until it's the agent's turn
         if self.training:
-            # Compute global features once per opponent pick and refresh after each pick
-            while self.current_pick_idx < len(self.draft_order) and \
-                  self.draft_order[self.current_pick_idx] != self.agent_team_id:
+            while self._state.get_current_pick_idx() < len(self._state.get_draft_order()) and \
+                  self._state.get_draft_order()[self._state.get_current_pick_idx()] != self._state.get_agent_team_id():
 
-                current_sim_team_id = self.draft_order[self.current_pick_idx]
+                current_sim_team_id = self._state.get_draft_order()[self._state.get_current_pick_idx()]
                 global_features = self._compute_global_state_features()
                 sim_drafted_player = self._simulate_competing_pick(current_sim_team_id, global_features)
 
                 if sim_drafted_player:
-                    self.teams_rosters[current_sim_team_id]['PLAYERS'].append(sim_drafted_player)
-                    self.available_players_ids.remove(sim_drafted_player.player_id)
-                    self._update_roster_counts(current_sim_team_id, sim_drafted_player)
+                    self._state.add_player_to_roster(current_sim_team_id, sim_drafted_player)
                     self._invalidate_sorted_available_cache()
-                    # Record the simulated pick in history, marking it as not manual
-                    self._draft_history.append({
-                        'player_id': sim_drafted_player.player_id,
-                        'team_id': current_sim_team_id,
-                        'is_manual_pick': False,
-                        'previous_pick_idx': self.current_pick_idx, # Store state before this sim pick
-                        'previous_pick_number': self.current_pick_number,
-                        'previous_overridden_team_id': None, # Sim picks don't have overrides
-                        'was_override': False
+                    self._state.append_draft_history({
+                        "player_id": sim_drafted_player.player_id,
+                        "team_id": current_sim_team_id,
+                        "is_manual_pick": False,
+                        "previous_pick_idx": self._state.get_current_pick_idx(),
+                        "previous_pick_number": self._state.get_current_pick_number(),
+                        "previous_overridden_team_id": None,
+                        "was_override": False,
                     })
                 else:
-                    if not self.available_players_ids:
-                        print(f"[{self.current_pick_number}] No players left in pool. Ending draft early during reset advance.")
-                        break 
-                    print(f"[{self.current_pick_number}] Warning: Competing team {current_sim_team_id} could not make a valid pick.")
+                    if not self._state.get_available_player_ids():
+                        print(f"[{self._state.get_current_pick_number()}] No players left in pool. Ending draft early during reset advance.")
+                        break
+                    print(f"[{self._state.get_current_pick_number()}] Warning: Competing team {current_sim_team_id} could not make a valid pick.")
 
-
-                self.current_pick_idx += 1
-                self.current_pick_number += 1
+                self._state.advance_pick()
 
         observation = self._get_state()
         info = self._get_info() 
@@ -951,16 +993,12 @@ class FantasyFootballDraftEnv(gym.Env):
             info['invalid_action'] = True
             info['reason'] = f"Invalid pick: {selected_position} - {'Penalty applied' if self.config.ENABLE_INVALID_ACTION_PENALTIES else 'No penalty'}"
         else:
-            # Valid pick
-            self.teams_rosters[self.agent_team_id]['PLAYERS'].append(drafted_player)
-            self.available_players_ids.remove(drafted_player.player_id)
-            info['drafted_player'] = drafted_player.name
+            self._state.add_player_to_roster(self.agent_team_id, drafted_player)
+            info["drafted_player"] = drafted_player.name
             info['drafted_position'] = drafted_player.position
-            info['drafted_points'] = drafted_player.projected_points
-            info['drafted_adp'] = drafted_player.adp
+            info["drafted_points"] = drafted_player.projected_points
+            info["drafted_adp"] = drafted_player.adp
 
-            # Update position counts
-            self._update_roster_counts(self.agent_team_id, drafted_player)
             self._invalidate_sorted_available_cache()
 
             # Apply intermediate reward based on configuration
@@ -1016,8 +1054,7 @@ class FantasyFootballDraftEnv(gym.Env):
                     info['post_stack_count'] = post_stack_count
 
 
-        self.current_pick_idx += 1
-        self.current_pick_number += 1
+        self._state.advance_pick()
 
         # --- 2. Simulate Competing Teams' Turns ---
         if not done: # Only simulate if agent's pick was valid
@@ -1030,9 +1067,7 @@ class FantasyFootballDraftEnv(gym.Env):
                 sim_drafted_player = self._simulate_competing_pick(current_sim_team_id, global_features)
 
                 if sim_drafted_player:
-                    self.teams_rosters[current_sim_team_id]['PLAYERS'].append(sim_drafted_player)
-                    self.available_players_ids.remove(sim_drafted_player.player_id)
-                    self._update_roster_counts(current_sim_team_id, sim_drafted_player)
+                    self._state.add_player_to_roster(current_sim_team_id, sim_drafted_player)
                     self._invalidate_sorted_available_cache()
                 else:
                     print(f"[{self.current_pick_number}] Warning: Competing team {current_sim_team_id} could not make a pick. Ending round early.")
@@ -1040,8 +1075,7 @@ class FantasyFootballDraftEnv(gym.Env):
                     info['draft_ended_prematurely_sim_team'] = True
                     break
 
-                self.current_pick_idx += 1
-                self.current_pick_number += 1
+                self._state.advance_pick()
 
         # --- 3. Check for Done Condition ---
         if len(self.teams_rosters[self.agent_team_id]['PLAYERS']) >= self.total_roster_size_per_team:
@@ -1141,7 +1175,7 @@ class FantasyFootballDraftEnv(gym.Env):
                     # Pass dynamic number of playoff teams
                     num_playoff_teams = int(getattr(self.config, 'REGULAR_SEASON_REWARD', {}).get('NUM_PLAYOFF_TEAMS', 6))
                     regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season_fast(
-                        self.wtw_dict, self.matchups_df, sim_rosters, 2025, "", False, num_playoff_teams
+                        self.weekly_projections, self.matchups_df, sim_rosters, 2025, "", False, num_playoff_teams
                     )
                     sim_reward = 0.0
                     agent_manager_name = self.config.TEAM_MANAGER_MAPPING.get(self.agent_team_id)
@@ -1498,55 +1532,13 @@ class FantasyFootballDraftEnv(gym.Env):
         """Returns the available player with the highest projected points for a given position."""
         return self._get_kth_best_available_player_by_pos(position, 1)
 
-    def _can_team_draft_position(self, team_id: int, position: str, is_manual_pick: bool = False) -> bool:
-        """
-        Checks if a team can draft a player of a given position, considering roster limits.
-        For manual UI picks, it only checks total bench size. For AI/simulated picks, it enforces positional maxes.
-        """
-        roster_counts = self.teams_rosters[team_id]
-        current_total_players = len(roster_counts['PLAYERS'])
-        total_starters_slots = sum(self.config.ROSTER_STRUCTURE.values())
-        current_bench_players_count = current_total_players - total_starters_slots
+    def _can_team_draft_position_manual(self, team_id: int, position: str) -> bool:
+        """Validates if a manual user can draft a position. Delegates to DraftRules."""
+        return self._rules.can_draft_manual(self._state, team_id, position, self.player_map)
 
-        # Universal check: is the roster completely full (starters + total bench)?
-        if current_total_players >= self.total_roster_size_per_team:
-            return False
-
-        # Check if any players of this position are available in the pool
-        if not any(self.player_map[pid].position == position for pid in self.available_players_ids):
-            return False
-
-        # --- Logic based on whether it's a manual UI pick or an AI/simulated pick ---
-        if is_manual_pick:
-            # For manual UI picks:
-            # 1. Can fill a starter spot?
-            if roster_counts[position] < self.config.ROSTER_STRUCTURE.get(position, 0):
-                return True
-            # 2. Can fill a FLEX spot?
-            elif position in ['RB', 'WR', 'TE'] and roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE.get('FLEX', 0):
-                return True
-            # 3. Can fill any bench spot (only limited by total bench size)
-            elif current_bench_players_count < self.config.TOTAL_BENCH_SIZE:
-                return True
-            else:
-                return False
-        else:
-            # For AI/simulated picks (enforce positional bench limits):
-            # 1. Can fill a starter spot?
-            if roster_counts[position] < self.config.ROSTER_STRUCTURE.get(position, 0):
-                return True
-            # 2. Can fill a FLEX spot?
-            elif position in ['RB', 'WR', 'TE'] and roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE.get('FLEX', 0):
-                return True
-            # 3. Can fill a positional bench spot?
-            #    Check if current count for this position (including starters) is less than
-            #    its total allowed (starters + positional bench max) AND
-            #    if the total bench is not yet full.
-            elif (roster_counts[position] < (self.config.ROSTER_STRUCTURE.get(position, 0) + self.config.BENCH_MAXES.get(position, 0))) \
-                 and current_bench_players_count < self.config.TOTAL_BENCH_SIZE:
-                return True
-            else:
-                return False
+    def _can_team_draft_position_simulated(self, team_id: int, position: str) -> bool:
+        """Validates if an automated agent can draft a position. Delegates to DraftRules."""
+        return self._rules.can_draft_simulated(self._state, team_id, position, self.player_map)
 
     def get_action_mask(self) -> np.ndarray:
         """
@@ -1556,7 +1548,7 @@ class FantasyFootballDraftEnv(gym.Env):
         mask = np.zeros(self.action_space.n, dtype=bool)
         
         for action, position_choice in self.action_to_position.items():
-            if self._can_team_draft_position(self.agent_team_id, position_choice):
+            if self._can_team_draft_position_simulated(self.agent_team_id, position_choice):
                 mask[action] = True
         return mask
 
@@ -1579,7 +1571,7 @@ class FantasyFootballDraftEnv(gym.Env):
             return False, None # No players of this position available at all
 
         # 2. Check roster limits for the chosen position for this specific team
-        if not self._can_team_draft_position(team_id, position_choice):
+        if not self._can_team_draft_position_simulated(team_id, position_choice):
             return False, None
 
         # Find the best available player for the chosen position (highest projected points)
@@ -1595,184 +1587,63 @@ class FantasyFootballDraftEnv(gym.Env):
         else:
             return False, None # Should not happen if available_players_for_pos is not empty and _can_team_draft_position is True
 
-    def _update_roster_counts(self, team_id: int, player: Player):
-        """Updates team's roster counts, correctly assigning players to starter, flex, or bench spots."""
-        roster = self.teams_rosters[team_id]
-        pos = player.position
-
-        # 1. Try to fill a required starter position
-        if roster[pos] < self.config.ROSTER_STRUCTURE.get(pos, 0):
-            roster[pos] += 1
-            return
-
-        # 2. Try to fill a FLEX position if applicable
-        if pos in ['RB', 'WR', 'TE'] and roster['FLEX'] < self.config.ROSTER_STRUCTURE.get('FLEX', 0):
-            roster['FLEX'] += 1
-            return
-
-        # 3. If it's not a starter or flex, it must be a bench player.
-        # The _can_team_draft_position function has already validated that there is space.
-        # We still increment the position count for tracking, even for bench players.
-        roster[pos] += 1
-
     def _simulate_competing_pick(self, team_id: int, global_features: Optional[Dict[str, float]] = None) -> Optional[Player]:
-        roster_counts = self.teams_rosters[team_id]
-        
-        # Get opponent's specific strategy, or fallback to default
-        opponent_strategy = self.config.OPPONENT_TEAM_STRATEGIES.get(
-            team_id, self.config.DEFAULT_OPPONENT_STRATEGY
+        """Delegates to the opponent's strategy to select a player."""
+        strategy = self._opponent_strategies.get(team_id)
+        if not strategy:
+            strategy = create_opponent_strategy(
+                logic=self.config.DEFAULT_OPPONENT_STRATEGY["logic"],
+                config=self.config.DEFAULT_OPPONENT_STRATEGY,
+                opponent_models=self.opponent_models,
+                team_id=team_id,
+                action_to_position=self.action_to_position,
+            )
+            self._opponent_strategies[team_id] = strategy
+
+        def can_draft(team_id: int, position: str, is_manual: bool = False) -> bool:
+            if is_manual:
+                return self._can_team_draft_position_manual(team_id, position)
+            return self._can_team_draft_position_simulated(team_id, position)
+
+        def try_select(team_id: int, position: str, available_ids: set):
+            return self._try_select_player_for_team(team_id, position, available_ids)
+
+        def build_state(tid: int) -> np.ndarray:
+            if global_features is None:
+                gf = self._compute_global_state_features()
+            else:
+                gf = global_features
+            return self._build_state_for_team_from_global(tid, gf)
+
+        def get_mask(tid: int) -> np.ndarray:
+            orig = self.agent_team_id
+            self.agent_team_id = tid
+            mask = self.get_action_mask()
+            self.agent_team_id = orig
+            return mask
+
+        chosen = strategy.execute_pick(
+            team_id=team_id,
+            available_player_ids=self.available_players_ids,
+            player_map=self.player_map,
+            roster_counts=self.teams_rosters[team_id],
+            roster_structure=self.config.ROSTER_STRUCTURE,
+            bench_maxes=self.config.BENCH_MAXES,
+            can_draft_position_fn=can_draft,
+            try_select_player_fn=try_select,
+            build_state_fn=build_state,
+            get_action_mask_fn=get_mask,
         )
-        logic = opponent_strategy['logic']
 
-        # Define positions that our environment and roster structure can handle.
-        handled_positions = set(self.config.ROSTER_STRUCTURE.keys()) - {'FLEX'}
-        flex_eligible_positions = {'RB', 'WR', 'TE'}
-        all_draftable_positions = handled_positions.union(flex_eligible_positions)
-
-        # Get all players that are available AND whose positions are handled by our logic
-        available_players_filtered = [self.player_map[pid] 
-                                      for pid in self.available_players_ids 
-                                      if self.player_map[pid].position in all_draftable_positions]
-
-        # Filter these further to only include players that the current team can actually draft
-        # (i.e., they have a roster spot for that position or FLEX)
-        eligible_players_for_pick = []
-        for player in available_players_filtered:
-            if self._can_team_draft_position(team_id, player.position):
-                eligible_players_for_pick.append(player)
-        
-        if not eligible_players_for_pick:
-            return None # No eligible player found for this team
-
-        # --- Determine the pick based on opponent's strategy ---
-        chosen_player = None
-
-        if logic == 'AGENT_MODEL':
-            # Use a trained agent model for this opponent
-            if team_id in self.opponent_models:
-                opponent_model = self.opponent_models[team_id]
-                # Build lightweight state from precomputed global features
-                if global_features is None:
-                    global_features = self._compute_global_state_features()
-                opponent_state = self._build_state_for_team_from_global(team_id, global_features)
-                # Get the action mask for this opponent team by temporarily switching perspective
-                original_agent_team_id = self.agent_team_id
-                self.agent_team_id = team_id
-                opponent_action_mask = self.get_action_mask()
-                self.agent_team_id = original_agent_team_id
-
-                state_tensor = torch.from_numpy(opponent_state).float().unsqueeze(0)
-                with torch.no_grad():
-                    # Opponent models should also respect action masking
-                    action_probs = opponent_model.get_action_probabilities(state_tensor, action_mask=opponent_action_mask)
-                    action_chosen = torch.argmax(action_probs).item() # Greedy pick for opponent agents
-
-                selected_position_by_opponent = self.action_to_position[action_chosen]
-                
-                # Attempt to pick the player chosen by the opponent agent
-                is_valid_pick_by_opponent, drafted_player_obj = self._try_select_player_for_team(
-                    team_id, selected_position_by_opponent, self.available_players_ids
-                )
-                if is_valid_pick_by_opponent:
-                    chosen_player = drafted_player_obj
-                else:
-                    # If the opponent model made an invalid pick (which should be rare with masking)
-                    # or there's an unforeseen edge case, fall back to a simple strategy.
-                    print(f"Warning: Opponent Team {team_id} (AGENT_MODEL) tried an invalid pick ({selected_position_by_opponent}). Falling back to ADP.")
-                    sorted_by_adp = sorted(eligible_players_for_pick, key=lambda p: p.adp)
-                    chosen_player = sorted_by_adp[0] if sorted_by_adp else None
-            else:
-                print(f"Warning: AGENT_MODEL requested for Team {team_id} but no model loaded. Falling back to DEFAULT_OPPONENT_STRATEGY.")
-                # Update strategy to prevent repeated warnings in this episode
-                self.config.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.DEFAULT_OPPONENT_STRATEGY.copy()
-                # Fallback to default heuristic for this turn
-                logic = self.config.DEFAULT_OPPONENT_STRATEGY['logic']
-                randomness_factor = self.config.DEFAULT_OPPONENT_STRATEGY['randomness_factor']
-                suboptimal_strategy = self.config.DEFAULT_OPPONENT_STRATEGY['suboptimal_strategy']
-                positional_priority = self.config.DEFAULT_OPPONENT_STRATEGY['positional_priority'] # Used for HEURISTIC logic
-                # Now proceed with the non-AGENT_MODEL logic as a fallback below
-
-        elif logic == 'RANDOM':
-            # 'RANDOM' logic directly picks a random eligible player
-            chosen_player = random.choice(eligible_players_for_pick)
-        elif logic == 'ADP' or logic == 'HEURISTIC':
-            # Determine the "best" pick based on the configured logic
-            best_pick_by_logic = None
-            if logic == 'ADP':
-                sorted_by_logic = sorted(eligible_players_for_pick, key=lambda p: p.adp)
-                best_pick_by_logic = sorted_by_logic[0] if sorted_by_logic else None
-            elif logic == 'HEURISTIC':
-                # Heuristic: Prioritize by position need and then projected points, using custom priority
-                positional_priority = opponent_strategy['positional_priority'] # Ensure we use specific opponent's priority
-                
-                def get_best_for_pos_heuristic(pos_list: List[str]):
-                    for pos in pos_list:
-                        if roster_counts[pos] < self.config.ROSTER_STRUCTURE.get(pos, 0): 
-                            eligible = [p for p in eligible_players_for_pick if p.position == pos]
-                            if eligible: return sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
-                    return None
-
-                best_pick_by_logic = get_best_for_pos_heuristic(positional_priority)
-                
-                if not best_pick_by_logic: 
-                    for pos in positional_priority: 
-                        max_pos_count_total = self.config.ROSTER_STRUCTURE.get(pos, 0) + self.config.BENCH_MAXES.get(pos, 0)
-                        if roster_counts[pos] < max_pos_count_total:
-                            eligible = [p for p in eligible_players_for_pick if p.position == pos]
-                            if eligible:
-                                best_pick_by_logic = sorted(eligible, key=lambda p: p.projected_points, reverse=True)[0]
-                                if best_pick_by_logic: break 
-                
-                if not best_pick_by_logic:
-                    if roster_counts['FLEX'] < self.config.ROSTER_STRUCTURE['FLEX']:
-                         eligible_flex_players = [p for p in eligible_players_for_pick if p.position in ['RB', 'WR', 'TE']]
-                         if eligible_flex_players:
-                             best_pick_by_logic = sorted(eligible_flex_players, key=lambda p: p.projected_points, reverse=True)[0]
-            
-            if not best_pick_by_logic:
-                # As a final fallback, if logic could not select, pick the best eligible by ADP
-                if eligible_players_for_pick:
-                    best_pick_by_logic = sorted(eligible_players_for_pick, key=lambda p: p.adp)[0]
-                else:
-                    return None 
-
-            randomness_factor = opponent_strategy['randomness_factor'] # Ensure we use specific opponent's randomness
-            suboptimal_strategy = opponent_strategy['suboptimal_strategy'] # Ensure we use specific opponent's suboptimal strategy
-
-            # Apply randomness
-            if random.random() < randomness_factor:
-                if suboptimal_strategy == 'RANDOM_ELIGIBLE':
-                    chosen_player = random.choice(eligible_players_for_pick)
-                elif suboptimal_strategy == 'NEXT_BEST_ADP':
-                    temp_list = sorted(eligible_players_for_pick, key=lambda p: p.adp)
-                    if len(temp_list) > 1:
-                        chosen_player = temp_list[1]
-                    else:
-                        chosen_player = temp_list[0]
-                elif suboptimal_strategy == 'NEXT_BEST_HEURISTIC':
-                    if len(eligible_players_for_pick) > 1:
-                        other_eligible = [p for p in eligible_players_for_pick if p != best_pick_by_logic]
-                        if other_eligible:
-                            chosen_player = random.choice(other_eligible)
-                        else:
-                            chosen_player = best_pick_by_logic
-                    else:
-                        chosen_player = best_pick_by_logic
-                else:
-                    print(f"Warning: Unknown suboptimal pick strategy: {suboptimal_strategy}. Falling back to best pick.")
-                    chosen_player = best_pick_by_logic
-            else:
-                chosen_player = best_pick_by_logic
-        else: # For safety, if logic is somehow neither defined nor AGENT_MODEL, fallback to ADP
-            print(f"Warning: Unknown competing team logic: {logic}. Falling back to ADP.")
-            sorted_by_adp = sorted(eligible_players_for_pick, key=lambda p: p.adp)
-            chosen_player = sorted_by_adp[0] if sorted_by_adp else None
-
-        # Final safety: if chosen_player is still None but there are eligible players, choose one at random
-        if chosen_player is None and eligible_players_for_pick:
-            chosen_player = random.choice(eligible_players_for_pick)
-
-        return chosen_player
+        if chosen is None:
+            eligible = [
+                self.player_map[pid] for pid in self.available_players_ids
+                if self.player_map.get(pid) and self.player_map[pid].position in {"QB", "RB", "WR", "TE"}
+                and self._can_team_draft_position(team_id, self.player_map[pid].position)
+            ]
+            if eligible:
+                chosen = random.choice(eligible)
+        return chosen
 
     def draft_player(self, player_id: int):
         """
@@ -1794,94 +1665,53 @@ class FantasyFootballDraftEnv(gym.Env):
         if not drafted_player or drafted_player.player_id not in self.available_players_ids:
             raise ValueError(f"Player with ID {player_id} is not available to be drafted.")
 
-        # Validate that the team can draft this position, noting it's a manual pick
-        if not self._can_team_draft_position(current_team_id, drafted_player.position, is_manual_pick=True):
+        if not self._can_team_draft_position_manual(current_team_id, drafted_player.position):
             raise ValueError(f"Team {current_team_id} cannot draft a {drafted_player.position}. The roster is full for that position or the bench is at capacity.")
 
         # Store the state before making the pick for the undo history
         was_override = (self._overridden_team_id is not None)
         
-        # Record the pick in history BEFORE making changes
-        self._draft_history.append({
+        self._state.append_draft_history({
             'player_id': drafted_player.player_id,
             'team_id': current_team_id,
             'is_manual_pick': True,
             'previous_pick_idx': self.current_pick_idx,
             'previous_pick_number': self.current_pick_number,
             'previous_overridden_team_id': self._overridden_team_id,
-            'was_override': was_override
+            "was_override": was_override,
         })
 
-        # Update roster and available players
-        self.teams_rosters[current_team_id]['PLAYERS'].append(drafted_player)
-        self.available_players_ids.remove(drafted_player.player_id)
-        self._update_roster_counts(current_team_id, drafted_player)
+        self._state.add_player_to_roster(current_team_id, drafted_player)
         self._invalidate_sorted_available_cache()
 
-        # Advance pick index and number
-        self.current_pick_idx += 1
-        self.current_pick_number += 1
-        
-        # Reset override after it's used for a pick
-        self._overridden_team_id = None
+        self._state.advance_pick()
+        self._state.set_overridden_team_id(None)
         # Invalidate cache after manual draft
         self._invalidate_sorted_available_cache()
 
 
     def undo_last_pick(self):
-        """
-        Reverts the last pick made in the draft.
-        """
-        if not self._draft_history:
+        """Reverts the last pick made in the draft."""
+        last_pick_info = self._state.pop_draft_history()
+        if not last_pick_info:
             raise ValueError("No picks to undo.")
 
-        last_pick_info = self._draft_history.pop() # Get the last pick info
-        player_id = last_pick_info['player_id']
-        team_id = last_pick_info['team_id']
-        is_manual_pick = last_pick_info['is_manual_pick']
-
-        # Re-add player to available pool
-        self.available_players_ids.add(player_id)
+        player_id = last_pick_info["player_id"]
+        team_id = last_pick_info["team_id"]
         player = self.player_map[player_id]
 
-        # Remove player from team roster and update counts
-        # Find the player object in the team's roster and remove it
-        player_removed = False
-        for i, p in enumerate(self.teams_rosters[team_id]['PLAYERS']):
-            if p.player_id == player_id:
-                self.teams_rosters[team_id]['PLAYERS'].pop(i);
-                player_removed = True
-                break
-        
-        if not player_removed:
-            print(f"Warning: Player {player.name} (ID: {player_id}) not found in Team {team_id}'s roster during undo.")
+        self._state.remove_player_from_roster(team_id, player)
+        self._state.set_current_pick_idx(last_pick_info["previous_pick_idx"])
+        self._state.set_current_pick_number(last_pick_info["previous_pick_number"])
+        self._state.set_overridden_team_id(last_pick_info.get("previous_overridden_team_id"))
 
-        # Decrement roster counts (reverse of _update_roster_counts)
-        # This logic needs to be careful with FLEX spots. For simplicity, we'll just decrement the position count.
-        # A more robust undo might need to store how the player filled the spot (e.g., QB, RB, WR, TE, or FLEX)
-        # For now, we assume the player filled their primary position or a flex if primary was full.
-        # This is a simplification and might not perfectly restore complex flex scenarios.
-        if self.teams_rosters[team_id][player.position] > 0:
-            self.teams_rosters[team_id][player.position] -= 1
-        elif player.position in ['RB', 'WR', 'TE'] and self.teams_rosters[team_id]['FLEX'] > 0:
-            self.teams_rosters[team_id]['FLEX'] -= 1
-        else:
-            print(f"Warning: Could not decrement roster count for {player.name} ({player.position}) on Team {team_id} during undo.")
-
-        # Revert pick index and number and overridden team state
-        self.current_pick_idx = last_pick_info['previous_pick_idx']
-        self.current_pick_number = last_pick_info['previous_pick_number']
-        self._overridden_team_id = last_pick_info['previous_overridden_team_id']
-
-        # Invalidate cache after undo
         self._invalidate_sorted_available_cache()
 
-        # Safely determine the team on clock for display
-        team_on_clock_display = 'N/A'
-        if self.current_pick_idx < len(self.draft_order):
-            team_on_clock_display = self.draft_order[self.current_pick_idx]
+        team_on_clock_display = "N/A"
+        if self._state.get_current_pick_idx() < len(self._state.get_draft_order()):
+            team_on_clock_display = self._state.get_draft_order()[self._state.get_current_pick_idx()]
 
-        print(f"Undo successful. Current pick: {self.current_pick_number}, Team on clock: {team_on_clock_display}")
+        print(f"Undo successful. Current pick: {self._state.get_current_pick_number()}, Team on clock: {team_on_clock_display}")
 
     def set_current_team_picking(self, team_id: int):
         """
@@ -1894,7 +1724,7 @@ class FantasyFootballDraftEnv(gym.Env):
         # For UI flexibility, allow setting an override even if no scheduled picks remain.
         # Manual drafting can continue post-schedule to fill rosters.
 
-        self._overridden_team_id = team_id
+        self._state.set_overridden_team_id(team_id)
         print(f"Next pick will be overridden for Team {team_id}.")
 
     def simulate_single_pick(self):
@@ -1905,10 +1735,8 @@ class FantasyFootballDraftEnv(gym.Env):
         if self.current_pick_idx >= len(self.draft_order):
             raise ValueError("The draft has already concluded. No more picks can be made.")
 
-        current_sim_team_id = self._overridden_team_id if self._overridden_team_id is not None else self.draft_order[self.current_pick_idx]
-
-        # Reset override after it's used
-        self._overridden_team_id = None
+        current_sim_team_id = self._state.get_overridden_team_id() or self._state.get_draft_order()[self._state.get_current_pick_idx()]
+        self._state.set_overridden_team_id(None)
 
         if current_sim_team_id in self.manual_draft_teams:
             raise ValueError("It is a manual team's turn. Cannot simulate pick.")
@@ -1918,61 +1746,50 @@ class FantasyFootballDraftEnv(gym.Env):
         sim_drafted_player = self._simulate_competing_pick(current_sim_team_id, global_features)
 
         if sim_drafted_player:
-            self.teams_rosters[current_sim_team_id]['PLAYERS'].append(sim_drafted_player)
-            self.available_players_ids.remove(sim_drafted_player.player_id)
-            self._update_roster_counts(current_sim_team_id, sim_drafted_player)
+            self._state.add_player_to_roster(current_sim_team_id, sim_drafted_player)
             self._invalidate_sorted_available_cache()
-            # Record the simulated pick in history, marking it as not manual
-            self._draft_history.append({
-                'player_id': sim_drafted_player.player_id,
-                'team_id': current_sim_team_id,
-                'is_manual_pick': False,
-                'previous_pick_idx': self.current_pick_idx, # Store state before this sim pick
-                'previous_pick_number': self.current_pick_number,
-                'previous_overridden_team_id': None, # Sim picks don't have overrides
-                'was_override': False
+            self._state.append_draft_history({
+                "player_id": sim_drafted_player.player_id,
+                "team_id": current_sim_team_id,
+                "is_manual_pick": False,
+                "previous_pick_idx": self._state.get_current_pick_idx(),
+                "previous_pick_number": self._state.get_current_pick_number(),
+                "previous_overridden_team_id": None,
+                "was_override": False,
             })
         else:
             # If the team cannot make a valid pick under constraints, only skip if team is full.
-            roster_data = self.teams_rosters[current_sim_team_id]
-            if len(roster_data['PLAYERS']) >= self.total_roster_size_per_team:
+            roster_data = self._state.get_rosters()[current_sim_team_id]
+            if len(roster_data["PLAYERS"]) >= self.total_roster_size_per_team:
                 print(f"Competing team {current_sim_team_id} cannot pick and roster is full. Skipping.")
-                self.current_pick_idx += 1
-                self.current_pick_number += 1
+                self._state.advance_pick()
                 return
-            
-            # Force-pick the best available by ADP (ignoring positional constraints)
-            if not self.available_players_ids:
+
+            if not self._state.get_available_player_ids():
                 print("No players left to force-pick. Skipping.")
-                self.current_pick_idx += 1
-                self.current_pick_number += 1
+                self._state.advance_pick()
                 return
             
-            all_available_players = [self.player_map[pid] for pid in self.available_players_ids]
+            all_available_players = [self.player_map[pid] for pid in self._state.get_available_player_ids()]
             # Prefer finite ADP; if equal/unavailable, fall back to higher projected points
             def force_key(p):
                 return (np.isinf(p.adp), p.adp if np.isfinite(p.adp) else float('inf'), -p.projected_points)
             forced_player = min(all_available_players, key=force_key)
 
-            # Apply the forced pick
-            self.teams_rosters[current_sim_team_id]['PLAYERS'].append(forced_player)
-            self.available_players_ids.remove(forced_player.player_id)
-            self._update_roster_counts(current_sim_team_id, forced_player)
+            self._state.add_player_to_roster(current_sim_team_id, forced_player)
             self._invalidate_sorted_available_cache()
-            self._draft_history.append({
-                'player_id': forced_player.player_id,
-                'team_id': current_sim_team_id,
-                'is_manual_pick': False,
-                'previous_pick_idx': self.current_pick_idx,
-                'previous_pick_number': self.current_pick_number,
-                'previous_overridden_team_id': None,
-                'was_override': False
+            self._state.append_draft_history({
+                "player_id": forced_player.player_id,
+                "team_id": current_sim_team_id,
+                "is_manual_pick": False,
+                "previous_pick_idx": self._state.get_current_pick_idx(),
+                "previous_pick_number": self._state.get_current_pick_number(),
+                "previous_overridden_team_id": None,
+                "was_override": False,
             })
 
-        self.current_pick_idx += 1
-        self.current_pick_number += 1
-
-        print(f"Simulated pick for Team {current_sim_team_id}. Current pick: {self.current_pick_number}")
+        self._state.advance_pick()
+        print(f"Simulated pick for Team {current_sim_team_id}. Current pick: {self._state.get_current_pick_number()}")
 
     def get_ai_suggestion(self):
         """Gets the AI's suggested action probabilities for the current state."""
@@ -2023,21 +1840,19 @@ class FantasyFootballDraftEnv(gym.Env):
         original_available_ids = None
         self.agent_team_id = team_id
         try:
-            # Temporarily remove ignored players from availability
             if ignore_player_ids:
-                ignore_set = set(pid for pid in ignore_player_ids if pid in self.available_players_ids)
+                ignore_set = set(pid for pid in ignore_player_ids if pid in self._state.get_available_player_ids())
                 if ignore_set:
-                    original_available_ids = set(self.available_players_ids)
-                    self.available_players_ids = self.available_players_ids - ignore_set
+                    original_available_ids = set(self._state.get_available_player_ids())
+                    self._state.replace_available_player_ids(original_available_ids - ignore_set)
                     self._invalidate_sorted_available_cache()
 
             state = self._get_state()
             action_mask = self.get_action_mask()
         finally:
-            # Restore perspective and availability
             self.agent_team_id = original_agent_team_id
             if original_available_ids is not None:
-                self.available_players_ids = original_available_ids
+                self._state.replace_available_player_ids(original_available_ids)
                 self._invalidate_sorted_available_cache()
 
         state_tensor = torch.from_numpy(state).float().unsqueeze(0)

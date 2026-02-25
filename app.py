@@ -1,46 +1,86 @@
-import os
 import io
+import os
+
 import csv
-import datetime
-from flask import Flask, send_from_directory, jsonify, request, make_response
-from data_utils import load_player_data
-from config import Config
 import numpy as np
-from fantasy_draft_env import FantasyFootballDraftEnv
-from utils.season_simulation_fast import simulate_season_fast
 import pandas as pd
+from flask import Flask, jsonify, make_response, request, send_from_directory, session
 
-# Use 'frontend' as the static folder, and serve files from it
-app = Flask(__name__, static_folder='frontend')
+from config import Config
+from data_utils import load_player_data
+from draft_service import DraftService
+from utils.season_simulation_fast import simulate_season_fast
 
-# Load configuration
+app = Flask(__name__, static_folder="frontend")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-change-in-production")
+
 config = Config()
+draft_service = DraftService(config)
 
-# Load player data once when the app starts
 all_players = load_player_data(config.PLAYER_DATA_CSV, config.MOCK_ADP_CONFIG)
 player_map = {p.player_id: p for p in all_players}
 
-# Initialize the draft environment when the application starts
-draft_env = FantasyFootballDraftEnv(config)
-# Try to load an existing state
-draft_env.load_state(config.DRAFT_STATE_FILE)
 
-# If the draft is empty (e.g., new start or corrupted file), create and save a new one
-if not draft_env.draft_order:
-    print("No valid draft state found or draft is empty. Creating a new draft.")
-    draft_env.reset()
-    draft_env.save_state(config.DRAFT_STATE_FILE)
+def _get_session_id() -> str:
+    """
+    Return the session ID for the current request.
 
-def get_draft_state():
-    """Helper function to create the draft state dictionary."""
-    if not draft_env:
-        return None
+    Uses the Flask session to persist the draft session ID across requests.
+    Creates a new UUID if none exists.
 
-    # Determine the current team on the clock, considering overrides
-    team_on_clock = draft_env._overridden_team_id if draft_env._overridden_team_id is not None else \
-                    (draft_env.draft_order[draft_env.current_pick_idx] if draft_env.current_pick_idx < len(draft_env.draft_order) else None)
+    Returns
+    -------
+    str
+        The draft session ID for the current request.
+    """
+    if not session.get("draft_session_id"):
+        import uuid
+        session["draft_session_id"] = str(uuid.uuid4())
+    return session["draft_session_id"]
 
-    # Get structured rosters and points for all teams
+
+def _get_draft_env():
+    """
+    Return the draft environment for the current session.
+
+    Fetches or creates a FantasyFootballDraftEnv instance keyed by the
+    session ID.
+
+    Returns
+    -------
+    FantasyFootballDraftEnv
+        The draft environment for the current session.
+    """
+    return draft_service.get_or_create_draft(_get_session_id())
+
+
+def _get_draft_state():
+    """
+    Build the draft state dictionary for the current session.
+
+    Aggregates roster data, pick order, team points, and configuration
+    into a single dictionary suitable for API responses.
+
+    Returns
+    -------
+    dict
+        Draft state with keys: draft_order, current_pick_number,
+        current_team_picking, team_rosters, roster_counts,
+        team_projected_points, manual_draft_teams, roster_structure,
+        team_is_full, team_points_summary, num_teams, team_bye_weeks,
+        agent_start_position.
+    """
+    draft_env = _get_draft_env()
+    team_on_clock = (
+        draft_env._overridden_team_id
+        if draft_env._overridden_team_id is not None
+        else (
+            draft_env.draft_order[draft_env.current_pick_idx]
+            if draft_env.current_pick_idx < len(draft_env.draft_order)
+            else None
+        )
+    )
+
     structured_rosters = {}
     team_points_summary = {}
     team_is_full = {}
@@ -98,120 +138,85 @@ def get_draft_state():
 def hello_world():
     return {'message': 'Hello from DRAFT BUDDY backend!'}
 
-# API route for creating a new draft
-@app.route('/api/draft/new', methods=['POST'])
+@app.route("/api/draft/new", methods=["POST"])
 def create_new_draft():
-    """Saves the current draft state and resets the environment."""
-    global draft_env
+    """Archives the current draft and creates a fresh one for this session."""
+    draft_env = draft_service.create_new_draft(_get_session_id())
+    return jsonify(_get_draft_state())
 
-    # Archive the current state if the draft has started
-    if draft_env and draft_env.current_pick_number > 1:
-        saved_states_dir = 'saved_states'
-        if not os.path.exists(saved_states_dir):
-            os.makedirs(saved_states_dir)
-        
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        archive_filename = os.path.join(saved_states_dir, f'draft_state_{timestamp}.json')
-        draft_env.save_state(archive_filename)
-        print(f"Saved current draft state to {archive_filename}")
-
-    draft_env.reset()
-    draft_env.save_state(config.DRAFT_STATE_FILE)
-    return jsonify(get_draft_state())
-
-# API route for getting the current draft state
-@app.route('/api/draft/state')
+@app.route("/api/draft/state")
 def draft_state():
     """Returns the complete current state of the draft."""
-    return jsonify(get_draft_state())
+    return jsonify(_get_draft_state())
 
-@app.route('/api/draft/pick', methods=['POST'])
+@app.route("/api/draft/pick", methods=["POST"])
 def draft_pick():
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
-
+    draft_env = _get_draft_env()
     data = request.get_json()
-    player_id = data.get('player_id')
+    player_id = data.get("player_id")
     if not player_id:
-        return jsonify({'error': 'Player ID is required'}), 400
+        return jsonify({"error": "Player ID is required"}), 400
 
     try:
         draft_env.draft_player(player_id)
         draft_env.save_state(config.DRAFT_STATE_FILE)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({"error": str(e)}), 400
 
-    return jsonify(get_draft_state())
+    return jsonify(_get_draft_state())
 
-@app.route('/api/draft/undo', methods=['POST'])
+@app.route("/api/draft/undo", methods=["POST"])
 def undo_pick():
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
+    draft_env = _get_draft_env()
     try:
         draft_env.undo_last_pick()
         draft_env.save_state(config.DRAFT_STATE_FILE)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    
-    return jsonify(get_draft_state())
+        return jsonify({"error": str(e)}), 400
 
-@app.route('/api/draft/override_team', methods=['POST'])
+    return jsonify(_get_draft_state())
+
+@app.route("/api/draft/override_team", methods=["POST"])
 def override_team():
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
+    draft_env = _get_draft_env()
     data = request.get_json()
-    team_id = data.get('team_id')
+    team_id = data.get("team_id")
     if team_id is None:
-        return jsonify({'error': 'Team ID is required'}), 400
+        return jsonify({"error": "Team ID is required"}), 400
     try:
         draft_env.set_current_team_picking(team_id)
         draft_env.save_state(config.DRAFT_STATE_FILE)
     except ValueError as e:
-        # Relax override restriction for UI: treat as success if draft is over
-        # so user can proceed to manually fill rosters by setting team then picking.
-        # Still return error message for visibility but 200 to allow UI flow.
-        return jsonify({'warning': str(e), 'info': 'Override allowed for manual post-draft picks'}), 200
-    
-    return jsonify(get_draft_state())
+        return jsonify({"warning": str(e), "info": "Override allowed for manual post-draft picks"}), 200
 
-@app.route('/api/draft/simulate_pick', methods=['POST'])
+    return jsonify(_get_draft_state())
+
+@app.route("/api/draft/simulate_pick", methods=["POST"])
 def simulate_pick():
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
+    draft_env = _get_draft_env()
     try:
         draft_env.simulate_single_pick()
         draft_env.save_state(config.DRAFT_STATE_FILE)
     except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-    
-    return jsonify(get_draft_state())
+        return jsonify({"error": str(e)}), 400
 
-@app.route('/api/draft/ai_suggestion')
+    return jsonify(_get_draft_state())
+
+@app.route("/api/draft/ai_suggestion")
 def ai_suggestion():
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
-
+    draft_env = _get_draft_env()
     suggestion = draft_env.get_ai_suggestion()
     return jsonify(suggestion)
 
-@app.route('/api/draft/ai_suggestions_all')
+@app.route("/api/draft/ai_suggestions_all")
 def ai_suggestions_all():
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
+    draft_env = _get_draft_env()
     suggestions = draft_env.get_ai_suggestions_all()
     return jsonify(suggestions)
 
-@app.route('/api/draft/ai_suggestion_for_team')
+@app.route("/api/draft/ai_suggestion_for_team")
 def ai_suggestion_for_team():
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
+    draft_env = _get_draft_env()
     try:
         team_id_str = request.args.get('team_id')
         if team_id_str is None:
@@ -232,22 +237,16 @@ def ai_suggestion_for_team():
     suggestion = draft_env.get_ai_suggestion_for_team(team_id, ignore_player_ids=ignore_ids)
     return jsonify(suggestion)
 
-@app.route('/api/draft/summary')
+@app.route("/api/draft/summary")
 def draft_summary():
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
-
+    draft_env = _get_draft_env()
     summary = draft_env.get_draft_summary()
     return jsonify(summary)
 
-@app.route('/api/draft/export_csv')
+@app.route("/api/draft/export_csv")
 def export_csv():
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
+    draft_env = _get_draft_env()
 
-    # Create a string buffer to hold CSV data
     si = io.StringIO()
     cw = csv.writer(si)
 
@@ -281,17 +280,11 @@ def export_csv():
     output.headers["Content-type"] = "text/csv"
     return output
 
-@app.route('/api/simulate_season', methods=['POST'])
+@app.route("/api/simulate_season", methods=["POST"])
 def simulate_season():
-    """Runs a full season simulation using current in-memory draft state and returns results.
+    """Runs a full season simulation using current in-memory draft state."""
+    draft_env = _get_draft_env()
 
-    This does not modify any saved state on disk.
-    """
-    global draft_env
-    if not draft_env:
-        return jsonify({'error': 'Draft has not been started'}), 400
-
-    # Build rosters: manager name -> list of player_ids
     rosters = {}
     for team_id, roster_data in draft_env.teams_rosters.items():
         manager_name = config.TEAM_MANAGER_MAPPING.get(team_id)
@@ -318,15 +311,15 @@ def simulate_season():
     except FileNotFoundError:
         return jsonify({'error': f'Matchups file not found at {matchups_path}'}), 400
 
-    # Week-to-week points dict. Prefer env's prepared dict if available
-    wtw_dict = getattr(draft_env, 'wtw_dict', None)
-    if wtw_dict is None:
-        wtw_dict = {p.player_id: {'pts': [p.projected_points] * 18, 'pos': p.position} for p in draft_env.all_players_data}
+    # Week-to-week points. Prefer env's prepared projections if available
+    weekly_projections = getattr(draft_env, 'weekly_projections', None)
+    if weekly_projections is None:
+        weekly_projections = {p.player_id: {'pts': [p.projected_points] * 18, 'pos': p.position} for p in draft_env.all_players_data}
 
     try:
         num_playoff_teams = int(getattr(config, 'REGULAR_SEASON_REWARD', {}).get('NUM_PLAYOFF_TEAMS', 6))
         regular_results_df, regular_records, playoff_results_df, playoffs_tree, winner = simulate_season_fast(
-            wtw_dict, matchups_df, rosters, 2025, '', False, num_playoff_teams
+            weekly_projections, matchups_df, rosters, 2025, '', False, num_playoff_teams
         )
     except Exception as e:
         return jsonify({'error': f'Season simulation failed: {e}'}), 500
@@ -353,7 +346,7 @@ def simulate_season():
         'winner': winner
     })
 
-@app.route('/api/players')
+@app.route("/api/players")
 def get_players():
     position_filter = request.args.get('position')
     search_query = request.args.get('search')
@@ -361,8 +354,8 @@ def get_players():
     sort_dir = request.args.get('sort_dir', 'desc').lower()  # 'asc' or 'desc'
     reverse = (sort_dir == 'desc')
 
-    # If a draft is in progress, use the available players from the environment
-    if draft_env:
+    draft_env = _get_draft_env()
+    if draft_env and draft_env.available_players_ids:
         source_players = [player_map[p_id] for p_id in draft_env.available_players_ids]
     else:
         source_players = all_players
@@ -436,14 +429,13 @@ def get_players():
 
     return jsonify(players_data)
 
-# Serve frontend application
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
 def serve(path):
     if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
-    else:
-        return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, "index.html")
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8000)
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=8000)
