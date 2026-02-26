@@ -220,41 +220,23 @@ def main():
     # 5. Load Checkpoint if Resuming
     start_episode = 1
     if config.training.RESUME_TRAINING:
-        latest_checkpoint = find_latest_checkpoint(config)
-        if latest_checkpoint:
-            print(f"\nResuming training from checkpoint: {latest_checkpoint}")
-            agent.load_model(latest_checkpoint)
-            # Extract episode number from checkpoint filename if possible
+        latest_checkpoint_path = find_latest_checkpoint(config)
+        if latest_checkpoint_path:
+            print(f"\nResuming training from checkpoint: {latest_checkpoint_path}")
             try:
-                base_name = os.path.basename(latest_checkpoint)
-                start_episode = int(base_name.split('episode_')[1].split('.')[0]) + 1
-                print(f"Starting from episode {start_episode}")
-            except (IndexError, ValueError):
-                print("Could not determine start episode from checkpoint filename. Starting from episode 1.")
+                # Load checkpoint with training=True for strict validation
+                loaded_episode = agent.load_checkpoint(latest_checkpoint_path, is_training=True)
+                start_episode = loaded_episode + 1
+                print(f"Checkpoint validated and loaded successfully. Resuming from episode {start_episode}")
 
-            # Load existing raw data for plotting
-            rewards_data_path = os.path.join(logs_dir, 'all_episode_rewards.csv')
-            losses_data_path = os.path.join(logs_dir, 'all_policy_losses.csv')
-            if os.path.exists(rewards_data_path):
-                with open(rewards_data_path, 'r') as f:
-                    agent.all_episode_rewards = [float(line.strip()) for line in f]
-            if os.path.exists(losses_data_path):
-                with open(losses_data_path, 'r') as f:
-                    agent.all_policy_losses = [float(line.strip()) for line in f]
-
-            # Try to resume optimizer and value network if available
-            optimizer_path_guess = os.path.join(os.path.dirname(latest_checkpoint), f"optimizer_episode_{start_episode-1}.pt")
-            value_path_guess = os.path.join(os.path.dirname(latest_checkpoint), f"value_episode_{start_episode-1}.pth")
-            if os.path.exists(optimizer_path_guess):
-                try:
-                    agent.load_optimizer(optimizer_path_guess)
-                except Exception as e:
-                    print(f"Warning: failed to load optimizer from {optimizer_path_guess}: {e}")
-            if os.path.exists(value_path_guess):
-                try:
-                    agent.load_value_network(value_path_guess)
-                except Exception as e:
-                    print(f"Warning: failed to load value network from {value_path_guess}: {e}")
+            except (ValueError, FileNotFoundError) as e:
+                print(f"FATAL: Could not resume training due to an error. Mismatched configuration or file issue.")
+                print(f"  Error: {e}")
+                print("  Please align your configuration with the checkpoint or start a new training run.")
+                return
+            except Exception as e:
+                print(f"FATAL: An unexpected error occurred while loading the checkpoint: {e}")
+                return
 
         else:
             print("\nNo checkpoint found. Starting a new training run.")

@@ -23,32 +23,20 @@ class ReinforceAgent:
         metrics_logger: Optional[MetricsLogger] = None,
         checkpoint_manager: Optional[CheckpointManager] = None,
     ):
-        """
-        Initializes the REINFORCE Agent.
-
-        Parameters
-        ----------
-        env : FantasyFootballDraftEnv
-            The OpenAI Gym environment.
-        config : Config
-            The project configuration object.
-        metrics_logger : MetricsLogger, optional
-            Handles CSV logging.
-        checkpoint_manager : CheckpointManager, optional
-            Handles model checkpoint I/O.
-        """
         self.env = env
         self.config = config
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"ReinforceAgent using device: {self.device}")
 
         input_dim = len(config.training.ENABLED_STATE_FEATURES)
         output_dim = env.action_space.n
 
-        self.policy_network = PolicyNetwork(input_dim, output_dim, config.training.HIDDEN_DIM)
+        self.policy_network = PolicyNetwork(input_dim, output_dim, config.training.HIDDEN_DIM).to(self.device)
         self.value_network = torch.nn.Sequential(
             torch.nn.Linear(input_dim, config.training.HIDDEN_DIM),
             torch.nn.ReLU(),
             torch.nn.Linear(config.training.HIDDEN_DIM, 1),
-        )
+        ).to(self.device)
         
         value_lr_multiplier = getattr(self.config.training, "VALUE_LR_MULTIPLIER", 2.0)
         self.optimizer = optim.Adam(
@@ -60,7 +48,7 @@ class ReinforceAgent:
 
         self._metrics_logger = metrics_logger
         self._checkpoint_manager = checkpoint_manager or CheckpointManager(
-            self.policy_network, self.value_network, self.optimizer
+            self.policy_network, self.value_network, self.optimizer, self.device
         )
 
     def _calculate_returns(self, rewards: List[float]) -> List[float]:
@@ -88,7 +76,7 @@ class ReinforceAgent:
         
         done = False
         while not done:
-            state_tensor = torch.from_numpy(state).float()
+            state_tensor = torch.from_numpy(state).float().to(self.device)
             
             if self.config.training.ENABLE_ACTION_MASKING:
                 action, log_prob, entropy = self.policy_network.sample_action(state_tensor, action_mask=current_action_mask)
@@ -115,8 +103,8 @@ class ReinforceAgent:
 
     def _update_networks(self, batch_data: Dict[str, List]) -> Tuple[float, float]:
         """Performs one optimization step using batch data."""
-        returns_tensor = torch.tensor(batch_data['returns'], dtype=torch.float32)
-        states_tensor = torch.stack(batch_data['states'])
+        returns_tensor = torch.tensor(batch_data['returns'], dtype=torch.float32).to(self.device)
+        states_tensor = torch.stack(batch_data['states']).to(self.device)
         
         # 1. Compute Value Loss and Advantages
         values = self.value_network(states_tensor).squeeze(-1)
@@ -223,29 +211,14 @@ class ReinforceAgent:
         avg_pts = np.mean(points[-interval:])
         print(f"[Episode {ep}] avg_rew={avg_rew:.2f} | avg_pts={avg_pts:.2f} | loss={last_metrics['loss']:.4f} | EV={last_metrics['ev']:.3f}")
 
-    def save_model(self, filepath: str):
-        torch.save(self.policy_network.state_dict(), filepath)
-
-    def load_model(self, filepath: str):
-        self.policy_network.load_state_dict(torch.load(filepath, map_location='cpu'))
-        self.policy_network.eval()
-
-    def save_value_network(self, filepath: str):
-        torch.save(self.value_network.state_dict(), filepath)
-
-    def load_value_network(self, filepath: str):
-        self.value_network.load_state_dict(torch.load(filepath, map_location='cpu'))
-        self.value_network.eval()
-
-    def save_optimizer(self, filepath: str):
-        torch.save(self.optimizer.state_dict(), filepath)
-
-    def load_optimizer(self, filepath: str):
-        self.optimizer.load_state_dict(torch.load(filepath, map_location='cpu'))
+    def load_checkpoint(self, filepath: str, is_training: bool) -> int:
+        """Loads a consolidated checkpoint using the checkpoint manager."""
+        return self._checkpoint_manager.load_checkpoint(filepath, self.config, is_training)
 
     def save_checkpoint(self, run_version_dir, logs_dir, episode, all_episode_rewards, all_policy_losses):
+        """Saves a consolidated checkpoint and training metrics."""
         if run_version_dir:
-            self._checkpoint_manager.save_checkpoint(run_version_dir, episode)
+            self._checkpoint_manager.save_checkpoint(run_version_dir, episode, self.config)
         if logs_dir:
             metrics = self._metrics_logger or MetricsLogger(logs_dir)
             metrics.write_rewards(all_episode_rewards)

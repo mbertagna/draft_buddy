@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from draft_buddy.config import Config
 from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
+from draft_buddy.models.checkpoint_manager import CheckpointManager
 from draft_buddy.models.policy_network import PolicyNetwork
 from draft_buddy.utils.roster_utils import calculate_roster_scores
 
@@ -15,19 +16,27 @@ def simulate_drafts(config: Config, num_runs: int):
     print(f"Action Masking Enabled (for agent): {config.training.ENABLE_ACTION_MASKING}")
     print(f"Opponent Personalities Enabled. Using specified strategies or default.") # New print
     
-    # 1. Load the trained Policy Network
-    # Use config for dimensions to avoid heavy env instantiation
+    # 1. Load the trained Policy Network via CheckpointManager (inference-only)
     input_dim = len(config.training.ENABLED_STATE_FEATURES)
     output_dim = config.draft.ACTION_SPACE_SIZE
-    
+
     policy_network = PolicyNetwork(input_dim, output_dim, config.training.HIDDEN_DIM)
-    
+    checkpoint_manager = CheckpointManager(
+        policy_network, value_network=None, optimizer=None
+    )
+
     try:
-        policy_network.load_state_dict(torch.load(config.training.MODEL_PATH_TO_LOAD))
-        policy_network.eval() # Set to evaluation mode (e.g., disables dropout layers)
+        checkpoint_manager.load_checkpoint(
+            config.training.MODEL_PATH_TO_LOAD, config, is_training=False
+        )
+        policy_network.eval()
         print(f"Successfully loaded model from: {config.training.MODEL_PATH_TO_LOAD}")
     except FileNotFoundError:
         print(f"Error: Model not found at {config.training.MODEL_PATH_TO_LOAD}. Please ensure the path is correct.")
+        print("Aborting simulation.")
+        return
+    except ValueError as e:
+        print(f"Error: Model configuration mismatch. {e}")
         print("Aborting simulation.")
         return
     except Exception as e:

@@ -13,6 +13,7 @@ from draft_buddy.utils.data_utils import load_player_data, Player, calculate_sta
 from draft_buddy.draft_env.draft_rules import FantasyDraftRules
 from draft_buddy.draft_env.draft_state import DraftState
 from draft_buddy.logic.opponent_strategies import create_opponent_strategy, OpponentStrategy
+from draft_buddy.models.checkpoint_manager import CheckpointManager
 from draft_buddy.models.policy_network import PolicyNetwork
 import json
 from draft_buddy.utils.season_simulation_fast import simulate_season_fast, generate_round_robin_schedule
@@ -335,9 +336,7 @@ class FantasyFootballDraftEnv(gym.Env):
 
 
     def _load_agent_model(self):
-        """Loads the primary agent model for AI suggestions."""
-        input_dim = len(self.config.training.ENABLED_STATE_FEATURES)
-        output_dim = self.action_space.n
+        """Loads the primary agent model for AI suggestions with config validation."""
         model_path = self.config.training.MODEL_PATH_TO_LOAD
 
         if not model_path or not os.path.exists(model_path):
@@ -345,10 +344,23 @@ class FantasyFootballDraftEnv(gym.Env):
             return
 
         try:
-            self.agent_model = PolicyNetwork(input_dim, output_dim, self.config.training.HIDDEN_DIM)
-            self.agent_model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-            self.agent_model.eval()
+            input_dim = len(self.config.training.ENABLED_STATE_FEATURES)
+            output_dim = self.action_space.n
+            policy_network = PolicyNetwork(input_dim, output_dim, self.config.training.HIDDEN_DIM)
+            checkpoint_manager = CheckpointManager(
+                policy_network, value_network=None, optimizer=None
+            )
+            checkpoint_manager.load_checkpoint(model_path, self.config, is_training=False)
+            self.agent_model = policy_network
             print(f"Successfully loaded agent model for suggestions from {model_path}")
+        except ValueError as e:
+            print(f"CRITICAL WARNING: Agent model compatibility error for '{model_path}'.")
+            print(f"  Reason: {e}")
+            print("  AI suggestions will be disabled.")
+            self.agent_model = None
+        except FileNotFoundError:
+            print(f"Warning: Agent model not found at {model_path}. AI suggestions will be disabled.")
+            self.agent_model = None
         except Exception as e:
             print(f"Error loading agent model for suggestions from {model_path}: {e}")
             self.agent_model = None
@@ -356,15 +368,12 @@ class FantasyFootballDraftEnv(gym.Env):
 
     def _load_opponent_models(self):
         """
-        Loads trained PolicyNetwork models for opponents specified in config.
+        Loads trained PolicyNetwork models for opponents with config validation.
         Only loads models for teams explicitly marked with 'AGENT_MODEL' logic.
         """
-        input_dim = len(self.config.training.ENABLED_STATE_FEATURES)
-        output_dim = self.action_space.n
-
         for team_id in range(1, self.config.draft.NUM_TEAMS + 1):
             if team_id == self.config.draft.AGENT_START_POSITION:
-                continue # Skip loading a model for the agent's own team
+                continue
 
             opponent_strategy = self.config.opponent.OPPONENT_TEAM_STRATEGIES.get(
                 team_id, self.config.opponent.DEFAULT_OPPONENT_STRATEGY
@@ -372,23 +381,37 @@ class FantasyFootballDraftEnv(gym.Env):
 
             if opponent_strategy['logic'] == 'AGENT_MODEL':
                 model_path_key = opponent_strategy.get('model_path_key')
-                if model_path_key and model_path_key in self.config.opponent.OPPONENT_MODEL_PATHS:
-                    model_path = self.config.opponent.OPPONENT_MODEL_PATHS[model_path_key]
-                    try:
-                        model = PolicyNetwork(input_dim, output_dim, self.config.training.HIDDEN_DIM)
-                        model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
-                        model.eval() # Set to evaluation mode
-                        self.opponent_models[team_id] = model
-                        print(f"Loaded agent model for opponent Team {team_id} from {model_path}")
-                    except FileNotFoundError:
-                        print(f"Warning: Opponent model not found at {model_path} for Team {team_id}. Falling back to DEFAULT_OPPONENT_STRATEGY.")
-                        # If model not found, revert this opponent to default heuristic
-                        self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
-                    except Exception as e:
-                        print(f"Error loading opponent model for Team {team_id} from {model_path}: {e}. Falling back to DEFAULT_OPPONENT_STRATEGY.")
-                        self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
-                else:
-                    print(f"Warning: 'model_path_key' missing or invalid for Team {team_id} configured as 'AGENT_MODEL'. Falling back to DEFAULT_OPPONENT_STRATEGY.")
+                if not model_path_key or model_path_key not in self.config.opponent.OPPONENT_MODEL_PATHS:
+                    print(f"Warning: 'model_path_key' missing or invalid for Team {team_id} configured as 'AGENT_MODEL'. Falling back to default strategy.")
+                    self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
+                    continue
+
+                model_path = self.config.opponent.OPPONENT_MODEL_PATHS[model_path_key]
+                if not os.path.exists(model_path):
+                    print(f"Warning: Opponent model not found at {model_path} for Team {team_id}. Falling back to default strategy.")
+                    self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
+                    continue
+
+                try:
+                    input_dim = len(self.config.training.ENABLED_STATE_FEATURES)
+                    output_dim = self.action_space.n
+                    policy_network = PolicyNetwork(input_dim, output_dim, self.config.training.HIDDEN_DIM)
+                    checkpoint_manager = CheckpointManager(
+                        policy_network, value_network=None, optimizer=None
+                    )
+                    checkpoint_manager.load_checkpoint(model_path, self.config, is_training=False)
+                    self.opponent_models[team_id] = policy_network
+                    print(f"Loaded agent model for opponent Team {team_id} from {model_path}")
+                except ValueError as e:
+                    print(f"CRITICAL WARNING: Opponent model compatibility error for Team {team_id} at '{model_path}'.")
+                    print(f"  Reason: {e}")
+                    print("  Falling back to default strategy.")
+                    self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
+                except FileNotFoundError:
+                    print(f"Warning: Opponent model not found at {model_path} for Team {team_id}. Falling back to default strategy.")
+                    self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
+                except Exception as e:
+                    print(f"Error loading opponent model for Team {team_id} from {model_path}: {e}. Falling back to default strategy.")
                     self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = self.config.opponent.DEFAULT_OPPONENT_STRATEGY.copy()
 
         # Optional: Randomize non-agent opponent strategies per episode
