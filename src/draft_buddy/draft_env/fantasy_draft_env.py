@@ -901,49 +901,81 @@ class FantasyFootballDraftEnv(gym.Env):
 
         return bye_week_vector
 
+    def _get_stack_count_for_team(self, team_id: int) -> int:
+        """
+        Return QB–WR/TE stack count for a team's current roster.
+
+        Parameters
+        ----------
+        team_id : int
+            Team whose roster is evaluated.
+
+        Returns
+        -------
+        int
+            Number of valid stacks on that roster.
+        """
+        roster = self.teams_rosters[team_id]['PLAYERS']
+        return calculate_stack_count(roster)
+
     def _get_current_stack_count(self) -> int:
         """
         Returns the count of existing QB-WR/TE stacks currently on the agent's roster.
-        
+
         Returns
         -------
         int
             Number of valid stacks on the current roster
         """
-        agent_roster = self.teams_rosters[self.agent_team_id]['PLAYERS']
-        return calculate_stack_count(agent_roster)
+        return self._get_stack_count_for_team(self.agent_team_id)
+
+    def _get_stack_target_available_flag_for_team(self, team_id: int) -> int:
+        """
+        Whether a stacking target exists in the pool for a given team's roster.
+
+        Parameters
+        ----------
+        team_id : int
+            Team whose rostered QBs define stack eligibility.
+
+        Returns
+        -------
+        int
+            1 if a valid stacking target is available, 0 otherwise.
+        """
+        agent_roster = self.teams_rosters[team_id]['PLAYERS']
+
+        qb_teams = set()
+        for player in agent_roster:
+            if player.position == 'QB' and player.team:
+                qb_teams.add(player.team)
+
+        if not qb_teams:
+            return 0
+
+        for player_id in self.available_players_ids:
+            player = self.player_map[player_id]
+            if (
+                player.position in ['WR', 'TE']
+                and player.team
+                and player.team in qb_teams
+            ):
+                return 1
+
+        return 0
 
     def _get_stack_target_available_flag(self) -> int:
         """
-        Returns a binary flag indicating whether a valid stacking target 
+        Returns a binary flag indicating whether a valid stacking target
         (a WR or TE from the same NFL team as a QB currently on the agent's roster)
         is available in the remaining draft pool.
-        
+
         Returns
         -------
         int
             1 if a valid stacking target is available, 0 otherwise
         """
-        agent_roster = self.teams_rosters[self.agent_team_id]['PLAYERS']
-        
-        # Get teams of QBs on the agent's roster
-        qb_teams = set()
-        for player in agent_roster:
-            if player.position == 'QB' and player.team:
-                qb_teams.add(player.team)
-        
-        if not qb_teams:
-            return 0
-        
-        # Check if any available WR/TE shares a team with a rostered QB
-        for player_id in self.available_players_ids:
-            player = self.player_map[player_id]
-            if (player.position in ['WR', 'TE'] and 
-                player.team and 
-                player.team in qb_teams):
-                return 1
-        
-        return 0
+        return self._get_stack_target_available_flag_for_team(self.agent_team_id)
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None):
         super().reset(seed=seed)
@@ -1154,6 +1186,24 @@ class FantasyFootballDraftEnv(gym.Env):
             'manual_draft_teams': list(self.manual_draft_teams)
         }
 
+    def _get_state_for_team(self, team_id: int) -> np.ndarray:
+        """
+        Normalized state vector from the perspective of a specific team (roster, threats, etc.).
+
+        Parameters
+        ----------
+        team_id : int
+            Team whose features populate the observation.
+
+        Returns
+        -------
+        np.ndarray
+            Normalized state vector.
+        """
+        state_values_map = self._compute_global_state_features()
+        full_state_map = self._build_state_map_for_team(team_id, state_values_map)
+        return self._state_normalizer.normalize(full_state_map)
+
     def _get_state(self) -> np.ndarray:
         """
         Constructs and returns the normalized state vector for the current team on clock.
@@ -1163,16 +1213,11 @@ class FantasyFootballDraftEnv(gym.Env):
         np.ndarray
             Normalized state vector.
         """
-        state_values_map = self._compute_global_state_features()
-        perspective_team_id = (
-            self.draft_order[self.current_pick_idx] 
-            if self.current_pick_idx < len(self.draft_order) 
-            else self.agent_team_id
-        )
-        
-        # Build map for the normalizer
-        full_state_map = self._build_state_map_for_team(perspective_team_id, state_values_map)
-        return self._state_normalizer.normalize(full_state_map)
+        if self.current_pick_idx < len(self.draft_order):
+            perspective_team_id = self.draft_order[self.current_pick_idx]
+        else:
+            perspective_team_id = self.agent_team_id
+        return self._get_state_for_team(perspective_team_id)
 
     def _build_state_map_for_team(self, team_id: int, global_features: Dict[str, float]) -> Dict[str, float]:
         """
@@ -1201,7 +1246,7 @@ class FantasyFootballDraftEnv(gym.Env):
             state_values_map['available_roster_slots_flex'] = float(self.config.draft.ROSTER_STRUCTURE['FLEX'] - roster_counts['FLEX'])
 
         if 'current_pick_number' in enabled: state_values_map['current_pick_number'] = float(self.current_pick_number)
-        if 'agent_start_position' in enabled: state_values_map['agent_start_position'] = float(self.agent_team_id)
+        if 'agent_start_position' in enabled: state_values_map['agent_start_position'] = float(team_id)
 
         # Imminent threats from perspectives of next teams
         next_opp_id = self._get_next_opponent_team_id_for(team_id)
@@ -1228,11 +1273,13 @@ class FantasyFootballDraftEnv(gym.Env):
             fname = f"bye_week_{i}_count"
             if fname in enabled: state_values_map[fname] = float(team_bye_vec[i-4])
 
-        # Stacking features
+        # Stacking features (perspective of team_id)
         if 'current_stack_count' in enabled:
-            state_values_map['current_stack_count'] = float(self._get_current_stack_count())
+            state_values_map['current_stack_count'] = float(self._get_stack_count_for_team(team_id))
         if 'stack_target_available_flag' in enabled:
-            state_values_map['stack_target_available_flag'] = float(self._get_stack_target_available_flag())
+            state_values_map['stack_target_available_flag'] = float(
+                self._get_stack_target_available_flag_for_team(team_id)
+            )
 
         return state_values_map
 
@@ -1294,7 +1341,7 @@ class FantasyFootballDraftEnv(gym.Env):
         if best_player:
             return True, best_player
         else:
-            return False, None # Should not happen if available_players_for_pos is not empty and _can_team_draft_position is True
+            return False, None  # Should not happen if available_players_for_pos is not empty and rules allow the pick.
 
     def _simulate_competing_pick(self, team_id: int, global_features: Optional[Dict[str, float]] = None) -> Optional[Player]:
         """Delegates to the opponent's strategy to select a player."""
@@ -1348,7 +1395,7 @@ class FantasyFootballDraftEnv(gym.Env):
             eligible = [
                 self.player_map[pid] for pid in self.available_players_ids
                 if self.player_map.get(pid) and self.player_map[pid].position in {"QB", "RB", "WR", "TE"}
-                and self._can_team_draft_position(team_id, self.player_map[pid].position)
+                and self._can_team_draft_position_simulated(team_id, self.player_map[pid].position)
             ]
             if eligible:
                 chosen = random.choice(eligible)
@@ -1372,10 +1419,15 @@ class FantasyFootballDraftEnv(gym.Env):
         # Find the player object
         drafted_player = self.player_map.get(player_id)
         if not drafted_player or drafted_player.player_id not in self.available_players_ids:
+            self._state.set_overridden_team_id(None)
             raise ValueError(f"Player with ID {player_id} is not available to be drafted.")
 
         if not self._can_team_draft_position_manual(current_team_id, drafted_player.position):
-            raise ValueError(f"Team {current_team_id} cannot draft a {drafted_player.position}. The roster is full for that position or the bench is at capacity.")
+            self._state.set_overridden_team_id(None)
+            raise ValueError(
+                f"Team {current_team_id} cannot draft a {drafted_player.position}. "
+                "The roster is full for that position or the bench is at capacity."
+            )
 
         # Store the state before making the pick for the undo history
         was_override = (self._overridden_team_id is not None)
@@ -1556,7 +1608,7 @@ class FantasyFootballDraftEnv(gym.Env):
                     self._state.replace_available_player_ids(original_available_ids - ignore_set)
                     self._invalidate_sorted_available_cache()
 
-            state = self._get_state()
+            state = self._get_state_for_team(team_id)
             action_mask = self.get_action_mask()
         finally:
             self.agent_team_id = original_agent_team_id
