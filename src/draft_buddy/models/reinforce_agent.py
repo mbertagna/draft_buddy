@@ -113,7 +113,7 @@ class ReinforceAgent:
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
         # 2. Policy Loss (REINFORCE with Baseline)
-        policy_terms = [-lp * adv for log_prob, adv in zip(batch_data['log_probs'], advantages)]
+        policy_terms = [-log_prob * adv for log_prob, adv in zip(batch_data['log_probs'], advantages)]
         policy_loss = torch.stack(policy_terms).sum()
 
         # 3. Entropy Loss (to encourage exploration)
@@ -209,7 +209,7 @@ class ReinforceAgent:
         """Helper to print training progress."""
         avg_rew = np.mean(rewards[-interval:])
         avg_pts = np.mean(points[-interval:])
-        print(f"[Episode {ep}] avg_rew={avg_rew:.2f} | avg_pts={avg_pts:.2f} | loss={last_metrics['loss']:.4f} | EV={last_metrics['ev']:.3f}")
+        print(f"Episode {ep:<10} | avg_rew={avg_rew:<10.2f} | avg_pts={avg_pts:<10.2f} | loss={last_metrics['loss']:<10.3f} | EV={last_metrics['ev']:<10.3f}")
 
     def load_checkpoint(self, filepath: str, is_training: bool) -> int:
         """Loads a consolidated checkpoint using the checkpoint manager."""

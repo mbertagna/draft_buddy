@@ -6,30 +6,9 @@
     <title>DRAFT BUDDY</title>
     <style>
         body { font-family: sans-serif; margin: 0; background-color: #f4f4f9; display: flex; flex-direction: column; height: 100vh; }
-        main { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-        
-        #top-panel { flex: 0 0 50%; overflow-y: auto; padding: 0.5rem 1rem; min-height: 100px; display: flex; flex-direction: column; }
-        #bottom-panel { flex: 1 1 auto; overflow-y: auto; padding: 0.5rem 1rem; min-height: 100px; background: #fff; }
-
-        .resizer {
-            height: 8px;
-            cursor: row-resize;
-            background-color: #eee;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-            border-top: 1px solid #ddd;
-            border-bottom: 1px solid #ddd;
-        }
-        .resizer:hover { background-color: #e0e0e0; }
-        .resizer::after {
-            content: "";
-            width: 30px;
-            height: 4px;
-            border-top: 2px solid #999;
-            border-bottom: 2px solid #999;
-        }
+        main { display: flex; flex: 1; overflow: hidden; padding: 1rem; }
+        #left-panel { flex: 1; overflow-y: auto; padding-right: 1rem; }
+        #right-panel { flex: 2; overflow-y: auto; padding-left: 1rem; }
 
         /* Header: compact, sticky, space-efficient */
         header {
@@ -198,15 +177,6 @@
         }
         #undo-pick-btn { background-color: #ffc107; color: black; }
         #simulate-pick-btn { background-color: #007bff; }
-        #auto-draft-btn {
-            background-color: #c62828;
-            color: #fff;
-            font-weight: 600;
-        }
-        #auto-draft-btn:disabled {
-            opacity: 0.65;
-            cursor: not-allowed;
-        }
         #download-csv-btn { background-color: #6c757d; }
 
         /* Controls + table */
@@ -262,130 +232,14 @@
             gap: 0.5rem;
         }
 
-        #player-list { border-collapse: collapse; width: 100%; position: relative; }
-        #player-list thead th { background-color: #4CAF50; color: white; position: sticky; top: -1px; z-index: 100; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        #player-list { border-collapse: collapse; width: 100%; }
+        #player-list th { background-color: #4CAF50; color: white; }
         #player-list th.sortable { cursor: pointer; user-select: none; }
         #player-list tbody tr:nth-child(even) { background-color: #f2f2f2; }
         #player-list tbody tr:hover { cursor: pointer; }
         #player-list tbody tr:hover td { box-shadow: inset 0 0 100vw 100vh rgba(0, 0, 0, 0.07); }
         #player-list th, #player-list td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         #player-list td:first-child { text-align: center; vertical-align: middle; }
-
-        /* Draft Board Grid */
-        #draft-board-container {
-            overflow-x: auto;
-            margin-bottom: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        #draft-board-table {
-            border-collapse: collapse;
-            width: max-content;
-            min-width: 100%;
-            table-layout: fixed;
-        }
-        #draft-board-table th, #draft-board-table td {
-            border: 1px solid #ddd;
-            padding: 4px;
-            width: 150px;
-            min-width: 150px;
-            vertical-align: top;
-            overflow: hidden;
-        }
-        #draft-board-table th {
-            background-color: #eee;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-        .board-team-header {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            font-size: 0.85rem;
-        }
-        .board-team-header-btn {
-            cursor: pointer;
-            padding: 6px 8px;
-            border-radius: 6px;
-            border: 2px solid transparent;
-            transition: background-color 0.15s, border-color 0.15s;
-        }
-        .board-team-header-btn:hover {
-            background-color: #e8e8e8;
-        }
-        .board-team-header-btn.main-team .board-team-name {
-            color: #1976d2;
-            font-weight: 700;
-        }
-        .board-team-header-btn.picking-now {
-            background-color: #ffc107;
-            border-color: #ffc107;
-            color: #000;
-        }
-        .board-team-header-btn.picking-now:hover {
-            background-color: #ffca28;
-        }
-        .board-team-header-btn.team-full {
-            background-color: #e0e0e0;
-            opacity: 0.9;
-        }
-        .board-team-header-btn.snake-order-pick {
-            border: 2px solid #ffc107;
-        }
-        .board-team-header-btn.snake-order-pick:not(.picking-now) {
-            background-color: #fffde7;
-        }
-        .board-team-stats {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2px;
-            font-size: 0.75rem;
-            color: #555;
-        }
-        .board-team-stats .stat {
-            background: rgba(0,0,0,0.05);
-            padding: 1px 4px;
-            border-radius: 4px;
-        }
-        .board-bye-week-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 3px;
-            font-size: 0.65rem;
-        }
-        .board-bye-week-cell {
-            padding: 3px 4px;
-            text-align: center;
-            border-radius: 3px;
-            border: 1px solid #ccc;
-            min-width: 0;
-            line-height: 1.2;
-        }
-        .board-bye-week-cell .bye-week-num {
-            font-weight: 700;
-            display: block;
-        }
-        .board-bye-week-cell .bye-week-pos {
-            font-size: 0.6rem;
-            display: block;
-            margin-top: 1px;
-        }
-        .board-cell {
-            min-height: 48px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            font-size: 0.8rem;
-            border-radius: 3px;
-            padding: 4px;
-        }
-        .board-cell .pos { font-weight: bold; font-size: 0.7rem; opacity: 0.8; }
-        .board-cell .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .board-cell .team { font-size: 0.7rem; opacity: 0.9; }
-        .board-cell.empty { background-color: #fafafa; color: #ccc; border: 1px dashed #eee; }
-        .board-cell.on-clock { border: 2px solid #ffc107; background-color: #fff9e6; }
-
         /* Info column/button */
         #player-list th.info-col, #player-list td.info-col { width: 28px; text-align: center; }
         .info-button { padding: 2px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; font-size: 0.9rem; line-height: 1; }
@@ -505,7 +359,6 @@
             <div class="header-actions">
                 <button id="undo-pick-btn">Undo</button>
                 <button id="simulate-pick-btn">Sim Pick</button>
-                <button type="button" id="auto-draft-btn">Auto Draft</button>
                 <button id="download-csv-btn">CSV</button>
             </div>
         </div>
@@ -552,10 +405,23 @@
                 <div id="ai-suggestion-display">N/A</div>
             </div>
         </div>
+
+        <div class="team-row">
+            <div id="team-buttons"></div>
+        </div>
     </header>
 
     <main>
-        <div id="top-panel">
+        <div id="left-panel">
+            <div id="team-rosters">
+                <!-- Team rosters will be inserted here -->
+            </div>
+            <div id="season-sim-container" style="margin-top:12px;">
+                <button id="simulate-season-btn" style="background-color:#8a2be2; color:#fff; padding:8px 12px; border:none; border-radius:6px; cursor:pointer;">Sim Season</button>
+                <div id="season-simulation-results" style="margin-top:12px;"></div>
+            </div>
+        </div>
+        <div id="right-panel">
             <div id="controls">
                 <input type="text" id="player-search" placeholder="Search by name...">
                 <div class="position-filters">
@@ -567,48 +433,25 @@
                 <div class="gp-filter"><span>Min GP Frac</span><input type="number" id="gp-frac-min" step="0.01" min="0" max="1" placeholder="e.g., 0.75"></div>
                 <button id="new-draft-btn">Start New Draft</button>
             </div>
-            <div style="flex: 1; overflow-y: auto;">
-                <table id="player-list">
-                    <thead>
-                        <tr>
-                            <th style="width:28px;">Blind</th>
-                            <th data-sort-key="adp">ADP</th>
-                            <th data-sort-key="name">Name</th>
-                            <th data-sort-key="position">Position</th>
-                            <th data-sort-key="projected_points">Proj. Pts</th>
-                            <th data-sort-key="vorp">VORP</th>
-                            <th data-sort-key="games_played_frac">GP Frac</th>
-                            <th data-sort-key="team">Team</th>
-                            <th data-sort-key="bye_week">Bye</th>
-                            <th class="info-col">Info</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Player rows will be inserted here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="resizer" id="h-resizer"></div>
-
-        <div id="bottom-panel">
-            <div id="draft-board-container">
-                <table id="draft-board-table">
-                    <thead>
-                        <tr id="board-headers">
-                            <!-- Headers will be inserted here -->
-                        </tr>
-                    </thead>
-                    <tbody id="board-rows">
-                        <!-- Rows will be inserted here -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="season-sim-container" style="margin-top:12px;">
-                <button id="simulate-season-btn" style="background-color:#8a2be2; color:#fff; padding:8px 12px; border:none; border-radius:6px; cursor:pointer;">Sim Season</button>
-                <div id="season-simulation-results" style="margin-top:12px;"></div>
-            </div>
+            <table id="player-list">
+                <thead>
+                    <tr>
+                        <th style="width:28px;">Blind</th>
+                        <th data-sort-key="adp">ADP</th>
+                        <th data-sort-key="name">Name</th>
+                        <th data-sort-key="position">Position</th>
+                        <th data-sort-key="projected_points">Proj. Pts</th>
+                        <th data-sort-key="vorp">VORP</th>
+                        <th data-sort-key="games_played_frac">GP Frac</th>
+                        <th data-sort-key="team">Team</th>
+                        <th data-sort-key="bye_week">Bye</th>
+                        <th class="info-col">Info</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Player rows will be inserted here -->
+                </tbody>
+            </table>
         </div>
     </main>
 
@@ -617,8 +460,8 @@
         const positionCheckboxes = document.querySelectorAll('input[name="position"]');
         const playerTbody = document.querySelector('#player-list tbody');
         const newDraftBtn = document.getElementById('new-draft-btn');
-        const boardHeaders = document.getElementById('board-headers');
-        const boardRows = document.getElementById('board-rows');
+        const teamRostersDiv = document.getElementById('team-rosters');
+        const teamButtonsDiv = document.getElementById('team-buttons');
         const currentPickDisplay = document.getElementById('current-pick-display');
         const teamOnClockDisplay = document.getElementById('team-on-clock-display');
         const aiSuggestionDisplay = document.getElementById('ai-suggestion-display');
@@ -630,44 +473,10 @@
         const teDraftedDisplay = document.getElementById('te-drafted-display');
         const undoPickBtn = document.getElementById('undo-pick-btn');
         const simulatePickBtn = document.getElementById('simulate-pick-btn');
-        const autoDraftBtn = document.getElementById('auto-draft-btn');
         const downloadCsvBtn = document.getElementById('download-csv-btn');
-        const AUTO_DRAFT_LABEL = 'Auto Draft';
         const gpFracMinInput = document.getElementById('gp-frac-min');
         const simulateSeasonBtn = document.getElementById('simulate-season-btn');
         const seasonResultsDiv = document.getElementById('season-simulation-results');
-
-        const topPanel = document.getElementById('top-panel');
-        const bottomPanel = document.getElementById('bottom-panel');
-        const resizer = document.getElementById('h-resizer');
-
-        let isResizing = false;
-
-        resizer.addEventListener('mousedown', function(e) {
-            isResizing = true;
-            document.body.style.cursor = 'row-resize';
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        });
-
-        function handleMouseMove(e) {
-            if (!isResizing) return;
-            const main = document.querySelector('main');
-            const mainRect = main.getBoundingClientRect();
-            const topHeight = e.clientY - mainRect.top;
-            const containerHeight = mainRect.height;
-            const percentage = (topHeight / containerHeight) * 100;
-            if (percentage > 5 && percentage < 95) {
-                topPanel.style.flex = `0 0 ${percentage}%`;
-            }
-        }
-
-        function handleMouseUp(e) {
-            isResizing = false;
-            document.body.style.cursor = 'default';
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        }
 
         let currentDraftState = null;
 
@@ -884,14 +693,15 @@
         const GREEN = [200, 245, 200]; // light green
         const RED = [245, 200, 200];   // light red
         // Dynamic, multi-stop color scale: green (good) -> yellow -> orange -> red (bad)
-        function _computeMetricColor(value, minVal, maxVal, tMapper) {
+        function dynamicMetricColor(value, minVal, maxVal, invert=false) {
             if (
                 value === null || value === undefined || Number.isNaN(value) ||
                 minVal === null || maxVal === null || maxVal === minVal
             ) return '';
 
             const tRaw = (value - minVal) / (maxVal - minVal);
-            const t = clamp(tMapper(tRaw), 0, 1);
+            let t = clamp(tRaw, 0, 1);
+            if (invert) t = 1 - t; // e.g., ADP lower is better
 
             const RED = [245, 200, 200];
             const ORANGE = [255, 218, 185];
@@ -908,16 +718,8 @@
             }
         }
 
-        function getStandardMetricColor(value, minVal, maxVal) {
-            return _computeMetricColor(value, minVal, maxVal, t => t);
-        }
-
-        function getInvertedMetricColor(value, minVal, maxVal) {
-            return _computeMetricColor(value, minVal, maxVal, t => 1 - t);
-        }
-
         function openPlayerInfo(playerName) {
-            const query = `${playerName} 2026 outlook`;
+            const query = `${playerName} 2025 outlook`;
             const url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
             window.open(url, '_blank');
         }
@@ -1004,7 +806,7 @@
                     gpCell.style.color = '';
                     gpCell.style.fontWeight = '';
                     if (gpValNum !== null) {
-                        gpCell.style.background = getStandardMetricColor(gpValNum, gpMin, gpMax);
+                        gpCell.style.background = dynamicMetricColor(gpValNum, gpMin, gpMax, /*invert*/ false);
                     } else {
                         gpCell.style.background = '';
                     }
@@ -1032,9 +834,9 @@
                 infoCell.appendChild(infoBtn);
 
                 // ----- Conditional Coloring -----
-                if (adpValNum !== null) adpCell.style.background = getInvertedMetricColor(adpValNum, adpMin, adpMax);
-                ptsCell.style.background = getStandardMetricColor(ptsVal, ptsMin, ptsMax);
-                vorpCell.style.background = getStandardMetricColor(vorpVal, vorpMin, vorpMax);
+                if (adpValNum !== null) adpCell.style.background = dynamicMetricColor(adpValNum, adpMin, adpMax, /*invert*/ true);
+                ptsCell.style.background = dynamicMetricColor(ptsVal, ptsMin, ptsMax, /*invert*/ false);
+                vorpCell.style.background = dynamicMetricColor(vorpVal, vorpMin, vorpMax, /*invert*/ false);
 
                 const posColor = POS_COLORS[player.position];
                 if (posColor) {
@@ -1054,6 +856,10 @@
             });
         };
 
+        const checkBackendStatus = async () => {
+            // Not used
+        };
+
         // Event Listeners
         playerSearch.addEventListener('keyup', fetchPlayers);
         positionCheckboxes.forEach(checkbox => checkbox.addEventListener('change', fetchPlayers));
@@ -1061,7 +867,6 @@
         newDraftBtn.addEventListener('click', startNewDraft);
         undoPickBtn.addEventListener('click', undoLastPick);
         simulatePickBtn.addEventListener('click', simulateNextPick);
-        autoDraftBtn.addEventListener('click', autoDraftRest);
         downloadCsvBtn.addEventListener('click', downloadCsv);
         if (simulateSeasonBtn) simulateSeasonBtn.addEventListener('click', simulateSeason);
 
@@ -1087,13 +892,6 @@
             }
         }
 
-        function syncAutoDraftButtonState() {
-            const sched = currentDraftState && Array.isArray(currentDraftState.draft_order) &&
-                typeof currentDraftState.current_pick_idx === 'number' &&
-                currentDraftState.current_pick_idx < currentDraftState.draft_order.length;
-            autoDraftBtn.disabled = !sched;
-        }
-
         function renderDraftState(state) {
             currentDraftState = state;
             currentPickDisplay.innerText = state.current_pick_number;
@@ -1104,136 +902,131 @@
             fetchDraftSummary();
             updatePositionMetaChips();
 
-            const numTeams = Number(state.num_teams) || 10;
-            const agentTeamId = state.agent_start_position;
+            teamButtonsDiv.innerHTML = '';
+            const snakePickTeam = state.draft_order[state.current_pick_number - 1];
             const teamOnClock = state.current_team_picking;
-            const draftOrder = state.draft_order || [];
-            const totalRounds = state.total_roster_size_per_team || 16;
+            const numTeams = Number(state.num_teams) || Object.keys(state.team_rosters || {}).length || 10;
+            const agentTeamId = state.agent_start_position; // GET THE VALUE DYNAMICALLY
 
-            const snakePickIdx = state.current_pick_number - 1;
-            const snakePickTeam = (snakePickIdx >= 0 && snakePickIdx < draftOrder.length)
-                ? draftOrder[snakePickIdx] : null;
+            for (let i = 1; i <= numTeams; i++) {
+                const button = document.createElement('button');
+                button.innerText = `Team ${i}`;
+                button.classList.add('team-button');
 
-            // --- Render Board Headers (also serve as team selection buttons) ---
-            boardHeaders.innerHTML = '';
+                if (i === agentTeamId) {
+                    button.classList.add('main-team');
+                }
+
+                if (i === snakePickTeam) {
+                    button.classList.add('snake-order-pick');
+                }
+
+                if (i === teamOnClock) {
+                    button.classList.add('picking-now');
+                }
+
+                if (state.team_is_full && state.team_is_full[i]) {
+                    button.classList.add('team-full');
+                }
+
+                button.addEventListener('click', () => overrideTeam(i));
+                teamButtonsDiv.appendChild(button);
+            }
+
+            let rostersHTML = '<h3>Team Rosters</h3>';
+            // --- Summary section: total players and points per team ---
+            let summaryHTML = '<div class="team-summary"><div class="team-summary-grid">';
             for (let i = 1; i <= numTeams; i++) {
                 const teamId = i;
                 const roster = state.team_rosters[teamId];
-                const pointsSummary = state.team_points_summary[teamId] || { starters_total: 0, bench_total: 0 };
                 const totalProjectedPoints = state.team_projected_points[teamId] || 0;
-
                 let totalPlayers = 0;
                 if (roster) {
                     const starters = roster.starters || {};
-                    const startersCount = Object.values(starters).reduce(
-                        (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
+                    const startersCount = Object.values(starters).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
                     const benchCount = (roster.bench || []).length;
                     totalPlayers = startersCount + benchCount;
                 }
-
-                const byeWeeksData = state.team_bye_weeks?.[teamId] || {};
-                let byeWeekCellsHTML = '';
-                for (let week = 4; week <= 14; week++) {
-                    const weekData = byeWeeksData[week];
-                    let totalOnBye = 0;
-                    let posParts = [];
-                    if (weekData) {
-                        totalOnBye = Object.values(weekData).reduce((s, c) => s + c, 0);
-                        posParts = Object.entries(weekData)
-                            .filter(([, c]) => c > 0)
-                            .map(([p, c]) => `${p}:${c}`);
-                    }
-                    const posContent = posParts.join(' ');
-                    const intensity = Math.min(totalOnBye / 3, 1);
-                    const bgColor = totalOnBye > 1 ? `rgba(255, 100, 100, ${intensity})` : '#efefef';
-                    byeWeekCellsHTML += `<div class="board-bye-week-cell" style="background-color: ${bgColor};" title="Week ${week}${posContent ? ': ' + posParts.join(', ') : ''}">
-                        <span class="bye-week-num">${week}</span>
-                        ${posContent ? `<span class="bye-week-pos">${posContent}</span>` : ''}
-                    </div>`;
-                }
-
-                const th = document.createElement('th');
-                const headerDiv = document.createElement('div');
-                headerDiv.className = 'board-team-header board-team-header-btn';
-                headerDiv.title = 'Click to set this team as picking';
-                headerDiv.setAttribute('role', 'button');
-                headerDiv.tabIndex = 0;
-
-                if (teamId === agentTeamId) headerDiv.classList.add('main-team');
-                if (teamId === snakePickTeam) headerDiv.classList.add('snake-order-pick');
-                if (teamId === teamOnClock) headerDiv.classList.add('picking-now');
-                if (state.team_is_full && state.team_is_full[teamId]) headerDiv.classList.add('team-full');
-
-                headerDiv.innerHTML = `
-                    <span class="board-team-name">Team ${teamId}</span>
-                    <div class="board-team-stats">
-                        <span class="stat" title="Total players drafted">P: ${totalPlayers}</span>
-                        <span class="stat" title="Total projected points">${totalProjectedPoints.toFixed(0)} pts</span>
-                        <span class="stat" title="Starters points">S: ${pointsSummary.starters_total.toFixed(0)}</span>
-                        <span class="stat" title="Bench points">B: ${pointsSummary.bench_total.toFixed(0)}</span>
-                    </div>
-                    <div class="board-bye-week-grid" title="Bye week distribution (weeks 4-14)">
-                        ${byeWeekCellsHTML}
+                summaryHTML += `
+                    <div class="team-summary-item">
+                        <span class="chip">Team ${teamId}</span>
+                        <span class="metric"><span class="label">Players</span> <span class="value">${totalPlayers}</span></span>
+                        <span class="metric"><span class="label">Pts</span> <span class="value">${totalProjectedPoints.toFixed(1)}</span></span>
                     </div>
                 `;
+            }
+            summaryHTML += '</div></div>';
+            rostersHTML += summaryHTML;
+            for (let i = 1; i <= numTeams; i++) {
+                const teamId = i;
+                const roster = state.team_rosters[teamId];
+                const totalProjectedPoints = state.team_projected_points[teamId] || 0;
+                const pointsSummary = state.team_points_summary[teamId] || { starters_total: 0, bench_total: 0 };
 
-                headerDiv.addEventListener('click', () => overrideTeam(teamId));
-                headerDiv.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        overrideTeam(teamId);
+                if (!roster) {
+                    rostersHTML += `<div class="roster-card"><h4>Team ${teamId}</h4><p>No players drafted yet.</p></div>`;
+                    continue;
+                }
+
+                // --- Starters ---
+                let startersHTML = `<div class="roster-section"><h5>Starters (${pointsSummary.starters_total.toFixed(1)} pts)</h5><table>`;
+                const starterPositions = ['QB', 'RB', 'WR', 'TE', 'FLEX'];
+                starterPositions.forEach(pos => {
+                    const players = roster.starters[pos] || [];
+                    const numSlots = state.roster_structure[pos] || 0;
+                    for (let j = 0; j < numSlots; j++) {
+                        const player = players[j];
+                        if (player) {
+                            const posColor = POS_COLORS[player.position] || '';
+                            startersHTML += `<tr><td>${pos}</td><td><span class="chip" style="background-color: ${posColor};">${player.name} - ${player.projected_points.toFixed(1)} pts</span></td></tr>`;
+                        } else {
+                            startersHTML += `<tr><td>${pos}</td><td>Empty</td></tr>`;
+                        }
                     }
                 });
+                startersHTML += '</table></div>';
 
-                th.appendChild(headerDiv);
-                boardHeaders.appendChild(th);
-            }
+                // --- Bench ---
+                let benchHTML = `<div class="roster-section"><h5>Bench (${pointsSummary.bench_total.toFixed(1)} pts)</h5><ul>`;
+                const benchPlayers = roster.bench || [];
+                benchPlayers.sort((a, b) => b.projected_points - a.projected_points);
+                benchPlayers.forEach(player => {
+                    const posColor = POS_COLORS[player.position] || '';
+                    benchHTML += `<li><span class="chip" style="background-color: ${posColor};">${player.name} - ${player.projected_points.toFixed(1)} pts</span></li>`;
+                });
+                benchHTML += '</ul></div>';
 
-            // --- Render Board Rows (Rounds) ---
-            boardRows.innerHTML = '';
-            for (let r = 0; r < totalRounds; r++) {
-                const tr = document.createElement('tr');
-                for (let t = 1; t <= numTeams; t++) {
-                    const teamId = t;
-                    const td = document.createElement('td');
-                    const roster = state.team_rosters[teamId] || {};
-                    const players = roster.players_flat || [];
-                    const player = players[r];
-
-                    const cell = document.createElement('div');
-                    cell.className = 'board-cell';
-
-                    // Check if this cell is currently on clock
-                    // Pick index = r * numTeams + (r % 2 === 0 ? t-1 : numTeams - t)
-                    // But we want to know if it's Team t's turn in Round r.
-                    // If team t is on clock and they have r players, then Round r+1 cell is on clock.
-                    const isNextForTeam = (teamId === teamOnClock && players.length === r);
-                    if (isNextForTeam) cell.classList.add('on-clock');
-
-                    if (player) {
-                        cell.style.backgroundColor = POS_COLORS[player.position] || '#fff';
-                        const teamColors = getTeamColor(player.team);
-                        if (teamColors) {
-                            // Subtle indicator for NFL team
-                            cell.style.borderLeft = `4px solid ${teamColors.background}`;
-                        }
-
-                        cell.innerHTML = `
-                            <span class="pos">${player.position}</span>
-                            <span class="name">${player.name}</span>
-                            <span class="team">${player.team || 'N/A'} (B:${player.bye_week})</span>
-                        `;
-                    } else {
-                        cell.classList.add('empty');
-                        cell.innerText = `Round ${r + 1}`;
+                // --- Bye Week Visualization ---
+                const byeWeeksData = state.team_bye_weeks[teamId] || {};
+                let byeWeekHTML = '<div class="roster-section"><h5>Bye Week Distribution</h5><div class="bye-week-grid">';
+                for (let week = 4; week <= 14; week++) {
+                    const weekData = byeWeeksData[week];
+                    let cellContent = `<b>${week}</b>`;
+                    let totalPlayers = 0;
+                    if (weekData) {
+                        cellContent += '<br>' + Object.entries(weekData).map(([pos, count]) => `${pos}: ${count}`).join(', ');
+                        totalPlayers = Object.values(weekData).reduce((sum, count) => sum + count, 0);
                     }
-                    td.appendChild(cell);
-                    tr.appendChild(td);
+                    const intensity = Math.min(totalPlayers / 3, 1);
+                    const color = totalPlayers > 1 ? `rgba(255, 100, 100, ${intensity})` : '#efefef';
+                    byeWeekHTML += `<div class="bye-week-cell" style="background-color: ${color};">${cellContent}</div>`;
                 }
-                boardRows.appendChild(tr);
-            }
+                byeWeekHTML += '</div></div>';
 
-            syncAutoDraftButtonState();
+                const fullClass = (state.team_is_full && state.team_is_full[teamId]) ? 'full' : '';
+                const totalPlayers = roster.starters ? Object.values(roster.starters).flat().length + (roster.bench ? roster.bench.length : 0) : 0;
+                rostersHTML += `
+                    <div class="roster-card ${fullClass}">
+                        <h4>Team ${teamId} (${totalPlayers} players, ${totalProjectedPoints.toFixed(1)} pts)</h4>
+                        <div class="roster-details">
+                            ${startersHTML}
+                            ${benchHTML}
+                            ${byeWeekHTML}
+                        </div>
+                    </div>
+                `;
+            }
+            teamRostersDiv.innerHTML = rostersHTML;
         }
 
         async function fetchAiSuggestionForTeam(teamId, ignoreIds) {
@@ -1380,38 +1173,6 @@
             } catch (error) {
                 console.error('Error simulating pick:', error);
                 alert(`Error simulating pick: ${error.message}`);
-            }
-        }
-
-        async function autoDraftRest() {
-            if (!currentDraftState) {
-                alert("Please start a new draft first.");
-                return;
-            }
-            const message =
-                "This will automatically simulate every remaining pick for computer-controlled teams. " +
-                "You cannot undo this in one step. Continue?";
-            if (!confirm(message)) {
-                return;
-            }
-
-            autoDraftBtn.disabled = true;
-            autoDraftBtn.textContent = "Drafting...";
-
-            try {
-                const response = await fetch("/api/draft/simulate_rest", { method: "POST" });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
-                }
-                renderDraftState(data);
-                fetchPlayers();
-            } catch (error) {
-                console.error("Error auto-drafting:", error);
-                alert(`Error auto-drafting: ${error.message}`);
-            } finally {
-                autoDraftBtn.textContent = AUTO_DRAFT_LABEL;
-                syncAutoDraftButtonState();
             }
         }
 

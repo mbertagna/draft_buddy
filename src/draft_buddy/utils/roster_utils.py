@@ -99,17 +99,32 @@ def calculate_roster_scores(
     flex_points = sum(p.projected_points for p in flex_list)
     bench_points = sum(p.projected_points for p in bench_list)
     
-    # Check if there are unoptimally assigned players
+    # Check if there are unoptimally assigned players (overflow beyond position capacity).
+    # For RB/WR/TE, capacity includes FLEX slots since those positions can fill FLEX.
     temp_pos_counts = defaultdict(int)
-    for pos_list in starters_dict.values():
+    for pos, pos_list in starters_dict.items():
+        if pos == 'FLEX':
+            continue
         for p in pos_list:
             temp_pos_counts[p.position] += 1
-            
+
+    for pos, pos_list in starters_dict.items():
+        if pos != 'FLEX':
+            continue
+        for p in pos_list:
+            temp_pos_counts[p.position] += 1
+
     for p in bench_list:
-        if temp_pos_counts[p.position] < (roster_structure.get(p.position, 0) + bench_maxes.get(p.position, 0)):
+        pos_limit = roster_structure.get(p.position, 0) + bench_maxes.get(p.position, 0)
+        if p.position in ('RB', 'WR', 'TE'):
+            pos_limit += roster_structure.get('FLEX', 0)
+        if temp_pos_counts[p.position] < pos_limit:
             temp_pos_counts[p.position] += 1
         else:
-            logger.warning(f"Player {p.name if hasattr(p, 'name') else p} ({p.position}) could not be optimally assigned to a starter/flex spot. Placed on bench.")
+            logger.warning(
+                f"Player {p.name if hasattr(p, 'name') else p} ({p.position}) could not be optimally "
+                "assigned to a starter/flex spot. Placed on bench."
+            )
 
     combined_total_points = starter_points + bench_points + flex_points
     

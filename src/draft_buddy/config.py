@@ -86,7 +86,7 @@ class TrainingConfig:
     VALUE_LR_MULTIPLIER: float = 2.0
     LOG_SAVE_INTERVAL_EPISODES: int = 128
     HIDDEN_DIM: int = 64
-    MODEL_PATH_TO_LOAD: str = os.path.join('models/12_teams_random_start/v3/checkpoint_episode_315483.pth')
+    MODEL_PATH_TO_LOAD: str = os.path.join('models/12_teams_pos_5/v1/checkpoint_episode_498.pth')
     NUM_SIMULATION_RUNS: int = 10
     STATE_NORMALIZATION_METHOD: str = 'min_max'
     ENABLE_ACTION_MASKING: bool = True

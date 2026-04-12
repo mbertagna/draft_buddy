@@ -19,8 +19,13 @@ dependencies = [
     "beautifulsoup4",
     "bokeh",
     "pytest",
+    "tree-sitter>=0.21",
+    "tree-sitter-python>=0.21",
 ]
 requires-python = ">=3.10"
+
+[project.scripts]
+draft-arch = "draft_buddy.arch_viz.cli:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]

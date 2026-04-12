@@ -49,7 +49,8 @@ class DraftPresentationService:
 
             structured_rosters[team_id] = {
                 'starters': {pos: [p.to_dict() for p in players] for pos, players in starters.items()},
-                'bench': [p.to_dict() for p in bench]
+                'bench': [p.to_dict() for p in bench],
+                'players_flat': [p.to_dict() for p in roster_data['PLAYERS']]
             }
 
             # Full status
@@ -57,6 +58,7 @@ class DraftPresentationService:
 
         return {
             'draft_order': draft_env.draft_order,
+            'current_pick_idx': draft_env.current_pick_idx,
             'current_pick_number': draft_env.current_pick_number,
             'current_team_picking': team_on_clock,
             'team_rosters': structured_rosters,
@@ -73,6 +75,7 @@ class DraftPresentationService:
             'team_is_full': team_is_full,
             'team_points_summary': team_points_summary,
             'num_teams': draft_env.num_teams,
+            'total_roster_size_per_team': draft_env.total_roster_size_per_team,
             'team_bye_weeks': DraftPresentationService._aggregate_bye_weeks(draft_env),
             'agent_start_position': draft_env.agent_team_id,
         }

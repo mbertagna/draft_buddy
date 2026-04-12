@@ -23,3 +23,48 @@ services:
     environment:
       - PYTHONPATH=/app/src
     command: python -m pytest tests/
+
+  train:
+      build: .
+      volumes:
+        - .:/app
+      environment:
+        - PYTHONPATH=/app/src
+      command: python scripts/train.py
+
+  data-prep:
+    build: .
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app/src
+    command:
+      [
+        "python",
+        "-m",
+        "draft_buddy.utils.data_driver",
+        "--year",
+        "2025",
+      ]
+
+  arch-viz:
+    build: .
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - PYTHONPATH=/app/src
+    command:
+      [
+        "python",
+        "-m",
+        "draft_buddy.arch_viz.cli",
+        "--project-root",
+        "/app",
+        "--output-dir",
+        "/app/viz",
+        "--all-default-entries",
+        "--strategy",
+        "module",
+      ]

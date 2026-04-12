@@ -43,20 +43,19 @@ The easiest way to get started is by using Docker Compose.
     This command builds the Docker image and starts the Flask backend.
 
     ```bash
-    docker-compose up api
+    docker compose up api
     ```
+
+    To run the API in the background, use `docker compose up -d api`.
 
 -----
 
 ## 🕹️ Running the Web App (UI)
 
-If you prefer to run from the shell (inside Docker or a virtual environment):
-
-1.  **Start the server**:
+1.  **Start the server** (from the project root):
 
     ```bash
-    export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-    python api/app.py
+    docker compose up api
     ```
 
 2.  **Open the web UI**:
@@ -82,14 +81,13 @@ The core of Draft Buddy is the reinforcement learning agent trained with the REI
 1.  **Prepare your configuration**:
     Open `src/draft_buddy/config.py` and adjust parameters such as `TOTAL_EPISODES`, `LEARNING_RATE`, and `ENABLED_STATE_FEATURES`.
 
-2.  **Start training**:
+2.  **Start training** (from the project root):
 
     ```bash
-    export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-    python scripts/train.py
+    docker compose run --rm train
     ```
 
-    Training progress, including rewards and losses, will be logged to the `logs/` directory.
+    The project directory is mounted into the container, so edits to `config.py` apply on the next run. Training progress, including rewards and losses, will be logged to the `logs/` directory on your host.
 
 3.  **Resume training**:
     Set `RESUME_TRAINING = True` in `config.py` and the script will automatically find and load the latest checkpoint to continue training.
@@ -98,7 +96,7 @@ The core of Draft Buddy is the reinforcement learning agent trained with the REI
     To visualize your training metrics without starting a new training run, use the `-p` flag.
 
     ```bash
-    python scripts/train.py -p
+    docker compose run --rm train python scripts/train.py -p
     ```
 
     This generates an interactive HTML dashboard in the `logs/` directory.
@@ -112,14 +110,80 @@ Use a trained model to run multiple mock drafts and evaluate its performance.
 1.  **Update the model path**:
     In `config.py`, ensure `MODEL_PATH_TO_LOAD` points to the `.pth` file of the trained agent you want to evaluate.
 
-2.  **Run the simulation**:
+2.  **Run the simulation** (from the project root):
 
     ```bash
-    export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-    python scripts/simulate.py
+    docker compose run --rm simulation
     ```
 
     The script will output a detailed log of each pick and a summary of final team scores across all simulation runs, allowing you to see how your agent stacks up against its opponents.
+
+-----
+
+## 🗺️ Architecture diagrams (draft-arch)
+
+The `arch_viz` module traces imports from one or more entry files and emits **Mermaid** diagrams of internal dependencies. Strategies: `module` (file-to-file), `class` (classes and inheritance), `function` (calls within reachable code).
+
+**Entry points** commonly used in this repo:
+
+| Role | Path |
+|------|------|
+| Web API | `api/app.py` |
+| Training | `scripts/train.py` |
+| Data preparation | `src/draft_buddy/utils/data_driver.py` |
+
+**Using Docker Compose** (writes under `./viz` on the host: one file per entry plus `merged_module.mmd` showing the union; nodes list `entries: …` where multiple entry graphs overlap):
+
+```bash
+docker compose run --rm arch-viz
+```
+
+Override strategy or entries (arguments after `arch-viz` replace the service command):
+
+```bash
+docker compose run --rm arch-viz python -m draft_buddy.arch_viz.cli \
+  --project-root /app --output-dir /app/viz --strategy class --all-default-entries
+```
+
+Single entry or custom list:
+
+```bash
+docker compose run --rm arch-viz python -m draft_buddy.arch_viz.cli \
+  --project-root /app -O /app/viz -s module \
+  --entry api/app.py --entry scripts/train.py
+```
+
+**Locally** (with `pip install -e .`):
+
+```bash
+# All default entries: separate files in ./viz plus merged diagram
+python -m draft_buddy.arch_viz.cli --all-default-entries --output-dir viz --strategy module
+
+# Stdout: merged graph when you pass multiple --entry values
+python -m draft_buddy.arch_viz.cli -e api/app.py -e scripts/train.py -s module
+
+draft-arch --entry api/app.py --strategy module
+```
+
+Paste the generated ` ```mermaid ` block into Markdown or [Mermaid Live Editor](https://mermaid.live).
+
+-----
+
+## 📊 Data preparation (player CSV)
+
+Regenerate merged player data (writes to the path configured in `config.paths.PLAYER_DATA_CSV`, typically under `data/`):
+
+```bash
+docker compose run --rm data-prep
+```
+
+Other years or rookie projection options:
+
+```bash
+docker compose run --rm data-prep python -m draft_buddy.utils.data_driver --year 2024 --rookie_projection_method hybrid
+```
+
+Requires ADP CSV files in `data/` as expected by `FantasyDataProcessor` (see `data_driver` and config).
 
 -----
 
@@ -132,6 +196,7 @@ Use a trained model to run multiple mock drafts and evaluate its performance.
 ├── frontend/                   # UI static files
 ├── scripts/                    # Training and simulation scripts
 ├── src/draft_buddy/            # Main source package
+│   ├── arch_viz/               # AST-based dependency / Mermaid diagram CLI
 │   ├── config.py               # Central configuration
 │   ├── draft_env/              # Core RL environment
 │   ├── logic/                  # Draft services and strategies

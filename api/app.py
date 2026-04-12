@@ -11,6 +11,7 @@ from draft_buddy.utils.data_utils import load_player_data
 from draft_buddy.logic.draft_service import DraftService
 from draft_buddy.logic.season_simulation_service import SeasonSimulationService
 from draft_buddy.logic.draft_presentation_service import DraftPresentationService
+from draft_buddy.logic.draft_rest_simulation import simulate_scheduled_picks_remaining
 from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
 from draft_buddy.utils.season_simulation_fast import simulate_season_fast
 
@@ -142,6 +143,19 @@ def simulate_pick():
 
     return jsonify(_get_draft_state())
 
+
+@app.route("/api/draft/simulate_rest", methods=["POST"])
+def simulate_rest():
+    """Simulates all remaining scheduled picks in one request; saves state once."""
+    draft_env = _get_draft_env()
+    try:
+        simulate_scheduled_picks_remaining(draft_env)
+        draft_env.save_state(config.paths.DRAFT_STATE_FILE)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    return jsonify(_get_draft_state())
+
 @app.route("/api/draft/ai_suggestion")
 def ai_suggestion():
     draft_env = _get_draft_env()
@@ -241,7 +255,7 @@ def get_players():
     reverse = (sort_dir == 'desc')
 
     draft_env = _get_draft_env()
-    if draft_env and draft_env.available_players_ids:
+    if draft_env is not None:
         source_players = [player_map[p_id] for p_id in draft_env.available_players_ids]
     else:
         source_players = all_players

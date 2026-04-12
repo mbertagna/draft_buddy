@@ -81,6 +81,8 @@ pytest
 
 - When generating python code, follow these coding standards: All classes, methods, and functions must include NumPy-style docstrings written in clear, concise language. Include comments only where logic is complex or non-obvious. Each function or method should perform a single, focused task. Exclude emojis from all text.
 
+- Strategic replace Tool Usage: The replace tool requires an exact literal match for old_string and is highly sensitive to whitespace. Avoid replacing large, complex blocks of code. Prefer smaller, more targeted replacements. Always re-read the target file immediately before executing a replace command to ensure the old_string is based on the file's current content.
+
 ## Data Management
 - **Player Data:** Loaded from `data/generated_player_data.csv`.
 - **Matchups:** Season simulation depends on matchup CSVs in `data/`.
