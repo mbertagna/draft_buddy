@@ -17,7 +17,7 @@ def test_regular_season_reward(mock_config):
 
 def test_stacking_reward_calculation(mock_config):
     from unittest.mock import MagicMock
-    from draft_buddy.utils.data_utils import Player
+    from draft_buddy.domain.entities import Player
     
     env = MagicMock()
     # Team 1 has Josh Allen (BUF)

@@ -10,10 +10,10 @@ from typing import Dict, Optional
 
 import pandas as pd
 
-from draft_buddy.utils.scoring_utils import ScoringEngine
+from .engine import ScoringEngine
 
 
-def generate_weekly_projections(df: pd.DataFrame) -> Dict:
+def _weekly_projections_from_draft_players(df: pd.DataFrame) -> Dict:
     """
     Build week-to-week point projections from a draft players DataFrame.
 
@@ -373,3 +373,19 @@ class ScoringService:
             .sort_values(by="total_pts", ascending=False)
             .reset_index(drop=True)
         )
+
+    def generate_weekly_projections(self, df: pd.DataFrame) -> Dict:
+        """
+        Build week-to-week point projections from a draft players DataFrame.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Must have columns: player_id, position, total_pts, bye_week.
+
+        Returns
+        -------
+        dict
+            Mapping player_id -> {'position': str, 1: float, 2: float, ... 18: float}.
+        """
+        return _weekly_projections_from_draft_players(df)

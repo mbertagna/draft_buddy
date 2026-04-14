@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from draft_buddy.logic.scoring_service import ScoringService
+from draft_buddy.logic.scoring import ScoringService
 
 def test_scoring_service_apply_scoring():
     """Verify that scoring rules are correctly applied to player stats."""

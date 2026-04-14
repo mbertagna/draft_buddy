@@ -6,7 +6,7 @@ import numpy as np
 
 from draft_buddy.config import Config
 from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
-from draft_buddy.utils import player_data_utils
+from draft_buddy.data_pipeline import get_simulation_dfs
 from draft_buddy.utils.season_simulation_fast import simulate_season_fast
 
 def run_full_season_simulation(config: Config, num_simulations: int):
@@ -32,7 +32,7 @@ def run_full_season_simulation(config: Config, num_simulations: int):
 
     # --- Get Player Data ---
     print("Fetching player data for simulation...")
-    _, weekly_projections = player_data_utils.get_simulation_dfs(
+    _, weekly_projections = get_simulation_dfs(
         season, ps_start_year, measure_of_center='median', custom_bye_weeks=bye_weeks_2024, custom_roster=season
     )
     print("Player data loaded.")

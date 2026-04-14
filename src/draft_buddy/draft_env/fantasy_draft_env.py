@@ -9,9 +9,11 @@ from typing import Optional, Dict, List, Tuple
 import os
 
 from draft_buddy.config import Config
-from draft_buddy.utils.data_utils import load_player_data, Player, calculate_stack_count
+from draft_buddy.domain.entities import Player
+from draft_buddy.utils.data_utils import load_player_data, calculate_stack_count
 from draft_buddy.draft_env.draft_rules import FantasyDraftRules
 from draft_buddy.draft_env.draft_state import DraftState
+from draft_buddy.draft_env.state_normalizer import StateNormalizer
 from draft_buddy.logic.opponent_strategies import create_opponent_strategy, OpponentStrategy
 from draft_buddy.models.checkpoint_manager import CheckpointManager
 from draft_buddy.models.policy_network import PolicyNetwork
@@ -26,7 +28,22 @@ class FantasyFootballDraftEnv(gym.Env):
     """
     metadata = {'render_modes': ['human'], 'render_fps': 4}
 
-    def __init__(self, config: Config, training: bool = False):
+    def __init__(
+        self,
+        config: Config,
+        training: bool = False,
+        state_normalizer: Optional[StateNormalizer] = None,
+    ):
+        """
+        Parameters
+        ----------
+        config : Config
+            Application configuration.
+        training : bool
+            When True, enables training-only behavior (e.g. opponent randomization).
+        state_normalizer : StateNormalizer, optional
+            Injected observation normalizer. If None, ``StateNormalizer(config)`` is used.
+        """
         super(FantasyFootballDraftEnv, self).__init__()
         self.config = config
         self.training = training
@@ -188,8 +205,11 @@ class FantasyFootballDraftEnv(gym.Env):
 
         self.weekly_projections = self._create_weekly_projections()
         self._sorted_available_by_pos_cache: Dict[str, List[Player]] = {}
-        from draft_buddy.utils.state_normalizer import StateNormalizer
-        self._state_normalizer = StateNormalizer(self.config)
+        self._state_normalizer = (
+            state_normalizer
+            if state_normalizer is not None
+            else StateNormalizer(self.config)
+        )
 
     @property
     def available_players_ids(self):

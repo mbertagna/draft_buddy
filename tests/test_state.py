@@ -1,6 +1,6 @@
 import pytest
 from draft_buddy.draft_env.draft_state import DraftState
-from draft_buddy.utils.data_utils import Player
+from draft_buddy.domain.entities import Player
 
 @pytest.fixture
 def basic_state():

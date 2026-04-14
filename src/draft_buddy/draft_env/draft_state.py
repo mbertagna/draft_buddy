@@ -8,7 +8,7 @@ state but contains no logic about whether a move is legal.
 from collections import defaultdict
 from typing import Dict, List, Optional, Set, Any
 
-from draft_buddy.utils.data_utils import Player
+from draft_buddy.domain.entities import Player
 
 
 class DraftState:

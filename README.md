@@ -130,7 +130,7 @@ The `arch_viz` module traces imports from one or more entry files and emits **Me
 |------|------|
 | Web API | `api/app.py` |
 | Training | `scripts/train.py` |
-| Data preparation | `src/draft_buddy/utils/data_driver.py` |
+| Data preparation | `scripts/generate_projections.py` |
 
 **Using Docker Compose** (writes under `./viz` on the host: one file per entry plus `merged_module.mmd` showing the union; nodes list `entries: …` where multiple entry graphs overlap):
 
@@ -180,10 +180,10 @@ docker compose run --rm data-prep
 Other years or rookie projection options:
 
 ```bash
-docker compose run --rm data-prep python -m draft_buddy.utils.data_driver --year 2024 --rookie_projection_method hybrid
+docker compose run --rm data-prep python scripts/generate_projections.py --year 2024 --rookie_projection_method hybrid
 ```
 
-Requires ADP CSV files in `data/` as expected by `FantasyDataProcessor` (see `data_driver` and config).
+Requires ADP CSV files in `data/` as expected by `FantasyDataProcessor` (see `generate_projections.py` and config).
 
 -----
 
@@ -194,14 +194,15 @@ Requires ADP CSV files in `data/` as expected by `FantasyDataProcessor` (see `da
 ├── api/                        # Web API (Flask app)
 ├── data/                       # Draft data, matchups, and states
 ├── frontend/                   # UI static files
-├── scripts/                    # Training and simulation scripts
+├── scripts/                    # Training, simulation, and projection generation
 ├── src/draft_buddy/            # Main source package
 │   ├── arch_viz/               # AST-based dependency / Mermaid diagram CLI
 │   ├── config.py               # Central configuration
+│   ├── data_pipeline/          # Fantasy data ingest, scoring merge, simulation loaders
 │   ├── draft_env/              # Core RL environment
 │   ├── logic/                  # Draft services and strategies
 │   ├── models/                 # Neural networks and agents
-│   └── utils/                  # Utilities and data processors
+│   └── utils/                  # Shared utilities (season sim, metrics, etc.)
 ├── Dockerfile                  # Container definition
 ├── docker-compose.yml          # Service orchestration
 └── pyproject.toml              # Modern Python packaging

@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple, Dict, Any
 from draft_buddy.models.checkpoint_manager import CheckpointManager
 from draft_buddy.config import Config
 from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
-from draft_buddy.utils.metrics_logger import MetricsLogger
+from draft_buddy.training.metrics_logger import MetricsLogger
 from draft_buddy.models.policy_network import PolicyNetwork
 
 

@@ -1,7 +1,16 @@
+"""
+Entry point: fetch stats, score players, merge ADP, and write generated player CSV.
+
+Run from repo root with PYTHONPATH including ``src`` (see docker-compose ``data-prep``).
+"""
+
 import argparse
+
 import pandas as pd
-from draft_buddy.utils.data_processor import FantasyDataProcessor
+
 from draft_buddy.config import Config
+from draft_buddy.data_pipeline.data_processor import FantasyDataProcessor
+
 
 def main(output_path, draft_year, rookie_projection_method):
     """
@@ -131,7 +140,7 @@ def main(output_path, draft_year, rookie_projection_method):
         print(f"\n\n--- Successfully Merged Data for {draft_year} ---")
         display_cols = ['Rank', 'Player', 'Team', 'Pos', 'name', 'recent_team', 'projected_points', 'match_score', 'adp']
         print(merged_df[display_cols].head(10))
-        
+
         merged_df.to_csv(output_path, index=False)
         print(f"\n✅ Saved final merged data to '{output_path}'")
 
@@ -140,15 +149,16 @@ def main(output_path, draft_year, rookie_projection_method):
         borderline_df.to_csv(borderline_path, index=False)
         print(f"\n✅ Saved borderline cases to '{borderline_path}'")
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process fantasy football data for a given year.')
     parser.add_argument('--year', type=int, default=2025, help='The draft year to process data for.')
     parser.add_argument('--rookie_projection_method', type=str, default='draft', choices=['draft', 'adp', 'hybrid'],
                         help='Method to project rookie points: draft (slot scaling), adp (ADP interpolation), or hybrid (average).')
-    
+
     args = parser.parse_args()
-    
+
     config = Config()
     output_file_path = config.paths.PLAYER_DATA_CSV
-    
+
     main(output_path=output_file_path, draft_year=args.year, rookie_projection_method=args.rookie_projection_method)

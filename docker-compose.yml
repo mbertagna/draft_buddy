@@ -42,8 +42,7 @@ services:
     command:
       [
         "python",
-        "-m",
-        "draft_buddy.utils.data_driver",
+        "scripts/generate_projections.py",
         "--year",
         "2025",
       ]

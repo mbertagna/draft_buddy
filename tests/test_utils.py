@@ -1,5 +1,6 @@
 import pytest
-from draft_buddy.utils.data_utils import Player, calculate_stack_count
+from draft_buddy.domain.entities import Player
+from draft_buddy.utils.data_utils import calculate_stack_count
 
 def test_calculate_stack_count():
     """Verify QB-WR/TE stacking logic."""

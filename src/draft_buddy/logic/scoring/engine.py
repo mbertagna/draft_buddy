@@ -1,5 +1,8 @@
+"""Low-level fantasy scoring engine (stat rows to total_pts)."""
+
 import pandas as pd
 from typing import Dict, Optional, Iterable
+
 
 class ScoringEngine:
     """

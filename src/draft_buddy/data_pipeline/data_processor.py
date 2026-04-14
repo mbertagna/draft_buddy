@@ -3,10 +3,11 @@ from typing import Optional
 
 import pandas as pd
 
-from draft_buddy.logic.scoring_service import ScoringService
-from draft_buddy.utils.data_downloader import NflverseCsvDownloader
-from draft_buddy.utils.rookie_projector import RookieProjector
-from draft_buddy.utils.adp_matcher import AdpMatcher
+from draft_buddy.logic.scoring import ScoringService
+
+from .adp_matcher import AdpMatcher
+from .nflverse_client import NflverseCsvDownloader
+from .rookie_projector import RookieProjector
 
 DEFAULT_SCORING_RULES = {
     "passing_yards": 0.04,

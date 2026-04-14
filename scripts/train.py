@@ -6,7 +6,7 @@ import argparse
 from draft_buddy.config import Config
 from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
 from draft_buddy.models.reinforce_agent import ReinforceAgent
-from draft_buddy.utils.run_utils import setup_run_directories, save_run_metadata, find_latest_checkpoint, get_run_name
+from draft_buddy.training.run_utils import setup_run_directories, save_run_metadata, find_latest_checkpoint, get_run_name
 
 from bokeh.plotting import figure, output_file, save
 from bokeh.models import HoverTool

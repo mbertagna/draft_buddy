@@ -76,7 +76,7 @@ def _default_multi_entries(project_root: Path) -> List[Path]:
     candidates = [
         project_root / "api" / "app.py",
         project_root / "scripts" / "train.py",
-        project_root / "src" / "draft_buddy" / "utils" / "data_driver.py",
+        project_root / "scripts" / "generate_projections.py",
     ]
     return [p.resolve() for p in candidates if p.is_file()]
 
@@ -113,7 +113,7 @@ def main() -> None:
         "--all-default-entries",
         action="store_true",
         help=(
-            "Use api/app.py, scripts/train.py, and src/draft_buddy/utils/data_driver.py "
+            "Use api/app.py, scripts/train.py, and scripts/generate_projections.py "
             "(only files that exist)."
         ),
     )

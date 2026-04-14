@@ -10,7 +10,7 @@ import random
 from typing import Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from draft_buddy.utils.data_utils import Player
+    from draft_buddy.domain.entities import Player
 
 
 class OpponentStrategy(ABC):

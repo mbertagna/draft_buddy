@@ -1,8 +1,8 @@
 """
-Data downloader abstraction for fantasy football data sources.
+Nflverse-backed client for fetching fantasy football player data.
 
-Defines the contract for fetching player data. Enables swapping nflverse
-CSV downloads for Sleeper API or other sources.
+Defines the abstract ``DataDownloader`` contract and a concrete implementation
+that downloads nflverse CSV releases into a local cache.
 """
 
 import os

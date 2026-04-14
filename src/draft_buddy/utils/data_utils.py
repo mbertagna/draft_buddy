@@ -1,32 +1,10 @@
 import os
 import pandas as pd
 import numpy as np
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Union
+from typing import List, Dict
 
-# Define Player data structure
-@dataclass
-class Player:
-    player_id: int
-    name: str
-    position: str # QB, RB, WR, TE
-    projected_points: float
-    games_played_frac: Union[float, str] = 1.0
-    adp: float = field(default=np.inf) # Default to infinity if no ADP
-    bye_week: Optional[int] = None
-    team: Optional[str] = None
+from draft_buddy.domain.entities import Player
 
-    def to_dict(self):
-        return {
-            'player_id': self.player_id,
-            'name': self.name,
-            'position': self.position,
-            'projected_points': self.projected_points,
-            'games_played_frac': self.games_played_frac,
-            'adp': self.adp if np.isfinite(self.adp) else None,
-            'bye_week': self.bye_week,
-            'team': self.team
-        }
 
 def _generate_mock_adp(players: List[Player], adp_config: Dict) -> List[Player]:
     """

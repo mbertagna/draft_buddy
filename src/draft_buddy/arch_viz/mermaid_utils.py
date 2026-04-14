@@ -137,7 +137,7 @@ def entry_path_slug(entry: Path, project_root: Path) -> str:
     Returns
     -------
     str
-        Slug such as ``api__app`` or ``src__draft_buddy__utils__data_driver``.
+        Slug such as ``api__app`` or ``scripts__generate_projections``.
     """
     try:
         rel = entry.resolve().relative_to(project_root.resolve())

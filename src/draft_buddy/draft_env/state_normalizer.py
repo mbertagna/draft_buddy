@@ -1,5 +1,8 @@
+"""Scale and normalize draft environment observation vectors."""
+
 import numpy as np
 from typing import List, Dict, Set
+
 
 class StateNormalizer:
     """
@@ -82,7 +85,7 @@ class StateNormalizer:
             return self._normalize_min_max(state_array, enabled_features)
         elif self.config.training.STATE_NORMALIZATION_METHOD == 'z_score':
             return self._normalize_z_score(state_array)
-        
+
         return state_array
 
     def _normalize_min_max(self, state_array: np.ndarray, enabled_features: List[str]) -> np.ndarray:
@@ -94,12 +97,12 @@ class StateNormalizer:
             val = state_array[i]
             max_val = self._feature_max_bounds.get(feature_name, 1.0)
             min_val = 0.0
-            
+
             if max_val == min_val:
                 normalized_state.append(0.0)
             else:
                 normalized_state.append((val - min_val) / (max_val - min_val))
-        
+
         return np.array(normalized_state, dtype=np.float32)
 
     def _normalize_z_score(self, state_array: np.ndarray) -> np.ndarray:
