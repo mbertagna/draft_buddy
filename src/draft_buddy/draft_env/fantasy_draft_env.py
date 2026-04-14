@@ -10,15 +10,18 @@ import os
 
 from draft_buddy.config import Config
 from draft_buddy.domain.entities import Player
-from draft_buddy.utils.data_utils import load_player_data, calculate_stack_count
-from draft_buddy.draft_env.draft_rules import FantasyDraftRules
-from draft_buddy.draft_env.draft_state import DraftState
+from draft_buddy.core.stacking import calculate_stack_count
+from draft_buddy.core.bot_gm import BotGM, create_bot_gm
+from draft_buddy.core.draft_state import DraftState
+from draft_buddy.core.rules_engine import FantasyRulesEngine, RulesEngine
+from draft_buddy.data.player_loader import load_player_data
 from draft_buddy.draft_env.state_normalizer import StateNormalizer
-from draft_buddy.logic.opponent_strategies import create_opponent_strategy, OpponentStrategy
-from draft_buddy.models.checkpoint_manager import CheckpointManager
-from draft_buddy.models.policy_network import PolicyNetwork
+from draft_buddy.rl.checkpoint_manager import CheckpointManager
+from draft_buddy.rl.policy_network import PolicyNetwork
+from draft_buddy.rl.feature_extractor import FeatureExtractor
+from draft_buddy.rl.agent_bot import AgentModelBotGM
 import json
-from draft_buddy.utils.season_simulation_fast import simulate_season_fast, generate_round_robin_schedule
+from draft_buddy.simulator.evaluator import generate_round_robin_schedule, simulate_season_fast
 import pandas as pd
 
 class FantasyFootballDraftEnv(gym.Env):
@@ -33,6 +36,8 @@ class FantasyFootballDraftEnv(gym.Env):
         config: Config,
         training: bool = False,
         state_normalizer: Optional[StateNormalizer] = None,
+        draft_state: Optional[DraftState] = None,
+        rules_engine: Optional[RulesEngine] = None,
     ):
         """
         Parameters
@@ -60,94 +65,7 @@ class FantasyFootballDraftEnv(gym.Env):
         self.position_to_action = {'QB': 0, 'RB': 1, 'WR': 2, 'TE': 3}
         self.action_space = spaces.Discrete(len(self.action_to_position))
 
-        # State Space: Dynamically determined by ENABLED_STATE_FEATURES
-        self.state_features_map = {
-            # Player availability info
-            "best_available_qb_points": lambda: self._get_kth_best_available_player_by_pos('QB', 1).projected_points if self._get_kth_best_available_player_by_pos('QB', 1) else 0,
-            "best_available_rb_points": lambda: self._get_kth_best_available_player_by_pos('RB', 1).projected_points if self._get_kth_best_available_player_by_pos('RB', 1) else 0,
-            "best_available_wr_points": lambda: self._get_kth_best_available_player_by_pos('WR', 1).projected_points if self._get_kth_best_available_player_by_pos('WR', 1) else 0,
-            "best_available_te_points": lambda: self._get_kth_best_available_player_by_pos('TE', 1).projected_points if self._get_kth_best_available_player_by_pos('TE', 1) else 0,
-            "best_available_qb_vorp": lambda: self._calculate_vorp('QB'),
-            "best_available_rb_vorp": lambda: self._calculate_vorp('RB'),
-            "best_available_wr_vorp": lambda: self._calculate_vorp('WR'),
-            "best_available_te_vorp": lambda: self._calculate_vorp('TE'),
-            "qb_available_flag": lambda: 1 if any(p.position == 'QB' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
-            "rb_available_flag": lambda: 1 if any(p.position == 'RB' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
-            "wr_available_flag": lambda: 1 if any(p.position == 'WR' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
-            "te_available_flag": lambda: 1 if any(p.position == 'TE' and p.player_id in self.available_players_ids for p in self.all_players_data) else 0,
-            # Current Roster Counts (for agent's team)
-            "current_roster_qb_count": lambda: self.teams_rosters[self.agent_team_id]['QB'],
-            "current_roster_rb_count": lambda: self.teams_rosters[self.agent_team_id]['RB'],
-            "current_roster_wr_count": lambda: self.teams_rosters[self.agent_team_id]['WR'],
-            "current_roster_te_count": lambda: self.teams_rosters[self.agent_team_id]['TE'],
-            # Available Roster Slots (for agent's team)
-            "available_roster_slots_qb": lambda: self.config.draft.ROSTER_STRUCTURE['QB'] + self.config.draft.BENCH_MAXES['QB'] - self.teams_rosters[self.agent_team_id]['QB'],
-            "available_roster_slots_rb": lambda: self.config.draft.ROSTER_STRUCTURE['RB'] + self.config.draft.BENCH_MAXES['RB'] - self.teams_rosters[self.agent_team_id]['RB'],
-            "available_roster_slots_wr": lambda: self.config.draft.ROSTER_STRUCTURE['WR'] + self.config.draft.BENCH_MAXES['WR'] - self.teams_rosters[self.agent_team_id]['WR'],
-            "available_roster_slots_te": lambda: self.config.draft.ROSTER_STRUCTURE['TE'] + self.config.draft.BENCH_MAXES['TE'] - self.teams_rosters[self.agent_team_id]['TE'],
-            "available_roster_slots_flex": lambda: self.config.draft.ROSTER_STRUCTURE['FLEX'] - self.teams_rosters[self.agent_team_id]['FLEX'], # Simplified flex calculation
-            # Draft Progression Context
-            "current_pick_number": lambda: self.current_pick_number,
-            "agent_start_position": lambda: self.agent_team_id,
-            # New features
-            "second_best_available_qb_points": lambda: self._get_kth_best_available_player_by_pos('QB', 2).projected_points if self._get_kth_best_available_player_by_pos('QB', 2) else 0,
-            "second_best_available_rb_points": lambda: self._get_kth_best_available_player_by_pos('RB', 2).projected_points if self._get_kth_best_available_player_by_pos('RB', 2) else 0,
-            "second_best_available_wr_points": lambda: self._get_kth_best_available_player_by_pos('WR', 2).projected_points if self._get_kth_best_available_player_by_pos('WR', 2) else 0,
-            "second_best_available_te_points": lambda: self._get_kth_best_available_player_by_pos('TE', 2).projected_points if self._get_kth_best_available_player_by_pos('TE', 2) else 0,
-            "next_pick_opponent_qb_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'QB'),
-            "next_pick_opponent_rb_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'RB'),
-            "next_pick_opponent_wr_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'WR'),
-            "next_pick_opponent_te_count": lambda: self._get_opponent_roster_count(self._get_next_opponent_team_id(), 'TE'),
-            "best_qb_bye_week_conflict": lambda: self._get_bye_week_conflict_count('QB'),
-            "best_rb_bye_week_conflict": lambda: self._get_bye_week_conflict_count('RB'),
-            "best_wr_bye_week_conflict": lambda: self._get_bye_week_conflict_count('WR'),
-            "best_te_bye_week_conflict": lambda: self._get_bye_week_conflict_count('TE'),
-
-            # --- TIER 2 FEATURES ---
-
-            # 1. Positional Scarcity (Drop-off Score)
-            "qb_scarcity": lambda: self._calculate_scarcity('QB'),
-            "rb_scarcity": lambda: self._calculate_scarcity('RB'),
-            "wr_scarcity": lambda: self._calculate_scarcity('WR'),
-            "te_scarcity": lambda: self._calculate_scarcity('TE'),
-
-            # 2. Top-k Literal Data (Hybrid Component)
-            "top_3_qb_points_1": lambda: self._get_kth_best_available_player_by_pos('QB', 1).projected_points if self._get_kth_best_available_player_by_pos('QB', 1) else 0.0,
-            "top_3_qb_points_2": lambda: self._get_kth_best_available_player_by_pos('QB', 2).projected_points if self._get_kth_best_available_player_by_pos('QB', 2) else 0.0,
-            "top_3_qb_points_3": lambda: self._get_kth_best_available_player_by_pos('QB', 3).projected_points if self._get_kth_best_available_player_by_pos('QB', 3) else 0.0,
-            "top_3_rb_points_1": lambda: self._get_kth_best_available_player_by_pos('RB', 1).projected_points if self._get_kth_best_available_player_by_pos('RB', 1) else 0.0,
-            "top_3_rb_points_2": lambda: self._get_kth_best_available_player_by_pos('RB', 2).projected_points if self._get_kth_best_available_player_by_pos('RB', 2) else 0.0,
-            "top_3_rb_points_3": lambda: self._get_kth_best_available_player_by_pos('RB', 3).projected_points if self._get_kth_best_available_player_by_pos('RB', 3) else 0.0,
-            "top_3_wr_points_1": lambda: self._get_kth_best_available_player_by_pos('WR', 1).projected_points if self._get_kth_best_available_player_by_pos('WR', 1) else 0.0,
-            "top_3_wr_points_2": lambda: self._get_kth_best_available_player_by_pos('WR', 2).projected_points if self._get_kth_best_available_player_by_pos('WR', 2) else 0.0,
-            "top_3_wr_points_3": lambda: self._get_kth_best_available_player_by_pos('WR', 3).projected_points if self._get_kth_best_available_player_by_pos('WR', 3) else 0.0,
-            "top_3_te_points_1": lambda: self._get_kth_best_available_player_by_pos('TE', 1).projected_points if self._get_kth_best_available_player_by_pos('TE', 1) else 0.0,
-            "top_3_te_points_2": lambda: self._get_kth_best_available_player_by_pos('TE', 2).projected_points if self._get_kth_best_available_player_by_pos('TE', 2) else 0.0,
-            "top_3_te_points_3": lambda: self._get_kth_best_available_player_by_pos('TE', 3).projected_points if self._get_kth_best_available_player_by_pos('TE', 3) else 0.0,
-
-            # 3. Opponent Threat Analysis (Imminent Threat)
-            "qb_imminent_threat": lambda: self._calculate_imminent_threat('QB'),
-            "rb_imminent_threat": lambda: self._calculate_imminent_threat('RB'),
-            "wr_imminent_threat": lambda: self._calculate_imminent_threat('WR'),
-            "te_imminent_threat": lambda: self._calculate_imminent_threat('TE'),
-
-            # 4. Bye Week Management (Full Roster Vector)
-            "bye_week_4_count": lambda: self._get_agent_bye_week_vector()[0],
-            "bye_week_5_count": lambda: self._get_agent_bye_week_vector()[1],
-            "bye_week_6_count": lambda: self._get_agent_bye_week_vector()[2],
-            "bye_week_7_count": lambda: self._get_agent_bye_week_vector()[3],
-            "bye_week_8_count": lambda: self._get_agent_bye_week_vector()[4],
-            "bye_week_9_count": lambda: self._get_agent_bye_week_vector()[5],
-            "bye_week_10_count": lambda: self._get_agent_bye_week_vector()[6],
-            "bye_week_11_count": lambda: self._get_agent_bye_week_vector()[7],
-            "bye_week_12_count": lambda: self._get_agent_bye_week_vector()[8],
-            "bye_week_13_count": lambda: self._get_agent_bye_week_vector()[9],
-            "bye_week_14_count": lambda: self._get_agent_bye_week_vector()[10],
-
-            # 5. Positional Stacking Features
-            "current_stack_count": lambda: self._get_current_stack_count(),
-            "stack_target_available_flag": lambda: self._get_stack_target_available_flag(),
-        }
+        # Observation space dimension is driven by the configured feature list.
         self.observation_space_dim = len(config.training.ENABLED_STATE_FEATURES)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.observation_space_dim,), dtype=np.float32)
 
@@ -156,7 +74,7 @@ class FantasyFootballDraftEnv(gym.Env):
 
         all_player_ids = {p.player_id for p in self.all_players_data}
         draft_order = self._generate_snake_draft_order(self.config.draft.NUM_TEAMS, total_roster_size_per_team)
-        self._state = DraftState(
+        self._state = draft_state or DraftState(
             all_player_ids=all_player_ids,
             draft_order=draft_order,
             roster_structure=self.config.draft.ROSTER_STRUCTURE,
@@ -164,14 +82,14 @@ class FantasyFootballDraftEnv(gym.Env):
             total_roster_size_per_team=total_roster_size_per_team,
             agent_team_id=self.config.draft.AGENT_START_POSITION,
         )
-        self._rules = FantasyDraftRules(
+        self._rules = rules_engine or FantasyRulesEngine(
             roster_structure=self.config.draft.ROSTER_STRUCTURE,
             bench_maxes=self.config.draft.BENCH_MAXES,
             total_roster_size_per_team=total_roster_size_per_team,
         )
 
         self.opponent_models: Dict[int, PolicyNetwork] = {}
-        self._opponent_strategies: Dict[int, OpponentStrategy] = {}
+        self._opponent_strategies: Dict[int, BotGM] = {}
         self._load_opponent_models()
 
         self.agent_model: Optional[PolicyNetwork] = None
@@ -210,6 +128,7 @@ class FantasyFootballDraftEnv(gym.Env):
             if state_normalizer is not None
             else StateNormalizer(self.config)
         )
+        self._feature_extractor = FeatureExtractor(self.config, self._state_normalizer)
 
     @property
     def available_players_ids(self):
@@ -476,13 +395,32 @@ class FantasyFootballDraftEnv(gym.Env):
             strategy_config = self.config.opponent.OPPONENT_TEAM_STRATEGIES.get(
                 team_id, self.config.opponent.DEFAULT_OPPONENT_STRATEGY
             )
-            self._opponent_strategies[team_id] = create_opponent_strategy(
-                logic=strategy_config["logic"],
-                config=strategy_config,
-                opponent_models=self.opponent_models,
-                team_id=team_id,
-                action_to_position=self.action_to_position,
-            )
+            self._opponent_strategies[team_id] = self._create_bot_strategy(team_id, strategy_config)
+
+    def _create_bot_strategy(self, team_id: int, strategy_config: Dict[str, object]) -> BotGM:
+        """Create one opponent strategy from config.
+
+        Parameters
+        ----------
+        team_id : int
+            Team id for strategy instantiation.
+        strategy_config : Dict[str, object]
+            Team strategy configuration dictionary.
+
+        Returns
+        -------
+        BotGM
+            Concrete strategy implementation.
+        """
+        if strategy_config.get("logic") == "AGENT_MODEL" and team_id in self.opponent_models:
+            return AgentModelBotGM(self.opponent_models[team_id], self.action_to_position)
+        return create_bot_gm(
+            logic=strategy_config["logic"],
+            config=strategy_config,
+            opponent_models=self.opponent_models,
+            team_id=team_id,
+            action_to_position=self.action_to_position,
+        )
 
     def _get_dynamic_baseline_for_position(self, position: str, available_for_pos: List[Player]) -> float:
         """Calculates the smoothed baseline score for a list of pre-sorted players."""
@@ -692,234 +630,35 @@ class FantasyFootballDraftEnv(gym.Env):
         return threat_count
 
     def _compute_global_state_features(self) -> Dict[str, float]:
-        """
-        Computes and returns state feature values that are global (independent of team perspective)
-        for the features listed in config.training.ENABLED_STATE_FEATURES.
-        Relies on the per-step sorted cache.
-        """
-        self._build_sorted_available_cache()
-
-        def get_k(pos: str, k: int) -> float:
-            p = self._get_kth_best_available_player_by_pos(pos, k)
-            return p.projected_points if p else 0.0
-
-        globals_map: Dict[str, float] = {}
-
-        enabled = set(self.config.training.ENABLED_STATE_FEATURES)
-
-        # Best available points
-        if 'best_available_qb_points' in enabled: globals_map['best_available_qb_points'] = get_k('QB', 1)
-        if 'best_available_rb_points' in enabled: globals_map['best_available_rb_points'] = get_k('RB', 1)
-        if 'best_available_wr_points' in enabled: globals_map['best_available_wr_points'] = get_k('WR', 1)
-        if 'best_available_te_points' in enabled: globals_map['best_available_te_points'] = get_k('TE', 1)
-
-        # VORP
-        if 'best_available_qb_vorp' in enabled: globals_map['best_available_qb_vorp'] = self._calculate_vorp('QB')
-        if 'best_available_rb_vorp' in enabled: globals_map['best_available_rb_vorp'] = self._calculate_vorp('RB')
-        if 'best_available_wr_vorp' in enabled: globals_map['best_available_wr_vorp'] = self._calculate_vorp('WR')
-        if 'best_available_te_vorp' in enabled: globals_map['best_available_te_vorp'] = self._calculate_vorp('TE')
-
-        # Availability flags (use cache)
-        if 'qb_available_flag' in enabled:
-            globals_map['qb_available_flag'] = 1.0 if self._get_sorted_available_for_position('QB') else 0.0
-        if 'rb_available_flag' in enabled:
-            globals_map['rb_available_flag'] = 1.0 if self._get_sorted_available_for_position('RB') else 0.0
-        if 'wr_available_flag' in enabled:
-            globals_map['wr_available_flag'] = 1.0 if self._get_sorted_available_for_position('WR') else 0.0
-        if 'te_available_flag' in enabled:
-            globals_map['te_available_flag'] = 1.0 if self._get_sorted_available_for_position('TE') else 0.0
-
-        # Current pick number
-        if 'current_pick_number' in enabled:
-            globals_map['current_pick_number'] = float(self.current_pick_number)
-
-        # Second best available points
-        if 'second_best_available_qb_points' in enabled: globals_map['second_best_available_qb_points'] = get_k('QB', 2)
-        if 'second_best_available_rb_points' in enabled: globals_map['second_best_available_rb_points'] = get_k('RB', 2)
-        if 'second_best_available_wr_points' in enabled: globals_map['second_best_available_wr_points'] = get_k('WR', 2)
-        if 'second_best_available_te_points' in enabled: globals_map['second_best_available_te_points'] = get_k('TE', 2)
-
-        # Scarcity
-        if 'qb_scarcity' in enabled: globals_map['qb_scarcity'] = self._calculate_scarcity('QB')
-        if 'rb_scarcity' in enabled: globals_map['rb_scarcity'] = self._calculate_scarcity('RB')
-        if 'wr_scarcity' in enabled: globals_map['wr_scarcity'] = self._calculate_scarcity('WR')
-        if 'te_scarcity' in enabled: globals_map['te_scarcity'] = self._calculate_scarcity('TE')
-
-        # Top-3 points
-        for pos in ['QB', 'RB', 'WR', 'TE']:
-            for k in [1, 2, 3]:
-                key = f"top_3_{pos.lower()}_points_{k}"
-                if key in enabled:
-                    globals_map[key] = get_k(pos, k)
-
-        return globals_map
+        """Return global feature values built by FeatureExtractor."""
+        return self._feature_extractor.compute_global_state_features(self._state, self.player_map)
 
     def _build_state_for_team_from_global(self, team_id: int, global_features: Dict[str, float]) -> np.ndarray:
-        """
-        Builds a full state vector for a given team_id by combining provided global features
-        with efficiently computed team-specific features. Applies configured normalization.
-        """
-        state_values_map: Dict[str, float] = dict(global_features) if global_features else {}
-        enabled = self.config.training.ENABLED_STATE_FEATURES
-
-        # Team-specific simple counts
-        roster_counts = self.teams_rosters[team_id]
-        if 'current_roster_qb_count' in enabled: state_values_map['current_roster_qb_count'] = float(roster_counts['QB'])
-        if 'current_roster_rb_count' in enabled: state_values_map['current_roster_rb_count'] = float(roster_counts['RB'])
-        if 'current_roster_wr_count' in enabled: state_values_map['current_roster_wr_count'] = float(roster_counts['WR'])
-        if 'current_roster_te_count' in enabled: state_values_map['current_roster_te_count'] = float(roster_counts['TE'])
-
-        # Available roster slots
-        if 'available_roster_slots_qb' in enabled:
-            state_values_map['available_roster_slots_qb'] = float(self.config.draft.ROSTER_STRUCTURE['QB'] + self.config.draft.BENCH_MAXES['QB'] - roster_counts['QB'])
-        if 'available_roster_slots_rb' in enabled:
-            state_values_map['available_roster_slots_rb'] = float(self.config.draft.ROSTER_STRUCTURE['RB'] + self.config.draft.BENCH_MAXES['RB'] - roster_counts['RB'])
-        if 'available_roster_slots_wr' in enabled:
-            state_values_map['available_roster_slots_wr'] = float(self.config.draft.ROSTER_STRUCTURE['WR'] + self.config.draft.BENCH_MAXES['WR'] - roster_counts['WR'])
-        if 'available_roster_slots_te' in enabled:
-            state_values_map['available_roster_slots_te'] = float(self.config.draft.ROSTER_STRUCTURE['TE'] + self.config.draft.BENCH_MAXES['TE'] - roster_counts['TE'])
-        if 'available_roster_slots_flex' in enabled:
-            state_values_map['available_roster_slots_flex'] = float(self.config.draft.ROSTER_STRUCTURE['FLEX'] - roster_counts['FLEX'])
-
-        # Agent start position from team's perspective
-        if 'agent_start_position' in enabled:
-            state_values_map['agent_start_position'] = float(team_id)
-
-        # Next pick opponent counts (perspective-specific)
-        next_opp_id = self._get_next_opponent_team_id_for(team_id)
-        if 'next_pick_opponent_qb_count' in enabled:
-            state_values_map['next_pick_opponent_qb_count'] = float(self._get_opponent_roster_count(next_opp_id, 'QB'))
-        if 'next_pick_opponent_rb_count' in enabled:
-            state_values_map['next_pick_opponent_rb_count'] = float(self._get_opponent_roster_count(next_opp_id, 'RB'))
-        if 'next_pick_opponent_wr_count' in enabled:
-            state_values_map['next_pick_opponent_wr_count'] = float(self._get_opponent_roster_count(next_opp_id, 'WR'))
-        if 'next_pick_opponent_te_count' in enabled:
-            state_values_map['next_pick_opponent_te_count'] = float(self._get_opponent_roster_count(next_opp_id, 'TE'))
-
-        # Bye week conflicts for best player at pos
-        if 'best_qb_bye_week_conflict' in enabled:
-            state_values_map['best_qb_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'QB'))
-        if 'best_rb_bye_week_conflict' in enabled:
-            state_values_map['best_rb_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'RB'))
-        if 'best_wr_bye_week_conflict' in enabled:
-            state_values_map['best_wr_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'WR'))
-        if 'best_te_bye_week_conflict' in enabled:
-            state_values_map['best_te_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'TE'))
-
-        # Imminent threat (perspective-specific)
-        if 'qb_imminent_threat' in enabled:
-            state_values_map['qb_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'QB'))
-        if 'rb_imminent_threat' in enabled:
-            state_values_map['rb_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'RB'))
-        if 'wr_imminent_threat' in enabled:
-            state_values_map['wr_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'WR'))
-        if 'te_imminent_threat' in enabled:
-            state_values_map['te_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'TE'))
-
-        # Bye week vector
-        if any(k.startswith('bye_week_') for k in enabled):
-            bye_vec = self._get_bye_week_vector_for_team(team_id)
-            mapping = {
-                'bye_week_4_count': 0,
-                'bye_week_5_count': 1,
-                'bye_week_6_count': 2,
-                'bye_week_7_count': 3,
-                'bye_week_8_count': 4,
-                'bye_week_9_count': 5,
-                'bye_week_10_count': 6,
-                'bye_week_11_count': 7,
-                'bye_week_12_count': 8,
-                'bye_week_13_count': 9,
-                'bye_week_14_count': 10,
-            }
-            for key, idx in mapping.items():
-                if key in enabled:
-                    state_values_map[key] = float(bye_vec[idx])
-
-        # Assemble in correct order
-        raw_state = []
-        for feature_name in enabled:
-            raw_state.append(state_values_map.get(feature_name, 0.0))
-        state_array = np.array(raw_state, dtype=np.float32)
-
-        # Normalize
-        if self.config.training.STATE_NORMALIZATION_METHOD == 'min_max':
-            state_array = self._normalize_min_max(state_array)
-        elif self.config.training.STATE_NORMALIZATION_METHOD == 'z_score':
-            state_array = self._normalize_z_score(state_array)
-
-        return state_array
+        """Return normalized state for team using provided global feature map."""
+        state_map = self._feature_extractor.build_state_map_for_team(
+            draft_state=self._state,
+            player_map=self.player_map,
+            team_id=team_id,
+            global_features=global_features or {},
+        )
+        return self._state_normalizer.normalize(state_map)
 
     def _calculate_scarcity(self, position: str, k: int = 5) -> float:
-        """
-        Calculates the point difference between the best available player and the k-th
-        best available player at a position to measure talent drop-off.
-        """
-        best_player = self._get_kth_best_available_player_by_pos(position, 1)
-        if not best_player:
-            return 0.0
-
-        kth_player = self._get_kth_best_available_player_by_pos(position, k)
-
-        if kth_player:
-            # If the k-th player exists, calculate the drop-off directly.
-            return best_player.projected_points - kth_player.projected_points
-        else:
-            # Edge case: Fewer than k players are available.
-            # Use cached sorted list to determine the last one.
-            eligible_players = self._get_sorted_available_for_position(position)
-            if len(eligible_players) > 1:
-                last_player = eligible_players[-1]
-                return best_player.projected_points - last_player.projected_points
-            else:
-                return 0.0
+        """Delegate scarcity calculation to FeatureExtractor."""
+        sorted_by_position = self._feature_extractor._build_sorted_available_by_position(
+            self._state, self.player_map
+        )
+        return self._feature_extractor.calculate_scarcity(sorted_by_position, position, k)
 
     def _calculate_imminent_threat(self, position: str) -> int:
-        """
-        Calculates how many teams picking between the agent's current and next pick
-        still need to fill a starting spot at the given position.
-        """
-        threat_count = 0
-        try:
-            # Find the index of the agent's next pick
-            next_agent_pick_idx = self.draft_order.index(self.agent_team_id, self.current_pick_idx + 1)
-        except ValueError:
-            # Agent has no more picks, so the window is the rest of the draft.
-            next_agent_pick_idx = len(self.draft_order)
-
-        # Identify the team IDs picking between now and the agent's next turn
-        intervening_picks = self.draft_order[self.current_pick_idx + 1 : next_agent_pick_idx]
-        opponent_teams_in_window = set(intervening_picks)
-
-        # Count how many of those opponents need a starter for the position
-        needed_starters = self.config.draft.ROSTER_STRUCTURE.get(position, 0)
-        if needed_starters == 0:
-            return 0
-
-        for team_id in opponent_teams_in_window:
-            roster_counts = self.teams_rosters[team_id]
-            if roster_counts.get(position, 0) < needed_starters:
-                threat_count += 1
-
-        return threat_count
+        """Delegate imminent-threat calculation to FeatureExtractor."""
+        return self._feature_extractor.calculate_imminent_threat(
+            self._state, self.teams_rosters, self.agent_team_id, position
+        )
 
     def _get_agent_bye_week_vector(self) -> np.ndarray:
-        """
-        Returns a fixed-length numpy array representing the count of players
-        on the agent's roster for each bye week (Weeks 4-14).
-        """
-        # Vector for Weeks 4 through 14 (11 weeks total)
-        bye_week_vector = np.zeros(11, dtype=np.float32)
-        agent_roster = self.teams_rosters[self.agent_team_id]['PLAYERS']
-
-        for player in agent_roster:
-            bye_week = player.bye_week
-            if bye_week and not np.isnan(bye_week) and 4 <= bye_week <= 14:
-                # Subtract 4 to map week 4 to index 0, week 5 to index 1, etc.
-                vector_index = int(bye_week) - 4
-                bye_week_vector[vector_index] += 1
-
-        return bye_week_vector
+        """Delegate agent bye-week vector construction to FeatureExtractor."""
+        return self._feature_extractor.get_agent_bye_week_vector(self._state, self.teams_rosters)
 
     def _get_stack_count_for_team(self, team_id: int) -> int:
         """
@@ -1039,7 +778,11 @@ class FantasyFootballDraftEnv(gym.Env):
 
                 self._state.advance_pick()
 
-        observation = self._get_state()
+        if self.current_pick_idx < len(self.draft_order):
+            perspective_team_id = self.draft_order[self.current_pick_idx]
+        else:
+            perspective_team_id = self.agent_team_id
+        observation = self._feature_extractor.extract(self._state, self.player_map, perspective_team_id)
         info = self._get_info() 
         
         # If the draft ended before the agent even got its first pick (e.g., very late draft position in a short draft)
@@ -1066,7 +809,7 @@ class FantasyFootballDraftEnv(gym.Env):
         # Compute starter points BEFORE pick (for shaping)
         pre_starter_points = 0.0
         if self.config.reward.ENABLE_PICK_SHAPING_REWARD and self.config.reward.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
-            from draft_buddy.utils.roster_utils import calculate_roster_scores
+            from draft_buddy.core.roster_utils import calculate_roster_scores
             curr_scores = calculate_roster_scores(
                 self.teams_rosters[self.agent_team_id]['PLAYERS'],
                 self.config.draft.ROSTER_STRUCTURE,
@@ -1100,7 +843,7 @@ class FantasyFootballDraftEnv(gym.Env):
             self._invalidate_sorted_available_cache()
 
             # Delegate Step Reward Calculation
-            from draft_buddy.utils.reward_calculator import RewardCalculator
+            from draft_buddy.rl.reward_calculator import RewardCalculator
             step_reward, step_info = RewardCalculator.calculate_step_reward(
                 self.config, self, drafted_player, pre_starter_points
             )
@@ -1140,7 +883,7 @@ class FantasyFootballDraftEnv(gym.Env):
 
         # --- 4. Final Reward Calculation if Done ---
         if done:
-            from draft_buddy.utils.reward_calculator import RewardCalculator
+            from draft_buddy.rl.reward_calculator import RewardCalculator
             final_reward, final_info = RewardCalculator.calculate_final_reward(
                 self.config, self, self.matchups_df
             )
@@ -1149,7 +892,11 @@ class FantasyFootballDraftEnv(gym.Env):
             info['final_reward_total'] = reward # The total reward given to the agent
 
         # --- 5. Get Next State and Action Mask ---
-        observation = self._get_state()
+        if self.current_pick_idx < len(self.draft_order):
+            perspective_team_id = self.draft_order[self.current_pick_idx]
+        else:
+            perspective_team_id = self.agent_team_id
+        observation = self._feature_extractor.extract(self._state, self.player_map, perspective_team_id)
         info['action_mask'] = self.get_action_mask()
 
         # Invalidate per-step cache at the very end to ensure freshness for next call
@@ -1163,7 +910,7 @@ class FantasyFootballDraftEnv(gym.Env):
         Categorizes players into starters, bench, and flex players based on roster structure
         and projected points, ensuring no player is double-counted.
         """
-        from draft_buddy.utils.roster_utils import categorize_roster_by_slots
+        from draft_buddy.core.roster_utils import categorize_roster_by_slots
         return categorize_roster_by_slots(team_roster, roster_structure, bench_maxes)
 
     def _generate_snake_draft_order(self, num_teams, total_picks_per_team):
@@ -1220,9 +967,7 @@ class FantasyFootballDraftEnv(gym.Env):
         np.ndarray
             Normalized state vector.
         """
-        state_values_map = self._compute_global_state_features()
-        full_state_map = self._build_state_map_for_team(team_id, state_values_map)
-        return self._state_normalizer.normalize(full_state_map)
+        return self._feature_extractor.extract(self._state, self.player_map, team_id)
 
     def _get_state(self) -> np.ndarray:
         """
@@ -1240,68 +985,13 @@ class FantasyFootballDraftEnv(gym.Env):
         return self._get_state_for_team(perspective_team_id)
 
     def _build_state_map_for_team(self, team_id: int, global_features: Dict[str, float]) -> Dict[str, float]:
-        """
-        Combines global features with team-specific features into a single map.
-        """
-        state_values_map = global_features.copy()
-        enabled = set(self.config.training.ENABLED_STATE_FEATURES)
-
-        # Team-specific simple counts
-        roster_counts = self.teams_rosters[team_id]
-        if 'current_roster_qb_count' in enabled: state_values_map['current_roster_qb_count'] = float(roster_counts['QB'])
-        if 'current_roster_rb_count' in enabled: state_values_map['current_roster_rb_count'] = float(roster_counts['RB'])
-        if 'current_roster_wr_count' in enabled: state_values_map['current_roster_wr_count'] = float(roster_counts['WR'])
-        if 'current_roster_te_count' in enabled: state_values_map['current_roster_te_count'] = float(roster_counts['TE'])
-
-        # Available roster slots
-        if 'available_roster_slots_qb' in enabled:
-            state_values_map['available_roster_slots_qb'] = float(self.config.draft.ROSTER_STRUCTURE['QB'] + self.config.draft.BENCH_MAXES['QB'] - roster_counts['QB'])
-        if 'available_roster_slots_rb' in enabled:
-            state_values_map['available_roster_slots_rb'] = float(self.config.draft.ROSTER_STRUCTURE['RB'] + self.config.draft.BENCH_MAXES['RB'] - roster_counts['RB'])
-        if 'available_roster_slots_wr' in enabled:
-            state_values_map['available_roster_slots_wr'] = float(self.config.draft.ROSTER_STRUCTURE['WR'] + self.config.draft.BENCH_MAXES['WR'] - roster_counts['WR'])
-        if 'available_roster_slots_te' in enabled:
-            state_values_map['available_roster_slots_te'] = float(self.config.draft.ROSTER_STRUCTURE['TE'] + self.config.draft.BENCH_MAXES['TE'] - roster_counts['TE'])
-        if 'available_roster_slots_flex' in enabled:
-            state_values_map['available_roster_slots_flex'] = float(self.config.draft.ROSTER_STRUCTURE['FLEX'] - roster_counts['FLEX'])
-
-        if 'current_pick_number' in enabled: state_values_map['current_pick_number'] = float(self.current_pick_number)
-        if 'agent_start_position' in enabled: state_values_map['agent_start_position'] = float(team_id)
-
-        # Imminent threats from perspectives of next teams
-        next_opp_id = self._get_next_opponent_team_id_for(team_id)
-        if 'next_pick_opponent_qb_count' in enabled: state_values_map['next_pick_opponent_qb_count'] = float(self._get_opponent_roster_count(next_opp_id, 'QB'))
-        if 'next_pick_opponent_rb_count' in enabled: state_values_map['next_pick_opponent_rb_count'] = float(self._get_opponent_roster_count(next_opp_id, 'RB'))
-        if 'next_pick_opponent_wr_count' in enabled: state_values_map['next_pick_opponent_wr_count'] = float(self._get_opponent_roster_count(next_opp_id, 'WR'))
-        if 'next_pick_opponent_te_count' in enabled: state_values_map['next_pick_opponent_te_count'] = float(self._get_opponent_roster_count(next_opp_id, 'TE'))
-
-        # Team specific conflicts
-        if 'best_qb_bye_week_conflict' in enabled: state_values_map['best_qb_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'QB'))
-        if 'best_rb_bye_week_conflict' in enabled: state_values_map['best_rb_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'RB'))
-        if 'best_wr_bye_week_conflict' in enabled: state_values_map['best_wr_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'WR'))
-        if 'best_te_bye_week_conflict' in enabled: state_values_map['best_te_bye_week_conflict'] = float(self._get_bye_week_conflict_count_for_team(team_id, 'TE'))
-
-        # TIER 2 features
-        if 'qb_imminent_threat' in enabled: state_values_map['qb_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'QB'))
-        if 'rb_imminent_threat' in enabled: state_values_map['rb_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'RB'))
-        if 'wr_imminent_threat' in enabled: state_values_map['wr_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'WR'))
-        if 'te_imminent_threat' in enabled: state_values_map['te_imminent_threat'] = float(self._calculate_imminent_threat_for_team(team_id, 'TE'))
-
-        # Bye week vector for team
-        team_bye_vec = self._get_bye_week_vector_for_team(team_id)
-        for i in range(4, 15):
-            fname = f"bye_week_{i}_count"
-            if fname in enabled: state_values_map[fname] = float(team_bye_vec[i-4])
-
-        # Stacking features (perspective of team_id)
-        if 'current_stack_count' in enabled:
-            state_values_map['current_stack_count'] = float(self._get_stack_count_for_team(team_id))
-        if 'stack_target_available_flag' in enabled:
-            state_values_map['stack_target_available_flag'] = float(
-                self._get_stack_target_available_flag_for_team(team_id)
-            )
-
-        return state_values_map
+        """Delegate state-map construction to FeatureExtractor."""
+        return self._feature_extractor.build_state_map_for_team(
+            draft_state=self._state,
+            player_map=self.player_map,
+            team_id=team_id,
+            global_features=global_features,
+        )
 
     # Original _get_best_available_player_by_pos is now generalized by _get_kth_best_available_player_by_pos
     def _get_best_available_player_by_pos(self, position: str) -> Optional[Player]:
@@ -1367,12 +1057,9 @@ class FantasyFootballDraftEnv(gym.Env):
         """Delegates to the opponent's strategy to select a player."""
         strategy = self._opponent_strategies.get(team_id)
         if not strategy:
-            strategy = create_opponent_strategy(
-                logic=self.config.opponent.DEFAULT_OPPONENT_STRATEGY["logic"],
-                config=self.config.opponent.DEFAULT_OPPONENT_STRATEGY,
-                opponent_models=self.opponent_models,
+            strategy = self._create_bot_strategy(
                 team_id=team_id,
-                action_to_position=self.action_to_position,
+                strategy_config=self.config.opponent.DEFAULT_OPPONENT_STRATEGY,
             )
             self._opponent_strategies[team_id] = strategy
 

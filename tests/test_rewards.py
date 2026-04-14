@@ -1,5 +1,5 @@
 import pytest
-from draft_buddy.utils.reward_calculator import RewardCalculator
+from draft_buddy.rl.reward_calculator import RewardCalculator
 
 def test_regular_season_reward(mock_config):
     # Mock records: (ManagerName, {'W': x, 'L': y, ...})

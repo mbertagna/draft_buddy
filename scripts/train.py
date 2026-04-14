@@ -1,31 +1,46 @@
-import os
-import matplotlib.pyplot as plt
-import datetime
 import argparse
+import datetime
+import os
+from typing import List, Optional, Tuple
+
+import matplotlib.pyplot as plt
 
 from draft_buddy.config import Config
-from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
-from draft_buddy.models.reinforce_agent import ReinforceAgent
-from draft_buddy.training.run_utils import setup_run_directories, save_run_metadata, find_latest_checkpoint, get_run_name
-
+from draft_buddy.rl.reinforce_agent import ReinforceAgent
 from bokeh.plotting import figure, output_file, save
 from bokeh.models import HoverTool
 from bokeh.layouts import column
+from draft_buddy.rl import GymEnv
+from draft_buddy.rl.run_utils import (
+    find_latest_checkpoint,
+    get_run_name,
+    save_run_metadata,
+    setup_run_directories,
+)
 
-def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
+
+def plot_training_results(
+    episode_rewards: List[float], policy_losses: List[float], logs_dir: str, prefix: str = ""
+) -> None:
+    """Plot and save reward/loss trends.
+
+    Parameters
+    ----------
+    episode_rewards : List[float]
+        Episode reward series.
+    policy_losses : List[float]
+        Policy loss series.
+    logs_dir : str
+        Output directory for plots.
+    prefix : str, optional
+        Filename prefix.
     """
-    Plots training results as static PNGs and combined interactive Bokeh HTML dashboard.
-    """
-    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    
-    # --------------------
-    # Matplotlib (PNG)
-    # --------------------
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     plt.figure(figsize=(12, 6))
     plt.plot(episode_rewards)
-    plt.title(f'{prefix}Total Reward per Episode')
-    plt.xlabel('Episode')
-    plt.ylabel('Total Reward')
+    plt.title(f"{prefix}Total Reward per Episode")
+    plt.xlabel("Episode")
+    plt.ylabel("Total Reward")
     plt.grid(True)
     rewards_plot_path = os.path.join(logs_dir, f"{prefix}rewards_plot_{timestamp}.png")
     plt.savefig(rewards_plot_path)
@@ -43,17 +58,11 @@ def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
     plt.close()
     print(f"Losses plot saved to: {losses_plot_path}")
 
-    # --------------------
-    # Bokeh (Interactive HTML Dashboard)
-    # --------------------
     html_path = os.path.join(logs_dir, f"{prefix}training_dashboard_{timestamp}.html")
     output_file(html_path, title=f"{prefix} Training Dashboard")
 
-    # Explicit x values (lists instead of range objects)
     x_rewards = list(range(len(episode_rewards)))
     x_losses = list(range(len(policy_losses)))
-
-    # Shared x_range for synchronized zooming
     x_range = (0, max(len(episode_rewards), len(policy_losses)))
 
     p1 = figure(
@@ -62,14 +71,13 @@ def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
         y_axis_label="Total Reward",
         width=1000,
         height=400,
-        tools="pan,xwheel_zoom,reset,save",  # only zooms x with wheel
-        active_scroll="xwheel_zoom",         # make x-zoom active
-        x_range=x_range
+        tools="pan,xwheel_zoom,reset,save",
+        active_scroll="xwheel_zoom",
+        x_range=x_range,
     )
     p1.line(x_rewards, episode_rewards, line_width=2, legend_label="Reward")
     p1.add_tools(HoverTool(tooltips=[("Episode", "$x"), ("Reward", "$y")]))
     p1.legend.click_policy = "hide"
-
 
     p2 = figure(
         title=f"{prefix}Policy Loss per Episode",
@@ -77,9 +85,9 @@ def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
         y_axis_label="Loss",
         width=1000,
         height=400,
-        tools="pan,xwheel_zoom,reset,save",  # only zooms x with wheel
+        tools="pan,xwheel_zoom,reset,save",
         active_scroll="xwheel_zoom",
-        x_range=p1.x_range  # sync x zoom
+        x_range=p1.x_range,
     )
     p2.line(x_losses, policy_losses, line_width=2, color="red", legend_label="Loss")
     p2.add_tools(HoverTool(tooltips=[("Episode", "$x"), ("Loss", "$y")]))
@@ -90,9 +98,21 @@ def plot_training_results(episode_rewards, policy_losses, logs_dir, prefix=""):
 
     print(f"Interactive training dashboard saved to: {html_path}")
 
-def find_latest_logs_dir_with_csvs(logs_root: str) -> str:
-    """Recursively search for the most recently updated logs directory containing both CSVs."""
-    candidates = []
+
+def find_latest_logs_dir_with_csvs(logs_root: str) -> Optional[str]:
+    """Find most recently updated logs directory with both CSV files.
+
+    Parameters
+    ----------
+    logs_root : str
+        Root logs directory.
+
+    Returns
+    -------
+    Optional[str]
+        Matching directory path, if any.
+    """
+    candidates: List[Tuple[float, str]] = []
     for root, _dirs, files in os.walk(logs_root):
         if {"all_episode_rewards.csv", "all_policy_losses.csv"}.issubset(set(files)):
             try:
@@ -109,9 +129,21 @@ def find_latest_logs_dir_with_csvs(logs_root: str) -> str:
     candidates.sort(key=lambda x: x[0], reverse=True)
     return candidates[0][1]
 
-def find_version_dirs_with_csvs(run_logs_root: str):
-    """Return a list of (version_num, dir_path) for version dirs under run_logs_root that contain both CSVs."""
-    results = []
+
+def find_version_dirs_with_csvs(run_logs_root: str) -> List[Tuple[int, str]]:
+    """List versioned run directories containing both metrics CSVs.
+
+    Parameters
+    ----------
+    run_logs_root : str
+        Logs root for a run family.
+
+    Returns
+    -------
+    List[Tuple[int, str]]
+        Version number and directory pairs.
+    """
+    results: List[Tuple[int, str]] = []
     if not os.path.exists(run_logs_root):
         return results
     for entry in os.listdir(run_logs_root):
@@ -131,127 +163,88 @@ def find_version_dirs_with_csvs(run_logs_root: str):
     results.sort(key=lambda x: x[0])
     return results
 
-def _load_floats_from_csv(path: str):
+
+def _load_floats_from_csv(path: str) -> List[float]:
+    """Load one float per line from CSV-like file."""
     with open(path, "r") as f:
         return [float(line.strip()) for line in f if line.strip()]
 
-def main():
-    """
-    Main function to initialize the environment, agent, and run the training process.
-    """
-    print("--- Starting Fantasy Football Draft AI Training ---")
 
-    # CLI args
+def _run_plot_only_mode(config: Config) -> None:
+    """Generate plots from latest available CSV metrics files."""
+    run_name = get_run_name(config)
+    run_logs_root = os.path.join(config.paths.LOGS_DIR, run_name)
+    version_dirs = find_version_dirs_with_csvs(run_logs_root)
+    if not version_dirs:
+        latest_logs_dir = find_latest_logs_dir_with_csvs(config.paths.LOGS_DIR)
+        if not latest_logs_dir:
+            print(f"No logs directory with both CSVs found under '{config.paths.LOGS_DIR}'.")
+            return
+        rewards_csv = os.path.join(latest_logs_dir, "all_episode_rewards.csv")
+        losses_csv = os.path.join(latest_logs_dir, "all_policy_losses.csv")
+        if not (os.path.exists(rewards_csv) and os.path.exists(losses_csv)):
+            print(f"Missing CSVs in '{latest_logs_dir}'.")
+            return
+        episode_rewards = _load_floats_from_csv(rewards_csv)
+        policy_losses = _load_floats_from_csv(losses_csv)
+        plot_training_results(episode_rewards, policy_losses, latest_logs_dir, prefix="manual_")
+        return
+
+    all_rewards: List[float] = []
+    all_losses: List[float] = []
+    for _, version_dir in version_dirs:
+        rewards_csv = os.path.join(version_dir, "all_episode_rewards.csv")
+        losses_csv = os.path.join(version_dir, "all_policy_losses.csv")
+        all_rewards.extend(_load_floats_from_csv(rewards_csv))
+        all_losses.extend(_load_floats_from_csv(losses_csv))
+    plot_training_results(all_rewards, all_losses, run_logs_root, prefix="manual_aggregate_")
+
+
+def main() -> None:
+    """Run RL training for Draft Buddy."""
     parser = argparse.ArgumentParser(description="Train agent or plot latest CSV results.")
     parser.add_argument(
-        "--plot-latest-csvs", 
+        "--plot-latest-csvs",
         "-p",
         action="store_true",
         help="Auto-find the latest logs directory with CSVs and generate plots without training.",
     )
     args = parser.parse_args()
 
-    # If only plotting is requested, auto-find logs dir and plot, then exit
+    print("--- Starting Fantasy Football Draft AI Training ---")
     if args.plot_latest_csvs:
         config = Config()
-        # Aggregate across all versions under the run's logs root
-        run_name = get_run_name(config)
-        run_logs_root = os.path.join(config.paths.LOGS_DIR, run_name)
-        version_dirs = find_version_dirs_with_csvs(run_logs_root)
-        if not version_dirs:
-            # fallback to legacy behavior of searching entire logs root
-            latest_logs_dir = find_latest_logs_dir_with_csvs(config.paths.LOGS_DIR)
-            if not latest_logs_dir:
-                print(f"No logs directory with both CSVs found under '{config.paths.LOGS_DIR}'.")
-                return
-            rewards_csv = os.path.join(latest_logs_dir, "all_episode_rewards.csv")
-            losses_csv = os.path.join(latest_logs_dir, "all_policy_losses.csv")
-            if not (os.path.exists(rewards_csv) and os.path.exists(losses_csv)):
-                print(f"Missing CSVs in '{latest_logs_dir}'. Expected both rewards and losses CSVs.")
-                return
-            print(f"Auto-found logs directory: {latest_logs_dir}")
-            episode_rewards = _load_floats_from_csv(rewards_csv)
-            policy_losses = _load_floats_from_csv(losses_csv)
-            print("Generating plots from discovered CSVs...")
-            plot_training_results(episode_rewards, policy_losses, latest_logs_dir, prefix="manual_")
-            print("Finished plotting from CSVs. Exiting.")
-            return
-
-        # Concatenate data from all versions in order
-        all_rewards, all_losses = [], []
-        for vnum, vdir in version_dirs:
-            rewards_csv = os.path.join(vdir, "all_episode_rewards.csv")
-            losses_csv = os.path.join(vdir, "all_policy_losses.csv")
-            try:
-                all_rewards.extend(_load_floats_from_csv(rewards_csv))
-            except Exception:
-                pass
-            try:
-                all_losses.extend(_load_floats_from_csv(losses_csv))
-            except Exception:
-                pass
-
-        # Save aggregate plots in the run root logs dir
-        print("Auto-found run logs root:", run_logs_root)
-        print("Generating aggregated plots from all versions...")
-        plot_training_results(all_rewards, all_losses, run_logs_root, prefix="manual_aggregate_")
-        print("Finished plotting aggregated CSVs. Exiting.")
+        _run_plot_only_mode(config)
         return
 
-    # 1. Load Configuration
     config = Config()
-
-    # 2. Setup Run Directories and Metadata
     run_name, version, run_version_dir, logs_dir = setup_run_directories(config)
     save_run_metadata(config, run_name, version, run_version_dir)
-
     print(f"Run: {run_name} | Version: {version}")
     print(f"Models will be saved in: {run_version_dir}")
     print(f"Logs will be saved in: {logs_dir}")
-
-    # 3. Initialize Environment
-    print("\nInitializing Fantasy Football Draft Environment...")
-    env = FantasyFootballDraftEnv(config, training=True)
-
-    # 4. Initialize Agent
-    print("\nInitializing REINFORCE Agent...")
+    env = GymEnv(config, training=True)
     agent = ReinforceAgent(env, config)
-
-    # 5. Load Checkpoint if Resuming
     start_episode = 1
     if config.training.RESUME_TRAINING:
         latest_checkpoint_path = find_latest_checkpoint(config)
         if latest_checkpoint_path:
-            print(f"\nResuming training from checkpoint: {latest_checkpoint_path}")
+            print(f"Resuming training from checkpoint: {latest_checkpoint_path}")
             try:
-                # Load checkpoint with training=True for strict validation
                 loaded_episode = agent.load_checkpoint(latest_checkpoint_path, is_training=True)
                 start_episode = loaded_episode + 1
-                print(f"Checkpoint validated and loaded successfully. Resuming from episode {start_episode}")
-
+                print(f"Checkpoint loaded. Resuming from episode {start_episode}")
             except (ValueError, FileNotFoundError) as e:
-                print(f"FATAL: Could not resume training due to an error. Mismatched configuration or file issue.")
-                print(f"  Error: {e}")
-                print("  Please align your configuration with the checkpoint or start a new training run.")
+                print(f"Failed to resume from checkpoint: {e}")
                 return
             except Exception as e:
-                print(f"FATAL: An unexpected error occurred while loading the checkpoint: {e}")
+                print(f"Unexpected checkpoint loading failure: {e}")
                 return
-
-        else:
-            print("\nNo checkpoint found. Starting a new training run.")
-
-    # 6. Train the Agent
-    print("\nStarting Agent Training...")
-    episode_rewards, policy_losses = agent.train(start_episode=start_episode, run_version_dir=run_version_dir, logs_dir=logs_dir)
-    print("\nAgent training complete!")
-
-    # 7. Plotting Training Results (Final)
-    print("\nGenerating final training plots...")
+    episode_rewards, policy_losses = agent.train(
+        start_episode=start_episode, run_version_dir=run_version_dir, logs_dir=logs_dir
+    )
     plot_training_results(episode_rewards, policy_losses, logs_dir, prefix="final_")
-    
-    print("\nTraining process finished.")
-    print(f"You can inspect the saved model and plots in the '{run_version_dir}' and '{logs_dir}' directories.")
+    print("Training finished.")
 
 if __name__ == "__main__":
     main()

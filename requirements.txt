@@ -3,7 +3,8 @@ numpy
 torch
 gym
 matplotlib
-Flask
+fastapi
+uvicorn
 requests
 tqdm
 fuzzywuzzy 

@@ -25,7 +25,7 @@ class DraftPresentationService:
         team_points_summary = {}
         team_is_full = {}
 
-        from draft_buddy.utils.roster_utils import categorize_roster_by_slots, calculate_roster_scores
+        from draft_buddy.core.roster_utils import categorize_roster_by_slots, calculate_roster_scores
 
         for team_id, roster_data in draft_env.teams_rosters.items():
             # Roster Categorization

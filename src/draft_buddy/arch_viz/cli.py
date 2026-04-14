@@ -61,7 +61,7 @@ def _strategies() -> Dict[str, Type[ExtractionStrategy]]:
 
 def _default_multi_entries(project_root: Path) -> List[Path]:
     """
-    Return known entry scripts that exist on disk (API, training, data prep).
+    Return known entry scripts that exist on disk (webapp, training, data prep).
 
     Parameters
     ----------
@@ -74,7 +74,7 @@ def _default_multi_entries(project_root: Path) -> List[Path]:
         Resolved paths to entry ``.py`` files.
     """
     candidates = [
-        project_root / "api" / "app.py",
+        project_root / "scripts" / "run_webapp.py",
         project_root / "scripts" / "train.py",
         project_root / "scripts" / "generate_projections.py",
     ]
@@ -107,13 +107,13 @@ def main() -> None:
         default=[],
         dest="entries",
         metavar="PATH",
-        help="Python entry file (repeat for multiple). Default: api/app.py",
+        help="Python entry file (repeat for multiple). Default: scripts/run_webapp.py",
     )
     parser.add_argument(
         "--all-default-entries",
         action="store_true",
         help=(
-            "Use api/app.py, scripts/train.py, and scripts/generate_projections.py "
+            "Use scripts/run_webapp.py, scripts/train.py, and scripts/generate_projections.py "
             "(only files that exist)."
         ),
     )
@@ -164,7 +164,7 @@ def main() -> None:
     elif args.entries:
         entries = [_resolve_entry(project_root, e) for e in args.entries]
     else:
-        default = project_root / "api" / "app.py"
+        default = project_root / "scripts" / "run_webapp.py"
         if not default.is_file():
             raise SystemExit(
                 f"Default entry not found ({default}). Use --entry or --all-default-entries."

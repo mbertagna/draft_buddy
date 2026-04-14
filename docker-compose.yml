@@ -1,20 +1,21 @@
 services:
-  api:
+  train:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app/src
+    command: python scripts/train.py
+
+  webapp:
     build: .
     ports:
       - "5001:5001"
     volumes:
       - .:/app
     environment:
-      - FLASK_APP=api/app.py
-      - FLASK_ENV=development
-    command: python api/app.py
-
-  simulation:
-    build: .
-    volumes:
-      - .:/app
-    command: python scripts/simulate.py
+      - PYTHONPATH=/app/src
+    command: python scripts/run_webapp.py
 
   test:
     build: .
@@ -24,46 +25,25 @@ services:
       - PYTHONPATH=/app/src
     command: python -m pytest tests/
 
-  train:
-      build: .
-      volumes:
-        - .:/app
-      environment:
-        - PYTHONPATH=/app/src
-      command: python scripts/train.py
-
-  data-prep:
+  data:
     build: .
     volumes:
       - .:/app
     working_dir: /app
     environment:
       - PYTHONPATH=/app/src
-    command:
-      [
-        "python",
-        "scripts/generate_projections.py",
-        "--year",
-        "2025",
-      ]
+    command: python scripts/generate_projections.py --year 2025
 
-  arch-viz:
+  ast:
     build: .
     volumes:
       - .:/app
     working_dir: /app
     environment:
       - PYTHONPATH=/app/src
-    command:
-      [
-        "python",
-        "-m",
-        "draft_buddy.arch_viz.cli",
-        "--project-root",
-        "/app",
-        "--output-dir",
-        "/app/viz",
-        "--all-default-entries",
-        "--strategy",
-        "module",
-      ]
+    command: >
+      python -m draft_buddy.arch_viz.cli
+      --project-root /app
+      --output-dir /app/viz
+      --all-default-entries
+      --strategy module

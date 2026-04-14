@@ -9,7 +9,7 @@ import argparse
 import pandas as pd
 
 from draft_buddy.config import Config
-from draft_buddy.data_pipeline.data_processor import FantasyDataProcessor
+from draft_buddy.data import FantasyDataProcessor
 
 
 def main(output_path, draft_year, rookie_projection_method):
