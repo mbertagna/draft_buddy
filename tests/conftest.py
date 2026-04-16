@@ -1,197 +1,302 @@
+"""Shared fixtures for canonical Draft Buddy tests."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from types import SimpleNamespace
+
+import numpy as np
+import pandas as pd
 import pytest
-import os
-import tempfile
-import shutil
+
 from draft_buddy.config import Config
-from draft_buddy.core.draft_state import DraftState
-from draft_buddy.core.rules_engine import FantasyRulesEngine
-from draft_buddy.domain.entities import Player
+from draft_buddy.core import (
+    DraftController,
+    DraftState,
+    FantasyRulesEngine,
+    Pick,
+    Player,
+    PlayerCatalog,
+)
+from draft_buddy.data import load_player_catalog
 
-@pytest.fixture(scope="session")
-def test_env_setup():
-    """
-    Sets up a completely isolated environment for the duration of the test session.
-    Creates temporary directories for data, models, and logs.
-    """
-    # Create a temporary root for the test run
-    test_root = tempfile.mkdtemp()
-    
-    # Define subdirectories
-    dirs = {
-        'data': os.path.join(test_root, 'data'),
-        'models': os.path.join(test_root, 'models'),
-        'logs': os.path.join(test_root, 'logs')
-    }
-    
-    for d in dirs.values():
-        os.makedirs(d, exist_ok=True)
-        
-    # Create a dummy player data file for tests
-    player_csv = os.path.join(dirs['data'], 'generated_player_data.csv')
-    csv_content = (
-        "player_id,name,position,projected_points,adp,games_played_frac\n"
-        "1,Test QB,QB,300.0,10.0,1.0\n"
-        "2,Test RB,RB,200.0,20.0,1.0\n"
-        "3,Test WR,WR,150.0,30.0,1.0\n"
-        "4,Test TE,TE,100.0,40.0,1.0\n"
-    )
-    with open(player_csv, 'w') as f:
-        f.write(csv_content)
-
-    yield dirs, player_csv
-
-    # Cleanup after all tests are done
-    shutil.rmtree(test_root)
 
 @pytest.fixture
-def mock_config(test_env_setup):
+def config(tmp_path: Path) -> Config:
+    """Return a test configuration rooted in a temporary directory.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary test directory.
+
+    Returns
+    -------
+    Config
+        Configuration with isolated paths and deterministic draft settings.
     """
-    Provides a Config object that points to temporary test directories.
-    """
-    dirs, player_csv = test_env_setup
     config = Config()
-    
-    # Override paths to use temporary test directories
-    config.paths.DATA_DIR = dirs['data']
-    config.paths.MODELS_DIR = dirs['models']
-    config.paths.LOGS_DIR = dirs['logs']
-    config.paths.PLAYER_DATA_CSV = player_csv
-    
+    data_dir = tmp_path / "data"
+    models_dir = tmp_path / "models"
+    logs_dir = tmp_path / "logs"
+    data_dir.mkdir()
+    models_dir.mkdir()
+    logs_dir.mkdir()
+
+    config.paths.DATA_DIR = str(data_dir)
+    config.paths.MODELS_DIR = str(models_dir)
+    config.paths.LOGS_DIR = str(logs_dir)
+    config.paths.PLAYER_DATA_CSV = str(data_dir / "generated_player_data.csv")
+    config.paths.DRAFT_STATE_FILE = str(data_dir / "draft_state.json")
+
+    config.draft.NUM_TEAMS = 4
+    config.draft.AGENT_START_POSITION = 1
+    config.draft.RANDOMIZE_AGENT_START_POSITION = False
+    config.draft.MANUAL_DRAFT_TEAMS = []
+    config.draft.ROSTER_STRUCTURE = {"QB": 1, "RB": 1, "WR": 1, "TE": 1, "FLEX": 1}
+    config.draft.BENCH_MAXES = {"QB": 0, "RB": 1, "WR": 1, "TE": 0}
+    config.draft.TOTAL_BENCH_SIZE = 2
+    config.draft.TEAM_MANAGER_MAPPING = {1: "Team 1", 2: "Team 2", 3: "Team 3", 4: "Team 4"}
+    config.training.MODEL_PATH_TO_LOAD = ""
+    config.training.RESUME_TRAINING = False
+    config.reward.ENABLE_SEASON_SIM_REWARD = False
+    config.reward.ENABLE_COMPETITIVE_REWARD = False
+    config.reward.USE_RANDOM_MATCHUPS = False
     return config
 
 
 @pytest.fixture
-def core_roster_structure():
-    """Return a standard starter roster structure.
-
-    Returns
-    -------
-    dict
-        Starter slots by position.
-    """
-    return {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1}
-
-
-@pytest.fixture
-def core_bench_maxes():
-    """Return bench limits used for core tests.
-
-    Returns
-    -------
-    dict
-        Bench slots by position.
-    """
-    return {"QB": 1, "RB": 2, "WR": 2, "TE": 1}
-
-
-@pytest.fixture
-def core_total_roster_size(core_roster_structure, core_bench_maxes):
-    """Return total roster size derived from starters and bench.
-
-    Parameters
-    ----------
-    core_roster_structure : dict
-        Starter slot counts.
-    core_bench_maxes : dict
-        Bench slot counts.
-
-    Returns
-    -------
-    int
-        Total roster cap.
-    """
-    return sum(core_roster_structure.values()) + sum(core_bench_maxes.values())
-
-
-@pytest.fixture
-def core_player_pool():
+def player_dataframe() -> pd.DataFrame:
     """Return a small deterministic player pool.
 
     Returns
     -------
-    list[Player]
-        Players across core fantasy positions.
+    pd.DataFrame
+        Draftable player records with bye weeks and teams.
     """
-    return [
-        Player(1, "QB One", "QB", 300.0, adp=10.0, team="BUF"),
-        Player(2, "RB One", "RB", 220.0, adp=12.0, team="BUF"),
-        Player(3, "RB Two", "RB", 210.0, adp=18.0, team="MIA"),
-        Player(4, "RB Three", "RB", 190.0, adp=32.0, team="NYJ"),
-        Player(5, "WR One", "WR", 230.0, adp=9.0, team="BUF"),
-        Player(6, "WR Two", "WR", 180.0, adp=26.0, team="MIA"),
-        Player(7, "WR Three", "WR", 170.0, adp=34.0, team="NE"),
-        Player(8, "WR Four", "WR", 160.0, adp=40.0, team="PIT"),
-        Player(9, "TE One", "TE", 150.0, adp=50.0, team="BUF"),
-        Player(10, "TE Two", "TE", 130.0, adp=70.0, team="NYG"),
-    ]
-
-
-@pytest.fixture
-def core_player_map(core_player_pool):
-    """Return player map keyed by player id.
-
-    Parameters
-    ----------
-    core_player_pool : list[Player]
-        Source players.
-
-    Returns
-    -------
-    dict[int, Player]
-        Lookup table for players.
-    """
-    return {player.player_id: player for player in core_player_pool}
-
-
-@pytest.fixture
-def core_draft_state(core_player_map, core_roster_structure, core_bench_maxes, core_total_roster_size):
-    """Return a fresh DraftState for core tests.
-
-    Parameters
-    ----------
-    core_player_map : dict[int, Player]
-        Players available in the draft pool.
-    core_roster_structure : dict
-        Starter slot counts.
-    core_bench_maxes : dict
-        Bench slot counts.
-    core_total_roster_size : int
-        Total roster cap.
-
-    Returns
-    -------
-    DraftState
-        Initialized mutable draft state.
-    """
-    return DraftState(
-        all_player_ids=set(core_player_map.keys()),
-        draft_order=[1, 2, 3, 4],
-        roster_structure=core_roster_structure,
-        bench_maxes=core_bench_maxes,
-        total_roster_size_per_team=core_total_roster_size,
+    return pd.DataFrame(
+        [
+            {"player_id": 1, "name": "QB One", "position": "QB", "projected_points": 300.0, "adp": 1.0, "bye_week": 7, "team": "BUF"},
+            {"player_id": 2, "name": "RB One", "position": "RB", "projected_points": 240.0, "adp": 2.0, "bye_week": 7, "team": "BUF"},
+            {"player_id": 3, "name": "WR One", "position": "WR", "projected_points": 230.0, "adp": 3.0, "bye_week": 7, "team": "BUF"},
+            {"player_id": 4, "name": "TE One", "position": "TE", "projected_points": 170.0, "adp": 4.0, "bye_week": 7, "team": "BUF"},
+            {"player_id": 5, "name": "QB Two", "position": "QB", "projected_points": 280.0, "adp": 5.0, "bye_week": 10, "team": "KC"},
+            {"player_id": 6, "name": "RB Two", "position": "RB", "projected_points": 220.0, "adp": 6.0, "bye_week": 10, "team": "KC"},
+            {"player_id": 7, "name": "WR Two", "position": "WR", "projected_points": 210.0, "adp": 7.0, "bye_week": 10, "team": "KC"},
+            {"player_id": 8, "name": "TE Two", "position": "TE", "projected_points": 150.0, "adp": 8.0, "bye_week": 10, "team": "KC"},
+            {"player_id": 9, "name": "QB Three", "position": "QB", "projected_points": 260.0, "adp": 9.0, "bye_week": 11, "team": "PHI"},
+            {"player_id": 10, "name": "RB Three", "position": "RB", "projected_points": 205.0, "adp": 10.0, "bye_week": 11, "team": "PHI"},
+            {"player_id": 11, "name": "WR Three", "position": "WR", "projected_points": 200.0, "adp": 11.0, "bye_week": 11, "team": "PHI"},
+            {"player_id": 12, "name": "TE Three", "position": "TE", "projected_points": 140.0, "adp": 12.0, "bye_week": 11, "team": "PHI"},
+            {"player_id": 13, "name": "QB Four", "position": "QB", "projected_points": 250.0, "adp": 13.0, "bye_week": 14, "team": "DAL"},
+            {"player_id": 14, "name": "RB Four", "position": "RB", "projected_points": 190.0, "adp": 14.0, "bye_week": 14, "team": "DAL"},
+            {"player_id": 15, "name": "WR Four", "position": "WR", "projected_points": 185.0, "adp": 15.0, "bye_week": 14, "team": "DAL"},
+            {"player_id": 16, "name": "TE Four", "position": "TE", "projected_points": 130.0, "adp": 16.0, "bye_week": 14, "team": "DAL"},
+        ]
     )
 
 
 @pytest.fixture
-def core_rules_engine(core_roster_structure, core_bench_maxes, core_total_roster_size):
-    """Return the fantasy rules engine for core tests.
+def player_catalog(config: Config, player_dataframe: pd.DataFrame) -> PlayerCatalog:
+    """Return a loaded player catalog from the temporary CSV.
 
     Parameters
     ----------
-    core_roster_structure : dict
-        Starter slot counts.
-    core_bench_maxes : dict
-        Bench slot counts.
-    core_total_roster_size : int
-        Total roster cap.
+    config : Config
+        Test configuration.
+    player_dataframe : pd.DataFrame
+        Player rows to persist.
+
+    Returns
+    -------
+    PlayerCatalog
+        Loaded catalog.
+    """
+    player_dataframe.to_csv(config.paths.PLAYER_DATA_CSV, index=False)
+    return load_player_catalog(config.paths.PLAYER_DATA_CSV, config.draft.MOCK_ADP_CONFIG)
+
+
+@pytest.fixture
+def rules_engine(config: Config) -> FantasyRulesEngine:
+    """Return the fantasy rules engine for tests.
+
+    Parameters
+    ----------
+    config : Config
+        Test configuration.
 
     Returns
     -------
     FantasyRulesEngine
-        Rules engine with deterministic limits.
+        Rules engine using the configured roster limits.
     """
+    total_roster_size = sum(config.draft.ROSTER_STRUCTURE.values()) + config.draft.TOTAL_BENCH_SIZE
     return FantasyRulesEngine(
-        roster_structure=core_roster_structure,
-        bench_maxes=core_bench_maxes,
-        total_roster_size_per_team=core_total_roster_size,
+        roster_structure=config.draft.ROSTER_STRUCTURE,
+        bench_maxes=config.draft.BENCH_MAXES,
+        total_roster_size_per_team=total_roster_size,
     )
+
+
+@pytest.fixture
+def draft_state(config: Config, player_catalog: PlayerCatalog) -> DraftState:
+    """Return a fresh ID-based draft state.
+
+    Parameters
+    ----------
+    config : Config
+        Test configuration.
+    player_catalog : PlayerCatalog
+        Shared player catalog.
+
+    Returns
+    -------
+    DraftState
+        Initialized draft state.
+    """
+    total_roster_size = sum(config.draft.ROSTER_STRUCTURE.values()) + config.draft.TOTAL_BENCH_SIZE
+    return DraftState(
+        all_player_ids=set(player_catalog.player_ids),
+        draft_order=[1, 2, 3, 4],
+        roster_structure=config.draft.ROSTER_STRUCTURE,
+        bench_maxes=config.draft.BENCH_MAXES,
+        total_roster_size_per_team=total_roster_size,
+        agent_team_id=config.draft.AGENT_START_POSITION,
+    )
+
+
+@pytest.fixture
+def draft_controller(
+    config: Config,
+    draft_state: DraftState,
+    player_catalog: PlayerCatalog,
+    rules_engine: FantasyRulesEngine,
+) -> DraftController:
+    """Return a shared draft controller for tests.
+
+    Parameters
+    ----------
+    config : Config
+        Test configuration.
+    draft_state : DraftState
+        Mutable draft state.
+    player_catalog : PlayerCatalog
+        Shared player catalog.
+    rules_engine : FantasyRulesEngine
+        Draft rules engine.
+
+    Returns
+    -------
+    DraftController
+        Shared draft workflow coordinator.
+    """
+    return DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+
+
+@pytest.fixture
+def player_factory():
+    """Return a helper for constructing lightweight Player objects."""
+
+    def _build(
+        player_id: int,
+        position: str,
+        projected_points: float = 100.0,
+        team: str | None = "BUF",
+        name: str | None = None,
+        adp: float = 10.0,
+        bye_week: int | None = 7,
+    ) -> Player:
+        return Player(
+            player_id=player_id,
+            name=name or f"{position}-{player_id}",
+            position=position,
+            projected_points=projected_points,
+            adp=adp,
+            bye_week=bye_week,
+            team=team,
+        )
+
+    return _build
+
+
+@pytest.fixture
+def fake_session(player_catalog: PlayerCatalog):
+    """Return a lightweight fake session for web route tests."""
+    pick = Pick(pick_number=1, team_id=1, player_id=1)
+    state = SimpleNamespace()
+    session = SimpleNamespace(
+        current_pick_number=2,
+        draft_history=[pick],
+        player_catalog=player_catalog,
+        available_player_ids=set(player_catalog.player_ids),
+        _state=state,
+        weekly_projections=player_catalog.to_weekly_projections(),
+        team_manager_mapping={1: "Team 1", 2: "Team 2", 3: "Team 3", 4: "Team 4"},
+        get_ui_state=lambda: {"ok": True},
+        draft_player=lambda player_id: None,
+        undo_last_pick=lambda: None,
+        set_current_team_picking=lambda team_id: None,
+        simulate_single_pick=lambda: None,
+        simulate_scheduled_picks_remaining=lambda: None,
+        get_ai_suggestion=lambda: {"QB": 0.7},
+        get_ai_suggestions_all=lambda: {1: {"QB": 0.7}},
+        get_ai_suggestion_for_team=lambda team_id, ignore_player_ids=None: {
+            "team_id": team_id,
+            "ignore": ignore_player_ids or [],
+        },
+        save_state=lambda file_path: None,
+        get_positional_baselines=lambda: {"QB": 250.0, "RB": 200.0, "WR": 180.0, "TE": 120.0},
+    )
+    return session
+
+
+@pytest.fixture
+def fake_env(player_factory):
+    """Return a configurable fake RL env for reward and agent tests."""
+    roster_map = {
+        1: SimpleNamespace(player_ids=[1, 2]),
+        2: SimpleNamespace(player_ids=[3, 4]),
+    }
+    resolved = {
+        1: [player_factory(1, "QB", 200.0, "BUF"), player_factory(2, "WR", 150.0, "BUF")],
+        2: [player_factory(3, "QB", 180.0, "KC"), player_factory(4, "TE", 120.0, "KC")],
+    }
+
+    class _FakeEnv:
+        agent_team_id = 1
+        total_roster_size_per_team = 2
+        weekly_projections = {
+            1: {"pts": [10.0] * 18, "pos": "QB"},
+            2: {"pts": [8.0] * 18, "pos": "WR"},
+        }
+
+        def __init__(self):
+            self._resolved = resolved
+            self.team_rosters = roster_map
+
+        def resolve_roster_players(self, team_id: int):
+            return list(self._resolved[team_id])
+
+        def _calculate_vorp(self, position: str) -> float:
+            return {"QB": 10.0, "RB": 5.0, "WR": 7.5, "TE": 3.0}.get(position, 0.0)
+
+    return _FakeEnv()
+
+
+@pytest.fixture
+def tiny_training_config(config: Config) -> Config:
+    """Return config tuned for deterministic RL unit tests."""
+    config.training.ENABLED_STATE_FEATURES = ["f1", "f2", "f3"]
+    config.training.HIDDEN_DIM = 4
+    config.training.BATCH_EPISODES = 1
+    config.training.LOG_SAVE_INTERVAL_EPISODES = 1
+    config.training.TOTAL_EPISODES = 1
+    config.training.LEARNING_RATE = 0.001
+    config.training.DISCOUNT_FACTOR = 0.9
+    config.training.ENABLE_ACTION_MASKING = True
+    return config

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List
 
-from draft_buddy.domain.entities import Player
+from draft_buddy.core.entities import Player
 
 
 def calculate_stack_count(roster_players: List[Player]) -> int:

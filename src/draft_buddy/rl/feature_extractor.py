@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-import numpy as np
 from typing import Dict, List
 
+import numpy as np
+
 from draft_buddy.core.draft_state import DraftState
+from draft_buddy.core.entities import PlayerCatalog, TeamRoster
 from draft_buddy.core.stacking import calculate_stack_count
 
 
@@ -20,43 +22,30 @@ class FeatureExtractor:
         config : Config
             Runtime configuration containing enabled feature names.
         state_normalizer : StateNormalizer
-            Normalizer used to convert feature map into array.
+            Normalizer used to convert feature map into an array.
         """
         self._config = config
         self._state_normalizer = state_normalizer
 
-    def extract(self, draft_state: DraftState, player_map: Dict[int, object], team_id: int) -> np.ndarray:
-        """Extract normalized features for one team perspective.
-
-        Parameters
-        ----------
-        draft_state : DraftState
-            Current mutable draft state.
-        player_map : Dict[int, object]
-            Player lookup by id.
-        team_id : int
-            Team perspective for feature construction.
-
-        Returns
-        -------
-        np.ndarray
-            Normalized feature vector.
-        """
-        global_features = self.compute_global_state_features(draft_state, player_map)
+    def extract(
+        self, draft_state: DraftState, player_catalog: PlayerCatalog, team_id: int
+    ) -> np.ndarray:
+        """Extract normalized features for one team perspective."""
+        global_features = self.compute_global_state_features(draft_state, player_catalog)
         feature_map = self.build_state_map_for_team(
             draft_state=draft_state,
-            player_map=player_map,
+            player_catalog=player_catalog,
             team_id=team_id,
             global_features=global_features,
         )
         return self._state_normalizer.normalize(feature_map)
 
     def compute_global_state_features(
-        self, draft_state: DraftState, player_map: Dict[int, object]
+        self, draft_state: DraftState, player_catalog: PlayerCatalog
     ) -> Dict[str, float]:
         """Build global features independent of team perspective."""
         enabled = set(self._config.training.ENABLED_STATE_FEATURES)
-        sorted_by_position = self._build_sorted_available_by_position(draft_state, player_map)
+        sorted_by_position = self._build_sorted_available_by_position(draft_state, player_catalog)
         global_features: Dict[str, float] = {}
 
         for position in ["QB", "RB", "WR", "TE"]:
@@ -81,7 +70,7 @@ class FeatureExtractor:
                 )
 
         if "current_pick_number" in enabled:
-            global_features["current_pick_number"] = float(draft_state.get_current_pick_number())
+            global_features["current_pick_number"] = float(draft_state.current_pick_number)
 
         for position in ["QB", "RB", "WR", "TE"]:
             for rank in [1, 2, 3]:
@@ -94,27 +83,26 @@ class FeatureExtractor:
     def build_state_map_for_team(
         self,
         draft_state: DraftState,
-        player_map: Dict[int, object],
+        player_catalog: PlayerCatalog,
         team_id: int,
         global_features: Dict[str, float],
     ) -> Dict[str, float]:
         """Merge global and team-specific features into one map."""
         enabled = set(self._config.training.ENABLED_STATE_FEATURES)
-        rosters = draft_state.get_rosters()
-        roster_counts = rosters[team_id]
+        rosters = draft_state.team_rosters
+        team_roster = draft_state.roster_for_team(team_id)
         feature_map = dict(global_features)
 
-        self._add_roster_count_features(feature_map, roster_counts, enabled)
-        self._add_available_slot_features(feature_map, roster_counts, enabled)
+        self._add_roster_count_features(feature_map, team_roster, enabled)
+        self._add_available_slot_features(feature_map, team_roster, enabled)
         self._add_draft_context_features(
             feature_map, draft_state, rosters, team_id, enabled
         )
         self._add_bye_week_features(
-            feature_map, draft_state, player_map, rosters, team_id, enabled
+            feature_map, draft_state, player_catalog, rosters, team_id, enabled
         )
         self._add_threat_features(feature_map, draft_state, rosters, team_id, enabled)
-        self._add_stack_features(feature_map, draft_state, player_map, rosters, team_id, enabled)
-
+        self._add_stack_features(feature_map, draft_state, player_catalog, rosters, team_id, enabled)
         return feature_map
 
     def calculate_scarcity(
@@ -132,40 +120,39 @@ class FeatureExtractor:
         return 0.0
 
     def calculate_imminent_threat(
-        self, draft_state: DraftState, rosters: Dict[int, dict], team_id: int, position: str
+        self, draft_state: DraftState, rosters: Dict[int, TeamRoster], team_id: int, position: str
     ) -> int:
         """Count opponents between current and next team pick needing a starter."""
-        draft_order = draft_state.get_draft_order()
-        current_pick_idx = draft_state.get_current_pick_idx()
+        draft_order = draft_state.draft_order
+        current_pick_index = draft_state.current_pick_index
         try:
-            next_pick_idx = draft_order.index(team_id, current_pick_idx + 1)
+            next_pick_index = draft_order.index(team_id, current_pick_index + 1)
         except ValueError:
-            next_pick_idx = len(draft_order)
+            next_pick_index = len(draft_order)
         needed_starters = self._config.draft.ROSTER_STRUCTURE.get(position, 0)
         if needed_starters == 0:
             return 0
-        opponents = set(draft_order[current_pick_idx + 1 : next_pick_idx])
+        opponents = set(draft_order[current_pick_index + 1 : next_pick_index])
         threat_count = 0
         for opponent_id in opponents:
-            if rosters[opponent_id].get(position, 0) < needed_starters:
+            if rosters[opponent_id].position_count(position) < needed_starters:
                 threat_count += 1
         return threat_count
 
     def get_agent_bye_week_vector(
-        self, draft_state: DraftState, rosters: Dict[int, dict]
+        self, draft_state: DraftState, rosters: Dict[int, TeamRoster], player_catalog: PlayerCatalog
     ) -> np.ndarray:
         """Return bye-week histogram for agent team."""
-        return self._get_team_bye_week_vector(
-            rosters[ draft_state.get_agent_team_id() ]["PLAYERS"]
-        )
+        agent_roster = rosters[draft_state.agent_team_id]
+        return self._get_team_bye_week_vector(player_catalog.resolve(agent_roster.player_ids))
 
     def _build_sorted_available_by_position(
-        self, draft_state: DraftState, player_map: Dict[int, object]
+        self, draft_state: DraftState, player_catalog: PlayerCatalog
     ) -> Dict[str, List[object]]:
         """Build sorted available player lists by position."""
         grouped: Dict[str, List[object]] = {"QB": [], "RB": [], "WR": [], "TE": []}
-        for player_id in draft_state.get_available_player_ids():
-            player = player_map[player_id]
+        for player_id in draft_state.available_player_ids:
+            player = player_catalog.require(player_id)
             if player.position in grouped:
                 grouped[player.position].append(player)
         for position in grouped:
@@ -192,10 +179,9 @@ class FeatureExtractor:
         if not players:
             return 0.0
         needed_starters = 0
-        rosters = draft_state.get_rosters()
         required = self._config.draft.ROSTER_STRUCTURE.get(position, 0)
         for team_id in range(1, self._config.draft.NUM_TEAMS + 1):
-            missing = max(0, required - rosters[team_id].get(position, 0))
+            missing = max(0, required - draft_state.roster_for_team(team_id).position_count(position))
             needed_starters += missing
         replacement_index = min(max(0, needed_starters + 1), len(players) - 1)
         score_before = float(players[max(0, replacement_index - 1)].projected_points)
@@ -205,56 +191,56 @@ class FeatureExtractor:
         return float(players[0].projected_points) - baseline
 
     def _add_roster_count_features(
-        self, feature_map: Dict[str, float], roster_counts: dict, enabled: set
+        self, feature_map: Dict[str, float], team_roster: TeamRoster, enabled: set
     ) -> None:
         """Add roster count features for team."""
         if "current_roster_qb_count" in enabled:
-            feature_map["current_roster_qb_count"] = float(roster_counts["QB"])
+            feature_map["current_roster_qb_count"] = float(team_roster.qb_count)
         if "current_roster_rb_count" in enabled:
-            feature_map["current_roster_rb_count"] = float(roster_counts["RB"])
+            feature_map["current_roster_rb_count"] = float(team_roster.rb_count)
         if "current_roster_wr_count" in enabled:
-            feature_map["current_roster_wr_count"] = float(roster_counts["WR"])
+            feature_map["current_roster_wr_count"] = float(team_roster.wr_count)
         if "current_roster_te_count" in enabled:
-            feature_map["current_roster_te_count"] = float(roster_counts["TE"])
+            feature_map["current_roster_te_count"] = float(team_roster.te_count)
 
     def _add_available_slot_features(
-        self, feature_map: Dict[str, float], roster_counts: dict, enabled: set
+        self, feature_map: Dict[str, float], team_roster: TeamRoster, enabled: set
     ) -> None:
         """Add available-slot features for team."""
         if "available_roster_slots_qb" in enabled:
             feature_map["available_roster_slots_qb"] = float(
                 self._config.draft.ROSTER_STRUCTURE["QB"]
                 + self._config.draft.BENCH_MAXES["QB"]
-                - roster_counts["QB"]
+                - team_roster.qb_count
             )
         if "available_roster_slots_rb" in enabled:
             feature_map["available_roster_slots_rb"] = float(
                 self._config.draft.ROSTER_STRUCTURE["RB"]
                 + self._config.draft.BENCH_MAXES["RB"]
-                - roster_counts["RB"]
+                - team_roster.rb_count
             )
         if "available_roster_slots_wr" in enabled:
             feature_map["available_roster_slots_wr"] = float(
                 self._config.draft.ROSTER_STRUCTURE["WR"]
                 + self._config.draft.BENCH_MAXES["WR"]
-                - roster_counts["WR"]
+                - team_roster.wr_count
             )
         if "available_roster_slots_te" in enabled:
             feature_map["available_roster_slots_te"] = float(
                 self._config.draft.ROSTER_STRUCTURE["TE"]
                 + self._config.draft.BENCH_MAXES["TE"]
-                - roster_counts["TE"]
+                - team_roster.te_count
             )
         if "available_roster_slots_flex" in enabled:
             feature_map["available_roster_slots_flex"] = float(
-                self._config.draft.ROSTER_STRUCTURE["FLEX"] - roster_counts["FLEX"]
+                self._config.draft.ROSTER_STRUCTURE["FLEX"] - team_roster.flex_count
             )
 
     def _add_draft_context_features(
         self,
         feature_map: Dict[str, float],
         draft_state: DraftState,
-        rosters: Dict[int, dict],
+        rosters: Dict[int, TeamRoster],
         team_id: int,
         enabled: set,
     ) -> None:
@@ -263,32 +249,33 @@ class FeatureExtractor:
             feature_map["agent_start_position"] = float(team_id)
         next_team_id = self._get_next_opponent_team_id_for(draft_state, team_id)
         if "next_pick_opponent_qb_count" in enabled:
-            feature_map["next_pick_opponent_qb_count"] = float(rosters[next_team_id].get("QB", 0))
+            feature_map["next_pick_opponent_qb_count"] = float(rosters[next_team_id].qb_count)
         if "next_pick_opponent_rb_count" in enabled:
-            feature_map["next_pick_opponent_rb_count"] = float(rosters[next_team_id].get("RB", 0))
+            feature_map["next_pick_opponent_rb_count"] = float(rosters[next_team_id].rb_count)
         if "next_pick_opponent_wr_count" in enabled:
-            feature_map["next_pick_opponent_wr_count"] = float(rosters[next_team_id].get("WR", 0))
+            feature_map["next_pick_opponent_wr_count"] = float(rosters[next_team_id].wr_count)
         if "next_pick_opponent_te_count" in enabled:
-            feature_map["next_pick_opponent_te_count"] = float(rosters[next_team_id].get("TE", 0))
+            feature_map["next_pick_opponent_te_count"] = float(rosters[next_team_id].te_count)
 
     def _add_bye_week_features(
         self,
         feature_map: Dict[str, float],
         draft_state: DraftState,
-        player_map: Dict[int, object],
-        rosters: Dict[int, dict],
+        player_catalog: PlayerCatalog,
+        rosters: Dict[int, TeamRoster],
         team_id: int,
         enabled: set,
     ) -> None:
         """Add bye-week conflict and histogram features."""
-        sorted_by_position = self._build_sorted_available_by_position(draft_state, player_map)
+        sorted_by_position = self._build_sorted_available_by_position(draft_state, player_catalog)
+        roster_players = player_catalog.resolve(rosters[team_id].player_ids)
         for position in ["QB", "RB", "WR", "TE"]:
             key = f"best_{position.lower()}_bye_week_conflict"
             if key in enabled:
                 feature_map[key] = float(
-                    self._count_bye_week_conflicts(rosters[team_id]["PLAYERS"], sorted_by_position[position])
+                    self._count_bye_week_conflicts(roster_players, sorted_by_position[position])
                 )
-        team_bye_vector = self._get_team_bye_week_vector(rosters[team_id]["PLAYERS"])
+        team_bye_vector = self._get_team_bye_week_vector(roster_players)
         for week in range(4, 15):
             key = f"bye_week_{week}_count"
             if key in enabled:
@@ -298,7 +285,7 @@ class FeatureExtractor:
         self,
         feature_map: Dict[str, float],
         draft_state: DraftState,
-        rosters: Dict[int, dict],
+        rosters: Dict[int, TeamRoster],
         team_id: int,
         enabled: set,
     ) -> None:
@@ -324,30 +311,31 @@ class FeatureExtractor:
         self,
         feature_map: Dict[str, float],
         draft_state: DraftState,
-        player_map: Dict[int, object],
-        rosters: Dict[int, dict],
+        player_catalog: PlayerCatalog,
+        rosters: Dict[int, TeamRoster],
         team_id: int,
         enabled: set,
     ) -> None:
         """Add stacking features."""
+        roster_players = player_catalog.resolve(rosters[team_id].player_ids)
         if "current_stack_count" in enabled:
-            feature_map["current_stack_count"] = float(calculate_stack_count(rosters[team_id]["PLAYERS"]))
+            feature_map["current_stack_count"] = float(calculate_stack_count(roster_players))
         if "stack_target_available_flag" in enabled:
             feature_map["stack_target_available_flag"] = float(
                 self._stack_target_available_flag(
-                    roster_players=rosters[team_id]["PLAYERS"],
-                    available_ids=draft_state.get_available_player_ids(),
-                    player_map=player_map,
+                    roster_players=roster_players,
+                    available_ids=draft_state.available_player_ids,
+                    player_catalog=player_catalog,
                 )
             )
 
     def _get_next_opponent_team_id_for(self, draft_state: DraftState, team_id: int) -> int:
         """Get next drafting team that is not the current perspective team."""
-        draft_order = draft_state.get_draft_order()
-        current_pick_idx = draft_state.get_current_pick_idx()
-        if current_pick_idx + 1 >= len(draft_order):
+        draft_order = draft_state.draft_order
+        current_pick_index = draft_state.current_pick_index
+        if current_pick_index + 1 >= len(draft_order):
             return team_id
-        next_index = current_pick_idx + 1
+        next_index = current_pick_index + 1
         while next_index < len(draft_order):
             next_team_id = draft_order[next_index]
             if next_team_id != team_id:
@@ -358,7 +346,7 @@ class FeatureExtractor:
     def _count_bye_week_conflicts(
         self, roster_players: List[object], sorted_players_for_position: List[object]
     ) -> int:
-        """Count roster players sharing bye with best available positional player."""
+        """Count roster players sharing a bye with the best available positional player."""
         if not sorted_players_for_position:
             return 0
         best_player = sorted_players_for_position[0]
@@ -377,14 +365,14 @@ class FeatureExtractor:
         return bye_week_vector
 
     def _stack_target_available_flag(
-        self, roster_players: List[object], available_ids: set[int], player_map: Dict[int, object]
+        self, roster_players: List[object], available_ids: set[int], player_catalog: PlayerCatalog
     ) -> int:
-        """Return 1 if roster has a QB with available WR/TE teammate."""
+        """Return 1 if roster has a QB with an available WR/TE teammate."""
         qb_teams = {player.team for player in roster_players if player.position == "QB" and player.team}
         if not qb_teams:
             return 0
         for player_id in available_ids:
-            player = player_map[player_id]
+            player = player_catalog.require(player_id)
             if player.position in {"WR", "TE"} and player.team and player.team in qb_teams:
                 return 1
         return 0

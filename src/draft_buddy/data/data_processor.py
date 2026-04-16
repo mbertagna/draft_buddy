@@ -3,7 +3,7 @@ from typing import Optional
 
 import pandas as pd
 
-from draft_buddy.logic.scoring import ScoringService
+from draft_buddy.data.scoring import ScoringService
 
 from .adp_matcher import AdpMatcher
 from .nflverse_client import NflverseCsvDownloader

@@ -25,7 +25,7 @@ class RewardCalculator:
         ----------
         config : Config
             Runtime reward settings.
-        env : FantasyFootballDraftEnv
+        env : DraftGymEnv
             Active environment instance.
         drafted_player : Player
             Player selected this step.
@@ -39,6 +39,7 @@ class RewardCalculator:
         """
         reward = 0.0
         info: Dict[str, Any] = {}
+        current_roster = env.resolve_roster_players(env.agent_team_id)
         if config.reward.ENABLE_INTERMEDIATE_REWARD:
             if config.reward.INTERMEDIATE_REWARD_MODE == "STATIC":
                 reward += config.reward.INTERMEDIATE_REWARD_VALUE
@@ -50,7 +51,6 @@ class RewardCalculator:
             config.reward.ENABLE_PICK_SHAPING_REWARD
             and config.reward.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD
         ):
-            current_roster = env.teams_rosters[env.agent_team_id]["PLAYERS"]
             current_scores = calculate_roster_scores(
                 current_roster, config.draft.ROSTER_STRUCTURE, config.draft.BENCH_MAXES
             )
@@ -66,9 +66,8 @@ class RewardCalculator:
             info["vorp_shaping"] = vorp
 
         if config.reward.ENABLE_STACKING_REWARD:
-            roster = env.teams_rosters[env.agent_team_id]["PLAYERS"]
-            post_stack_count = calculate_stack_count(roster)
-            pre_stack_count = calculate_stack_count(roster[:-1])
+            post_stack_count = calculate_stack_count(current_roster)
+            pre_stack_count = calculate_stack_count(current_roster[:-1])
             stack_increase = post_stack_count - pre_stack_count
             if stack_increase > 0:
                 stacking_reward = stack_increase * config.reward.STACKING_REWARD_WEIGHT
@@ -82,7 +81,7 @@ class RewardCalculator:
         reward = 0.0
         info: Dict[str, Any] = {}
         agent_team_id = env.agent_team_id
-        agent_roster = env.teams_rosters[agent_team_id]["PLAYERS"]
+        agent_roster = env.resolve_roster_players(agent_team_id)
         agent_scores = calculate_roster_scores(
             agent_roster, config.draft.ROSTER_STRUCTURE, config.draft.BENCH_MAXES
         )
@@ -105,11 +104,14 @@ class RewardCalculator:
 
         if config.reward.ENABLE_COMPETITIVE_REWARD:
             opponent_scores = []
-            for team_id, roster_data in env.teams_rosters.items():
+            for team_id in env.team_rosters:
                 if team_id == agent_team_id:
                     continue
+                opponent_roster = env.resolve_roster_players(team_id)
                 opponent = calculate_roster_scores(
-                    roster_data["PLAYERS"], config.draft.ROSTER_STRUCTURE, config.draft.BENCH_MAXES
+                    opponent_roster,
+                    config.draft.ROSTER_STRUCTURE,
+                    config.draft.BENCH_MAXES,
                 )
                 if config.reward.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD:
                     opponent_score = (
@@ -145,8 +147,8 @@ class RewardCalculator:
             or config.reward.ENABLE_SEASON_SIM_REWARD
         ) and matchups_df is not None and not matchups_df.empty:
             sim_rosters = {
-                config.draft.TEAM_MANAGER_MAPPING.get(team_id): [player.player_id for player in roster_data["PLAYERS"]]
-                for team_id, roster_data in env.teams_rosters.items()
+                config.draft.TEAM_MANAGER_MAPPING.get(team_id): list(team_roster.player_ids)
+                for team_id, team_roster in env.team_rosters.items()
                 if config.draft.TEAM_MANAGER_MAPPING.get(team_id)
             }
             try:

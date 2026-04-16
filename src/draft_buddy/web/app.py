@@ -189,8 +189,8 @@ def create_app(
             "total_picks": session.current_pick_number - 1,
             "picks_by_position": {"QB": 0, "RB": 0, "WR": 0, "TE": 0},
         }
-        for pick in session._draft_history:
-            player = session.player_map.get(pick["player_id"])
+        for pick in session.draft_history:
+            player = session.player_catalog.get(pick.player_id)
             if player:
                 summary["picks_by_position"][player.position] += 1
         return summary
@@ -216,14 +216,14 @@ def create_app(
                 "Games Played %",
             ]
         )
-        for pick in session._draft_history:
-            player = session.player_map.get(pick["player_id"])
+        for pick in session.draft_history:
+            player = session.player_catalog.get(pick.player_id)
             if player is None:
                 continue
             writer.writerow(
                 [
-                    pick["previous_pick_number"],
-                    pick["team_id"],
+                    pick.pick_number,
+                    pick.team_id,
                     player.player_id,
                     player.name,
                     player.position,
@@ -246,7 +246,12 @@ def create_app(
         """Run season simulation for current session rosters."""
         session = runtime_session_manager.get_or_create(_session_id(request, response))
         try:
-            return season_simulation_service.simulate_season(session)
+            return season_simulation_service.simulate_season(
+                draft_state=session._state,
+                player_catalog=session.player_catalog,
+                team_manager_mapping=session.team_manager_mapping,
+                weekly_projections=session.weekly_projections,
+            )
         except FileNotFoundError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         except Exception as error:
@@ -264,7 +269,7 @@ def create_app(
     ) -> JSONResponse:
         """Return players filtered and sorted for frontend table."""
         session = runtime_session_manager.get_or_create(_session_id(request, response))
-        filtered_players = [session.player_map[player_id] for player_id in session.available_players_ids]
+        filtered_players = session.player_catalog.resolve(session.available_player_ids)
 
         if position:
             positions = [value.strip().upper() for value in position.split(",")]

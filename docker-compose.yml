@@ -1,36 +1,28 @@
-services:
-  train:
-    build: .
-    volumes:
-      - .:/app
-    environment:
-      - PYTHONPATH=/app/src
-    command: python scripts/train.py
+x-app-base: &app-base
+  build: .
+  working_dir: /app
+  volumes:
+    - .:/app
+  environment:
+    PYTHONPATH: /app/src
 
+services:
   webapp:
-    build: .
+    <<: *app-base
     ports:
       - "5001:5001"
-    volumes:
-      - .:/app
-    environment:
-      - PYTHONPATH=/app/src
     command: python scripts/run_webapp.py
 
+  train:
+    <<: *app-base
+    command: python scripts/train.py
+
   test:
-    build: .
-    volumes:
-      - .:/app
-    environment:
-      - PYTHONPATH=/app/src
+    <<: *app-base
     command: python -m pytest tests/
 
   test-cov:
-    build: .
-    volumes:
-      - .:/app
-    environment:
-      - PYTHONPATH=/app/src
+    <<: *app-base
     command: >
       python -m pytest tests/
       --cov=src/draft_buddy
@@ -40,21 +32,11 @@ services:
       --cov-report=html:/app/htmlcov
 
   data:
-    build: .
-    volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - PYTHONPATH=/app/src
+    <<: *app-base
     command: python scripts/generate_projections.py --year 2025
 
   ast:
-    build: .
-    volumes:
-      - .:/app
-    working_dir: /app
-    environment:
-      - PYTHONPATH=/app/src
+    <<: *app-base
     command: >
       python -m draft_buddy.arch_viz.cli
       --project-root /app

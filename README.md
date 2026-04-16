@@ -1,216 +1,147 @@
-# Draft Buddy - AI-Powered Fantasy Football Draft Assistant
+# Draft Buddy
 
-Draft Buddy is a system for:
+Draft Buddy uses Docker Compose as the primary local workflow for the refactored runtime boundaries:
 
-- training an RL draft agent,
-- running an interactive web draft UI,
-- generating projection data,
-- and visualizing architecture dependencies.
+- `web`: FastAPI app and session management
+- `rl`: Gym environment, feature extraction, rewards, models, and training
+- `data`: player loading and projection generation
+- `simulator`: stateless season evaluation
+- `core`: shared draft state, controller, rules, bots, and entities
+- `arch_viz`: architecture visualization tooling
 
-The project has been refactored into bounded packages with explicit responsibilities (`core`, `data`, `simulator`, `rl`, `web`, `arch_viz`) and predictable script entry points in `scripts/`.
-
-![ui](images/ui.png)
-![loss](images/loss.png)
-![reward](images/reward.png)
-
-## Key Features
-
-- Custom snake-draft environment with roster constraints (including FLEX handling).
-- Opponent strategy system (`RANDOM`, `ADP`, `HEURISTIC`, `AGENT_MODEL`) with injection-based model inference.
-- Feature engineering and reward shaping for RL training.
-- FastAPI-backed web app with manual picks, simulation controls, CSV export, and AI suggestions.
-- Stateless season evaluation pipeline for end-of-draft scoring.
-- Architecture visualization CLI that emits Mermaid dependency graphs.
-
-## Quick Start
+## Docker Compose Usage
 
 ### Prerequisites
 
-- [Docker](https://www.docker.com/get-started)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- Docker
+- Docker Compose
 
-### Clone
+### First-Time Setup
 
-```bash
-git clone https://github.com/your-username/draft-buddy.git
-cd draft-buddy
-```
-
-### Primary Runtime Modes (Docker Compose)
-
-The repository standardizes around five operational services:
+Build the image used by every service:
 
 ```bash
-# Web app
-docker compose up webapp
-
-# RL training
-docker compose run --rm train
-
-# Test suite
-docker compose run --rm test
-
-# Test suite with branch coverage
-docker compose run --rm test-cov
-
-# Data preparation
-docker compose run --rm data
-
-# Architecture diagrams
-docker compose run --rm ast
+docker compose build
 ```
 
-## Testing and Coverage
+Each service bind-mounts the repository into `/app` and runs with `PYTHONPATH=/app/src`, so generated files are written back to your host checkout.
 
-Run the fast test suite:
+Common output locations on the host:
 
-```bash
-docker compose run --rm test
-```
+- `data/`: generated player data and draft state files
+- `logs/`: training metrics, dashboards, and run logs
+- `models/`: checkpoints and trained model artifacts
+- `coverage.xml`: XML coverage report from `test-cov`
+- `htmlcov/`: HTML coverage report from `test-cov`
+- `viz/`: Mermaid architecture output from `ast`
 
-Run tests with branch coverage and artifact output:
+### Services
 
-```bash
-docker compose run --rm test-cov
-```
+| Service | Purpose | Default command |
+| --- | --- | --- |
+| `webapp` | Run the FastAPI web application | `python scripts/run_webapp.py` |
+| `train` | Run RL training | `python scripts/train.py` |
+| `test` | Run the test suite | `python -m pytest tests/` |
+| `test-cov` | Run tests with coverage outputs | `python -m pytest tests/ --cov=src/draft_buddy ...` |
+| `data` | Generate player projections and merged draft data | `python scripts/generate_projections.py --year 2025` |
+| `ast` | Generate Mermaid architecture diagrams | `python -m draft_buddy.arch_viz.cli --project-root /app --output-dir /app/viz --all-default-entries --strategy module` |
 
-Coverage artifacts are written to:
+### Common Commands
 
-- `coverage.xml` (CI/report tooling)
-- `htmlcov/index.html` (local interactive report)
-
-You can also run targeted package coverage directly, for example:
-
-```bash
-docker compose run --rm test python -m pytest tests/ \
-  --cov=src/draft_buddy/web --cov-report=term-missing --cov-branch
-```
-
-## Web App
-
-Start the server:
+Start the web application:
 
 ```bash
 docker compose up webapp
 ```
 
-Open the UI at `http://localhost:5001`.
-
-UI capabilities include:
-
-- start/reset draft session,
-- manual picks and undo,
-- single-step and rest-of-draft simulation,
-- live roster breakdowns and player filtering,
-- AI suggestions by team perspective,
-- season simulation and CSV export.
-
-## Training
-
-Training entrypoint: `scripts/train.py`
-
-1. Adjust config in `src/draft_buddy/config.py` (`TOTAL_EPISODES`, `LEARNING_RATE`, `ENABLED_STATE_FEATURES`, etc.).
-2. Run training:
+Run training:
 
 ```bash
 docker compose run --rm train
 ```
 
-3. Resume by setting `RESUME_TRAINING = True` in config.
-4. Generate plots without training:
+Generate training plots from the latest CSV metrics without training:
 
 ```bash
 docker compose run --rm train python scripts/train.py -p
 ```
 
-## Data Preparation
+Run the test suite:
 
-Data entrypoint: `scripts/generate_projections.py`
+```bash
+docker compose run --rm test
+```
 
-Default compose run:
+Run tests with coverage:
+
+```bash
+docker compose run --rm test-cov
+```
+
+Generate player projections with the default compose command:
 
 ```bash
 docker compose run --rm data
 ```
 
-Custom year/options:
+Override the data-generation command:
 
 ```bash
 docker compose run --rm data python scripts/generate_projections.py --year 2024 --rookie_projection_method hybrid
 ```
 
-## Architecture Diagrams (`draft-arch`)
-
-The `arch_viz` CLI traces imports from entry files and emits Mermaid diagrams.
-
-- Strategies: `module`, `class`, `function`
-- Default entries:
-  - `scripts/run_webapp.py`
-  - `scripts/train.py`
-  - `scripts/generate_projections.py`
-
-Run with compose:
+Generate architecture diagrams:
 
 ```bash
 docker compose run --rm ast
 ```
 
-Override strategy:
+### `up` vs `run --rm`
+
+Use `docker compose up` for long-running services that should stay attached to a port, such as `webapp`.
+
+Use `docker compose run --rm` for one-off tasks such as training, tests, coverage, data generation, and architecture visualization. The `--rm` flag removes the container when the command exits.
+
+Because every service uses `working_dir: /app`, command overrides run from the repository root inside the container. That means overrides like:
 
 ```bash
-docker compose run --rm ast python -m draft_buddy.arch_viz.cli \
-  --project-root /app --output-dir /app/viz --strategy class --all-default-entries
+docker compose run --rm test python -m pytest tests/test_config.py
 ```
 
-Custom entries:
+behave consistently across services.
 
-```bash
-docker compose run --rm ast python -m draft_buddy.arch_viz.cli \
-  --project-root /app --output-dir /app/viz --strategy module \
-  --entry scripts/run_webapp.py --entry scripts/train.py
-```
+### Accessing Outputs
 
-Local usage (after `pip install -e .`):
-
-```bash
-python -m draft_buddy.arch_viz.cli --all-default-entries --output-dir viz --strategy module
-draft-arch --entry scripts/run_webapp.py --strategy module
-```
-
-## Script Entry Points
-
-The `scripts/` directory is intentionally minimal:
-
-- `scripts/train.py`
-- `scripts/run_webapp.py`
-- `scripts/generate_projections.py`
+- Web UI: [http://localhost:5001](http://localhost:5001)
+- Coverage HTML report: [htmlcov/index.html](htmlcov/index.html)
+- Architecture diagrams: `viz/`
+- Training logs and dashboards: `logs/`
+- Model checkpoints: `models/`
 
 ## Package Structure
 
 ```text
 .
-├── data/                         # input/output datasets and artifacts
-├── frontend/                     # browser UI assets
-├── scripts/                      # canonical runtime entrypoints
+├── data/
+├── frontend/
+├── logs/
+├── models/
+├── scripts/
 ├── src/draft_buddy/
-│   ├── arch_viz/                 # dependency graph + Mermaid CLI
-│   ├── core/                     # domain entities, draft state, rules, bots, inference abstraction
-│   ├── data/                     # data adapters/loaders used by app/runtime layers
-│   ├── data_pipeline/            # ETL and projection generation pipeline
-│   ├── draft_env/                # gym environment adapter
-│   ├── domain/                   # shared domain models
-│   ├── rl/                       # policy network, training agent, checkpointing, rewards, feature extraction
-│   ├── simulator/                # stateless schedule + season evaluator
-│   └── web/                      # FastAPI app and session orchestration
+│   ├── arch_viz/
+│   ├── core/
+│   ├── data/
+│   ├── rl/
+│   ├── simulator/
+│   └── web/
+├── viz/
 ├── docker-compose.yml
 ├── Dockerfile
 └── pyproject.toml
 ```
 
-## Notes on Legacy Modules
+## Entry Scripts
 
-Some modules under `logic/` and `draft_env/` may remain as internal adapters while migration is in progress. New code should target `core`, `rl`, `simulator`, `data`, and `web` package boundaries directly.
-
-## License
-
-This project is released under the MIT License.
+- `scripts/run_webapp.py`
+- `scripts/train.py`
+- `scripts/generate_projections.py`

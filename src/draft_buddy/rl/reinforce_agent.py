@@ -1,12 +1,13 @@
 import signal
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import torch
 import torch.optim as optim
-from typing import List, Optional, Tuple, Dict, Any
 
 from draft_buddy.rl.checkpoint_manager import CheckpointManager
 from draft_buddy.config import Config
-from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv
+from draft_buddy.rl.draft_gym_env import DraftGymEnv
 from draft_buddy.rl.metrics_logger import MetricsLogger
 from draft_buddy.rl.policy_network import PolicyNetwork
 
@@ -18,7 +19,7 @@ class ReinforceAgent:
 
     def __init__(
         self,
-        env: FantasyFootballDraftEnv,
+        env: DraftGymEnv,
         config: Config,
         metrics_logger: Optional[MetricsLogger] = None,
         checkpoint_manager: Optional[CheckpointManager] = None,
@@ -95,7 +96,7 @@ class ReinforceAgent:
             state = next_state
             done = terminated or truncated
             current_action_mask = info.get("action_mask")
-        agent_roster = self.env.teams_rosters[self.env.agent_team_id]["PLAYERS"]
+        agent_roster = self.env.resolve_roster_players(self.env.agent_team_id)
         episode_data["actual_points"] = sum(player.projected_points for player in agent_roster)
         return episode_data
 

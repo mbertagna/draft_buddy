@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
+from draft_buddy.core import DraftState, PlayerCatalog
 from draft_buddy.simulator.evaluator import simulate_season_fast
 
 
@@ -21,13 +22,25 @@ class SeasonSimulationService:
         """
         self._config = config
 
-    def simulate_season(self, draft_session) -> Dict[str, Any]:
-        """Simulate a season using provided draft rosters.
+    def simulate_season(
+        self,
+        draft_state: DraftState,
+        player_catalog: PlayerCatalog,
+        team_manager_mapping: Dict[int, str],
+        weekly_projections: Dict[int, Dict[str, object]] | None = None,
+    ) -> Dict[str, Any]:
+        """Simulate a season using explicit draft inputs.
 
         Parameters
         ----------
-        draft_session : object
-            Session-like object exposing rosters and player projections.
+        draft_state : DraftState
+            Current draft state.
+        player_catalog : PlayerCatalog
+            Shared player catalog.
+        team_manager_mapping : Dict[int, str]
+            Team id to manager name mapping.
+        weekly_projections : Dict[int, Dict[str, object]], optional
+            Weekly projection map. When omitted, uses season projection repeats.
 
         Returns
         -------
@@ -35,17 +48,13 @@ class SeasonSimulationService:
             Structured simulation results.
         """
         rosters = {}
-        for team_id, roster_data in draft_session.teams_rosters.items():
-            manager_name = draft_session.team_manager_mapping.get(team_id)
+        for team_id, team_roster in draft_state.team_rosters.items():
+            manager_name = team_manager_mapping.get(team_id)
             if manager_name:
-                rosters[manager_name] = [player.player_id for player in roster_data["PLAYERS"]]
+                rosters[manager_name] = list(team_roster.player_ids)
 
-        weekly_projections = getattr(draft_session, "weekly_projections", None)
         if weekly_projections is None:
-            weekly_projections = {
-                player.player_id: {"pts": [player.projected_points] * 18, "pos": player.position}
-                for player in draft_session.all_players_data
-            }
+            weekly_projections = player_catalog.to_weekly_projections()
 
         matchups_df = self._load_matchups()
         num_playoff_teams = int(self._config.reward.REGULAR_SEASON_REWARD.get("NUM_PLAYOFF_TEAMS", 6))

@@ -10,7 +10,7 @@ from draft_buddy.rl.reinforce_agent import ReinforceAgent
 from bokeh.plotting import figure, output_file, save
 from bokeh.models import HoverTool
 from bokeh.layouts import column
-from draft_buddy.rl import GymEnv
+from draft_buddy.rl import DraftGymEnv
 from draft_buddy.rl.run_utils import (
     find_latest_checkpoint,
     get_run_name,
@@ -223,7 +223,7 @@ def main() -> None:
     print(f"Run: {run_name} | Version: {version}")
     print(f"Models will be saved in: {run_version_dir}")
     print(f"Logs will be saved in: {logs_dir}")
-    env = GymEnv(config, training=True)
+    env = DraftGymEnv(config, training=True)
     agent = ReinforceAgent(env, config)
     start_episode = 1
     if config.training.RESUME_TRAINING:

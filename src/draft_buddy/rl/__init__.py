@@ -5,8 +5,8 @@ from __future__ import annotations
 __all__ = [
     "AgentModelBotGM",
     "CheckpointManager",
+    "DraftGymEnv",
     "FeatureExtractor",
-    "GymEnv",
     "MetricsLogger",
     "PolicyNetwork",
     "ReinforceAgent",
@@ -20,10 +20,10 @@ __all__ = [
 
 def __getattr__(name: str):
     """Lazily expose RL symbols to avoid import cycles."""
-    if name == "GymEnv":
-        from draft_buddy.draft_env.fantasy_draft_env import FantasyFootballDraftEnv as gym_env
+    if name == "DraftGymEnv":
+        from draft_buddy.rl.draft_gym_env import DraftGymEnv as draft_gym_env
 
-        return gym_env
+        return draft_gym_env
     if name == "PolicyNetwork":
         from draft_buddy.rl.policy_network import PolicyNetwork as policy_network
 

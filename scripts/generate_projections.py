@@ -1,7 +1,8 @@
 """
 Entry point: fetch stats, score players, merge ADP, and write generated player CSV.
 
-Run from repo root with PYTHONPATH including ``src`` (see docker-compose ``data-prep``).
+Run from repo root with PYTHONPATH including ``src`` or through the Docker Compose
+``data`` service.
 """
 
 import argparse

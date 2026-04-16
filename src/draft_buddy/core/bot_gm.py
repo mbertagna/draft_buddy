@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import random
 from typing import Dict, List, Optional
 
-from draft_buddy.domain.entities import Player
+from draft_buddy.core.entities import Player, PlayerCatalog, TeamRoster
 
 
 class BotGM(ABC):
@@ -15,8 +15,8 @@ class BotGM(ABC):
         self,
         team_id: int,
         available_player_ids: set,
-        player_map: dict,
-        roster_counts: dict,
+        player_catalog: PlayerCatalog,
+        team_roster: TeamRoster,
         roster_structure: dict,
         bench_maxes: dict,
         can_draft_position_fn,
@@ -33,8 +33,8 @@ class RandomBotGM(BotGM):
         self,
         team_id: int,
         available_player_ids: set,
-        player_map: dict,
-        roster_counts: dict,
+        player_catalog: PlayerCatalog,
+        team_roster: TeamRoster,
         roster_structure: dict,
         bench_maxes: dict,
         can_draft_position_fn,
@@ -44,11 +44,11 @@ class RandomBotGM(BotGM):
         """Execute a random valid pick."""
         handled_positions = set(roster_structure.keys()) - {"FLEX"}
         eligible = [
-            player_map[pid]
+            player_catalog.require(pid)
             for pid in available_player_ids
-            if player_map.get(pid)
-            and player_map[pid].position in handled_positions
-            and can_draft_position_fn(team_id, player_map[pid].position, False)
+            if player_catalog.get(pid)
+            and player_catalog.require(pid).position in handled_positions
+            and can_draft_position_fn(team_id, player_catalog.require(pid).position, False)
         ]
         return random.choice(eligible) if eligible else None
 
@@ -64,8 +64,8 @@ class AdpBotGM(BotGM):
         self,
         team_id: int,
         available_player_ids: set,
-        player_map: dict,
-        roster_counts: dict,
+        player_catalog: PlayerCatalog,
+        team_roster: TeamRoster,
         roster_structure: dict,
         bench_maxes: dict,
         can_draft_position_fn,
@@ -74,11 +74,11 @@ class AdpBotGM(BotGM):
     ) -> Optional[Player]:
         """Execute an ADP-based pick."""
         eligible = [
-            player_map[pid]
+            player_catalog.require(pid)
             for pid in available_player_ids
-            if player_map.get(pid)
-            and player_map[pid].position in {"QB", "RB", "WR", "TE"}
-            and can_draft_position_fn(team_id, player_map[pid].position, False)
+            if player_catalog.get(pid)
+            and player_catalog.require(pid).position in {"QB", "RB", "WR", "TE"}
+            and can_draft_position_fn(team_id, player_catalog.require(pid).position, False)
         ]
         if not eligible:
             return None
@@ -114,8 +114,8 @@ class HeuristicBotGM(BotGM):
         self,
         team_id: int,
         available_player_ids: set,
-        player_map: dict,
-        roster_counts: dict,
+        player_catalog: PlayerCatalog,
+        team_roster: TeamRoster,
         roster_structure: dict,
         bench_maxes: dict,
         can_draft_position_fn,
@@ -124,15 +124,15 @@ class HeuristicBotGM(BotGM):
     ) -> Optional[Player]:
         """Execute a need-aware pick."""
         eligible = [
-            player_map[pid]
+            player_catalog.require(pid)
             for pid in available_player_ids
-            if player_map.get(pid)
-            and player_map[pid].position in {"QB", "RB", "WR", "TE"}
-            and can_draft_position_fn(team_id, player_map[pid].position, False)
+            if player_catalog.get(pid)
+            and player_catalog.require(pid).position in {"QB", "RB", "WR", "TE"}
+            and can_draft_position_fn(team_id, player_catalog.require(pid).position, False)
         ]
         if not eligible:
             return None
-        best = self._best_heuristic(eligible, roster_counts, roster_structure, bench_maxes)
+        best = self._best_heuristic(eligible, team_roster, roster_structure, bench_maxes)
         if best is None:
             best = min(eligible, key=lambda player: player.adp)
         if random.random() >= self._randomness_factor:
@@ -146,21 +146,21 @@ class HeuristicBotGM(BotGM):
         return random.choice(others) if others else best
 
     def _best_heuristic(
-        self, eligible: List[Player], roster_counts: dict, roster_structure: dict, bench_maxes: dict
+        self, eligible: List[Player], team_roster: TeamRoster, roster_structure: dict, bench_maxes: dict
     ) -> Optional[Player]:
         """Return best player using positional priority and roster needs."""
         for position in self._positional_priority:
-            if roster_counts.get(position, 0) < roster_structure.get(position, 0):
+            if team_roster.position_count(position) < roster_structure.get(position, 0):
                 position_players = [player for player in eligible if player.position == position]
                 if position_players:
                     return max(position_players, key=lambda player: player.projected_points)
         for position in self._positional_priority:
             position_max = roster_structure.get(position, 0) + bench_maxes.get(position, 0)
-            if roster_counts.get(position, 0) < position_max:
+            if team_roster.position_count(position) < position_max:
                 position_players = [player for player in eligible if player.position == position]
                 if position_players:
                     return max(position_players, key=lambda player: player.projected_points)
-        if roster_counts.get("FLEX", 0) < roster_structure.get("FLEX", 0):
+        if team_roster.position_count("FLEX") < roster_structure.get("FLEX", 0):
             flex_players = [player for player in eligible if player.position in {"RB", "WR", "TE"}]
             if flex_players:
                 return max(flex_players, key=lambda player: player.projected_points)

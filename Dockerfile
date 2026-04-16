@@ -1,32 +1,29 @@
-# Use an official Python runtime as a parent image
-# We choose a specific version (e.g., 3.10-slim-buster) for stability
+# Base image for all Docker Compose services.
 FROM python:3.10-slim-buster
 
-# Set the working directory in the container
+# Repository root inside the container.
 WORKDIR /app
 
-# Copy the project configuration files
+# Copy package metadata and source first for dependency installation.
 COPY pyproject.toml .
 COPY README.md .
 COPY src/ ./src/
 
-# Install dependencies and the project
+# Install project dependencies and the package itself.
 RUN pip install --no-cache-dir .
 
-# Copy the rest of your application code (api, scripts, frontend, etc.)
+# Copy the remaining repository files used by compose-run scripts.
 COPY . .
 
-# Ensure data directories exist
+# Ensure runtime output directories exist on fresh images.
 RUN mkdir -p data models logs
 
-# Define environment variables
+# Default runtime environment for script-based entrypoints.
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH=/app/src
 
-# Expose the port Flask will run on
+# FastAPI webapp default port.
 EXPOSE 5001
 
-# Command to run your application
-# This is a placeholder. The 'run.sh' script will typically override this
-# with a specific command like 'python train.py'
+# Compose services override the default command with the appropriate script.
 CMD ["python", "--version"]

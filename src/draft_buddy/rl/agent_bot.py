@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Dict, Optional
 
 from draft_buddy.core.bot_gm import BotGM
-from draft_buddy.domain.entities import Player
+from draft_buddy.core.entities import Player, PlayerCatalog, TeamRoster
 
 
 class AgentModelBotGM(BotGM):
@@ -27,8 +27,8 @@ class AgentModelBotGM(BotGM):
         self,
         team_id: int,
         available_player_ids: set,
-        player_map: dict,
-        roster_counts: dict,
+        player_catalog: PlayerCatalog,
+        team_roster: TeamRoster,
         roster_structure: dict,
         bench_maxes: dict,
         can_draft_position_fn,
@@ -45,10 +45,10 @@ class AgentModelBotGM(BotGM):
             Drafting team id.
         available_player_ids : set
             Available player ids.
-        player_map : dict
-            Player lookup by id.
-        roster_counts : dict
-            Current roster counts for team.
+        player_catalog : PlayerCatalog
+            Shared player catalog.
+        team_roster : TeamRoster
+            Current team roster.
         roster_structure : dict
             Required starter counts.
         bench_maxes : dict
@@ -82,10 +82,12 @@ class AgentModelBotGM(BotGM):
         if is_valid:
             return drafted_player
         eligible = [
-            player_map[player_id]
+            player_catalog.require(player_id)
             for player_id in available_player_ids
-            if player_map.get(player_id)
-            and player_map[player_id].position in {"QB", "RB", "WR", "TE"}
-            and can_draft_position_fn(team_id, player_map[player_id].position, False)
+            if player_catalog.get(player_id)
+            and player_catalog.require(player_id).position in {"QB", "RB", "WR", "TE"}
+            and can_draft_position_fn(
+                team_id, player_catalog.require(player_id).position, False
+            )
         ]
         return min(eligible, key=lambda player: player.adp) if eligible else None

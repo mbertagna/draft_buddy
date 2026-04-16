@@ -8,13 +8,12 @@ import torch
 import uvicorn
 
 from draft_buddy.config import Config
-from draft_buddy.core import BotGM, DraftState, InferenceProvider
-from draft_buddy.domain.entities import Player
-from draft_buddy.draft_env.state_normalizer import StateNormalizer
+from draft_buddy.core import BotGM, DraftState, InferenceProvider, PlayerCatalog
 from draft_buddy.rl.agent_bot import AgentModelBotGM
 from draft_buddy.rl.checkpoint_manager import CheckpointManager
 from draft_buddy.rl.feature_extractor import FeatureExtractor
 from draft_buddy.rl.policy_network import PolicyNetwork
+from draft_buddy.rl.state_normalizer import StateNormalizer
 from draft_buddy.web.app import create_app
 from draft_buddy.web.session import DraftSessionManager
 
@@ -56,7 +55,7 @@ class RlInferenceProvider(InferenceProvider):
         return AgentModelBotGM(model, action_to_position)
 
     def build_state_vector(
-        self, team_id: int, draft_state: DraftState, player_map: Dict[int, Player]
+        self, team_id: int, draft_state: DraftState, player_catalog: PlayerCatalog
     ) -> np.ndarray:
         """Build normalized feature vector for team perspective.
 
@@ -66,21 +65,21 @@ class RlInferenceProvider(InferenceProvider):
             Team perspective for feature extraction.
         draft_state : DraftState
             Current draft state.
-        player_map : Dict[int, Player]
-            Player lookup by id.
+        player_catalog : PlayerCatalog
+            Shared player catalog.
 
         Returns
         -------
         np.ndarray
             Normalized feature vector.
         """
-        return self._feature_extractor.extract(draft_state, player_map, team_id)
+        return self._feature_extractor.extract(draft_state, player_catalog, team_id)
 
     def predict_action_probabilities(
         self,
         team_id: int,
         draft_state: DraftState,
-        player_map: Dict[int, Player],
+        player_catalog: PlayerCatalog,
         action_to_position: Dict[int, str],
         get_action_mask_fn,
     ) -> Dict[str, float]:
@@ -92,8 +91,8 @@ class RlInferenceProvider(InferenceProvider):
             Team perspective for prediction.
         draft_state : DraftState
             Current draft state.
-        player_map : Dict[int, Player]
-            Player lookup by id.
+        player_catalog : PlayerCatalog
+            Shared player catalog.
         action_to_position : Dict[int, str]
             Action-index to position mapping.
         get_action_mask_fn : callable
@@ -106,7 +105,7 @@ class RlInferenceProvider(InferenceProvider):
         """
         if self._suggestion_model is None:
             raise ValueError("AI model not loaded.")
-        state = self.build_state_vector(team_id, draft_state, player_map)
+        state = self.build_state_vector(team_id, draft_state, player_catalog)
         action_mask = get_action_mask_fn(team_id)
         state_tensor = torch.from_numpy(state).float().unsqueeze(0)
         with torch.no_grad():

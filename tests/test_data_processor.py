@@ -1,181 +1,144 @@
-"""Tests for fantasy data processor orchestration."""
+"""Tests for data processor orchestration."""
 
-from unittest.mock import Mock
+from __future__ import annotations
+
+from types import SimpleNamespace
 
 import pandas as pd
 
-from draft_buddy.data_pipeline.data_processor import FantasyDataProcessor
+from draft_buddy.data.data_processor import FantasyDataProcessor
 
 
-def test_get_team_bye_weeks_inverts_week_to_team_mapping():
-    """Verify bye-week config is inverted into team-to-week map."""
-    processor = FantasyDataProcessor(
-        bye_weeks_override={7: ["KC", "BUF"], 8: ["MIA"]},
-        data_downloader=Mock(),
-        scoring_service=Mock(),
-        rookie_projector=Mock(),
-        adp_matcher=Mock(),
-    )
+class FakeDownloader:
+    """Downloader returning deterministic frames."""
 
-    assert processor._get_team_bye_weeks() == {"KC": 7, "BUF": 7, "MIA": 8}
+    def fetch_player_pool(self, draft_year: int, positions: list, start_year: int, end_year: int):
+        _ = (draft_year, positions, start_year, end_year)
+        draft_pool = pd.DataFrame(
+            [
+                {"player_id": 1, "player_display_name": "Vet", "position": "QB", "recent_team": "BUF", "draft_number": 1},
+                {"player_id": 2, "player_display_name": "Rookie", "position": "QB", "recent_team": "KC", "draft_number": 2},
+            ]
+        )
+        historical = pd.DataFrame(
+            [{"player_id": 1, "player_display_name": "Vet", "position": "QB", "recent_team": "BUF", "season": 2024, "week": 1, "total_pts": 20.0}]
+        )
+        draft_year_stats = pd.DataFrame(
+            [{"player_id": 1, "player_display_name": "Vet", "position": "QB", "recent_team": "BUF", "total_pts": 25.0}]
+        )
+        return draft_pool, historical, draft_year_stats
 
 
-def test_get_team_bye_weeks_returns_empty_dict_when_override_is_none():
-    """Verify missing bye-week override returns empty mapping."""
-    processor = FantasyDataProcessor(
-        bye_weeks_override=None,
-        data_downloader=Mock(),
-        scoring_service=Mock(),
-        rookie_projector=Mock(),
-        adp_matcher=Mock(),
-    )
+class FakeScoringService:
+    """Scoring service with call tracking."""
+
+    def __init__(self):
+        self.calls = []
+
+    def apply_scoring(self, df: pd.DataFrame) -> pd.DataFrame:
+        self.calls.append("apply_scoring")
+        return df.copy()
+
+    def aggregate_legacy_stats(self, df: pd.DataFrame, measure_of_center: str) -> pd.DataFrame:
+        self.calls.append(("aggregate_legacy_stats", measure_of_center))
+        return pd.DataFrame(
+            [{"player_id": 1, "player_display_name": "Vet", "position": "QB", "recent_team": "BUF", "total_pts": 20.0, "games_played_frac": 1.0}]
+        )
+
+    def merge_roster_with_legacy(self, draft_pool_df: pd.DataFrame, legacy_stats_df: pd.DataFrame) -> pd.DataFrame:
+        self.calls.append("merge_roster_with_legacy")
+        return pd.DataFrame(
+            [
+                {"player_id": 1, "player_display_name": "Vet", "position": "QB", "recent_team": "BUF", "total_pts": 20.0, "games_played_frac": 1.0, "draft_number": 1, "is_rookie_original": False},
+                {"player_id": 2, "player_display_name": "Rookie", "position": "QB", "recent_team": "KC", "total_pts": None, "games_played_frac": None, "draft_number": 2, "is_rookie_original": True},
+            ]
+        )
+
+    def merge_draft_year_with_legacy(self, draft_year_scored_df: pd.DataFrame, legacy_stats_df: pd.DataFrame) -> pd.DataFrame:
+        self.calls.append("merge_draft_year_with_legacy")
+        return draft_year_scored_df.assign(games_played_frac=1.0)
+
+    def apply_rookie_metadata(self, draft_players_df: pd.DataFrame) -> pd.DataFrame:
+        self.calls.append("apply_rookie_metadata")
+        return draft_players_df.assign(games_played_frac=draft_players_df["games_played_frac"].fillna("R"))
+
+    def generate_weekly_projections(self, draft_players_df: pd.DataFrame):
+        self.calls.append("generate_weekly_projections")
+        return {row.player_id: {"position": row.position, 1: row.total_pts} for row in draft_players_df.itertuples()}
+
+    def finalize_draft_players(self, draft_players_df: pd.DataFrame) -> pd.DataFrame:
+        self.calls.append("finalize_draft_players")
+        return draft_players_df
+
+
+class FakeRookieProjector:
+    """Rookie projector filling missing total points."""
+
+    def project_rookies(self, draft_players_df: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        _ = kwargs
+        return draft_players_df.assign(total_pts=draft_players_df["total_pts"].fillna(15.0))
+
+
+class FakeAdpMatcher:
+    """Matcher used to validate delegation."""
+
+    def __init__(self):
+        self.last_kwargs = None
+
+    def merge_adp_data(self, **kwargs):
+        self.last_kwargs = kwargs
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+
+def test_get_team_bye_weeks_returns_empty_dict_without_override() -> None:
+    """Verify missing bye-week overrides yield an empty mapping."""
+    processor = FantasyDataProcessor(bye_weeks_override=None)
 
     assert processor._get_team_bye_weeks() == {}
 
 
-def test_process_draft_data_calls_dependencies_in_expected_sequence():
-    """Verify orchestration order across downloader, scorer, projector, and finalization."""
-    calls = []
-    draft_pool_df = pd.DataFrame(
-        [{"player_id": 1, "recent_team": "KC", "is_rookie_original": True, "position": "QB"}]
-    )
-    legacy_stats_df = pd.DataFrame([{"player_id": 99, "position": "QB"}])
-    draft_year_stats_df = pd.DataFrame([{"player_id": 100, "position": "QB"}])
-    merged_df = pd.DataFrame(
-        [{"player_id": 1, "recent_team": "KC", "is_rookie_original": True, "position": "QB", "total_pts": None}]
-    )
-    projected_df = pd.DataFrame(
-        [{"player_id": 1, "recent_team": "KC", "is_rookie_original": True, "position": "QB", "total_pts": 200.0}]
-    )
-    metadata_df = projected_df.copy()
-    finalized_df = projected_df.copy()
-    weekly_projections = {1: {"position": "QB", 1: 15.0}}
+def test_get_team_bye_weeks_inverts_week_mapping() -> None:
+    """Verify bye-week overrides invert from week-to-teams into team-to-week."""
+    processor = FantasyDataProcessor(bye_weeks_override={7: ["BUF"], 10: ["KC"]})
 
-    downloader = Mock()
-    scorer = Mock()
-    projector = Mock()
+    assert processor._get_team_bye_weeks() == {"BUF": 7, "KC": 10}
 
-    downloader.fetch_player_pool.side_effect = lambda **kwargs: (
-        calls.append("fetch_player_pool") or (draft_pool_df, legacy_stats_df, draft_year_stats_df)
-    )
-    scorer.apply_scoring.side_effect = lambda dataframe: calls.append("apply_scoring") or dataframe
-    scorer.aggregate_legacy_stats.side_effect = (
-        lambda dataframe, moc: calls.append("aggregate_legacy_stats") or dataframe
-    )
-    scorer.merge_roster_with_legacy.side_effect = (
-        lambda roster, legacy: calls.append("merge_roster_with_legacy") or merged_df
-    )
-    projector.project_rookies.side_effect = (
-        lambda *args, **kwargs: calls.append("project_rookies") or projected_df
-    )
-    scorer.apply_rookie_metadata.side_effect = (
-        lambda dataframe: calls.append("apply_rookie_metadata") or metadata_df
-    )
-    scorer.generate_weekly_projections.side_effect = (
-        lambda dataframe: calls.append("generate_weekly_projections") or weekly_projections
-    )
-    scorer.finalize_draft_players.side_effect = (
-        lambda dataframe: calls.append("finalize_draft_players") or finalized_df
-    )
 
+def test_process_draft_data_projects_rookies_and_applies_bye_week_mapping() -> None:
+    """Verify rookie-enabled processing applies rookie projection and bye weeks."""
+    scoring_service = FakeScoringService()
     processor = FantasyDataProcessor(
-        bye_weeks_override={7: ["KC"]},
-        data_downloader=downloader,
-        scoring_service=scorer,
-        rookie_projector=projector,
-        adp_matcher=Mock(),
+        bye_weeks_override={7: ["BUF"], 10: ["KC"]},
+        data_downloader=FakeDownloader(),
+        scoring_service=scoring_service,
+        rookie_projector=FakeRookieProjector(),
+        adp_matcher=FakeAdpMatcher(),
     )
-    processor.process_draft_data(draft_year=2025)
+    draft_players_df, weekly_projections = processor.process_draft_data(draft_year=2025)
 
-    assert calls == [
-        "fetch_player_pool",
-        "apply_scoring",
-        "aggregate_legacy_stats",
-        "merge_roster_with_legacy",
-        "project_rookies",
-        "apply_rookie_metadata",
-        "generate_weekly_projections",
-        "finalize_draft_players",
-    ]
+    assert set(draft_players_df["bye_week"]) == {7, 10} and weekly_projections[2][1] == 15.0
 
 
-def test_process_draft_data_returns_finalized_players_and_weekly_projections():
-    """Verify process_draft_data returns expected tuple outputs."""
-    draft_pool_df = pd.DataFrame(
-        [{"player_id": 1, "recent_team": "KC", "is_rookie_original": False, "position": "QB"}]
-    )
-    legacy_stats_df = pd.DataFrame([{"player_id": 1, "position": "QB"}])
-    draft_year_stats_df = pd.DataFrame([{"player_id": 1, "position": "QB"}])
-    merged_df = pd.DataFrame(
-        [{"player_id": 1, "recent_team": "KC", "is_rookie_original": False, "position": "QB", "total_pts": 100.0}]
-    )
-    weekly_projections = {1: {"position": "QB", 1: 15.0}}
-    finalized_df = merged_df.copy()
-
-    downloader = Mock()
-    scorer = Mock()
-    projector = Mock()
-    downloader.fetch_player_pool.return_value = (draft_pool_df, legacy_stats_df, draft_year_stats_df)
-    scorer.apply_scoring.return_value = legacy_stats_df
-    scorer.aggregate_legacy_stats.return_value = legacy_stats_df
-    scorer.merge_roster_with_legacy.return_value = merged_df
-    scorer.apply_rookie_metadata.return_value = merged_df
-    scorer.generate_weekly_projections.return_value = weekly_projections
-    scorer.finalize_draft_players.return_value = finalized_df
-    projector.project_rookies.return_value = merged_df
-
-    processor = FantasyDataProcessor(
-        bye_weeks_override={7: ["KC"]},
-        data_downloader=downloader,
-        scoring_service=scorer,
-        rookie_projector=projector,
-        adp_matcher=Mock(),
-    )
-    result = processor.process_draft_data(draft_year=2025)
-
-    assert result == (finalized_df, weekly_projections)
-
-
-def test_process_draft_data_uses_draft_year_merge_when_rookie_projection_disabled():
-    """Verify disabled rookie projection path merges draft-year with legacy stats."""
-    draft_pool_df = pd.DataFrame([{"player_id": 1, "recent_team": "KC", "position": "QB"}])
-    legacy_stats_df = pd.DataFrame([{"player_id": 1, "position": "QB"}])
-    draft_year_stats_df = pd.DataFrame([{"player_id": 1, "position": "QB"}])
-    merged_df = pd.DataFrame([{"player_id": 1, "recent_team": "KC", "position": "QB", "total_pts": 120.0}])
-
-    downloader = Mock()
-    scorer = Mock()
-    downloader.fetch_player_pool.return_value = (draft_pool_df, legacy_stats_df, draft_year_stats_df)
-    scorer.apply_scoring.side_effect = [legacy_stats_df, draft_year_stats_df]
-    scorer.aggregate_legacy_stats.return_value = legacy_stats_df
-    scorer.merge_draft_year_with_legacy.return_value = merged_df
-    scorer.apply_rookie_metadata.return_value = merged_df
-    scorer.generate_weekly_projections.return_value = {1: {"position": "QB", 1: 10.0}}
-    scorer.finalize_draft_players.return_value = merged_df
-
+def test_process_draft_data_uses_draft_year_merge_when_rookies_disabled() -> None:
+    """Verify non-rookie processing uses the draft-year merge path."""
+    scoring_service = FakeScoringService()
     processor = FantasyDataProcessor(
         project_rookies=False,
-        bye_weeks_override={7: ["KC"]},
-        data_downloader=downloader,
-        scoring_service=scorer,
-        rookie_projector=Mock(),
-        adp_matcher=Mock(),
+        data_downloader=FakeDownloader(),
+        scoring_service=scoring_service,
+        rookie_projector=FakeRookieProjector(),
+        adp_matcher=FakeAdpMatcher(),
     )
     processor.process_draft_data(draft_year=2025)
 
-    assert scorer.merge_draft_year_with_legacy.called
+    assert "merge_draft_year_with_legacy" in scoring_service.calls
 
 
-def test_merge_adp_data_delegates_to_injected_adp_matcher():
-    """Verify merge_adp_data forwards call to matcher dependency."""
-    matcher = Mock()
-    matcher.merge_adp_data.return_value = (pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
-    processor = FantasyDataProcessor(
-        data_downloader=Mock(),
-        scoring_service=Mock(),
-        rookie_projector=Mock(),
-        adp_matcher=matcher,
-    )
-    processor.merge_adp_data(pd.DataFrame(), "adp.csv", 85)
+def test_merge_adp_data_delegates_to_matcher() -> None:
+    """Verify merge_adp_data forwards its arguments to the matcher dependency."""
+    matcher = FakeAdpMatcher()
+    processor = FantasyDataProcessor(adp_matcher=matcher)
+    computed_df = pd.DataFrame([{"player_id": 1}])
+    processor.merge_adp_data(computed_df, "adp.csv", match_threshold=90, adp_col_map={"Player": "Player"})
 
-    assert matcher.merge_adp_data.called
+    assert matcher.last_kwargs["match_threshold"] == 90 and matcher.last_kwargs["computed_df"].equals(computed_df)

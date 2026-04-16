@@ -9,7 +9,7 @@ import numpy as np
 
 from draft_buddy.core.bot_gm import BotGM
 from draft_buddy.core.draft_state import DraftState
-from draft_buddy.domain.entities import Player
+from draft_buddy.core.entities import PlayerCatalog
 
 
 class InferenceProvider(ABC):
@@ -42,7 +42,7 @@ class InferenceProvider(ABC):
 
     @abstractmethod
     def build_state_vector(
-        self, team_id: int, draft_state: DraftState, player_map: Dict[int, Player]
+        self, team_id: int, draft_state: DraftState, player_catalog: PlayerCatalog
     ) -> np.ndarray:
         """Build normalized model features for a team perspective.
 
@@ -52,8 +52,8 @@ class InferenceProvider(ABC):
             Team perspective for feature extraction.
         draft_state : DraftState
             Current draft state.
-        player_map : Dict[int, Player]
-            Player lookup by id.
+        player_catalog : PlayerCatalog
+            Shared player catalog.
 
         Returns
         -------
@@ -66,7 +66,7 @@ class InferenceProvider(ABC):
         self,
         team_id: int,
         draft_state: DraftState,
-        player_map: Dict[int, Player],
+        player_catalog: PlayerCatalog,
         action_to_position: Dict[int, str],
         get_action_mask_fn: Callable[[int], np.ndarray],
     ) -> Dict[str, float]:
@@ -78,8 +78,8 @@ class InferenceProvider(ABC):
             Team perspective for prediction.
         draft_state : DraftState
             Current draft state.
-        player_map : Dict[int, Player]
-            Player lookup by id.
+        player_catalog : PlayerCatalog
+            Shared player catalog.
         action_to_position : Dict[int, str]
             Action-index to position mapping.
         get_action_mask_fn : Callable[[int], np.ndarray]

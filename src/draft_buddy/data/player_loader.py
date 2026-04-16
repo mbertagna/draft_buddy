@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import os
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 import pandas as pd
 
-from draft_buddy.domain.entities import Player
+from draft_buddy.core import Player, PlayerCatalog
 
 
-def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
-    """Load players from CSV and ensure ADP values exist.
+def load_player_catalog(filepath: str, adp_config: Dict) -> PlayerCatalog:
+    """Load a player catalog from CSV and ensure ADP values exist.
 
     Parameters
     ----------
@@ -23,8 +24,8 @@ def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
 
     Returns
     -------
-    List[Player]
-        Loaded and ADP-sorted players.
+    PlayerCatalog
+        Loaded catalog sorted by ADP.
     """
     try:
         dataframe = pd.read_csv(filepath)
@@ -37,7 +38,7 @@ def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
         if column_name not in dataframe.columns:
             raise ValueError(f"Missing required column '{column_name}' in player data CSV.")
 
-    players: List[Player] = []
+    players: list[Player] = []
     has_adp_column = "adp" in dataframe.columns
     has_games_played_fraction = "games_played_frac" in dataframe.columns
     has_bye_week_column = "bye_week" in dataframe.columns
@@ -79,10 +80,10 @@ def load_player_data(filepath: str, adp_config: Dict) -> List[Player]:
         players = _generate_mock_adp(players, adp_config)
 
     players.sort(key=lambda player: player.adp)
-    return players
+    return PlayerCatalog(players)
 
 
-def _generate_mock_adp(players: List[Player], adp_config: Dict) -> List[Player]:
+def _generate_mock_adp(players: list[Player], adp_config: Dict) -> list[Player]:
     """Generate ADP rankings from weighted player attributes.
 
     Parameters
@@ -94,7 +95,7 @@ def _generate_mock_adp(players: List[Player], adp_config: Dict) -> List[Player]:
 
     Returns
     -------
-    List[Player]
+    list[Player]
         Players with generated ADP values.
     """
     if not adp_config["enabled"]:
@@ -113,9 +114,10 @@ def _generate_mock_adp(players: List[Player], adp_config: Dict) -> List[Player]:
     player_id_to_adp = {
         score_tuple[1]: index + 1 for index, score_tuple in enumerate(weighted_scores)
     }
-    for player in players:
-        player.adp = player_id_to_adp.get(player.player_id, np.inf)
-    return players
+    return [
+        replace(player, adp=player_id_to_adp.get(player.player_id, np.inf))
+        for player in players
+    ]
 
 
 def _create_dummy_csv(filepath: str) -> None:
