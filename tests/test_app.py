@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import importlib
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -15,6 +17,13 @@ class _FakeSession:
     """Minimal session stub for app route tests."""
 
     should_raise_on_pick: bool = False
+    should_raise_on_undo: bool = False
+    should_raise_on_override: bool = False
+    should_raise_on_simulate_pick: bool = False
+    should_raise_on_simulate_rest: bool = False
+    ai_payload: dict | None = None
+    ai_all_payload: dict | None = None
+    ai_for_team_payload: dict | None = None
 
     def __post_init__(self):
         self.current_pick_number = 2
@@ -40,6 +49,31 @@ class _FakeSession:
             {"previous_pick_number": self.current_pick_number, "team_id": 1, "player_id": player_id}
         )
 
+    def undo_last_pick(self):
+        """Undo the last pick or raise a validation error."""
+        if self.should_raise_on_undo:
+            raise ValueError("cannot undo")
+        if self._draft_history:
+            self._draft_history.pop()
+
+    def set_current_team_picking(self, team_id: int):
+        """Persist an override or raise a validation error."""
+        if self.should_raise_on_override:
+            raise ValueError("invalid override")
+        self.current_team_picking = team_id
+
+    def simulate_single_pick(self):
+        """Simulate one pick or raise a validation error."""
+        if self.should_raise_on_simulate_pick:
+            raise ValueError("cannot simulate")
+        self.current_pick_number += 1
+
+    def simulate_scheduled_picks_remaining(self):
+        """Simulate the rest of the draft or raise a validation error."""
+        if self.should_raise_on_simulate_rest:
+            raise ValueError("cannot simulate rest")
+        self.current_pick_idx = len(self.draft_order)
+
     def save_state(self, path: str):
         """No-op save."""
         del path
@@ -47,6 +81,20 @@ class _FakeSession:
     def get_positional_baselines(self):
         """Return simple baselines for VORP sorting."""
         return {"QB": 100.0, "RB": 100.0, "WR": 100.0, "TE": 100.0}
+
+    def get_ai_suggestion(self):
+        """Return a deterministic single-team AI payload."""
+        return self.ai_payload or {"QB": 0.1}
+
+    def get_ai_suggestions_all(self):
+        """Return deterministic all-team AI suggestions."""
+        return self.ai_all_payload or {1: {"QB": 0.1}}
+
+    def get_ai_suggestion_for_team(self, team_id: int, ignore_player_ids=None):
+        """Return deterministic team-specific AI suggestions."""
+        self.last_ai_team = team_id
+        self.last_ignore_ids = ignore_player_ids or []
+        return self.ai_for_team_payload or {"WR": 0.2}
 
 
 class _FakeSessionManager:
@@ -195,3 +243,127 @@ def test_players_unknown_sort_key_falls_back_to_vorp(mock_config):
     response = client.get("/api/players?sort_by=unknown_key&sort_dir=desc")
 
     assert response.status_code == 200
+
+
+def test_dashboard_returns_500_when_frontend_index_missing(mock_config):
+    """Verify the dashboard route serves the frontend when the file exists."""
+    client, _ = _build_client(mock_config, _FakeSession())
+    response = client.get("/")
+
+    assert response.status_code == 200
+
+
+def test_create_new_draft_returns_session_ui_state(mock_config):
+    """Verify creating a new draft returns the session state payload."""
+    client, _ = _build_client(mock_config, _FakeSession())
+    response = client.post("/api/draft/new")
+
+    assert response.json() == {"ok": True}
+
+
+def test_draft_undo_returns_400_when_session_rejects_request(mock_config):
+    """Verify undo errors surface as HTTP 400."""
+    client, _ = _build_client(mock_config, _FakeSession(should_raise_on_undo=True))
+    response = client.post("/api/draft/undo")
+
+    assert response.status_code == 400
+
+
+def test_override_team_requires_team_id(mock_config):
+    """Verify override requests reject missing team IDs."""
+    client, _ = _build_client(mock_config, _FakeSession())
+    response = client.post("/api/draft/override_team", json={})
+
+    assert response.status_code == 400
+
+
+def test_override_team_returns_400_when_session_raises_value_error(mock_config):
+    """Verify override errors are translated to HTTP 400."""
+    client, _ = _build_client(mock_config, _FakeSession(should_raise_on_override=True))
+    response = client.post("/api/draft/override_team", json={"team_id": 2})
+
+    assert response.status_code == 400
+
+
+def test_simulate_pick_returns_400_when_session_raises_value_error(mock_config):
+    """Verify simulate-pick errors are translated to HTTP 400."""
+    client, _ = _build_client(mock_config, _FakeSession(should_raise_on_simulate_pick=True))
+    response = client.post("/api/draft/simulate_pick")
+
+    assert response.status_code == 400
+
+
+def test_simulate_rest_returns_400_when_session_raises_value_error(mock_config):
+    """Verify simulate-rest errors are translated to HTTP 400."""
+    client, _ = _build_client(mock_config, _FakeSession(should_raise_on_simulate_rest=True))
+    response = client.post("/api/draft/simulate_rest")
+
+    assert response.status_code == 400
+
+
+def test_ai_suggestion_returns_session_payload(mock_config):
+    """Verify AI suggestion route delegates to the session."""
+    client, _ = _build_client(mock_config, _FakeSession(ai_payload={"RB": 0.6}))
+    response = client.get("/api/draft/ai_suggestion")
+
+    assert response.json() == {"RB": 0.6}
+
+
+def test_ai_suggestions_all_returns_session_payload(mock_config):
+    """Verify all-team AI suggestion route delegates to the session."""
+    client, _ = _build_client(mock_config, _FakeSession(ai_all_payload={"1": {"WR": 0.7}}))
+    response = client.get("/api/draft/ai_suggestions_all")
+
+    assert response.json() == {"1": {"WR": 0.7}}
+
+
+def test_ai_suggestion_for_team_parses_only_numeric_ignore_tokens(mock_config):
+    """Verify ignore parsing keeps only integer tokens."""
+    session = _FakeSession(ai_for_team_payload={"TE": 0.4})
+    client, _ = _build_client(mock_config, session)
+    response = client.get("/api/draft/ai_suggestion_for_team?team_id=2&ignore=1, x,3a, 4")
+
+    assert response.json() == {"TE": 0.4} and session.last_ignore_ids == [1, 4]
+
+
+def test_draft_summary_counts_only_known_players(mock_config):
+    """Verify summary ignores history entries for missing players."""
+    session = _FakeSession()
+    session._draft_history.append({"previous_pick_number": 2, "team_id": 1, "player_id": 99999})
+    client, _ = _build_client(mock_config, session)
+    response = client.get("/api/draft/summary")
+
+    assert response.json()["picks_by_position"]["RB"] == 1
+
+
+def test_players_payload_converts_infinite_adp_and_missing_bye_week(mock_config):
+    """Verify player payload normalizes inf ADP and missing bye weeks for the UI."""
+    session = _FakeSession()
+    session.player_map[103].adp = float("inf")
+    session.player_map[103].bye_week = float("nan")
+    client, _ = _build_client(mock_config, session)
+    response = client.get("/api/players?sort_by=projected_points&sort_dir=desc")
+
+    assert response.json()[0]["adp"] is None and response.json()[0]["bye_week"] == "N/A"
+
+
+def test_simulate_season_returns_400_when_service_raises_file_not_found(mock_config):
+    """Verify missing simulation data maps to HTTP 400."""
+    app_module = importlib.import_module("draft_buddy.web.app")
+    with patch.object(app_module, "SeasonSimulationService") as mock_service_class:
+        mock_service_class.return_value.simulate_season.side_effect = FileNotFoundError("missing")
+        app = create_app(config=mock_config, session_manager=_FakeSessionManager(_FakeSession()))
+    response = TestClient(app).post("/api/simulate_season")
+
+    assert response.status_code == 400
+
+
+def test_simulate_season_returns_500_when_service_raises_unexpected_error(mock_config):
+    """Verify unexpected simulation failures map to HTTP 500."""
+    app_module = importlib.import_module("draft_buddy.web.app")
+    with patch.object(app_module, "SeasonSimulationService") as mock_service_class:
+        mock_service_class.return_value.simulate_season.side_effect = RuntimeError("boom")
+        app = create_app(config=mock_config, session_manager=_FakeSessionManager(_FakeSession()))
+    response = TestClient(app).post("/api/simulate_season")
+
+    assert response.status_code == 500

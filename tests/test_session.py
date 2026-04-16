@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+import pytest
 
 from draft_buddy.domain.entities import Player
 from draft_buddy.web.session import DraftSession, DraftSessionManager
@@ -211,3 +212,133 @@ def test_draft_session_manager_get_or_create_resets_and_saves_when_loaded_sessio
         manager.get_or_create("session-x")
 
     assert fake_session.reset.called
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_draft_session_save_state_uses_atomic_temp_file_replace(mock_load_player_data, mock_config, tmp_path):
+    """Verify session persistence writes through a temporary file before replacing."""
+    del mock_load_player_data
+    session = DraftSession(mock_config, inference_provider=None)
+    target = Path(tmp_path) / "draft_state.json"
+
+    with patch("draft_buddy.web.session.os.replace") as mock_replace:
+        session.save_state(str(target))
+
+    assert mock_replace.call_args.args[0].endswith(".tmp")
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_get_positional_baselines_returns_zero_when_position_has_no_available_players(
+    mock_load_player_data, mock_config
+):
+    """Verify missing available players yield a zero baseline for that position."""
+    del mock_load_player_data
+    session = DraftSession(mock_config, inference_provider=None)
+    session._state.replace_available_player_ids({102, 103, 104})
+
+    assert session.get_positional_baselines()["QB"] == 0.0
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_undo_last_pick_raises_when_history_is_empty(mock_load_player_data, mock_config):
+    """Verify undo rejects empty history."""
+    del mock_load_player_data
+    session = DraftSession(mock_config, inference_provider=None)
+
+    with pytest.raises(ValueError, match="No picks to undo"):
+        session.undo_last_pick()
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_undo_last_pick_restores_previous_pick_number(mock_load_player_data, mock_config):
+    """Verify undo rewinds the global pick counter."""
+    del mock_load_player_data
+    session = DraftSession(mock_config, inference_provider=None)
+    original_pick = session.current_pick_number
+    session.draft_player(101)
+
+    session.undo_last_pick()
+
+    assert session.current_pick_number == original_pick
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_simulate_single_pick_rejects_manual_teams(mock_load_player_data, mock_config):
+    """Verify manual teams cannot be auto-simulated."""
+    del mock_load_player_data
+    mock_config.draft.MANUAL_DRAFT_TEAMS = [1]
+    mock_config.draft.AGENT_START_POSITION = 2
+    session = DraftSession(mock_config, inference_provider=None)
+    session.set_current_team_picking(1)
+
+    with pytest.raises(ValueError, match="manual team's turn"):
+        session.simulate_single_pick()
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_try_select_player_for_team_returns_false_when_position_pool_is_empty(
+    mock_load_player_data, mock_config
+):
+    """Verify position selection fails when no players of that position remain."""
+    del mock_load_player_data
+    session = DraftSession(mock_config, inference_provider=None)
+
+    picked, player = session._try_select_player_for_team(team_id=1, position_choice="K", available_ids={101, 102})
+
+    assert picked is False and player is None
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_try_select_player_for_team_returns_false_when_rules_reject_position(
+    mock_load_player_data, mock_config
+):
+    """Verify position selection fails when roster rules reject the pick."""
+    del mock_load_player_data
+    session = DraftSession(mock_config, inference_provider=None)
+
+    with patch.object(session, "_can_draft_position", return_value=False):
+        picked, player = session._try_select_player_for_team(team_id=1, position_choice="QB", available_ids={101})
+
+    assert picked is False and player is None
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_create_bot_strategy_falls_back_when_agent_model_provider_returns_none(
+    mock_load_player_data, mock_config
+):
+    """Verify AGENT_MODEL configs fall back to the regular bot factory when provider declines."""
+    del mock_load_player_data
+    provider = MagicMock()
+    provider.create_bot.return_value = None
+    session = DraftSession(mock_config, inference_provider=provider)
+    strategy_config = {"logic": "AGENT_MODEL"}
+
+    with patch("draft_buddy.web.session.create_bot_gm", return_value="fallback-bot") as mock_create_bot:
+        strategy = session._create_bot_strategy(team_id=2, strategy_config=strategy_config)
+
+    assert strategy == "fallback-bot" and mock_create_bot.called
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_get_ai_suggestions_all_collects_results_for_each_team(mock_load_player_data, mock_config):
+    """Verify bulk AI suggestions aggregate every team response."""
+    del mock_load_player_data
+    session = DraftSession(mock_config, inference_provider=MagicMock())
+
+    with patch.object(session, "get_ai_suggestion_for_team", side_effect=lambda team_id: {"team": team_id}):
+        suggestions = session.get_ai_suggestions_all()
+
+    assert suggestions[mock_config.draft.NUM_TEAMS] == {"team": mock_config.draft.NUM_TEAMS}
+
+
+@patch("draft_buddy.web.session.load_player_data", return_value=_mock_players())
+def test_generate_snake_draft_order_truncates_rounds_when_player_pool_is_small(
+    mock_load_player_data, mock_config
+):
+    """Verify snake order truncates to the available number of full rounds."""
+    del mock_load_player_data
+    mock_config.draft.NUM_TEAMS = 3
+    session = DraftSession(mock_config, inference_provider=None)
+    session.all_players_data = session.all_players_data[:4]
+
+    assert session._generate_snake_draft_order() == [1, 2, 3]

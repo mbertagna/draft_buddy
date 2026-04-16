@@ -240,10 +240,13 @@ class ScoringService:
             legacy_cols = ["player_id", "total_pts", "games_played_frac"]
             if set(["player_display_name", "position"]).issubset(legacy_stats_df.columns):
                 legacy_cols.extend(["player_display_name", "position"])
+            left_keys = (
+                merge_keys_left if merge_keys_right == ["player_display_name", "position"] else ["player_id"]
+            )
 
             draft_players_df = draft_pool_df.merge(
                 legacy_stats_df[legacy_cols],
-                left_on=merge_keys_left,
+                left_on=left_keys,
                 right_on=merge_keys_right,
                 how="left",
                 suffixes=("_roster", "_legacy"),

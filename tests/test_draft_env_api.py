@@ -90,3 +90,58 @@ def test_get_state_for_team_differs_from_clock_when_rosters_diverge(mock_config)
     s1 = env._get_state_for_team(1)
     s2 = env._get_state_for_team(2)
     assert not np.allclose(s1, s2)
+
+
+def test_simulate_single_pick_raises_for_manual_team_on_clock(mock_config):
+    """Manual teams must not be auto-simulated from the API helper."""
+    mock_config.draft.MANUAL_DRAFT_TEAMS = [1]
+    mock_config.draft.AGENT_START_POSITION = 2
+    mock_config.draft.RANDOMIZE_AGENT_START_POSITION = False
+    env = FantasyFootballDraftEnv(mock_config)
+    env.reset()
+    env.set_current_team_picking(1)
+
+    with pytest.raises(ValueError, match="manual team's turn"):
+        env.simulate_single_pick()
+
+
+def test_get_ai_suggestion_reports_draft_over_when_pick_index_is_exhausted(mock_config):
+    """AI helper should return a draft-over error after the schedule ends."""
+    env = FantasyFootballDraftEnv(mock_config)
+    env.reset()
+    env.current_pick_idx = len(env.draft_order)
+
+    assert env.get_ai_suggestion() == {"error": "Draft is over."}
+
+
+def test_get_draft_summary_counts_only_known_players(mock_config):
+    """Draft summary should ignore history entries whose players no longer exist."""
+    env = FantasyFootballDraftEnv(mock_config)
+    env.reset()
+    env._state.append_draft_history({"player_id": 1, "team_id": 1})
+    env._state.append_draft_history({"player_id": 99999, "team_id": 1})
+    env.current_pick_number = 3
+
+    summary = env.get_draft_summary()
+
+    assert summary["picks_by_position"]["QB"] == 1 and summary["total_picks"] == 2
+
+
+def test_simulate_competing_pick_temporarily_swaps_agent_team_for_mask_calculation(mock_config):
+    """Opponent mask calculation should restore the original agent perspective afterward."""
+    env = FantasyFootballDraftEnv(mock_config)
+    env.reset()
+    original_team = env.agent_team_id
+    team_on_clock = env.draft_order[env.current_pick_idx]
+    captured = {}
+
+    class _RecordingStrategy:
+        def execute_pick(self, **kwargs):
+            captured["mask"] = kwargs["get_action_mask_fn"](team_on_clock)
+            captured["agent_after"] = env.agent_team_id
+            return env.player_map[1]
+
+    env._opponent_strategies[team_on_clock] = _RecordingStrategy()
+    env._simulate_competing_pick(team_on_clock, env._compute_global_state_features())
+
+    assert env.agent_team_id == original_team and captured["agent_after"] == original_team
