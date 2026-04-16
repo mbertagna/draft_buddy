@@ -133,12 +133,14 @@ class RookieProjector:
         )
 
         if merged_df.empty:
+            draft_players_df.drop(columns=["is_rookie"], inplace=True)
             return draft_players_df
 
         adp_val_col = (
             "AVG" if "AVG" in merged_df.columns else ("Rank" if "Rank" in merged_df.columns else None)
         )
         if adp_val_col is None:
+            draft_players_df.drop(columns=["is_rookie"], inplace=True)
             return draft_players_df
 
         pos_col = (
@@ -147,6 +149,7 @@ class RookieProjector:
             else ("position" if "position" in merged_df.columns else None)
         )
         if pos_col is None:
+            draft_players_df.drop(columns=["is_rookie"], inplace=True)
             return draft_players_df
 
         veteran_mask = (merged_df["is_rookie"] == False) & merged_df["total_pts"].notna()
@@ -217,6 +220,7 @@ class RookieProjector:
                     predicted_points_by_player_id[pid] = float(predicted)
 
         if not predicted_points_by_player_id:
+            draft_players_df.drop(columns=["is_rookie"], inplace=True)
             return draft_players_df
 
         mask = (

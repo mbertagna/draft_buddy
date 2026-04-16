@@ -5,11 +5,12 @@ from __future__ import annotations
 import csv
 import io
 import uuid
+from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query, Request, Response
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from draft_buddy.config import Config
 from draft_buddy.simulator.service import SeasonSimulationService
@@ -37,6 +38,7 @@ def create_app(
     runtime_config = config or Config()
     season_simulation_service = SeasonSimulationService(runtime_config)
     runtime_session_manager = session_manager or DraftSessionManager(runtime_config)
+    frontend_index = Path(__file__).resolve().parents[3] / "frontend" / "index.html"
 
     def _session_id(request: Request, response: Optional[Response] = None) -> str:
         """Resolve session id from cookie or create one."""
@@ -53,6 +55,16 @@ def create_app(
     def hello_world() -> dict:
         """Return API health message."""
         return {"message": "Hello from DRAFT BUDDY backend!"}
+
+    @app.get("/", response_class=FileResponse, response_model=None)
+    def dashboard() -> Response:
+        """Serve the dashboard frontend entry page."""
+        if not frontend_index.exists():
+            return PlainTextResponse(
+                "Frontend entry file not found. Expected frontend/index.html.",
+                status_code=500,
+            )
+        return FileResponse(frontend_index)
 
 
     @app.post("/api/draft/new")

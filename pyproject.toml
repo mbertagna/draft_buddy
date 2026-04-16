@@ -12,6 +12,7 @@ dependencies = [
     "gym",
     "matplotlib",
     "fastapi",
+    "httpx",
     "uvicorn",
     "requests",
     "tqdm",
@@ -20,6 +21,7 @@ dependencies = [
     "beautifulsoup4",
     "bokeh",
     "pytest",
+    "pytest-cov",
     "tree-sitter>=0.21",
     "tree-sitter-python>=0.21",
 ]

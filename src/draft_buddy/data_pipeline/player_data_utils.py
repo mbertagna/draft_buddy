@@ -32,7 +32,20 @@ def _convert_to_simulation_format(weekly_projections: Dict) -> Dict:
     result = {}
     for player_id, data in weekly_projections.items():
         pos = data.get('position', data.get('pos', 'WR'))
-        pts_list = [data.get(w, 0) for w in range(1, 19)]
+        if isinstance(data.get('pts'), list):
+            pts_list = list(data.get('pts', []))
+        else:
+            week_keys = []
+            for key in data.keys():
+                if isinstance(key, int) and key > 0:
+                    week_keys.append(key)
+                elif isinstance(key, str) and key.isdigit() and int(key) > 0:
+                    week_keys.append(int(key))
+            week_keys = sorted(set(week_keys))
+            if week_keys:
+                pts_list = [data.get(week, data.get(str(week), 0.0)) for week in week_keys]
+            else:
+                pts_list = []
         result[player_id] = {'pos': pos, 'pts': pts_list}
     return result
 

@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple
 
 REQUIRED_STARTERS = {"QB": 1, "RB": 2, "WR": 2, "TE": 1}
 FLEX_ELIGIBLE = {"RB", "WR", "TE"}
-FLEX_MAX = 3
+FLEX_MAX = 1
 
 
 def _optimal_lineup_points(pos_points_for_week: Dict[str, List[float]]) -> float:
@@ -175,12 +175,13 @@ def generate_round_robin_schedule(team_names: List[str], num_weeks: int) -> pd.D
         for second_index in range(first_index + 1, len(team_names)):
             all_pairs.append((team_names[first_index], team_names[second_index]))
     remaining_pairs = [pair for pair in all_pairs if _norm_pair(*pair) not in unique_pairs]
-    while week <= num_weeks and remaining_pairs:
-        random_module.shuffle(remaining_pairs)
+    while week <= num_weeks:
+        candidate_pairs = list(remaining_pairs) if remaining_pairs else list(all_pairs)
+        random_module.shuffle(candidate_pairs)
         used_teams = set()
         matchup_index = 1
         pairs_to_remove = []
-        for team_a, team_b in remaining_pairs:
+        for team_a, team_b in candidate_pairs:
             if team_a in used_teams or team_b in used_teams:
                 continue
             used_teams.add(team_a)
@@ -202,7 +203,8 @@ def generate_round_robin_schedule(team_names: List[str], num_weeks: int) -> pd.D
                 }
             )
             matchup_index += 1
-            pairs_to_remove.append((team_a, team_b))
+            if (team_a, team_b) in remaining_pairs:
+                pairs_to_remove.append((team_a, team_b))
         remaining_pairs = [pair for pair in remaining_pairs if pair not in pairs_to_remove]
         if matchup_index > 1:
             week += 1

@@ -1,217 +1,216 @@
-# Draft Buddy 🏈 - An AI-Powered Fantasy Football Draft Assistant
+# Draft Buddy - AI-Powered Fantasy Football Draft Assistant
 
-Draft Buddy is a complete system for simulating, training, and running a fantasy football draft assistant. It leverages reinforcement learning to train an AI agent to draft an optimal team by understanding player value, positional scarcity, and opponent behavior.
+Draft Buddy is a system for:
 
-This project is more than just a draft simulator; it's a powerful tool for aspiring GMs to test strategies, train a personalized AI advisor, and get real-time suggestions during a live draft.
+- training an RL draft agent,
+- running an interactive web draft UI,
+- generating projection data,
+- and visualizing architecture dependencies.
+
+The project has been refactored into bounded packages with explicit responsibilities (`core`, `data`, `simulator`, `rl`, `web`, `arch_viz`) and predictable script entry points in `scripts/`.
 
 ![ui](images/ui.png)
 ![loss](images/loss.png)
 ![reward](images/reward.png)
 
------
+## Key Features
 
-## ✨ Key Features
+- Custom snake-draft environment with roster constraints (including FLEX handling).
+- Opponent strategy system (`RANDOM`, `ADP`, `HEURISTIC`, `AGENT_MODEL`) with injection-based model inference.
+- Feature engineering and reward shaping for RL training.
+- FastAPI-backed web app with manual picks, simulation controls, CSV export, and AI suggestions.
+- Stateless season evaluation pipeline for end-of-draft scoring.
+- Architecture visualization CLI that emits Mermaid dependency graphs.
 
-  * **Customizable Draft Environment**: A custom OpenAI Gym environment models a multi-team snake draft with realistic roster rules, including a FLEX position.
-  * **Intelligent Opponent Strategies**: Pit your AI against a range of opponent "personalities" from rule-based strategies (`ADP`, `HEURISTIC`, `RANDOM`) to other trained AI models. These can be randomized on the fly for robust training.
-  * **Rich State Representation**: The agent's decision-making is powered by a comprehensive observation space that includes player value (`VORP`), positional scarcity, and opponent roster composition.
-  * **Advanced Reward Functions**: Train your agent with flexible reward configurations, including per-pick shaping and a unique end-of-episode reward based on a full-season simulation. This rewards the agent for building a team that actually wins games, not just one with the highest projected points.
-  * **Interactive Web UI**: A simple Flask backend and lightweight frontend allow you to run mock drafts, manually make picks, get real-time AI suggestions, and view detailed roster breakdowns.
-  * **Extensive Analytics**: Simulate entire seasons to evaluate team performance, analyze draft results with CSV exports, and visualize training progress with intuitive plots.
-  * **Docker-Ready**: The entire system is containerized, ensuring a consistent and isolated environment for all dependencies and making it easy to run anywhere.
-
------
-
-## 🚀 Getting Started
-
-The easiest way to get started is by using Docker Compose.
+## Quick Start
 
 ### Prerequisites
 
-  * [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your system.
+- [Docker](https://www.docker.com/get-started)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
-### Installation & Setup
-
-1.  **Clone the repository**:
-
-    ```bash
-    git clone https://github.com/your-username/draft-buddy.git
-    cd draft-buddy
-    ```
-
-2.  **Start the application**:
-    This command builds the Docker image and starts the Flask backend.
-
-    ```bash
-    docker compose up api
-    ```
-
-    To run the API in the background, use `docker compose up -d api`.
-
------
-
-## 🕹️ Running the Web App (UI)
-
-1.  **Start the server** (from the project root):
-
-    ```bash
-    docker compose up api
-    ```
-
-2.  **Open the web UI**:
-    Open your browser and navigate to `http://localhost:5001`.
-
-The UI provides real-time controls and visualizations:
-
-  * `Start New Draft`: Clears the current state and begins a new draft.
-  * `Sim Pick`: Has the current team on the clock make an automatic selection.
-  * `Undo`: Reverts the last pick.
-  * `CSV`: Exports the entire draft history to a CSV file.
-  * **Player List**: Filter, search, and sort through the available player pool.
-  * **Team Rosters**: See a live breakdown of each team's roster, including starters, bench, and bye week conflicts.
-  * **AI Suggestions**: Get real-time AI recommendations for the team on the clock.
-  * **Sim Season**: Run a full season simulation based on current rosters to test the effectiveness of your draft.
-
------
-
-## 📈 Training the AI Agent
-
-The core of Draft Buddy is the reinforcement learning agent trained with the REINFORCE algorithm.
-
-1.  **Prepare your configuration**:
-    Open `src/draft_buddy/config.py` and adjust parameters such as `TOTAL_EPISODES`, `LEARNING_RATE`, and `ENABLED_STATE_FEATURES`.
-
-2.  **Start training** (from the project root):
-
-    ```bash
-    docker compose run --rm train
-    ```
-
-    The project directory is mounted into the container, so edits to `config.py` apply on the next run. Training progress, including rewards and losses, will be logged to the `logs/` directory on your host.
-
-3.  **Resume training**:
-    Set `RESUME_TRAINING = True` in `config.py` and the script will automatically find and load the latest checkpoint to continue training.
-
-4.  **Plotting results**:
-    To visualize your training metrics without starting a new training run, use the `-p` flag.
-
-    ```bash
-    docker compose run --rm train python scripts/train.py -p
-    ```
-
-    This generates an interactive HTML dashboard in the `logs/` directory.
-
------
-
-## 🧪 Simulation & Evaluation
-
-Use a trained model to run multiple mock drafts and evaluate its performance.
-
-1.  **Update the model path**:
-    In `config.py`, ensure `MODEL_PATH_TO_LOAD` points to the `.pth` file of the trained agent you want to evaluate.
-
-2.  **Run the simulation** (from the project root):
-
-    ```bash
-    docker compose run --rm simulation
-    ```
-
-    The script will output a detailed log of each pick and a summary of final team scores across all simulation runs, allowing you to see how your agent stacks up against its opponents.
-
------
-
-## 🗺️ Architecture diagrams (draft-arch)
-
-The `arch_viz` module traces imports from one or more entry files and emits **Mermaid** diagrams of internal dependencies. Strategies: `module` (file-to-file), `class` (classes and inheritance), `function` (calls within reachable code).
-
-**Entry points** commonly used in this repo:
-
-| Role | Path |
-|------|------|
-| Web API | `api/app.py` |
-| Training | `scripts/train.py` |
-| Data preparation | `scripts/generate_projections.py` |
-
-**Using Docker Compose** (writes under `./viz` on the host: one file per entry plus `merged_module.mmd` showing the union; nodes list `entries: …` where multiple entry graphs overlap):
+### Clone
 
 ```bash
-docker compose run --rm arch-viz
+git clone https://github.com/your-username/draft-buddy.git
+cd draft-buddy
 ```
 
-Override strategy or entries (arguments after `arch-viz` replace the service command):
+### Primary Runtime Modes (Docker Compose)
+
+The repository standardizes around five operational services:
 
 ```bash
-docker compose run --rm arch-viz python -m draft_buddy.arch_viz.cli \
+# Web app
+docker compose up webapp
+
+# RL training
+docker compose run --rm train
+
+# Test suite
+docker compose run --rm test
+
+# Test suite with branch coverage
+docker compose run --rm test-cov
+
+# Data preparation
+docker compose run --rm data
+
+# Architecture diagrams
+docker compose run --rm ast
+```
+
+## Testing and Coverage
+
+Run the fast test suite:
+
+```bash
+docker compose run --rm test
+```
+
+Run tests with branch coverage and artifact output:
+
+```bash
+docker compose run --rm test-cov
+```
+
+Coverage artifacts are written to:
+
+- `coverage.xml` (CI/report tooling)
+- `htmlcov/index.html` (local interactive report)
+
+You can also run targeted package coverage directly, for example:
+
+```bash
+docker compose run --rm test python -m pytest tests/ \
+  --cov=src/draft_buddy/web --cov-report=term-missing --cov-branch
+```
+
+## Web App
+
+Start the server:
+
+```bash
+docker compose up webapp
+```
+
+Open the UI at `http://localhost:5001`.
+
+UI capabilities include:
+
+- start/reset draft session,
+- manual picks and undo,
+- single-step and rest-of-draft simulation,
+- live roster breakdowns and player filtering,
+- AI suggestions by team perspective,
+- season simulation and CSV export.
+
+## Training
+
+Training entrypoint: `scripts/train.py`
+
+1. Adjust config in `src/draft_buddy/config.py` (`TOTAL_EPISODES`, `LEARNING_RATE`, `ENABLED_STATE_FEATURES`, etc.).
+2. Run training:
+
+```bash
+docker compose run --rm train
+```
+
+3. Resume by setting `RESUME_TRAINING = True` in config.
+4. Generate plots without training:
+
+```bash
+docker compose run --rm train python scripts/train.py -p
+```
+
+## Data Preparation
+
+Data entrypoint: `scripts/generate_projections.py`
+
+Default compose run:
+
+```bash
+docker compose run --rm data
+```
+
+Custom year/options:
+
+```bash
+docker compose run --rm data python scripts/generate_projections.py --year 2024 --rookie_projection_method hybrid
+```
+
+## Architecture Diagrams (`draft-arch`)
+
+The `arch_viz` CLI traces imports from entry files and emits Mermaid diagrams.
+
+- Strategies: `module`, `class`, `function`
+- Default entries:
+  - `scripts/run_webapp.py`
+  - `scripts/train.py`
+  - `scripts/generate_projections.py`
+
+Run with compose:
+
+```bash
+docker compose run --rm ast
+```
+
+Override strategy:
+
+```bash
+docker compose run --rm ast python -m draft_buddy.arch_viz.cli \
   --project-root /app --output-dir /app/viz --strategy class --all-default-entries
 ```
 
-Single entry or custom list:
+Custom entries:
 
 ```bash
-docker compose run --rm arch-viz python -m draft_buddy.arch_viz.cli \
-  --project-root /app -O /app/viz -s module \
-  --entry api/app.py --entry scripts/train.py
+docker compose run --rm ast python -m draft_buddy.arch_viz.cli \
+  --project-root /app --output-dir /app/viz --strategy module \
+  --entry scripts/run_webapp.py --entry scripts/train.py
 ```
 
-**Locally** (with `pip install -e .`):
+Local usage (after `pip install -e .`):
 
 ```bash
-# All default entries: separate files in ./viz plus merged diagram
 python -m draft_buddy.arch_viz.cli --all-default-entries --output-dir viz --strategy module
-
-# Stdout: merged graph when you pass multiple --entry values
-python -m draft_buddy.arch_viz.cli -e api/app.py -e scripts/train.py -s module
-
-draft-arch --entry api/app.py --strategy module
+draft-arch --entry scripts/run_webapp.py --strategy module
 ```
 
-Paste the generated ` ```mermaid ` block into Markdown or [Mermaid Live Editor](https://mermaid.live).
+## Script Entry Points
 
------
+The `scripts/` directory is intentionally minimal:
 
-## 📊 Data preparation (player CSV)
+- `scripts/train.py`
+- `scripts/run_webapp.py`
+- `scripts/generate_projections.py`
 
-Regenerate merged player data (writes to the path configured in `config.paths.PLAYER_DATA_CSV`, typically under `data/`):
+## Package Structure
 
-```bash
-docker compose run --rm data-prep
-```
-
-Other years or rookie projection options:
-
-```bash
-docker compose run --rm data-prep python scripts/generate_projections.py --year 2024 --rookie_projection_method hybrid
-```
-
-Requires ADP CSV files in `data/` as expected by `FantasyDataProcessor` (see `generate_projections.py` and config).
-
------
-
-## 🛠️ Project Structure
-
-```
+```text
 .
-├── api/                        # Web API (Flask app)
-├── data/                       # Draft data, matchups, and states
-├── frontend/                   # UI static files
-├── scripts/                    # Training, simulation, and projection generation
-├── src/draft_buddy/            # Main source package
-│   ├── arch_viz/               # AST-based dependency / Mermaid diagram CLI
-│   ├── config.py               # Central configuration
-│   ├── data_pipeline/          # Fantasy data ingest, scoring merge, simulation loaders
-│   ├── draft_env/              # Core RL environment
-│   ├── logic/                  # Draft services and strategies
-│   ├── models/                 # Neural networks and agents
-│   └── utils/                  # Shared utilities (season sim, metrics, etc.)
-├── Dockerfile                  # Container definition
-├── docker-compose.yml          # Service orchestration
-└── pyproject.toml              # Modern Python packaging
+├── data/                         # input/output datasets and artifacts
+├── frontend/                     # browser UI assets
+├── scripts/                      # canonical runtime entrypoints
+├── src/draft_buddy/
+│   ├── arch_viz/                 # dependency graph + Mermaid CLI
+│   ├── core/                     # domain entities, draft state, rules, bots, inference abstraction
+│   ├── data/                     # data adapters/loaders used by app/runtime layers
+│   ├── data_pipeline/            # ETL and projection generation pipeline
+│   ├── draft_env/                # gym environment adapter
+│   ├── domain/                   # shared domain models
+│   ├── rl/                       # policy network, training agent, checkpointing, rewards, feature extraction
+│   ├── simulator/                # stateless schedule + season evaluator
+│   └── web/                      # FastAPI app and session orchestration
+├── docker-compose.yml
+├── Dockerfile
+└── pyproject.toml
 ```
 
------
+## Notes on Legacy Modules
 
-## 📄 License & Acknowledgments
+Some modules under `logic/` and `draft_env/` may remain as internal adapters while migration is in progress. New code should target `core`, `rl`, `simulator`, `data`, and `web` package boundaries directly.
 
-This project is open-sourced under the **MIT License**.
+## License
 
-A special thanks to the open-source community behind Python, Gym, PyTorch, Pandas, Flask, and the various data sources used in this project. All player projections and logic should be adapted to your specific league's rules and data sources.
+This project is released under the MIT License.

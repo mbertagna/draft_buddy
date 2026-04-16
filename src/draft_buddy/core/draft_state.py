@@ -128,12 +128,25 @@ class DraftState:
 
     def _decrement_roster_counts_for_pick(self, team_id: int, player: Player) -> None:
         """Decrement positional counters after undoing a pick."""
+        self._recalculate_roster_counts(team_id)
+
+    def _recalculate_roster_counts(self, team_id: int) -> None:
+        """Rebuild positional counters from rostered players.
+
+        Notes
+        -----
+        This keeps FLEX/position counts consistent when removing a player that
+        may have occupied a FLEX slot.
+        """
         roster = self._rosters[team_id]
-        pos = player.position
-        if roster.get(pos, 0) > 0:
-            roster[pos] = roster.get(pos, 0) - 1
-        elif pos in ("RB", "WR", "TE") and roster.get("FLEX", 0) > 0:
-            roster["FLEX"] = roster.get("FLEX", 0) - 1
+        players = list(roster["PLAYERS"])
+        roster["QB"] = 0
+        roster["RB"] = 0
+        roster["WR"] = 0
+        roster["TE"] = 0
+        roster["FLEX"] = 0
+        for rostered_player in players:
+            self._update_roster_counts_for_pick(team_id, rostered_player)
 
     def advance_pick(self) -> None:
         """Advance to next pick."""

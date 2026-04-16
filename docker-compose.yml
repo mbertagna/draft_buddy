@@ -25,6 +25,20 @@ services:
       - PYTHONPATH=/app/src
     command: python -m pytest tests/
 
+  test-cov:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app/src
+    command: >
+      python -m pytest tests/
+      --cov=src/draft_buddy
+      --cov-branch
+      --cov-report=term-missing
+      --cov-report=xml:/app/coverage.xml
+      --cov-report=html:/app/htmlcov
+
   data:
     build: .
     volumes:

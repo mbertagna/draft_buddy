@@ -117,6 +117,8 @@ class AdpMatcher:
             adp_df.rename(columns={adp_col_map['Player']: 'Player'}, inplace=True)
 
         computed_df = computed_df.copy()
+        if 'player_id' not in computed_df.columns:
+            computed_df['player_id'] = computed_df.index.astype(int)
         computed_df['std_name'] = computed_df['player_display_name'].apply(_standardize_name)
         adp_df['std_name'] = adp_df['Player'].apply(_standardize_name)
 

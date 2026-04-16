@@ -853,7 +853,7 @@ class FantasyFootballDraftEnv(gym.Env):
         self._state.advance_pick()
 
         # --- 2. Simulate Competing Teams' Turns ---
-        if not done: # Only simulate if agent's pick was valid
+        if not done: 
             while self.current_pick_idx < len(self.draft_order) and \
                   self.draft_order[self.current_pick_idx] != self.agent_team_id:
 
