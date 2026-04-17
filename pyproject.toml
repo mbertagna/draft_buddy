@@ -45,3 +45,13 @@ ignore = []
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.coverage.run]
+omit = [
+    "src/draft_buddy/arch_viz/*",
+]
+
+[tool.coverage.report]
+omit = [
+    "src/draft_buddy/arch_viz/*",
+]

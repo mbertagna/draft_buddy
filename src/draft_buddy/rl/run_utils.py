@@ -7,7 +7,7 @@ import re
 
 def get_run_name(config):
     """Generate a descriptive training run name from config."""
-    if getattr(config, "RANDOMIZE_AGENT_START_POSITION", False):
+    if getattr(config.draft, "RANDOMIZE_AGENT_START_POSITION", False):
         return f"{config.draft.NUM_TEAMS}_teams_random_start"
     return f"{config.draft.NUM_TEAMS}_teams_pos_{config.draft.AGENT_START_POSITION}"
 

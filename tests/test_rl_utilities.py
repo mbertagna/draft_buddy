@@ -14,7 +14,13 @@ from draft_buddy.rl.agent_bot import AgentModelBotGM
 from draft_buddy.rl.checkpoint_manager import CheckpointManager
 from draft_buddy.rl.metrics_logger import MetricsLogger
 from draft_buddy.rl.policy_network import PolicyNetwork
-from draft_buddy.rl.run_utils import find_latest_checkpoint, get_next_version, save_run_metadata, setup_run_directories
+from draft_buddy.rl.run_utils import (
+    find_latest_checkpoint,
+    get_next_version,
+    get_run_name,
+    save_run_metadata,
+    setup_run_directories,
+)
 from draft_buddy.rl.state_normalizer import StateNormalizer
 
 
@@ -260,9 +266,9 @@ def test_get_next_version_increments_highest_existing_version(tmp_path: Path) ->
 
 def test_get_run_name_uses_random_start_flag(config) -> None:
     """Verify run names switch format when random start is enabled."""
-    config.RANDOMIZE_AGENT_START_POSITION = True
+    config.draft.RANDOMIZE_AGENT_START_POSITION = True
 
-    assert rl_package.run_utils.get_run_name(config) == f"{config.draft.NUM_TEAMS}_teams_random_start"
+    assert get_run_name(config) == f"{config.draft.NUM_TEAMS}_teams_random_start"
 
 
 def test_setup_run_directories_creates_model_and_logs_paths(tiny_training_config) -> None:
@@ -318,3 +324,15 @@ def test_find_latest_checkpoint_returns_highest_episode_number(
     latest = find_latest_checkpoint(tiny_training_config)
 
     assert latest == str(checkpoint_b) and "episode 12" in capsys.readouterr().out
+
+
+def test_find_latest_checkpoint_ignores_malformed_checkpoint_names(tiny_training_config) -> None:
+    """Verify malformed checkpoint filenames do not prevent valid discovery."""
+    run_name = get_run_name(tiny_training_config)
+    run_dir = Path(tiny_training_config.paths.MODELS_DIR) / run_name / "v1"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "checkpoint_episode_bad.pth").write_text("x", encoding="utf-8")
+    valid = run_dir / "checkpoint_episode_2.pth"
+    valid.write_text("x", encoding="utf-8")
+
+    assert find_latest_checkpoint(tiny_training_config) == str(valid)

@@ -30,6 +30,20 @@ def test_download_file_uses_cached_csv_without_fetch(monkeypatch, tmp_path: Path
     assert int(dataframe.iloc[0]["value"]) == 1 and called["downloaded"] is False
 
 
+def test_download_file_fetches_when_cache_is_missing(monkeypatch, tmp_path: Path) -> None:
+    """Verify missing cache files are downloaded before reading."""
+    downloader = NflverseCsvDownloader(str(tmp_path))
+
+    def fake_download(_url: str, file_path: str) -> None:
+        Path(file_path).write_text("value\n2\n", encoding="utf-8")
+
+    monkeypatch.setattr(downloader, "_download_from_url", fake_download)
+
+    dataframe = downloader.download_file("missing.csv", "https://example.com/missing.csv")
+
+    assert int(dataframe.iloc[0]["value"]) == 2
+
+
 def test_fetch_player_pool_filters_season_and_position(monkeypatch, tmp_path: Path) -> None:
     """Verify fetch_player_pool splits legacy and draft-year rows after filtering."""
     downloader = NflverseCsvDownloader(str(tmp_path))
@@ -59,3 +73,30 @@ def test_fetch_player_pool_filters_season_and_position(monkeypatch, tmp_path: Pa
     )
 
     assert len(draft_pool_df) == 1 and len(legacy_stats_df) == 1 and len(draft_year_stats_df) == 1
+
+
+def test_fetch_player_pool_creates_fallback_player_ids_when_roster_ids_missing(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Verify roster rows receive generated player ids when the source file lacks them."""
+    downloader = NflverseCsvDownloader(str(tmp_path))
+    stats_df = pd.DataFrame(
+        [
+            {"player_id": "1", "season": 2024, "position": "QB", "player_display_name": "A", "recent_team": "BUF"},
+        ]
+    )
+    roster_df = pd.DataFrame([{"full_name": "A", "position": "QB", "team": "BUF"}])
+    monkeypatch.setattr(
+        downloader,
+        "download_file",
+        lambda file_name, _url: stats_df.copy() if "player_stats" in file_name else roster_df.copy(),
+    )
+
+    draft_pool_df, _legacy_stats_df, _draft_year_stats_df = downloader.fetch_player_pool(
+        draft_year=2025,
+        positions=["QB"],
+        start_year=2024,
+        end_year=2025,
+    )
+
+    assert int(draft_pool_df.iloc[0]["player_id"]) == 0

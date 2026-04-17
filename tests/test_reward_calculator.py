@@ -107,6 +107,28 @@ def test_final_reward_adds_competitive_component_against_max_opponent(config, fa
     assert info["competitive_mode"] == "Max Opponent Difference" and "competitive_reward_component" in info and reward > 0.0
 
 
+def test_final_reward_adds_average_opponent_mode_and_std_penalty(config, fake_env) -> None:
+    """Verify average-opponent mode and std-dev penalty both contribute."""
+    config.reward.ENABLE_COMPETITIVE_REWARD = True
+    config.reward.COMPETITIVE_REWARD_MODE = "AVG_OPPONENT_DIFFERENCE"
+    config.reward.ENABLE_OPPONENT_STD_DEV_PENALTY = True
+    config.reward.OPPONENT_STD_DEV_PENALTY_WEIGHT = 1.0
+    config.reward.ENABLE_ROSTER_SLOT_WEIGHTED_REWARD = False
+    fake_env.team_rosters = {
+        1: SimpleNamespace(player_ids=[1, 2]),
+        2: SimpleNamespace(player_ids=[3, 4]),
+        3: SimpleNamespace(player_ids=[5, 6]),
+    }
+    fake_env._resolved[3] = [
+        SimpleNamespace(projected_points=100.0, position="QB", team="DAL", bye_week=7),
+        SimpleNamespace(projected_points=80.0, position="WR", team="DAL", bye_week=7),
+    ]
+
+    reward, info = RewardCalculator.calculate_final_reward(config, fake_env, pd.DataFrame())
+
+    assert info["competitive_mode"] == "Average Opponent Difference" and "opponent_std_dev_penalty" in info and reward > 0.0
+
+
 def test_final_reward_adds_season_simulation_rewards(config, fake_env, monkeypatch) -> None:
     """Verify season-simulation rewards are merged into the terminal reward."""
     config.reward.ENABLE_SEASON_SIM_REWARD = True
@@ -215,3 +237,14 @@ def test_compute_playoff_placement_reward_returns_quarterfinalist_fallback(confi
     )
 
     assert reward == config.reward.PLAYOFF_PLACEMENT_REWARDS["QUARTERFINALIST"] and label == "QUARTERFINALIST"
+
+
+def test_compute_playoff_placement_reward_returns_non_playoff_label(config) -> None:
+    """Verify non-playoff teams receive the non-playoff placement branch."""
+    regular_records = [("Other", {}), ("Another", {})]
+
+    reward, label = RewardCalculator.compute_playoff_placement_reward(
+        config, regular_records, pd.DataFrame(), "Other", "Team 1"
+    )
+
+    assert reward == config.reward.PLAYOFF_PLACEMENT_REWARDS["NON_PLAYOFF"] and label == "NON_PLAYOFF"
