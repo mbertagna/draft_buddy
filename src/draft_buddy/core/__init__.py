@@ -10,7 +10,7 @@ from draft_buddy.core.bot_gm import (
 )
 from draft_buddy.core.draft_controller import DraftController
 from draft_buddy.core.draft_state import DraftState
-from draft_buddy.core.entities import Pick, Player, PlayerCatalog, TeamRoster
+from draft_buddy.core.entities import DraftAction, Pick, Player, PlayerCatalog, TeamRoster, Transfer
 from draft_buddy.core.inference_provider import InferenceProvider
 from draft_buddy.core.roster_utils import calculate_roster_scores, categorize_roster_by_slots
 from draft_buddy.core.rules_engine import FantasyRulesEngine, RulesEngine
@@ -20,6 +20,7 @@ __all__ = [
     "AdpBotGM",
     "BotGM",
     "DraftController",
+    "DraftAction",
     "DraftState",
     "FantasyRulesEngine",
     "HeuristicBotGM",
@@ -30,6 +31,7 @@ __all__ = [
     "RandomBotGM",
     "RulesEngine",
     "TeamRoster",
+    "Transfer",
     "calculate_roster_scores",
     "calculate_stack_count",
     "categorize_roster_by_slots",

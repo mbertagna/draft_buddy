@@ -209,6 +209,75 @@ class Pick:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class Transfer:
+    """Represents a player ownership change during the draft.
+
+    Parameters
+    ----------
+    player_id : int
+        Identifier of the moved player.
+    from_team_id : int
+        Team that gave up the player.
+    to_team_id : int
+        Team that received the player.
+    previous_override_team_id : int, optional
+        Team override active before the transfer was applied.
+    """
+
+    player_id: int
+    from_team_id: int
+    to_team_id: int
+    previous_override_team_id: Optional[int] = None
+
+    def to_dict(self) -> dict:
+        """Serialize the transfer for JSON storage."""
+        return {
+            "player_id": self.player_id,
+            "from_team_id": self.from_team_id,
+            "to_team_id": self.to_team_id,
+            "previous_override_team_id": self.previous_override_team_id,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict) -> "Transfer":
+        """Build a transfer from serialized data."""
+        return cls(
+            player_id=int(payload["player_id"]),
+            from_team_id=int(payload["from_team_id"]),
+            to_team_id=int(payload["to_team_id"]),
+            previous_override_team_id=payload.get("previous_override_team_id"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class DraftAction:
+    """Chronological undo-stack record for draft mutations.
+
+    Parameters
+    ----------
+    action_type : str
+        Mutation kind, such as ``"pick"`` or ``"transfer"``.
+    history_index : int
+        Index into the matching typed history list.
+    """
+
+    action_type: str
+    history_index: int
+
+    def to_dict(self) -> dict:
+        """Serialize the action for JSON storage."""
+        return {"action_type": self.action_type, "history_index": self.history_index}
+
+    @classmethod
+    def from_dict(cls, payload: dict) -> "DraftAction":
+        """Build an action from serialized data."""
+        return cls(
+            action_type=str(payload["action_type"]),
+            history_index=int(payload["history_index"]),
+        )
+
+
 @dataclass(slots=True)
 class TeamRoster:
     """Mutable team roster stored as player ids plus slot counts.

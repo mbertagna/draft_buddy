@@ -21,6 +21,10 @@ class RulesEngine(ABC):
     ) -> bool:
         """Return whether an automated pick is legal."""
 
+    @abstractmethod
+    def can_accept_transfer(self, state: DraftState, team_id: int, position: str) -> bool:
+        """Return whether a team can receive a transferred player."""
+
 
 class FantasyRulesEngine(RulesEngine):
     """Fantasy football roster and availability validation rules."""
@@ -97,3 +101,13 @@ class FantasyRulesEngine(RulesEngine):
         return self._validate_simulated_constraints(
             roster, position, current_bench, total_starters
         )
+
+    def can_accept_transfer(self, state: DraftState, team_id: int, position: str) -> bool:
+        """Validate whether a transfer can add a player to a roster."""
+        roster = state.roster_for_team(team_id)
+        current_total = roster.size
+        total_starters = sum(self._roster_structure.values())
+        current_bench = current_total - total_starters
+        if current_total >= self._total_roster_size:
+            return False
+        return self._validate_manual_constraints(roster, position, current_bench, total_starters)

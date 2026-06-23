@@ -11,7 +11,7 @@ import numpy as np
 
 from draft_buddy.core.bot_gm import BotGM
 from draft_buddy.core.draft_state import DraftState
-from draft_buddy.core.entities import Pick, Player, PlayerCatalog
+from draft_buddy.core.entities import DraftAction, Pick, Player, PlayerCatalog, Transfer
 from draft_buddy.core.rules_engine import RulesEngine
 
 
@@ -155,16 +155,60 @@ class DraftController:
         )
 
     def undo_last_pick(self) -> None:
-        """Undo the most recent pick."""
-        last_pick = self.state.pop_pick()
-        if last_pick is None:
-            raise ValueError("No picks to undo.")
-        player = self.player_catalog.require(last_pick.player_id)
-        self.state.remove_player_from_roster(last_pick.team_id, player)
-        self.state.recalculate_roster_counts(last_pick.team_id, self.player_catalog.require)
-        self.state.current_pick_index = last_pick.previous_pick_index
-        self.state.current_pick_number = last_pick.pick_number
-        self.state.override_team_id = last_pick.previous_override_team_id
+        """Undo the most recent draft action."""
+        if not self.state.action_history:
+            raise ValueError("No actions to undo.")
+        last_action = self.state.action_history[-1]
+        if last_action.action_type == "pick":
+            self._undo_latest_pick_action(last_action)
+            return
+        if last_action.action_type == "transfer":
+            self._undo_latest_transfer_action(last_action)
+            return
+        raise ValueError(f"Cannot undo unknown action type: {last_action.action_type}.")
+
+    def transfer_player(self, player_id: int, to_team_id: int) -> Transfer:
+        """Transfer one drafted player to another team.
+
+        Parameters
+        ----------
+        player_id : int
+            Drafted player to move.
+        to_team_id : int
+            Destination team id.
+
+        Returns
+        -------
+        Transfer
+            Applied transfer record.
+        """
+        player = self.player_catalog.get(player_id)
+        if player is None:
+            raise ValueError(f"Unknown player id: {player_id}.")
+        from_team_id = self.state.find_player_team_id(player_id)
+        if from_team_id is None:
+            raise ValueError(f"Player with ID {player_id} is not currently rostered.")
+        if from_team_id == to_team_id:
+            raise ValueError("Cannot transfer a player to the same team.")
+        if not self._is_valid_team_id(to_team_id):
+            raise ValueError(f"Invalid team ID: {to_team_id}.")
+        if not self.rules_engine.can_accept_transfer(self.state, to_team_id, player.position):
+            raise ValueError(f"Team {to_team_id} cannot receive a {player.position}.")
+
+        transfer = Transfer(
+            player_id=player_id,
+            from_team_id=from_team_id,
+            to_team_id=to_team_id,
+            previous_override_team_id=self.state.override_team_id,
+        )
+        self.state.move_player_between_rosters(from_team_id, to_team_id, player)
+        self.state.recalculate_roster_counts(from_team_id, self.player_catalog.require)
+        self.state.recalculate_roster_counts(to_team_id, self.player_catalog.require)
+        self.state.append_transfer(transfer)
+        self.state.append_action(
+            DraftAction(action_type="transfer", history_index=len(self.state.transfer_history) - 1)
+        )
+        return transfer
 
     def set_override_team(self, team_id: int) -> None:
         """Override the next team on the clock."""
@@ -229,6 +273,9 @@ class DraftController:
                 previous_pick_index=self.current_pick_index,
                 previous_override_team_id=previous_override_team_id,
             )
+        )
+        self.state.append_action(
+            DraftAction(action_type="pick", history_index=len(self.state.draft_history) - 1)
         )
         self.state.add_player_to_roster(team_id, player)
         self.state.advance_pick()
@@ -299,3 +346,42 @@ class DraftController:
             return None
         self._bots[team_id] = self._bot_factory(team_id)
         return self._bots[team_id]
+
+    def _undo_latest_pick_action(self, action: DraftAction) -> None:
+        """Undo the latest action when it points to the latest pick."""
+        if action.history_index != len(self.state.draft_history) - 1:
+            raise ValueError("Cannot undo pick out of chronological order.")
+        last_pick = self.state.pop_pick()
+        if last_pick is None:
+            raise ValueError("No pick history to undo.")
+        player = self.player_catalog.require(last_pick.player_id)
+        self.state.remove_player_from_roster(last_pick.team_id, player)
+        self.state.recalculate_roster_counts(last_pick.team_id, self.player_catalog.require)
+        self.state.current_pick_index = last_pick.previous_pick_index
+        self.state.current_pick_number = last_pick.pick_number
+        self.state.override_team_id = last_pick.previous_override_team_id
+        self.state.pop_action()
+
+    def _undo_latest_transfer_action(self, action: DraftAction) -> None:
+        """Undo the latest action when it points to the latest transfer."""
+        if action.history_index != len(self.state.transfer_history) - 1:
+            raise ValueError("Cannot undo transfer out of chronological order.")
+        if not self.state.transfer_history:
+            raise ValueError("No transfer history to undo.")
+        transfer = self.state.transfer_history[-1]
+        player = self.player_catalog.require(transfer.player_id)
+        current_team_id = self.state.find_player_team_id(transfer.player_id)
+        if current_team_id != transfer.to_team_id:
+            raise ValueError("Cannot undo transfer because player ownership changed.")
+        self.state.move_player_between_rosters(
+            transfer.to_team_id, transfer.from_team_id, player
+        )
+        self.state.recalculate_roster_counts(transfer.to_team_id, self.player_catalog.require)
+        self.state.recalculate_roster_counts(transfer.from_team_id, self.player_catalog.require)
+        self.state.pop_transfer()
+        self.state.pop_action()
+
+    def _is_valid_team_id(self, team_id: int) -> bool:
+        """Return whether a team id belongs to the draft."""
+        valid_team_ids = set(self.state.draft_order) | set(self.state.team_rosters.keys())
+        return team_id in valid_team_ids

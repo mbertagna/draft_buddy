@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Optional
 
-from draft_buddy.core.entities import Pick, Player, TeamRoster
+from draft_buddy.core.entities import DraftAction, Pick, Player, TeamRoster, Transfer
 
 
 class DraftState:
@@ -111,6 +111,16 @@ class DraftState:
         """Return typed draft history."""
         return self._draft_history
 
+    @property
+    def transfer_history(self) -> list[Transfer]:
+        """Return typed transfer history."""
+        return self._transfer_history
+
+    @property
+    def action_history(self) -> list[DraftAction]:
+        """Return chronological undo-stack actions."""
+        return self._action_history
+
     def roster_for_team(self, team_id: int) -> TeamRoster:
         """Return one team's roster, creating it on first access."""
         return self._team_rosters[team_id]
@@ -122,13 +132,30 @@ class DraftState:
         self.available_player_ids.discard(player.player_id)
         self._update_roster_counts_for_pick(team_id, player)
 
-    def remove_player_from_roster(self, team_id: int, player: Player) -> None:
+    def remove_player_from_roster(
+        self, team_id: int, player: Player, restore_availability: bool = True
+    ) -> None:
         """Remove a player id from roster and restore availability."""
         roster = self.roster_for_team(team_id)
         roster.player_ids = [
             player_id for player_id in roster.player_ids if player_id != player.player_id
         ]
-        self.available_player_ids.add(player.player_id)
+        if restore_availability:
+            self.available_player_ids.add(player.player_id)
+
+    def find_player_team_id(self, player_id: int) -> Optional[int]:
+        """Return the team currently rostering a player id."""
+        for team_id, roster in self.team_rosters.items():
+            if player_id in roster.player_ids:
+                return team_id
+        return None
+
+    def move_player_between_rosters(
+        self, from_team_id: int, to_team_id: int, player: Player
+    ) -> None:
+        """Move a drafted player between rosters without changing availability."""
+        self.remove_player_from_roster(from_team_id, player, restore_availability=False)
+        self.roster_for_team(to_team_id).player_ids.append(player.player_id)
 
     def recalculate_roster_counts(self, team_id: int, player_lookup) -> None:
         """Rebuild positional counters from roster player ids."""
@@ -150,9 +177,25 @@ class DraftState:
         """Append one pick to draft history."""
         self._draft_history.append(pick)
 
+    def append_transfer(self, transfer: Transfer) -> None:
+        """Append one transfer to transfer history."""
+        self._transfer_history.append(transfer)
+
+    def append_action(self, action: DraftAction) -> None:
+        """Append one chronological undo action."""
+        self._action_history.append(action)
+
     def pop_pick(self) -> Optional[Pick]:
         """Pop the latest pick from draft history when present."""
         return self._draft_history.pop() if self._draft_history else None
+
+    def pop_transfer(self) -> Optional[Transfer]:
+        """Pop the latest transfer from transfer history when present."""
+        return self._transfer_history.pop() if self._transfer_history else None
+
+    def pop_action(self) -> Optional[DraftAction]:
+        """Pop the latest chronological undo action when present."""
+        return self._action_history.pop() if self._action_history else None
 
     def reset(self, all_player_ids: set[int], draft_order: list[int], agent_team_id: int) -> None:
         """Reset state to a fresh draft."""
@@ -163,6 +206,8 @@ class DraftState:
         self._current_pick_number = 1
         self._agent_team_id = agent_team_id
         self._draft_history: list[Pick] = []
+        self._transfer_history: list[Transfer] = []
+        self._action_history: list[DraftAction] = []
         self._override_team_id: Optional[int] = None
 
     def to_dict(self) -> dict:
@@ -176,13 +221,17 @@ class DraftState:
             "current_pick_index": self.current_pick_index,
             "current_pick_number": self.current_pick_number,
             "draft_history": [pick.to_dict() for pick in self.draft_history],
+            "transfer_history": [transfer.to_dict() for transfer in self.transfer_history],
+            "action_history": [action.to_dict() for action in self.action_history],
             "override_team_id": self.override_team_id,
             "agent_team_id": self.agent_team_id,
         }
 
     def load_from_dict(self, payload: dict) -> None:
         """Load state from serialized data."""
-        self.available_player_ids = {int(player_id) for player_id in payload.get("available_player_ids", [])}
+        self.available_player_ids = {
+            int(player_id) for player_id in payload.get("available_player_ids", [])
+        }
         self._team_rosters = defaultdict(TeamRoster)
         for team_id_str, roster_payload in payload.get("team_rosters", {}).items():
             try:
@@ -196,6 +245,20 @@ class DraftState:
         self._draft_history = [
             Pick.from_dict(pick_payload) for pick_payload in payload.get("draft_history", [])
         ]
+        self._transfer_history = [
+            Transfer.from_dict(transfer_payload)
+            for transfer_payload in payload.get("transfer_history", [])
+        ]
+        if "action_history" in payload:
+            self._action_history = [
+                DraftAction.from_dict(action_payload)
+                for action_payload in payload.get("action_history", [])
+            ]
+        else:
+            self._action_history = [
+                DraftAction(action_type="pick", history_index=index)
+                for index, _pick in enumerate(self._draft_history)
+            ]
         self.override_team_id = payload.get("override_team_id")
         self.agent_team_id = int(payload.get("agent_team_id", self.agent_team_id))
 

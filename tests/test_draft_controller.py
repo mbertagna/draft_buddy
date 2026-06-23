@@ -75,6 +75,51 @@ def test_draft_controller_drafts_and_undos_one_pick(config, draft_state, player_
     assert draft_state.current_pick_index == 0 and draft_state.roster_for_team(1).player_ids == [] and 1 in draft_state.available_player_ids
 
 
+def test_draft_controller_transfers_player_between_teams(draft_controller, draft_state) -> None:
+    """Verify transferring a drafted player moves ownership without changing the pick."""
+    draft_controller.draft_player(1)
+
+    transfer = draft_controller.transfer_player(player_id=1, to_team_id=2)
+
+    assert transfer.from_team_id == 1
+    assert draft_state.roster_for_team(1).player_ids == []
+    assert draft_state.roster_for_team(2).player_ids == [1]
+    assert 1 not in draft_state.available_player_ids
+    assert draft_state.draft_history[0].team_id == 1
+
+
+def test_draft_controller_unified_undo_reverses_transfer_before_pick(draft_controller, draft_state) -> None:
+    """Verify undo uses chronological order across picks and transfers."""
+    draft_controller.draft_player(1)
+    draft_controller.transfer_player(player_id=1, to_team_id=2)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.roster_for_team(1).player_ids == [1]
+    assert draft_state.roster_for_team(2).player_ids == []
+    assert draft_state.current_pick_number == 2
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.roster_for_team(1).player_ids == []
+    assert 1 in draft_state.available_player_ids
+    assert draft_state.current_pick_number == 1
+
+
+def test_draft_controller_transfer_requires_drafted_player(draft_controller) -> None:
+    """Verify only rostered players can be transferred."""
+    with pytest.raises(ValueError, match="currently rostered"):
+        draft_controller.transfer_player(player_id=1, to_team_id=2)
+
+
+def test_draft_controller_transfer_rejects_same_team(draft_controller) -> None:
+    """Verify transfers must change player ownership."""
+    draft_controller.draft_player(1)
+
+    with pytest.raises(ValueError, match="same team"):
+        draft_controller.transfer_player(player_id=1, to_team_id=1)
+
+
 def test_draft_controller_simulates_bot_pick(config, draft_state, player_catalog, rules_engine) -> None:
     """Verify bot-driven simulation delegates pick application to shared workflow."""
     controller = DraftController(
@@ -141,7 +186,7 @@ def test_draft_controller_rejects_pick_after_draft_concludes(draft_controller) -
 
 def test_draft_controller_undo_requires_existing_history(draft_controller) -> None:
     """Verify undo fails when no prior pick exists."""
-    with pytest.raises(ValueError, match="No picks to undo"):
+    with pytest.raises(ValueError, match="No actions to undo"):
         draft_controller.undo_last_pick()
 
 
