@@ -125,6 +125,17 @@ def test_draft_session_reset_restores_pick_cursor(config) -> None:
     assert session.current_pick_number == 1 and len(session.draft_history) == 0
 
 
+def test_draft_session_transfers_player_and_unified_undo_restores_it(config, player_catalog) -> None:
+    """Verify session transfer behavior delegates to chronological undo."""
+    session = DraftSession(config)
+    session.draft_player(1)
+
+    session.transfer_player(player_id=1, to_team_id=2)
+    session.undo_last_pick()
+
+    assert session.team_rosters[1].player_ids == [1] and session.team_rosters[2].player_ids == []
+
+
 def test_draft_session_create_bot_strategy_falls_back_when_provider_returns_none(config) -> None:
     """Verify bot creation falls back to configured core strategies."""
     session = DraftSession(config, inference_provider=StubInferenceProvider())

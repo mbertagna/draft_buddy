@@ -1223,6 +1223,8 @@
                             <span class="name">${player.name}</span>
                             <span class="team">${player.team || 'N/A'} (B:${player.bye_week})</span>
                         `;
+                        cell.title = 'Click to transfer this player';
+                        cell.addEventListener('click', () => transferDraftedPlayer(player, teamId));
                     } else {
                         cell.classList.add('empty');
                         cell.innerText = `Round ${r + 1}`;
@@ -1359,6 +1361,41 @@
             } catch (error) {
                 console.error('Error overriding team:', error);
                 alert(`Error overriding team: ${error.message}`);
+            }
+        }
+
+        async function transferDraftedPlayer(player, fromTeamId) {
+            if (!currentDraftState) {
+                alert("Please start a new draft first.");
+                return;
+            }
+            const destination = prompt(
+                `Move ${player.name} from Team ${fromTeamId} to which team?`,
+                String(fromTeamId)
+            );
+            if (destination === null) {
+                return;
+            }
+            const toTeamId = Number(destination);
+            if (!Number.isInteger(toTeamId)) {
+                alert("Enter a valid team number.");
+                return;
+            }
+            try {
+                const response = await fetch('/api/draft/transfer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ player_id: player.player_id, to_team_id: toTeamId })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || `HTTP error! status: ${response.status}`);
+                }
+                renderDraftState(data);
+                fetchPlayers();
+            } catch (error) {
+                console.error('Error transferring player:', error);
+                alert(`Error transferring player: ${error.message}`);
             }
         }
 

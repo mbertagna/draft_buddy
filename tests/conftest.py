@@ -240,6 +240,7 @@ def fake_session(player_catalog: PlayerCatalog):
         get_ui_state=lambda: {"ok": True},
         draft_player=lambda player_id: None,
         undo_last_pick=lambda: None,
+        transfer_player=lambda player_id, to_team_id: None,
         set_current_team_picking=lambda team_id: None,
         simulate_single_pick=lambda: None,
         simulate_scheduled_picks_remaining=lambda: None,

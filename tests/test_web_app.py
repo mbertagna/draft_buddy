@@ -74,6 +74,35 @@ def test_undo_pick_maps_value_error_to_400(config, fake_session) -> None:
     assert response.status_code == 400 and response.json()["detail"] == "cannot undo"
 
 
+def test_transfer_requires_player_id(config, fake_session) -> None:
+    """Verify transfer rejects payloads without player_id."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.post("/api/draft/transfer", json={"to_team_id": 2})
+
+    assert response.status_code == 400 and response.json()["detail"] == "Player ID is required"
+
+
+def test_transfer_requires_destination_team_id(config, fake_session) -> None:
+    """Verify transfer rejects payloads without destination team id."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.post("/api/draft/transfer", json={"player_id": 1})
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Destination team ID is required"
+
+
+def test_transfer_maps_value_error_to_400(config, fake_session) -> None:
+    """Verify transfer validation errors become HTTP 400 responses."""
+    fake_session.transfer_player = lambda _player_id, _to_team_id: (
+        _ for _ in ()
+    ).throw(ValueError("bad transfer"))
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+
+    response = client.post("/api/draft/transfer", json={"player_id": 1, "to_team_id": 2})
+
+    assert response.status_code == 400 and response.json()["detail"] == "bad transfer"
+
+
 def test_override_team_requires_team_id(config, fake_session) -> None:
     """Verify override route rejects payloads without team_id."""
     client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))

@@ -99,10 +99,29 @@ def create_app(
 
     @app.post("/api/draft/undo")
     def undo_pick(request: Request, response: Response) -> dict:
-        """Undo most recent draft pick."""
+        """Undo most recent draft action."""
         session = runtime_session_manager.get_or_create(_session_id(request, response))
         try:
             session.undo_last_pick()
+            session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return session.get_ui_state()
+
+
+    @app.post("/api/draft/transfer")
+    async def transfer_player(request: Request, response: Response) -> dict:
+        """Transfer one drafted player to another team."""
+        session = runtime_session_manager.get_or_create(_session_id(request, response))
+        payload = await request.json()
+        player_id = payload.get("player_id")
+        to_team_id = payload.get("to_team_id")
+        if player_id is None:
+            raise HTTPException(status_code=400, detail="Player ID is required")
+        if to_team_id is None:
+            raise HTTPException(status_code=400, detail="Destination team ID is required")
+        try:
+            session.transfer_player(int(player_id), int(to_team_id))
             session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error

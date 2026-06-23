@@ -119,6 +119,11 @@ class DraftSession:
         """Return typed draft history."""
         return self._state.draft_history
 
+    @property
+    def transfer_history(self):
+        """Return typed transfer history."""
+        return self._state.transfer_history
+
     def get_positional_baselines(self) -> Dict[str, float]:
         """Return per-position replacement baselines for VORP."""
         return self._controller.get_positional_baselines()
@@ -206,8 +211,12 @@ class DraftSession:
         self._controller.draft_player(player_id, is_manual_pick=True)
 
     def undo_last_pick(self) -> None:
-        """Undo latest pick."""
+        """Undo latest draft action."""
         self._controller.undo_last_pick()
+
+    def transfer_player(self, player_id: int, to_team_id: int) -> None:
+        """Move a drafted player to another team."""
+        self._controller.transfer_player(player_id, to_team_id)
 
     def set_current_team_picking(self, team_id: int) -> None:
         """Override next pick team."""
