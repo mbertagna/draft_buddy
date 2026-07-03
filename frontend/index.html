@@ -486,10 +486,107 @@
         .playoff-rounds { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
         .playoff-card { border: 1px solid #e5e5e5; background: #fff; border-radius: 8px; padding: 8px; }
         .playoff-card h6 { margin: 0 0 6px; border-bottom: 2px solid #ddd; padding-bottom: 4px; }
-        .matchup-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 4px 0; align-items: center; }
+        .matchup-row { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; padding: 4px 0; align-items: center; }
         .matchup-row + .matchup-row { border-top: 1px dashed #eee; }
         .team-name { font-weight: 600; }
         .score { font-variant-numeric: tabular-nums; font-weight: 700; }
+        .season-tabs { display: flex; gap: 6px; margin: 10px 0 8px; flex-wrap: wrap; }
+        .season-tab { background: #f0f0f0; border: 1px solid #ddd; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 0.9rem; }
+        .season-tab.active { background: #8a2be2; color: #fff; border-color: #8a2be2; }
+        .season-panel { display: none; }
+        .season-panel.active { display: block; }
+        .matchup-card { border: 1px solid #e5e5e5; background: #fff; border-radius: 8px; padding: 6px 8px; margin-bottom: 8px; }
+        .matchup-card .matchup-row { padding: 6px 8px; }
+        .matchup-card .matchup-row.winner {
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 3px solid #2e7d32;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        .matchup-card .matchup-row.winner .team-name { color: #1b5e20; }
+        .matchup-card .matchup-row.winner .score { color: #1b5e20; }
+        .matchup-card .matchup-row.loser { opacity: 0.55; }
+        .matchup-card .matchup-row.loser .score { font-weight: 500; }
+        .matchup-card .win-mark {
+            color: #2e7d32;
+            font-weight: 700;
+            min-width: 1.6rem;
+            text-align: center;
+            font-size: 0.75rem;
+            letter-spacing: 0.02em;
+        }
+        .matchup-card .matchup-row.winner .win-mark {
+            background: #2e7d32;
+            color: #fff;
+            border-radius: 4px;
+            padding: 1px 4px;
+        }
+        .week-accordion { margin-bottom: 8px; border: 1px solid #e5e5e5; border-radius: 8px; background: #fff; }
+        .week-accordion summary { cursor: pointer; padding: 8px 10px; font-weight: 600; list-style: none; }
+        .week-accordion summary::-webkit-details-marker { display: none; }
+        .week-accordion summary::before { content: '▸ '; display: inline-block; }
+        .week-accordion[open] summary::before { content: '▾ '; }
+        .week-accordion-body { padding: 0 10px 10px; }
+        .standings-table tr.team-agent td.team-cell { color: #1976d2; font-weight: 700; }
+        .standings-table tr.standings-rank-1 { background: rgba(255, 193, 7, 0.1); }
+        .standings-table tr.standings-rank-2 { background: rgba(158, 158, 158, 0.08); }
+        .standings-table tr.standings-rank-3 { background: rgba(255, 152, 0, 0.08); }
+        .standings-table tr.standings-champion td.team-cell { box-shadow: inset 3px 0 0 #8a2be2; }
+        .standings-table .rank-cell { width: 3.5rem; white-space: nowrap; }
+        .rank-badge {
+            display: inline-block;
+            min-width: 2.2rem;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: #fafafa;
+            color: #555;
+        }
+        .rank-badge.rank-1 { background: #fff8e1; color: #f57f17; border-color: #ffca28; }
+        .rank-badge.rank-2 { background: #f5f5f5; color: #616161; border-color: #bdbdbd; }
+        .rank-badge.rank-3 { background: #fff3e0; color: #e65100; border-color: #ffcc80; }
+        .champion-banner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 2px solid #ffc107;
+            background: linear-gradient(90deg, rgba(255, 193, 7, 0.18), rgba(138, 43, 226, 0.08));
+        }
+        .champion-banner .champion-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #8a2be2;
+            background: #fff;
+            border: 1px solid #e1bee7;
+            border-radius: 999px;
+            padding: 3px 8px;
+        }
+        .champion-banner .champion-team {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1b5e20;
+        }
+        .team-champion-tag {
+            display: inline-block;
+            margin-left: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #6a1b9a;
+            background: rgba(138, 43, 226, 0.1);
+            border: 1px solid #ce93d8;
+            border-radius: 999px;
+            padding: 1px 6px;
+            vertical-align: middle;
+        }
+        .matchup-row.team-agent .team-name { color: #1976d2; }
     </style>
 </head>
 <body>
@@ -1456,13 +1553,73 @@
             window.location.href = '/api/draft/export_csv';
         }
 
+        function formatTeamLabel(teamId, fallback = 'Unknown') {
+            if (teamId != null && Number.isFinite(Number(teamId))) {
+                return `Team ${teamId}`;
+            }
+            return fallback || 'Unknown';
+        }
+
+        function isAgentTeam(teamId) {
+            const agentTeamId = currentDraftState && currentDraftState.agent_start_position;
+            return agentTeamId != null && teamId != null && Number(teamId) === Number(agentTeamId);
+        }
+
+        function formatStandingsRank(rank) {
+            if (rank === 1) return '<span class="rank-badge rank-1">1st</span>';
+            if (rank === 2) return '<span class="rank-badge rank-2">2nd</span>';
+            if (rank === 3) return '<span class="rank-badge rank-3">3rd</span>';
+            return `<span class="rank-badge">${rank}</span>`;
+        }
+
+        function renderMatchupCard(awayTeam, homeTeam, awayScore, homeScore, awayTeamId, homeTeamId) {
+            const awayLabel = awayTeam || 'BYE';
+            const homeLabel = homeTeam || 'BYE';
+            const awayValue = awayScore == null ? '—' : Number(awayScore).toFixed(2);
+            const homeValue = homeScore == null ? '—' : Number(homeScore).toFixed(2);
+            const awayWins = awayScore != null && homeScore != null && awayScore > homeScore;
+            const homeWins = awayScore != null && homeScore != null && homeScore > awayScore;
+            const isTie = awayScore != null && homeScore != null && awayScore === homeScore;
+
+            function buildRow(teamLabel, scoreValue, teamId, isWinner, isLoser) {
+                const classes = ['matchup-row'];
+                if (isWinner) classes.push('winner');
+                if (isLoser) classes.push('loser');
+                if (isAgentTeam(teamId)) classes.push('team-agent');
+                return `
+                    <div class="${classes.join(' ')}">
+                        <div class="team-name">${teamLabel}</div>
+                        <div class="score">${scoreValue}</div>
+                        <div class="win-mark">${isWinner ? 'WIN' : (isTie ? 'TIE' : '')}</div>
+                    </div>
+                `;
+            }
+
+            const homeRow = buildRow(homeLabel, homeValue, homeTeamId, homeWins, awayWins);
+            const awayRow = buildRow(awayLabel, awayValue, awayTeamId, awayWins, homeWins);
+            const rows = (awayWins || isTie) ? `${awayRow}${homeRow}` : `${homeRow}${awayRow}`;
+            return `<div class="matchup-card">${rows}</div>`;
+        }
+
+        function initSeasonTabs(container) {
+            const tabs = container.querySelectorAll('.season-tab');
+            const panels = container.querySelectorAll('.season-panel');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const target = tab.dataset.tab;
+                    tabs.forEach(item => item.classList.toggle('active', item.dataset.tab === target));
+                    panels.forEach(panel => panel.classList.toggle('active', panel.dataset.panel === target));
+                });
+            });
+        }
+
         async function simulateSeason() {
             if (!seasonResultsDiv) return;
             seasonResultsDiv.innerHTML = '<div class="roster-card"><h4>Season Simulation</h4><p>Loading...</p></div>';
             try {
                 const resp = await fetch('/api/simulate_season', { method: 'POST' });
                 const data = await resp.json();
-                if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+                if (!resp.ok) throw new Error(data.detail || data.error || `HTTP ${resp.status}`);
                 renderSeasonResults(data);
             } catch (e) {
                 console.error('Season simulation error:', e);
@@ -1472,85 +1629,133 @@
 
         function renderSeasonResults(data) {
             const records = data.regular_season_records || [];
-            const winner = data.winner || 'N/A';
+            const matchups = data.regular_season_matchups || [];
             const playoffResults = data.playoff_results || [];
+            const winnerTeamId = data.winner_team_id;
+            const winner = data.winner || formatTeamLabel(winnerTeamId, 'N/A');
 
-            const standingsRows = records.map(([manager, rec]) => {
-                const name = String(manager);
-                const W = rec.W ?? rec['W'] ?? 0;
-                const L = rec.L ?? rec['L'] ?? 0;
-                const T = rec.T ?? rec['T'] ?? 0;
-                const pts = rec.pts ?? rec['pts'] ?? 0;
-                return `<tr><td>${name}</td><td class="num">${W}</td><td class="num">${L}</td><td class="num">${T}</td><td class="num">${Number(pts).toFixed(2)}</td></tr>`;
+            const standingsRows = records.map((rec, index) => {
+                const rank = index + 1;
+                const teamId = rec.team_id;
+                const name = rec.team || formatTeamLabel(teamId, 'Unknown');
+                const isChampion = winnerTeamId != null && teamId != null && Number(teamId) === Number(winnerTeamId);
+                const championTag = isChampion ? '<span class="team-champion-tag">Champion</span>' : '';
+                const rowClasses = [];
+                if (isAgentTeam(teamId)) rowClasses.push('team-agent');
+                if (rank === 1) rowClasses.push('standings-rank-1');
+                else if (rank === 2) rowClasses.push('standings-rank-2');
+                else if (rank === 3) rowClasses.push('standings-rank-3');
+                if (isChampion) rowClasses.push('standings-champion');
+                const rowClassAttr = rowClasses.length ? ` class="${rowClasses.join(' ')}"` : '';
+                const W = rec.W ?? 0;
+                const L = rec.L ?? 0;
+                const T = rec.T ?? 0;
+                const pts = rec.pts ?? 0;
+                return `<tr${rowClassAttr}><td class="rank-cell">${formatStandingsRank(rank)}</td><td class="team-cell">${name}${championTag}</td><td class="num">${W}</td><td class="num">${L}</td><td class="num">${T}</td><td class="num">${Number(pts).toFixed(2)}</td></tr>`;
             }).join('');
 
-            // Group playoff results by week for round-style cards
-            const resultsByWeek = {};
-            for (const m of playoffResults) {
-                const wk = m.week ?? 0;
-                if (!resultsByWeek[wk]) resultsByWeek[wk] = [];
-                resultsByWeek[wk].push(m);
+            const matchupsByWeek = {};
+            for (const matchup of matchups) {
+                const week = matchup.week ?? 0;
+                if (!matchupsByWeek[week]) matchupsByWeek[week] = [];
+                matchupsByWeek[week].push(matchup);
             }
-            const sortedWeeks = Object.keys(resultsByWeek).map(Number).sort((a,b)=>a-b);
-            const roundTitles = ['Quarterfinals','Semifinals','Final'];
-            const roundsHTML = sortedWeeks.map((wk, idx) => {
-                const title = roundTitles[idx] || `Round ${idx+1}`;
-                const rows = resultsByWeek[wk]
-                    .sort((a,b)=> (a.matchup||0) - (b.matchup||0))
-                    .map(g => {
-                        const away = g.away_manager ?? 'BYE';
-                        const home = g.home_manager ?? 'BYE';
-                        const awayScore = (g.away_score ?? 0).toFixed(2);
-                        const homeScore = (g.home_score ?? 0).toFixed(2);
-                        return `
-                            <div class="matchup-row">
-                                <div class="team-name">${home}</div>
-                                <div class="score">${homeScore}</div>
-                            </div>
-                            <div class="matchup-row">
-                                <div class="team-name">${away}</div>
-                                <div class="score">${awayScore}</div>
-                            </div>
-                        `;
-                    }).join('');
-                return `
-                    <div class="playoff-card">
-                        <h6>${title}</h6>
-                        ${rows || '<div style="opacity:0.7;">No games</div>'}
-                    </div>
-                `;
-            }).join('');
+            const regularWeeks = Object.keys(matchupsByWeek).map(Number).sort((a, b) => a - b);
+            const regularSeasonHTML = regularWeeks.length
+                ? regularWeeks.map((week, index) => {
+                    const weekMatchups = matchupsByWeek[week]
+                        .sort((a, b) => (a.matchup || 0) - (b.matchup || 0))
+                        .map(game => renderMatchupCard(
+                            game.away_team,
+                            game.home_team,
+                            game.away_score,
+                            game.home_score,
+                            game.away_team_id,
+                            game.home_team_id
+                        ))
+                        .join('');
+                    const openAttr = index === 0 ? ' open' : '';
+                    return `
+                        <details class="week-accordion"${openAttr}>
+                            <summary>Week ${week}</summary>
+                            <div class="week-accordion-body">${weekMatchups}</div>
+                        </details>
+                    `;
+                }).join('')
+                : '<div style="opacity:0.7;">No regular-season matchups available.</div>';
+
+            const resultsByWeek = {};
+            for (const game of playoffResults) {
+                const week = game.week ?? 0;
+                if (!resultsByWeek[week]) resultsByWeek[week] = [];
+                resultsByWeek[week].push(game);
+            }
+            const playoffWeeks = Object.keys(resultsByWeek).map(Number).sort((a, b) => a - b);
+            const roundTitles = ['Quarterfinals', 'Semifinals', 'Final'];
+            const playoffsHTML = playoffWeeks.length
+                ? playoffWeeks.map((week, index) => {
+                    const title = roundTitles[index] || `Round ${index + 1}`;
+                    const gamesHTML = resultsByWeek[week]
+                        .sort((a, b) => (a.matchup || 0) - (b.matchup || 0))
+                        .map(game => renderMatchupCard(
+                            game.away_team,
+                            game.home_team,
+                            game.away_score,
+                            game.home_score,
+                            game.away_team_id,
+                            game.home_team_id
+                        ))
+                        .join('');
+                    return `
+                        <div class="playoff-card">
+                            <h6>${title}</h6>
+                            ${gamesHTML || '<div style="opacity:0.7;">No games</div>'}
+                        </div>
+                    `;
+                }).join('')
+                : '<div style="opacity:0.7;">No playoff games.</div>';
 
             const html = `
                 <div class="roster-card">
                     <h4>Season Simulation Results</h4>
-                    <div class="team-summary" style="margin-top:6px;">
-                        <div class="team-summary-grid">
-                            <div class="team-summary-item"><span class="chip">Champion</span><span class="metric"><span class="value">${winner}</span></span></div>
+                    <div class="champion-banner">
+                        <span class="champion-label">Champion</span>
+                        <span class="champion-team">${winner}</span>
+                    </div>
+                    <div class="season-tabs">
+                        <button type="button" class="season-tab active" data-tab="standings">Standings</button>
+                        <button type="button" class="season-tab" data-tab="regular">Regular Season</button>
+                        <button type="button" class="season-tab" data-tab="playoffs">Playoffs</button>
+                    </div>
+                    <div class="season-panel active" data-panel="standings">
+                        <div style="overflow:auto;">
+                            <table class="standings-table">
+                                <thead>
+                                    <tr>
+                                        <th class="rank-cell">Rank</th>
+                                        <th>Team</th>
+                                        <th class="num">W</th>
+                                        <th class="num">L</th>
+                                        <th class="num">T</th>
+                                        <th class="num">Pts For</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${standingsRows}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    <h5>Regular Season Standings</h5>
-                    <div style="overflow:auto;">
-                        <table class="standings-table">
-                            <thead>
-                                <tr>
-                                    <th>Manager</th>
-                                    <th class="num">W</th>
-                                    <th class="num">L</th>
-                                    <th class="num">T</th>
-                                    <th class="num">Pts</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${standingsRows}
-                            </tbody>
-                        </table>
+                    <div class="season-panel" data-panel="regular">
+                        ${regularSeasonHTML}
                     </div>
-                    <h5 style="margin-top:10px;">Playoffs</h5>
-                    <div class="playoff-rounds">${roundsHTML}</div>
+                    <div class="season-panel" data-panel="playoffs">
+                        <div class="playoff-rounds">${playoffsHTML}</div>
+                    </div>
                 </div>
             `;
             seasonResultsDiv.innerHTML = html;
+            initSeasonTabs(seasonResultsDiv);
         }
     </script>
 </body>
