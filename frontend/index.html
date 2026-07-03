@@ -1186,8 +1186,8 @@
 
         function syncAutoDraftButtonState() {
             const sched = currentDraftState && Array.isArray(currentDraftState.draft_order) &&
-                typeof currentDraftState.current_pick_idx === 'number' &&
-                currentDraftState.current_pick_idx < currentDraftState.draft_order.length;
+                typeof currentDraftState.current_pick_index === 'number' &&
+                currentDraftState.current_pick_index < currentDraftState.draft_order.length;
             autoDraftBtn.disabled = !sched;
         }
 
