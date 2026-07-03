@@ -5,7 +5,14 @@ from __future__ import annotations
 import pandas as pd
 
 from draft_buddy.core import Pick
-from draft_buddy.simulator.service import SeasonSimulationService
+from draft_buddy.simulator.service import SeasonSimulationService, parse_team_id, team_label
+
+
+def test_team_label_and_parse_team_id_helpers() -> None:
+    """Verify team label helpers round-trip canonical ids."""
+    assert team_label(5) == "Team 5"
+    assert parse_team_id("Team 5") == 5
+    assert parse_team_id("Michael Bertagna") is None
 
 
 def test_season_simulation_service_passes_id_rosters_and_fallback_projections(
@@ -25,14 +32,102 @@ def test_season_simulation_service_passes_id_rosters_and_fallback_projections(
         captured["weekly_projections"] = weekly_projections
         captured["matchups"] = matchups_df
         captured["rosters"] = rosters
-        return None, [("Team 1", {"W": 1, "L": 0, "T": 0, "pts": 123.0})], pd.DataFrame(), {}, "Team 1"
+        regular_results = pd.DataFrame(
+            [
+                {
+                    "Week": 1,
+                    "Matchup": 1,
+                    "Away Manager(s)": "Team 1",
+                    "Home Manager(s)": "Team 2",
+                    "Away Score": 110.0,
+                    "Home Score": 95.0,
+                }
+            ]
+        )
+        return (
+            regular_results,
+            [("Team 1", {"W": 1, "L": 0, "T": 0, "pts": 123.0})],
+            pd.DataFrame(),
+            {},
+            "Team 1",
+        )
 
     service = SeasonSimulationService(config)
-    monkeypatch.setattr(service, "_load_matchups", lambda: pd.DataFrame([{"Week": 1, "Matchup": 1}]))
+    monkeypatch.setattr(
+        service,
+        "_load_matchups",
+        lambda: pd.DataFrame(
+            [
+                {
+                    "Week": 1,
+                    "Matchup": 1,
+                    "Away Manager(s)": "Team 1",
+                    "Home Manager(s)": "Team 2",
+                }
+            ]
+        ),
+    )
     monkeypatch.setattr("draft_buddy.simulator.service.simulate_season_fast", fake_simulate)
     result = service.simulate_season(draft_state, player_catalog, config.draft.TEAM_MANAGER_MAPPING)
 
-    assert captured["rosters"] == {"Team 1": [1, 2]} and captured["weekly_projections"] == player_catalog.to_weekly_projections() and result["winner"] == "Team 1"
+    assert captured["rosters"] == {"Team 1": [1, 2]}
+    assert captured["weekly_projections"] == player_catalog.to_weekly_projections()
+    assert result["winner"] == "Team 1"
+    assert result["winner_team_id"] == 1
+    assert result["regular_season_records"] == [
+        {"team_id": 1, "team": "Team 1", "W": 1, "L": 0, "T": 0, "pts": 123.0}
+    ]
+    assert result["regular_season_matchups"] == [
+        {
+            "week": 1,
+            "matchup": 1,
+            "away_team_id": 1,
+            "home_team_id": 2,
+            "away_team": "Team 1",
+            "home_team": "Team 2",
+            "away_score": 110.0,
+            "home_score": 95.0,
+        }
+    ]
+
+
+def test_season_simulation_service_translates_matchup_manager_names(
+    config,
+    draft_state,
+    player_catalog,
+    monkeypatch,
+) -> None:
+    """Verify matchup CSV manager names are translated to Team labels before simulation."""
+    draft_state.add_player_to_roster(1, player_catalog.require(1))
+    captured = {}
+
+    def fake_simulate(_weekly_projections, matchups_df, rosters, *_args):
+        captured["matchups"] = matchups_df
+        captured["rosters"] = rosters
+        return pd.DataFrame(), [], pd.DataFrame(), "", "Team 1"
+
+    service = SeasonSimulationService(config)
+    monkeypatch.setattr(
+        service,
+        "_load_matchups",
+        lambda: pd.DataFrame(
+            [
+                {
+                    "Week": 1,
+                    "Matchup": 1,
+                    "Away Manager(s)": "Team 1",
+                    "Home Manager(s)": "Team 2",
+                }
+            ]
+        ),
+    )
+    monkeypatch.setattr("draft_buddy.simulator.service.simulate_season_fast", fake_simulate)
+
+    service.simulate_season(draft_state, player_catalog, config.draft.TEAM_MANAGER_MAPPING)
+
+    assert captured["rosters"] == {"Team 1": [1]}
+    assert captured["matchups"].iloc[0]["Away Manager(s)"] == "Team 1"
+    assert captured["matchups"].iloc[0]["Home Manager(s)"] == "Team 2"
 
 
 def test_season_simulation_service_uses_explicit_weekly_projections(
@@ -49,7 +144,7 @@ def test_season_simulation_service_uses_explicit_weekly_projections(
     def fake_simulate(weekly_projections, matchups_df, rosters, *_args):
         captured["weekly_projections"] = weekly_projections
         _ = (matchups_df, rosters)
-        return None, [], pd.DataFrame(), "", "Team 1"
+        return pd.DataFrame(), [], pd.DataFrame(), "", "Team 1"
 
     service = SeasonSimulationService(config)
     monkeypatch.setattr(service, "_load_matchups", lambda: pd.DataFrame([{"Week": 1, "Matchup": 1}]))
@@ -113,9 +208,11 @@ def test_format_playoff_results_converts_nan_values_to_none(config) -> None:
         {
             "week": 15,
             "matchup": 1,
-            "away_manager": None,
+            "away_team_id": None,
+            "home_team_id": 1,
+            "away_team": None,
+            "home_team": "Team 1",
             "away_score": None,
-            "home_manager": "Team 1",
             "home_score": 120.5,
         }
     ]
