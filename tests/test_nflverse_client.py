@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -9,11 +11,11 @@ import pandas as pd
 from draft_buddy.data.nflverse_client import NflverseCsvDownloader
 
 
-def test_normalize_player_id_strips_non_digits(tmp_path: Path) -> None:
+def test_normalize_player_id_column_strips_non_digits(tmp_path: Path) -> None:
     """Verify player_id normalization removes non-numeric characters."""
     downloader = NflverseCsvDownloader(str(tmp_path))
     dataframe = pd.DataFrame({"player_id": ["abc123", "456-x", ""]})
-    downloader._normalize_player_id(dataframe)
+    downloader._normalize_player_id_column(dataframe)
 
     assert list(dataframe["player_id"].astype("object")) == [123, 456, pd.NA]
 
@@ -44,8 +46,39 @@ def test_download_file_fetches_when_cache_is_missing(monkeypatch, tmp_path: Path
     assert int(dataframe.iloc[0]["value"]) == 2
 
 
-def test_fetch_player_pool_filters_season_and_position(monkeypatch, tmp_path: Path) -> None:
-    """Verify fetch_player_pool splits legacy and draft-year rows after filtering."""
+def test_download_file_redownloads_when_cache_is_stale(monkeypatch, tmp_path: Path) -> None:
+    """Verify a stale cached file is refreshed via a new download."""
+    cached_file = tmp_path / "cached.csv"
+    cached_file.write_text("value\n1\n", encoding="utf-8")
+    old_mtime = time.time() - 1000
+    os.utime(cached_file, (old_mtime, old_mtime))
+    downloader = NflverseCsvDownloader(str(tmp_path), cache_max_age_seconds=500)
+
+    def fake_download(_url: str, file_path: str) -> None:
+        Path(file_path).write_text("value\n2\n", encoding="utf-8")
+
+    monkeypatch.setattr(downloader, "_download_from_url", fake_download)
+
+    dataframe = downloader.download_file("cached.csv", "https://example.com/cached.csv")
+
+    assert int(dataframe.iloc[0]["value"]) == 2
+
+
+def test_download_file_reuses_cache_within_max_age(monkeypatch, tmp_path: Path) -> None:
+    """Verify a cache file younger than the max age is not re-downloaded."""
+    cached_file = tmp_path / "cached.csv"
+    cached_file.write_text("value\n1\n", encoding="utf-8")
+    downloader = NflverseCsvDownloader(str(tmp_path), cache_max_age_seconds=500)
+    called = {"downloaded": False}
+    monkeypatch.setattr(downloader, "_download_from_url", lambda *_args, **_kwargs: called.__setitem__("downloaded", True))
+
+    dataframe = downloader.download_file("cached.csv", "https://example.com/cached.csv")
+
+    assert int(dataframe.iloc[0]["value"]) == 1 and called["downloaded"] is False
+
+
+def test_fetch_legacy_stats_filters_season_and_position(monkeypatch, tmp_path: Path) -> None:
+    """Verify fetch_legacy_stats splits legacy and draft-year rows after filtering."""
     downloader = NflverseCsvDownloader(str(tmp_path))
     stats_df = pd.DataFrame(
         [
@@ -54,49 +87,33 @@ def test_fetch_player_pool_filters_season_and_position(monkeypatch, tmp_path: Pa
             {"player_id": "2", "season": 2025, "position": "K", "player_display_name": "B", "recent_team": "BUF"},
         ]
     )
-    roster_df = pd.DataFrame(
-        [
-            {"full_name": "A", "position": "QB", "team": "BUF", "player_id": "1"},
-            {"full_name": "B", "position": "K", "team": "BUF", "player_id": "2"},
-        ]
-    )
     monkeypatch.setattr(
         downloader,
         "download_file",
-        lambda file_name, _url: stats_df.copy() if "player_stats" in file_name else roster_df.copy(),
+        lambda file_name, _url: stats_df.copy(),
     )
-    draft_pool_df, legacy_stats_df, draft_year_stats_df = downloader.fetch_player_pool(
+    legacy_stats_df, draft_year_stats_df = downloader.fetch_legacy_stats(
         draft_year=2025,
         positions=["QB"],
         start_year=2024,
         end_year=2025,
     )
 
-    assert len(draft_pool_df) == 1 and len(legacy_stats_df) == 1 and len(draft_year_stats_df) == 1
+    assert len(legacy_stats_df) == 1 and len(draft_year_stats_df) == 1
 
 
-def test_fetch_player_pool_creates_fallback_player_ids_when_roster_ids_missing(
+def test_fetch_draft_year_roster_creates_fallback_player_ids_when_roster_ids_missing(
     monkeypatch, tmp_path: Path
 ) -> None:
     """Verify roster rows receive generated player ids when the source file lacks them."""
     downloader = NflverseCsvDownloader(str(tmp_path))
-    stats_df = pd.DataFrame(
-        [
-            {"player_id": "1", "season": 2024, "position": "QB", "player_display_name": "A", "recent_team": "BUF"},
-        ]
-    )
     roster_df = pd.DataFrame([{"full_name": "A", "position": "QB", "team": "BUF"}])
-    monkeypatch.setattr(
-        downloader,
-        "download_file",
-        lambda file_name, _url: stats_df.copy() if "player_stats" in file_name else roster_df.copy(),
-    )
+    monkeypatch.setattr(downloader, "ensure_roster_cached", lambda _draft_year: None)
+    monkeypatch.setattr(pd, "read_csv", lambda _path: roster_df.copy())
 
-    draft_pool_df, _legacy_stats_df, _draft_year_stats_df = downloader.fetch_player_pool(
+    draft_pool_df = downloader.fetch_draft_year_roster(
         draft_year=2025,
         positions=["QB"],
-        start_year=2024,
-        end_year=2025,
     )
 
     assert int(draft_pool_df.iloc[0]["player_id"]) == 0
