@@ -842,7 +842,7 @@
                     const gpMin = parseFloat(gpMinStr);
                     players = players.filter(p => {
                         const v = p.games_played_frac;
-                        if (v === 'R') return false;
+                        if (v === 'R') return true;
                         if (v === null || v === undefined) return false;
                         const num = Number(v);
                         if (!isFinite(num)) return false;
