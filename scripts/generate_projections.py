@@ -134,6 +134,17 @@ def main(output_path, draft_year, rookie_projection_method, sleeper_league_id=No
             11: ["IND", "NO"],
             12: ["MIA", "DEN", "LAC", "WAS"],
             14: ["NYG", "NE", "CAR", "SF"]
+        },
+        2026: {
+            5: ["CAR", "KC"],
+            6: ["CIN", "DET", "MIA", "MIN"],
+            7: ["BUF", "JAX", "LAC", "WAS"],
+            8: ["HOU", "NO", "NYG", "SF"],
+            9: ["PIT", "TEN"],
+            10: ["CHI", "DEN", "PHI", "TB"],
+            11: ["ATL", "CLE", "GB", "LAR", "NE", "SEA"],
+            13: ["BAL", "IND", "LV", "NYJ"],
+            14: ["ARI", "DAL"],
         }
     }
 
