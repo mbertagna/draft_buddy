@@ -6,38 +6,19 @@ and weighted fuzzy matching logic.
 """
 
 import re
-import unicodedata
 from io import StringIO
 from typing import Optional, Tuple
 
 import pandas as pd
 from fuzzywuzzy import fuzz
 
+from draft_buddy.data.name_matching import standardize_name as _standardize_name
 
-def _standardize_name(name) -> Optional[str]:
-    """
-    Normalize a player name for consistent fuzzy matching.
-
-    Parameters
-    ----------
-    name : str or Any
-        Raw player name (may contain diacritics, suffixes, etc.).
-
-    Returns
-    -------
-    str or None
-        Standardized name string, or None if input is NaN.
-    """
-    if pd.isna(name):
-        return None
-    s = str(name)
-    s = unicodedata.normalize('NFKC', s)
-    s = ''.join(ch for ch in s if unicodedata.category(ch) not in ('Cf', 'Cc'))
-    s = ''.join(ch for ch in unicodedata.normalize('NFKD', s) if not unicodedata.category(ch).startswith('M'))
-    s = s.casefold()
-    s = re.sub(r'\b(jr|sr|iv|iii|ii)\b\.?$', '', s).strip()
-    s = re.sub(r'\s+', ' ', s).strip()
-    return s
+# Some FantasyPros exports combine name, team, and bye week into a single
+# "Player (Team / Bye)" column (e.g. "Jahmyr Gibbs   DET (6)") instead of the
+# standard export's separate Player/Team/Bye columns.
+_COMBINED_PLAYER_COLUMN_PATTERN = re.compile(r'^Player\s*\(')
+_COMBINED_PLAYER_VALUE_PATTERN = re.compile(r'^(?P<name>.+?)\s+(?P<team>[A-Z]{2,4})\s*\(\s*(?P<bye>\d+)\s*\)\s*$')
 
 
 class AdpMatcher:
@@ -67,6 +48,37 @@ class AdpMatcher:
         content = re.sub(r'","Ali","', ' Ali","","', content)
         content = re.sub(r'","HU","14 O","', '","HOU","14","', content)
         return content
+
+    def _split_combined_player_column(self, adp_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normalize a combined "Player (Team / Bye)" column into separate columns.
+
+        Parameters
+        ----------
+        adp_df : pd.DataFrame
+            Raw ADP dataframe as read from the CSV.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with a plain 'Player' column and, where extractable,
+            'Team' and 'Bye' columns. Returned unchanged if no combined
+            column is present.
+        """
+        combined_col = next(
+            (col for col in adp_df.columns if _COMBINED_PLAYER_COLUMN_PATTERN.match(col)), None
+        )
+        if combined_col is None:
+            return adp_df
+
+        raw_values = adp_df[combined_col].astype(str)
+        parsed = raw_values.str.extract(_COMBINED_PLAYER_VALUE_PATTERN)
+
+        adp_df = adp_df.drop(columns=[combined_col])
+        adp_df['Player'] = parsed['name'].fillna(raw_values).str.strip()
+        adp_df['Team'] = parsed['team']
+        adp_df['Bye'] = parsed['bye']
+        return adp_df
 
     def merge_adp_data(
         self,
@@ -105,6 +117,8 @@ class AdpMatcher:
         except Exception as e:
             print(f"Error loading ADP file: {e}")
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+        adp_df = self._split_combined_player_column(adp_df)
 
         if adp_col_map['Team'] in adp_df.columns:
             adp_df.rename(columns={adp_col_map['Team']: 'Team'}, inplace=True)
