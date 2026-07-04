@@ -167,9 +167,8 @@ repomix-output.xml
 /viz/
 **/.DS_Store
 data/draft_state.json
-data/player_stats.csv
-data/player_stats_kicking.csv
-data/roster_????.csv
+data/cache/
+data/generated/
 saved_states/
 saved_models/
 lighten_colors.py
