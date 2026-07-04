@@ -30,7 +30,7 @@ def test_get_simulation_dfs_converts_processor_output(monkeypatch) -> None:
 
         def process_draft_data(self, **kwargs):
             _ = kwargs
-            return pd.DataFrame([{"player_id": 1}]), {1: {"position": "QB", 1: 5.0, 2: 0.0}}
+            return pd.DataFrame([{"player_id": 1}]), {1: {"position": "QB", 1: 5.0, 2: 0.0}}, pd.DataFrame()
 
     monkeypatch.setattr("draft_buddy.data.player_data_utils.FantasyDataProcessor", FakeProcessor)
     draft_players_df, weekly_projections = get_simulation_dfs(season=2025, ps_start_year=2020)

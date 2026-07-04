@@ -6,20 +6,112 @@ Run from repo root with PYTHONPATH including ``src`` or through the Docker Compo
 """
 
 import argparse
+import os
 
 import pandas as pd
 
 from draft_buddy.config import Config
-from draft_buddy.data import FantasyDataProcessor
+from draft_buddy.data import (
+    FantasyDataProcessor,
+    SleeperCatalogBuilder,
+    SleeperHttpGateway,
+    adp_cache_dir,
+    sleeper_cache_dir,
+)
+
+DRAFTABLE_POSITIONS = ['QB', 'RB', 'WR', 'TE']
+DATA_ROOT = './data'
 
 
-def main(output_path, draft_year, rookie_projection_method):
+def generated_output_dir(draft_year: int) -> str:
+    """
+    Return the year-scoped directory for this run's generated outputs, creating it if needed.
+
+    Keeping each season's generated CSVs under their own directory prevents a
+    run for one draft year from silently overwriting another's diagnostics.
+
+    Parameters
+    ----------
+    draft_year : int
+        The draft year being processed.
+
+    Returns
+    -------
+    str
+        Path to ``./data/generated/{draft_year}``.
+    """
+    output_dir = os.path.join(DATA_ROOT, 'generated', str(draft_year))
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
+
+
+def save_missing_nflverse_stats_report(missing_nflverse_stats_df: pd.DataFrame, output_dir: str) -> None:
+    """
+    Report Sleeper players with no nflverse stats match who are unlikely rookies.
+
+    Parameters
+    ----------
+    missing_nflverse_stats_df : pd.DataFrame
+        Players flagged by ``FantasyDataProcessor._find_likely_veterans_missing_stats``.
+    output_dir : str
+        Year-scoped directory to save the report into.
+    """
+    if missing_nflverse_stats_df.empty:
+        print("No likely veterans are missing nflverse stats.")
+        return
+
+    missing_path = os.path.join(output_dir, 'sleeper_players_missing_nflverse_stats.csv')
+    missing_nflverse_stats_df.to_csv(missing_path, index=False)
+    print(
+        f"⚠️  {len(missing_nflverse_stats_df)} likely veterans have no nflverse stats match. "
+        f"Saved to '{missing_path}'"
+    )
+
+
+def check_sleeper_roster_coverage(cache_dir: str, sleeper_league_id: str, output_dir: str) -> None:
+    """
+    Verify the base-catalog filter didn't exclude a real league-rostered player.
+
+    Parameters
+    ----------
+    cache_dir : str
+        Directory used to cache the Sleeper player directory download.
+    sleeper_league_id : str
+        Sleeper league id to cross-check roster membership against.
+    output_dir : str
+        Year-scoped directory to save the report into.
+    """
+    print("\nChecking Sleeper roster coverage...")
+    gateway = SleeperHttpGateway(cache_dir=cache_dir)
+    catalog_builder = SleeperCatalogBuilder()
+
+    all_players_df = gateway.fetch_all_players()
+    catalog_df = catalog_builder.build_base_catalog(all_players_df, DRAFTABLE_POSITIONS)
+    rostered_df = gateway.fetch_league_rosters(sleeper_league_id)
+
+    excluded_df = catalog_builder.find_rostered_players_excluded_by_filter(
+        all_players_df, rostered_df, catalog_df
+    )
+    if excluded_df.empty:
+        print("No Sleeper-rostered players were excluded by the catalog filter.")
+        return
+
+    excluded_path = os.path.join(output_dir, 'sleeper_players_excluded_by_filter.csv')
+    excluded_df.to_csv(excluded_path, index=False)
+    print(
+        f"⚠️  {len(excluded_df)} Sleeper-rostered players were excluded by the catalog filter. "
+        f"Saved to '{excluded_path}'"
+    )
+
+
+def main(output_path, draft_year, rookie_projection_method, sleeper_league_id=None):
     """
     Main function to run the data processing and merging pipeline.
     """
     pd.set_option('display.max_columns', None)
 
     print(f"--- Running Player Data Processor for {draft_year} Season ---")
+    output_dir = generated_output_dir(draft_year)
 
     bye_weeks = {
         2024: {
@@ -89,17 +181,24 @@ def main(output_path, draft_year, rookie_projection_method):
         project_rookies=True,
         bye_weeks_override=bye_weeks.get(draft_year, {}),
         start_year=draft_year - 2,
-        positions=['QB', 'RB', 'WR', 'TE'],
+        positions=DRAFTABLE_POSITIONS,
         rookie_projection_method=rookie_projection_method,
+        cache_dir=DATA_ROOT,
     )
 
     # ADP file path for the given season
-    adp_file = f'./data/FantasyPros_{draft_year}_Overall_ADP_Rankings.csv'
+    adp_file = os.path.join(adp_cache_dir(DATA_ROOT), f'FantasyPros_{draft_year}_Overall_ADP_Rankings.csv')
 
-    computed_players_df, _ = processor.process_draft_data(
+    computed_players_df, _, missing_nflverse_stats_df = processor.process_draft_data(
         draft_year=draft_year,
         adp_filepath=adp_file,
     )
+    save_missing_nflverse_stats_report(missing_nflverse_stats_df, output_dir)
+
+    if sleeper_league_id:
+        check_sleeper_roster_coverage(
+            cache_dir=sleeper_cache_dir(DATA_ROOT), sleeper_league_id=sleeper_league_id, output_dir=output_dir
+        )
 
     merged_df, unmatched_df, borderline_df = processor.merge_adp_data(
         computed_df=computed_players_df,
@@ -145,8 +244,12 @@ def main(output_path, draft_year, rookie_projection_method):
         merged_df.to_csv(output_path, index=False)
         print(f"\n✅ Saved final merged data to '{output_path}'")
 
+        archive_path = os.path.join(output_dir, 'generated_player_data.csv')
+        merged_df.to_csv(archive_path, index=False)
+        print(f"✅ Archived a dated copy to '{archive_path}'")
+
     if not borderline_df.empty:
-        borderline_path = './data/borderline_adp_matches.csv'
+        borderline_path = os.path.join(output_dir, 'borderline_adp_matches.csv')
         borderline_df.to_csv(borderline_path, index=False)
         print(f"\n✅ Saved borderline cases to '{borderline_path}'")
 
@@ -156,10 +259,17 @@ if __name__ == '__main__':
     parser.add_argument('--year', type=int, default=2025, help='The draft year to process data for.')
     parser.add_argument('--rookie_projection_method', type=str, default='draft', choices=['draft', 'adp', 'hybrid'],
                         help='Method to project rookie points: draft (slot scaling), adp (ADP interpolation), or hybrid (average).')
+    parser.add_argument('--sleeper_league_id', type=str, default=None,
+                        help='Optional Sleeper league id to verify the base-catalog filter did not exclude a rostered player.')
 
     args = parser.parse_args()
 
     config = Config()
     output_file_path = config.paths.PLAYER_DATA_CSV
 
-    main(output_path=output_file_path, draft_year=args.year, rookie_projection_method=args.rookie_projection_method)
+    main(
+        output_path=output_file_path,
+        draft_year=args.year,
+        rookie_projection_method=args.rookie_projection_method,
+        sleeper_league_id=args.sleeper_league_id,
+    )

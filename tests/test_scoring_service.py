@@ -94,6 +94,66 @@ def test_merge_roster_with_legacy_assigns_rookie_ids_when_draft_pool_has_no_play
     assert int(result.iloc[0]["player_id"]) == 1 and bool(result.iloc[0]["is_rookie_original"]) is True
 
 
+def test_attach_legacy_stats_preserves_player_id_for_matched_rows() -> None:
+    """Verify a matched row keeps its original player_id and gains total_pts."""
+    draft_pool_df = pd.DataFrame(
+        [{"player_id": 7564, "player_display_name": "Vet", "position": "QB", "recent_team": "BUF"}]
+    )
+    legacy_stats_df = pd.DataFrame(
+        [{"player_id": 999, "player_display_name": "Vet", "position": "QB", "total_pts": 20.0, "games_played_frac": 1.0}]
+    )
+
+    result = ScoringService().attach_legacy_stats(draft_pool_df, legacy_stats_df)
+
+    assert int(result.iloc[0]["player_id"]) == 7564 and float(result.iloc[0]["total_pts"]) == 20.0
+
+
+def test_attach_legacy_stats_matches_despite_suffix_mismatch() -> None:
+    """Verify a roster 'Jr.' suffix doesn't block a match against suffix-less legacy stats."""
+    draft_pool_df = pd.DataFrame(
+        [{"player_id": 33921, "player_display_name": "Chris Godwin Jr.", "position": "WR", "recent_team": "TB"}]
+    )
+    legacy_stats_df = pd.DataFrame(
+        [{"player_id": 33921, "player_display_name": "Chris Godwin", "position": "WR", "total_pts": 17.3, "games_played_frac": 0.39}]
+    )
+
+    result = ScoringService().attach_legacy_stats(draft_pool_df, legacy_stats_df)
+
+    assert float(result.iloc[0]["total_pts"]) == 17.3 and bool(result.iloc[0]["is_rookie_original"]) is False
+
+
+def test_attach_legacy_stats_preserves_player_id_for_unmatched_rookie_rows() -> None:
+    """Verify an unmatched row keeps its original player_id rather than being reassigned."""
+    draft_pool_df = pd.DataFrame(
+        [{"player_id": 12489, "player_display_name": "Rookie", "position": "RB", "recent_team": "DEN"}]
+    )
+    legacy_stats_df = pd.DataFrame(
+        [{"player_id": 1, "player_display_name": "Someone Else", "position": "RB", "total_pts": 10.0, "games_played_frac": 1.0}]
+    )
+
+    result = ScoringService().attach_legacy_stats(draft_pool_df, legacy_stats_df)
+
+    assert int(result.iloc[0]["player_id"]) == 12489
+    assert pd.isna(result.iloc[0]["total_pts"])
+    assert bool(result.iloc[0]["is_rookie_original"]) is True
+
+
+def test_attach_legacy_stats_by_player_id_preserves_sleeper_player_id() -> None:
+    """Verify stats attach by nflverse id without overwriting Sleeper player_id."""
+    catalog_df = pd.DataFrame(
+        [{"player_id": 9226, "nflverse_player_id": 39040, "player_display_name": "De'Von Achane", "position": "RB"}]
+    )
+    legacy_stats_df = pd.DataFrame(
+        [{"player_id": 39040, "total_pts": 20.5, "games_played_frac": 1.0}]
+    )
+
+    result = ScoringService().attach_legacy_stats_by_player_id(catalog_df, legacy_stats_df)
+
+    assert int(result.iloc[0]["player_id"]) == 9226
+    assert float(result.iloc[0]["total_pts"]) == 20.5
+    assert bool(result.iloc[0]["is_rookie_original"]) is False
+
+
 def test_aggregate_legacy_stats_uses_mean_when_requested() -> None:
     """Verify legacy aggregation switches to mean when requested."""
     historical = pd.DataFrame(
@@ -161,6 +221,41 @@ def test_finalize_draft_players_ignores_missing_optional_columns() -> None:
     result = ScoringService().finalize_draft_players(dataframe)
 
     assert list(result.columns) == ["player_id", "player_display_name", "position", "total_pts"]
+
+
+def test_finalize_draft_players_preserves_sleeper_id_when_present() -> None:
+    """Verify the nflverse-derived sleeper_id column survives finalization."""
+    dataframe = pd.DataFrame(
+        [{"player_id": 1, "player_display_name": "A", "position": "QB", "total_pts": 1.0, "sleeper_id": "4984"}]
+    )
+
+    result = ScoringService().finalize_draft_players(dataframe)
+
+    assert result.iloc[0]["sleeper_id"] == "4984"
+
+
+def test_finalize_draft_players_preserves_sleeper_status_fields_when_present() -> None:
+    """Verify Sleeper status/injury/depth-chart columns survive finalization."""
+    dataframe = pd.DataFrame(
+        [
+            {
+                "player_id": 1,
+                "player_display_name": "A",
+                "position": "QB",
+                "total_pts": 1.0,
+                "sleeper_status": "Active",
+                "sleeper_injury_status": "Questionable",
+                "sleeper_depth_chart_position": "QB1",
+            }
+        ]
+    )
+
+    result = ScoringService().finalize_draft_players(dataframe)
+
+    row = result.iloc[0]
+    assert row["sleeper_status"] == "Active"
+    assert row["sleeper_injury_status"] == "Questionable"
+    assert row["sleeper_depth_chart_position"] == "QB1"
 
 
 def test_merge_draft_year_with_legacy_joins_by_player_id() -> None:

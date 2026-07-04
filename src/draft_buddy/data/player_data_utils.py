@@ -5,11 +5,15 @@ Provides get_simulation_dfs which fetches draft data and converts it to
 the format expected by simulate_season_fast.
 """
 
+import os
 from typing import Dict, Tuple
 
 import pandas as pd
 
+from .cache_paths import adp_cache_dir
 from .data_processor import FantasyDataProcessor
+
+DATA_ROOT = "./data"
 
 
 def _convert_to_simulation_format(weekly_projections: Dict) -> Dict:
@@ -80,7 +84,7 @@ def get_simulation_dfs(
         is in the format expected by simulate_season_fast.
     """
     bye_weeks = custom_bye_weeks or {}
-    adp_file = f'./data/FantasyPros_{season}_Overall_ADP_Rankings.csv'
+    adp_file = os.path.join(adp_cache_dir(DATA_ROOT), f'FantasyPros_{season}_Overall_ADP_Rankings.csv')
 
     processor = FantasyDataProcessor(
         project_rookies=True,
@@ -88,9 +92,10 @@ def get_simulation_dfs(
         start_year=ps_start_year,
         positions=['QB', 'RB', 'WR', 'TE'],
         rookie_projection_method='draft',
+        cache_dir=DATA_ROOT,
     )
 
-    draft_players_df, weekly_projections_raw = processor.process_draft_data(
+    draft_players_df, weekly_projections_raw, _ = processor.process_draft_data(
         draft_year=season,
         measure_of_center=measure_of_center,
         adp_filepath=adp_file,

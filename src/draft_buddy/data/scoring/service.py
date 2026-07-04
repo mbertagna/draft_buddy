@@ -10,6 +10,8 @@ from typing import Dict, Optional
 
 import pandas as pd
 
+from draft_buddy.data.name_matching import standardize_name
+
 from .engine import ScoringEngine
 
 
@@ -299,6 +301,104 @@ class ScoringService:
 
         return draft_players_df
 
+    def attach_legacy_stats(
+        self,
+        draft_pool_df: pd.DataFrame,
+        legacy_stats_df: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Attach legacy total_pts/games_played_frac by standardized name+position.
+
+        The join uses ``standardize_name`` (not a raw string match) because
+        nflverse's own roster and stats exports are occasionally
+        inconsistent about suffixes (e.g. a roster listing "Chris Godwin
+        Jr." against stats recorded under "Chris Godwin"). Unlike
+        ``merge_roster_with_legacy``, this never reassigns ``player_id``:
+        every row's id is assumed to already be final and correct (e.g. a
+        Sleeper-derived id). Rows without a legacy stats match simply keep
+        their existing id, with ``total_pts`` left as NaN and
+        ``is_rookie_original`` set to True for the caller's rookie-projection
+        step.
+
+        Parameters
+        ----------
+        draft_pool_df : pd.DataFrame
+            Catalog with a stable ``player_id`` plus ``player_display_name``
+            and ``position`` columns used purely as the join key.
+        legacy_stats_df : pd.DataFrame
+            Legacy stats with ``player_display_name``, ``position``,
+            ``total_pts``, and ``games_played_frac`` (see
+            ``aggregate_legacy_stats``).
+
+        Returns
+        -------
+        pd.DataFrame
+            ``draft_pool_df`` with ``total_pts``, ``games_played_frac``, and
+            ``is_rookie_original`` columns added; ``player_id`` untouched.
+        """
+        join_keys = ["std_name", "position"]
+        legacy_cols = [
+            column for column in ["player_display_name", "position", "total_pts", "games_played_frac"]
+            if column in legacy_stats_df.columns
+        ]
+
+        left_df = draft_pool_df.copy()
+        left_df["std_name"] = left_df["player_display_name"].apply(standardize_name)
+
+        right_df = legacy_stats_df[legacy_cols].copy()
+        right_df["std_name"] = right_df["player_display_name"].apply(standardize_name)
+        right_df = right_df.drop(columns=["player_display_name"]).drop_duplicates(subset=join_keys, keep="first")
+
+        merged_df = left_df.merge(right_df, on=join_keys, how="left").drop(columns=["std_name"])
+        for optional_column in ("total_pts", "games_played_frac"):
+            if optional_column not in merged_df.columns:
+                merged_df[optional_column] = pd.NA
+
+        merged_df["is_rookie_original"] = merged_df["total_pts"].isna()
+        return merged_df.drop_duplicates(subset=["player_id"], keep="first")
+
+    def attach_legacy_stats_by_player_id(
+        self,
+        catalog_df: pd.DataFrame,
+        legacy_stats_df: pd.DataFrame,
+        *,
+        nflverse_player_id_col: str = "nflverse_player_id",
+    ) -> pd.DataFrame:
+        """
+        Attach legacy stats to a Sleeper catalog by nflverse player id.
+
+        Parameters
+        ----------
+        catalog_df : pd.DataFrame
+            Sleeper catalog with stable ``player_id`` and
+            ``nflverse_player_id`` join column.
+        legacy_stats_df : pd.DataFrame
+            Aggregated legacy stats keyed by nflverse ``player_id``.
+        nflverse_player_id_col : str, optional
+            Column on ``catalog_df`` holding the nflverse stats id.
+
+        Returns
+        -------
+        pd.DataFrame
+            Catalog with ``total_pts``, ``games_played_frac``, and
+            ``is_rookie_original`` added. Sleeper ``player_id`` is preserved.
+        """
+        legacy_cols = [
+            column
+            for column in ["player_id", "total_pts", "games_played_frac"]
+            if column in legacy_stats_df.columns
+        ]
+        if legacy_cols:
+            stats_df = legacy_stats_df[legacy_cols].rename(columns={"player_id": nflverse_player_id_col})
+            merged_df = catalog_df.merge(stats_df, on=nflverse_player_id_col, how="left")
+        else:
+            merged_df = catalog_df.copy()
+        for optional_column in ("total_pts", "games_played_frac"):
+            if optional_column not in merged_df.columns:
+                merged_df[optional_column] = pd.NA
+        merged_df["is_rookie_original"] = merged_df["total_pts"].isna()
+        return merged_df.drop_duplicates(subset=["player_id"], keep="first")
+
     def merge_draft_year_with_legacy(
         self,
         draft_year_scored_df: pd.DataFrame,
@@ -369,6 +469,10 @@ class ScoringService:
             "total_pts",
             "games_played_frac",
             "bye_week",
+            "sleeper_id",
+            "sleeper_status",
+            "sleeper_injury_status",
+            "sleeper_depth_chart_position",
         ]
         cols_exist = [c for c in final_cols if c in draft_players_df.columns]
         return (

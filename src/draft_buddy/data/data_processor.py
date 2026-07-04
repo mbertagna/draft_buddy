@@ -6,8 +6,13 @@ import pandas as pd
 from draft_buddy.data.scoring import ScoringService
 
 from .adp_matcher import AdpMatcher
+from .cache_paths import nflverse_cache_dir, sleeper_cache_dir
 from .nflverse_client import NflverseCsvDownloader
+from .nflverse_crosswalk import NflverseCrosswalkBuilder
+from .nflverse_ids import normalize_gsis_id, normalize_sleeper_id
 from .rookie_projector import RookieProjector
+from .sleeper_catalog import SleeperCatalogBuilder
+from .sleeper_client import SleeperGateway, SleeperHttpGateway
 
 DEFAULT_SCORING_RULES = {
     "passing_yards": 0.04,
@@ -57,6 +62,9 @@ class FantasyDataProcessor:
         scoring_service: Optional[ScoringService] = None,
         rookie_projector: Optional[RookieProjector] = None,
         adp_matcher: Optional[AdpMatcher] = None,
+        sleeper_gateway: Optional[SleeperGateway] = None,
+        sleeper_catalog_builder: Optional[SleeperCatalogBuilder] = None,
+        crosswalk_builder: Optional[NflverseCrosswalkBuilder] = None,
     ):
         """
         Initialize the processor with configuration and optional service injections.
@@ -68,7 +76,9 @@ class FantasyDataProcessor:
         positions : list, optional
             Positions to include.
         cache_dir : str, optional
-            Cache directory for downloads.
+            Root data directory. Raw downloads are cached under
+            source-specific subdirectories beneath it (see
+            :mod:`draft_buddy.data.cache_paths`).
         bye_weeks_override : dict, optional
             Bye week data {week: [teams]}.
         project_rookies : bool, optional
@@ -87,6 +97,13 @@ class FantasyDataProcessor:
             Injected rookie projector. Defaults to RookieProjector from params.
         adp_matcher : AdpMatcher, optional
             Injected ADP matcher for fuzzy matching. Defaults to AdpMatcher().
+        sleeper_gateway : SleeperGateway, optional
+            Injected Sleeper data source. Defaults to a SleeperHttpGateway
+            cached under the Sleeper-specific subdirectory of cache_dir.
+        sleeper_catalog_builder : SleeperCatalogBuilder, optional
+            Injected catalog builder. Defaults to a new SleeperCatalogBuilder().
+        crosswalk_builder : NflverseCrosswalkBuilder, optional
+            Injected builder for sleeper_id to GSIS crosswalk rows.
         """
         self.scoring_rules = scoring_rules if scoring_rules is not None else DEFAULT_SCORING_RULES
         self.positions = positions if positions is not None else ["QB", "RB", "WR", "TE", "K"]
@@ -101,9 +118,13 @@ class FantasyDataProcessor:
         }
         self.start_year = start_year
 
-        self._downloader = data_downloader or NflverseCsvDownloader(cache_dir)
+        nflverse_cache = nflverse_cache_dir(cache_dir)
+        self._downloader = data_downloader or NflverseCsvDownloader(nflverse_cache)
         self._scoring_service = scoring_service or ScoringService(self.scoring_rules)
         self._adp_matcher = adp_matcher or AdpMatcher()
+        self._sleeper_gateway = sleeper_gateway or SleeperHttpGateway(sleeper_cache_dir(cache_dir))
+        self._sleeper_catalog_builder = sleeper_catalog_builder or SleeperCatalogBuilder()
+        self._crosswalk_builder = crosswalk_builder or NflverseCrosswalkBuilder(self._downloader)
         rp_params = self.rookie_projection_params
         self._rookie_projector = rookie_projector or RookieProjector(
             scale_min=rp_params.get("scale_min", 5),
@@ -127,6 +148,87 @@ class FantasyDataProcessor:
         # Invert the dictionary from {week: [teams]} to {team: week} for easy mapping
         inverted_byes = {team: week for week, teams in self.bye_weeks_override.items() for team in teams}
         return inverted_byes
+
+    def _resolve_nflverse_player_ids(
+        self, catalog_df: pd.DataFrame, crosswalk_df: pd.DataFrame
+    ) -> pd.DataFrame:
+        """Add ``nflverse_player_id`` to the catalog from GSIS ids.
+
+        Parameters
+        ----------
+        catalog_df : pd.DataFrame
+            Sleeper catalog with ``gsis_id`` and ``sleeper_id``.
+        crosswalk_df : pd.DataFrame
+            Optional sleeper_id to GSIS crosswalk from nflverse rosters.
+
+        Returns
+        -------
+        pd.DataFrame
+            Catalog copy with ``nflverse_player_id`` and ``draft_number`` columns.
+        """
+        resolved_df = catalog_df.copy()
+        if "gsis_id" in resolved_df.columns:
+            resolved_df["nflverse_player_id"] = resolved_df["gsis_id"].apply(normalize_gsis_id)
+        else:
+            resolved_df["nflverse_player_id"] = pd.NA
+
+        if not crosswalk_df.empty and "sleeper_id" in crosswalk_df.columns:
+            crosswalk_lookup = crosswalk_df.copy()
+            crosswalk_lookup["sleeper_id"] = crosswalk_lookup["sleeper_id"].apply(normalize_sleeper_id)
+            if "gsis_id" in crosswalk_lookup.columns:
+                crosswalk_lookup["crosswalk_nflverse_player_id"] = crosswalk_lookup["gsis_id"].apply(
+                    normalize_gsis_id
+                )
+            resolved_df["sleeper_id"] = resolved_df["sleeper_id"].apply(normalize_sleeper_id)
+            resolved_df = resolved_df.merge(
+                crosswalk_lookup[
+                    [
+                        column
+                        for column in ["sleeper_id", "crosswalk_nflverse_player_id", "draft_number"]
+                        if column in crosswalk_lookup.columns
+                    ]
+                ],
+                on="sleeper_id",
+                how="left",
+            )
+            resolved_df["nflverse_player_id"] = resolved_df["nflverse_player_id"].fillna(
+                resolved_df.get("crosswalk_nflverse_player_id")
+            )
+            if "crosswalk_nflverse_player_id" in resolved_df.columns:
+                resolved_df = resolved_df.drop(columns=["crosswalk_nflverse_player_id"])
+
+        if "draft_number" not in resolved_df.columns:
+            resolved_df["draft_number"] = pd.NA
+
+        return resolved_df
+
+    def _attach_legacy_stats_to_catalog(
+        self,
+        catalog_df: pd.DataFrame,
+        legacy_stats_df: pd.DataFrame,
+        crosswalk_df: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """Attach aggregated nflverse stats onto the Sleeper catalog by player id.
+
+        Parameters
+        ----------
+        catalog_df : pd.DataFrame
+            Sleeper-anchored base catalog.
+        legacy_stats_df : pd.DataFrame
+            Aggregated legacy stats keyed by nflverse ``player_id``.
+        crosswalk_df : pd.DataFrame
+            sleeper_id to GSIS crosswalk for players missing Sleeper ``gsis_id``.
+
+        Returns
+        -------
+        pd.DataFrame
+            Catalog with ``total_pts``, ``games_played_frac``,
+            ``draft_number``, and ``is_rookie_original`` columns added.
+        """
+        resolved_df = self._resolve_nflverse_player_ids(catalog_df, crosswalk_df)
+        return self._scoring_service.attach_legacy_stats_by_player_id(
+            resolved_df, legacy_stats_df
+        )
 
     def process_draft_data(self,
                            draft_year: int,
@@ -153,25 +255,36 @@ class FantasyDataProcessor:
         Returns
         -------
         tuple
-            (draft_players_df, weekly_projections).
+            (draft_players_df, weekly_projections, missing_nflverse_stats_df).
+            ``missing_nflverse_stats_df`` lists Sleeper players with no
+            nflverse legacy stats match who are unlikely to be rookies
+            (``years_exp > 0``) -- worth a manual look. Empty when
+            ``project_rookies`` is False.
         """
         print("Fetching player pool and historical data...")
-        draft_pool_df, legacy_stats_df, draft_year_stats_df = self._downloader.fetch_player_pool(
+        legacy_raw_df, draft_year_stats_df = self._downloader.fetch_legacy_stats(
             draft_year=draft_year,
             positions=self.positions,
             start_year=self.start_year,
             end_year=draft_year,
         )
 
-        scored_historical = self._scoring_service.apply_scoring(legacy_stats_df)
+        scored_historical = self._scoring_service.apply_scoring(legacy_raw_df)
         legacy_stats_df = self._scoring_service.aggregate_legacy_stats(
             scored_historical, measure_of_center
         )
 
+        missing_nflverse_stats_df = pd.DataFrame()
         if self.project_rookies:
-            draft_players_df = self._scoring_service.merge_roster_with_legacy(
-                draft_pool_df, legacy_stats_df
+            print("Building Sleeper-anchored player catalog...")
+            catalog_df = self._sleeper_catalog_builder.build_base_catalog(
+                self._sleeper_gateway.fetch_all_players(), self.positions
             )
+            crosswalk_df = self._crosswalk_builder.build(self.cache_dir, draft_year)
+            draft_players_df = self._attach_legacy_stats_to_catalog(
+                catalog_df, legacy_stats_df, crosswalk_df
+            )
+            missing_nflverse_stats_df = self._find_likely_veterans_missing_stats(draft_players_df)
             rookies_df = draft_players_df[draft_players_df['is_rookie_original'] == True]
             if not rookies_df.empty:
                 print(f"Estimating points for {len(rookies_df)} rookies using method='{self.rookie_projection_method}'...")
@@ -197,7 +310,32 @@ class FantasyDataProcessor:
         draft_players_df = self._scoring_service.finalize_draft_players(draft_players_df)
 
         print("Processing complete.")
-        return draft_players_df, weekly_projections
+        return draft_players_df, weekly_projections, missing_nflverse_stats_df
+
+    @staticmethod
+    def _find_likely_veterans_missing_stats(draft_players_df: pd.DataFrame) -> pd.DataFrame:
+        """Flag Sleeper players with no nflverse stats match who are unlikely rookies.
+
+        A genuine rookie (``years_exp == 0``) with no legacy stats is
+        expected and routed to rookie projection. A player with
+        ``years_exp > 0`` and no legacy stats match likely indicates a
+        broken nflverse crosswalk or name mismatch worth a manual look.
+
+        Parameters
+        ----------
+        draft_players_df : pd.DataFrame
+            Catalog after stats attach, with ``is_rookie_original`` and
+            ``years_exp`` columns.
+
+        Returns
+        -------
+        pd.DataFrame
+            Rows likely to be veterans with a missing stats match.
+        """
+        if "years_exp" not in draft_players_df.columns:
+            return pd.DataFrame()
+        is_likely_veteran = draft_players_df["years_exp"].fillna(0) > 0
+        return draft_players_df[draft_players_df["is_rookie_original"] & is_likely_veteran].reset_index(drop=True)
 
     def merge_adp_data(self,
                        computed_df: pd.DataFrame,
