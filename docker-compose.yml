@@ -33,7 +33,7 @@ services:
 
   data:
     <<: *app-base
-    command: python scripts/generate_projections.py --year 2025
+    command: python scripts/generate_projections.py --year 2026
 
   ast:
     <<: *app-base
