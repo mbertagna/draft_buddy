@@ -43,8 +43,10 @@ Common output locations on the host:
 | `train` | Run RL training | `python scripts/train.py` |
 | `test` | Run the test suite | `python -m pytest tests/` |
 | `test-cov` | Run tests with coverage outputs | `python -m pytest tests/ --cov=src/draft_buddy ...` |
-| `data` | Generate player projections and merged draft data | `python scripts/generate_projections.py --year 2025` |
+| `data` | Generate player projections and merged draft data | `python scripts/generate_projections.py --year 2026` |
 | `ast` | Generate Mermaid architecture diagrams | `python -m draft_buddy.arch_viz.cli --project-root /app --output-dir /app/viz --all-default-entries --strategy module` |
+| `insights-search` | Fetch web search snippets for top 150 ADP players (Valyu default) | `python scripts/fetch_player_insight_search.py --year 2026 --top-n 150 --search-provider valyu` |
+| `insights-synthesize` | Synthesize Gemini Flash player insights from cached search | `python scripts/synthesize_player_insights.py --year 2026 --top-n 150` |
 
 ### Common Commands
 
@@ -96,6 +98,45 @@ Generate architecture diagrams:
 docker compose run --rm ast
 ```
 
+### Player Insights (manual pre-draft enrichment)
+
+Offline player insight enrichment is a **manual, two-step** pipeline that prepares research-backed outlook data for the draft UI (see [PLAYER_INSIGHTS_PART2_PLAN.md](PLAYER_INSIGHTS_PART2_PLAN.md)).
+
+**Prerequisites:**
+
+1. Copy `.env.example` to `.env` and set:
+   - `VALYU_API_KEY` from [Valyu](https://platform.valyu.ai/) (default search provider)
+   - `GEMINI_API_KEY` from [Google AI Studio](https://ai.google.dev/)
+2. Optional: for Google CSE instead, set `INSIGHTS_SEARCH_PROVIDER=google`, `GOOGLE_CSE_API_KEY`, and `GOOGLE_CSE_ID` (note: CSE is closed to new customers and sunsets Jan 2027).
+
+**Run order:**
+
+```bash
+# 1. Generate player projections (if not already done)
+docker compose run --rm data
+
+# 2. Fetch and cache search snippets (Valyu by default)
+docker compose run --rm insights-search
+
+# 3. Synthesize structured insights with Gemini Flash
+docker compose run --rm insights-synthesize
+```
+
+**Outputs:**
+
+- Search cache: `data/cache/insights/search/{sleeper_id}/`
+- Synthesis cache: `data/cache/insights/synthesis/{sleeper_id}.json`
+- Merged insights file: `data/player_insights_2026.json`
+
+**Partial re-runs:**
+
+```bash
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --max-players 20 --start-index 0
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --force
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --search-provider google --force
+docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --force
+```
+
 ### `up` vs `run --rm`
 
 Use `docker compose up` for long-running services that should stay attached to a port, such as `webapp`.
@@ -145,3 +186,5 @@ behave consistently across services.
 - `scripts/run_webapp.py`
 - `scripts/train.py`
 - `scripts/generate_projections.py`
+- `scripts/fetch_player_insight_search.py`
+- `scripts/synthesize_player_insights.py`

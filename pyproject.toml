@@ -24,6 +24,8 @@ dependencies = [
     "pytest-cov",
     "tree-sitter>=0.21",
     "tree-sitter-python>=0.21",
+    "google-genai",
+    "pydantic>=2.0",
 ]
 requires-python = ">=3.10"
 

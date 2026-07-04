@@ -43,3 +43,13 @@ services:
       --output-dir /app/viz
       --all-default-entries
       --strategy module
+
+  insights-search:
+    <<: *app-base
+    env_file: .env
+    command: python scripts/fetch_player_insight_search.py --year 2026 --top-n 10 --search-provider valyu
+
+  insights-synthesize:
+    <<: *app-base
+    env_file: .env
+    command: python scripts/synthesize_player_insights.py --year 2026 --top-n 10
