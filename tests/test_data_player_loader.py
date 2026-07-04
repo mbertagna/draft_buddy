@@ -73,6 +73,39 @@ def test_load_player_catalog_preserves_rookie_fraction_and_prefers_recent_team(c
     assert catalog.require(1).games_played_frac == "R" and catalog.require(1).team == "BUF"
 
 
+def test_load_player_catalog_reads_sleeper_columns_when_present(config) -> None:
+    """Verify Sleeper-derived columns populate the corresponding Player fields."""
+    pd.DataFrame(
+        [
+            {
+                "player_id": 1,
+                "name": "A",
+                "position": "QB",
+                "projected_points": 100.0,
+                "adp": 1.0,
+                "sleeper_id": "4984",
+                "sleeper_status": "Active",
+                "sleeper_injury_status": "Questionable",
+                "sleeper_depth_chart_position": "QB",
+            }
+        ]
+    ).to_csv(config.paths.PLAYER_DATA_CSV, index=False)
+
+    catalog = load_player_catalog(config.paths.PLAYER_DATA_CSV, config.draft.MOCK_ADP_CONFIG)
+
+    player = catalog.require(1)
+    assert player.sleeper_id == "4984" and player.sleeper_injury_status == "Questionable"
+
+
+def test_load_player_catalog_defaults_sleeper_fields_when_columns_absent(config, player_dataframe) -> None:
+    """Verify CSVs without Sleeper columns still load with null sleeper fields."""
+    player_dataframe.to_csv(config.paths.PLAYER_DATA_CSV, index=False)
+
+    catalog = load_player_catalog(config.paths.PLAYER_DATA_CSV, config.draft.MOCK_ADP_CONFIG)
+
+    assert catalog.require(1).sleeper_id is None
+
+
 def test_load_player_catalog_raises_when_mock_adp_generation_is_disabled(config) -> None:
     """Verify missing ADP data fails when synthetic ADP generation is disabled."""
     pd.DataFrame(

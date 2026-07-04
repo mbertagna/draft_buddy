@@ -334,6 +334,9 @@ def create_app(
                     "adp": None if np.isinf(player.adp) else player.adp,
                     "bye_week": player.bye_week if player.bye_week and not np.isnan(player.bye_week) else "N/A",
                     "team": player.team,
+                    "sleeper_status": player.sleeper_status,
+                    "sleeper_injury_status": player.sleeper_injury_status,
+                    "sleeper_depth_chart_position": player.sleeper_depth_chart_position,
                 }
             )
         return JSONResponse(payload)

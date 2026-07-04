@@ -677,6 +677,7 @@
                             <th data-sort-key="games_played_frac">GP Frac</th>
                             <th data-sort-key="team">Team</th>
                             <th data-sort-key="bye_week">Bye</th>
+                            <th title="Sleeper status / injury">Status</th>
                             <th class="info-col">Info</th>
                         </tr>
                     </thead>
@@ -851,7 +852,7 @@
                 renderPlayers(players);
             } catch (error) {
                 console.error('Error fetching players:', error);
-                playerTbody.innerHTML = `<tr><td colspan="10" style="color: red;">Error loading players: ${error.message}</td></tr>`;
+                playerTbody.innerHTML = `<tr><td colspan="11" style="color: red;">Error loading players: ${error.message}</td></tr>`;
             }
         };
 
@@ -1024,7 +1025,7 @@
             if (players.length === 0) {
                 const row = playerTbody.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = 10;
+                cell.colSpan = 11;
                 cell.innerText = 'No players found with current filters.';
                 return;
             }
@@ -1114,6 +1115,25 @@
                 // Bye
                 const byeCell = row.insertCell();
                 byeCell.innerText = player.bye_week;
+
+                // Sleeper Status / Injury
+                const statusCell = row.insertCell();
+                const injuryStatus = player.sleeper_injury_status;
+                const rosterStatus = player.sleeper_status;
+                if (injuryStatus) {
+                    statusCell.innerText = injuryStatus;
+                    statusCell.title = `Sleeper status: ${rosterStatus || 'Unknown'}`;
+                    statusCell.style.backgroundColor = '#ffdada';
+                    statusCell.style.color = '#7a1f1f';
+                    statusCell.style.fontWeight = 'bold';
+                } else if (rosterStatus && rosterStatus !== 'Active') {
+                    statusCell.innerText = rosterStatus;
+                    statusCell.style.backgroundColor = '#fff3cd';
+                    statusCell.style.color = '#6b5300';
+                } else {
+                    statusCell.innerText = rosterStatus ? '' : 'N/A';
+                    statusCell.title = rosterStatus ? 'Active (Sleeper)' : 'No Sleeper match';
+                }
 
                 // Info button
                 const infoCell = row.insertCell();

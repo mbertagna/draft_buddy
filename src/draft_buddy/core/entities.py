@@ -30,6 +30,14 @@ class Player:
         NFL bye week.
     team : str, optional
         Team abbreviation for stacking and display.
+    sleeper_id : str, optional
+        Matching Sleeper player identifier, when available.
+    sleeper_status : str, optional
+        Sleeper roster status (e.g. "Active", "Injured Reserve").
+    sleeper_injury_status : str, optional
+        Sleeper injury designation (e.g. "Questionable", "Out").
+    sleeper_depth_chart_position : str, optional
+        Sleeper depth chart position group (e.g. "WR2").
     """
 
     player_id: int
@@ -40,6 +48,10 @@ class Player:
     adp: float = field(default=np.inf)
     bye_week: Optional[int] = None
     team: Optional[str] = None
+    sleeper_id: Optional[str] = None
+    sleeper_status: Optional[str] = None
+    sleeper_injury_status: Optional[str] = None
+    sleeper_depth_chart_position: Optional[str] = None
 
     def to_dict(self) -> dict:
         """Serialize the player to a JSON-friendly dictionary.
@@ -58,6 +70,10 @@ class Player:
             "adp": self.adp if np.isfinite(self.adp) else None,
             "bye_week": self.bye_week,
             "team": self.team,
+            "sleeper_id": self.sleeper_id,
+            "sleeper_status": self.sleeper_status,
+            "sleeper_injury_status": self.sleeper_injury_status,
+            "sleeper_depth_chart_position": self.sleeper_depth_chart_position,
         }
 
 

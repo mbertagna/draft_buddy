@@ -287,3 +287,29 @@ def test_get_players_formats_nan_bye_week_as_na(config, fake_session) -> None:
     response = client.get("/api/players?search=QB%20One")
 
     assert response.status_code == 200 and response.json()[0]["bye_week"] == "N/A"
+
+
+def test_get_players_includes_sleeper_fields(config, fake_session) -> None:
+    """Verify player payload surfaces Sleeper-derived stats."""
+    player = fake_session.player_catalog.get(1)
+    fake_session.player_catalog = fake_session.player_catalog.with_updated_player(
+        player.__class__(
+            player_id=player.player_id,
+            name=player.name,
+            position=player.position,
+            projected_points=player.projected_points,
+            games_played_frac=player.games_played_frac,
+            adp=player.adp,
+            bye_week=player.bye_week,
+            team=player.team,
+            sleeper_status="Active",
+            sleeper_injury_status="Questionable",
+            sleeper_depth_chart_position="QB",
+        )
+    )
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+
+    response = client.get("/api/players?search=QB%20One")
+    payload = response.json()[0]
+
+    assert payload["sleeper_injury_status"] == "Questionable" and payload["sleeper_depth_chart_position"] == "QB"

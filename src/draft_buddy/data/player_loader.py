@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import os
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -47,6 +47,12 @@ def load_player_catalog(filepath: str, adp_config: Dict) -> PlayerCatalog:
         if "recent_team" in dataframe.columns
         else ("team" if "team" in dataframe.columns else None)
     )
+    sleeper_columns = {
+        "sleeper_id": "sleeper_id" in dataframe.columns,
+        "sleeper_status": "sleeper_status" in dataframe.columns,
+        "sleeper_injury_status": "sleeper_injury_status" in dataframe.columns,
+        "sleeper_depth_chart_position": "sleeper_depth_chart_position" in dataframe.columns,
+    }
 
     for _, row in dataframe.iterrows():
         player_id = int(row["player_id"])
@@ -73,6 +79,7 @@ def load_player_catalog(filepath: str, adp_config: Dict) -> PlayerCatalog:
                 adp,
                 bye_week,
                 team,
+                **_read_sleeper_fields(row, sleeper_columns),
             )
         )
 
@@ -81,6 +88,27 @@ def load_player_catalog(filepath: str, adp_config: Dict) -> PlayerCatalog:
 
     players.sort(key=lambda player: player.adp)
     return PlayerCatalog(players)
+
+
+def _read_sleeper_fields(row: pd.Series, sleeper_columns: Dict[str, bool]) -> Dict[str, Optional[str]]:
+    """Read optional Sleeper-derived columns from one CSV row.
+
+    Parameters
+    ----------
+    row : pd.Series
+        Source CSV row.
+    sleeper_columns : Dict[str, bool]
+        Mapping of Sleeper field name to whether the column exists in the CSV.
+
+    Returns
+    -------
+    Dict[str, Optional[str]]
+        Sleeper field values, or None for missing columns/values.
+    """
+    return {
+        field_name: (str(row[field_name]) if has_column and pd.notna(row[field_name]) else None)
+        for field_name, has_column in sleeper_columns.items()
+    }
 
 
 def _generate_mock_adp(players: list[Player], adp_config: Dict) -> list[Player]:

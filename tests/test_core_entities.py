@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from draft_buddy.core import Pick, TeamRoster
+from draft_buddy.core import Pick, Player, TeamRoster
 
 
 def test_player_catalog_preserves_input_order(player_catalog) -> None:
@@ -26,6 +26,29 @@ def test_team_roster_round_trips_through_dict() -> None:
     restored = TeamRoster.from_dict(roster.to_dict())
 
     assert restored.to_dict() == roster.to_dict()
+
+
+def test_player_to_dict_defaults_sleeper_fields_to_none() -> None:
+    """Verify players without Sleeper data serialize null sleeper_* fields."""
+    player = Player(player_id=1, name="A", position="QB", projected_points=100.0)
+
+    assert player.to_dict()["sleeper_status"] is None
+
+
+def test_player_to_dict_includes_populated_sleeper_fields() -> None:
+    """Verify Sleeper-derived fields serialize when populated."""
+    player = Player(
+        player_id=1,
+        name="A",
+        position="QB",
+        projected_points=100.0,
+        sleeper_id="123",
+        sleeper_status="Active",
+        sleeper_injury_status="Questionable",
+        sleeper_depth_chart_position="QB",
+    )
+
+    assert player.to_dict()["sleeper_injury_status"] == "Questionable"
 
 
 def test_pick_round_trips_through_dict() -> None:
