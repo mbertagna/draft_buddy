@@ -86,6 +86,8 @@ Generate player projections with the default compose command:
 docker compose run --rm data
 ```
 
+Veteran weekly stats are downloaded from nflverse's current `stats_player` release as per-season files (`stats_player_week_{year}.csv`) into `data/cache/nflverse/`. The lookback window defaults to two completed seasons (`Config.data.LEGACY_STATS_LOOKBACK_SEASONS`); override with `--lookback-seasons`.
+
 Override the data-generation command:
 
 ```bash

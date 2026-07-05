@@ -10,7 +10,7 @@ Raw inputs and generated artifacts are separated under `./data`:
 
 | Path | Purpose |
 | --- | --- |
-| `data/cache/nflverse/` | nflverse `player_stats` / kicking stats and `roster_{year}.csv` (24h TTL, lazy refresh) |
+| `data/cache/nflverse/` | nflverse `stats_player_week_{year}.csv` weekly stats and `roster_{year}.csv` (24h TTL, lazy refresh) |
 | `data/cache/sleeper/` | Sleeper player directory JSON (24h TTL) |
 | `data/cache/adp/` | Manually placed FantasyPros ADP CSVs (e.g. `FantasyPros_2026_Overall_ADP_Rankings.csv`) |
 | `data/generated/{year}/` | Year-scoped diagnostics and archive copies (gitignored) |
@@ -22,7 +22,7 @@ Path helpers live in `src/draft_buddy/data/cache_paths.py`.
 
 1. **`SleeperHttpGateway`** (`sleeper_client.py`) — fetches and caches the Sleeper player directory (`/v1/players/nfl`) and, when requested, a league's rostered players (`/v1/league/<league_id>/rosters`).
 2. **`SleeperCatalogBuilder`** (`sleeper_catalog.py`) — filters the directory to draftable skill positions (`QB`/`RB`/`WR`/`TE`) where the player is on a team **or** is `Active` with a null team (covers free-agent veterans like Stefon Diggs). Sets internal `player_id = int(sleeper_id)`.
-3. **`NflverseCsvDownloader.fetch_legacy_stats()`** (`nflverse_client.py`) — downloads aggregated weekly stats for `start_year`…`draft_year`; roster files are no longer the player pool, only cached for crosswalk metadata via `ensure_roster_cached()`.
+3. **`NflverseCsvDownloader.fetch_legacy_stats()`** (`nflverse_client.py`) — downloads per-season `stats_player_week_{year}.csv` files for `start_year`…`draft_year`; roster files are no longer the player pool, only cached for crosswalk metadata via `ensure_roster_cached()`.
 4. **`NflverseCrosswalkBuilder`** (`nflverse_crosswalk.py`) — builds `sleeper_id → gsis_id` (+ `draft_number`) from Sleeper `gsis_id` first, merged nflverse roster history as fallback. GSIS normalization is shared in `nflverse_ids.py`.
 5. **`FantasyDataProcessor`** (`data_processor.py`) — resolves `nflverse_player_id` on each catalog row, then **`ScoringService.attach_legacy_stats_by_player_id()`** left-joins legacy `total_pts` / `games_played_frac` onto the Sleeper catalog. Rows with no stats match (`total_pts` is NaN) are routed to rookie projection.
 6. **`AdpMatcher`** (`adp_matcher.py`) — fuzzy-matches FantasyPros ADP onto the computed catalog using shared `standardize_name()` from `name_matching.py` (including combined `Player (Team / Bye)` column parsing). Only ADP-matched players land in the final CSV.

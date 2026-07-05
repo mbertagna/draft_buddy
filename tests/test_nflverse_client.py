@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 import pandas as pd
+import requests
 
 from draft_buddy.data.nflverse_client import NflverseCsvDownloader
 
@@ -87,11 +88,8 @@ def test_fetch_legacy_stats_filters_season_and_position(monkeypatch, tmp_path: P
             {"player_id": "2", "season": 2025, "position": "K", "player_display_name": "B", "recent_team": "BUF"},
         ]
     )
-    monkeypatch.setattr(
-        downloader,
-        "download_file",
-        lambda file_name, _url: stats_df.copy(),
-    )
+    monkeypatch.setattr(downloader, "_fetch_stats_player_week_range", lambda _start, _end: stats_df.copy())
+
     legacy_stats_df, draft_year_stats_df = downloader.fetch_legacy_stats(
         draft_year=2025,
         positions=["QB"],
@@ -100,6 +98,76 @@ def test_fetch_legacy_stats_filters_season_and_position(monkeypatch, tmp_path: P
     )
 
     assert len(legacy_stats_df) == 1 and len(draft_year_stats_df) == 1
+
+
+def test_fetch_stats_player_week_range_concatenates_seasons(monkeypatch, tmp_path: Path) -> None:
+    """Verify each season in the range is fetched and concatenated."""
+    downloader = NflverseCsvDownloader(str(tmp_path))
+    season_frames = {
+        2024: pd.DataFrame(
+            [{"player_id": "1", "season": 2024, "position": "RB", "player_display_name": "Vet", "recent_team": "BUF"}]
+        ),
+        2025: pd.DataFrame(
+            [
+                {
+                    "player_id": "00-0040666",
+                    "season": 2025,
+                    "position": "RB",
+                    "player_display_name": "Omarion Hampton",
+                    "team": "LAC",
+                }
+            ]
+        ),
+    }
+    monkeypatch.setattr(
+        downloader,
+        "_fetch_season_player_stats",
+        lambda season: season_frames.get(season, pd.DataFrame()).copy(),
+    )
+
+    merged_df = downloader._fetch_stats_player_week_range(2024, 2025)
+
+    assert set(merged_df["season"].astype(int)) == {2024, 2025}
+    assert "Omarion Hampton" in set(merged_df["player_display_name"])
+
+
+def test_fetch_season_player_stats_returns_empty_frame_on_404(monkeypatch, tmp_path: Path) -> None:
+    """Verify unpublished seasons return an empty frame instead of raising."""
+    downloader = NflverseCsvDownloader(str(tmp_path))
+
+    def raise_not_found(_url: str, _file_path: str) -> None:
+        response = requests.Response()
+        response.status_code = 404
+        raise requests.HTTPError(response=response)
+
+    monkeypatch.setattr(downloader, "_download_from_url", raise_not_found)
+
+    season_df = downloader._fetch_season_player_stats(2026)
+
+    assert season_df.empty
+
+
+def test_fetch_stats_player_week_range_skips_unpublished_future_season(monkeypatch, tmp_path: Path) -> None:
+    """Verify a 404 on a future season still returns data for published seasons."""
+    downloader = NflverseCsvDownloader(str(tmp_path))
+    season_frames = {
+        2024: pd.DataFrame(
+            [{"player_id": "1", "season": 2024, "position": "QB", "player_display_name": "A", "recent_team": "BUF"}]
+        ),
+        2025: pd.DataFrame(
+            [{"player_id": "1", "season": 2025, "position": "QB", "player_display_name": "A", "recent_team": "BUF"}]
+        ),
+        2026: pd.DataFrame(),
+    }
+    monkeypatch.setattr(
+        downloader,
+        "_fetch_season_player_stats",
+        lambda season: season_frames.get(season, pd.DataFrame()).copy(),
+    )
+
+    merged_df = downloader._fetch_stats_player_week_range(2024, 2026)
+
+    assert set(merged_df["season"].astype(int)) == {2024, 2025}
 
 
 def test_fetch_draft_year_roster_creates_fallback_player_ids_when_roster_ids_missing(

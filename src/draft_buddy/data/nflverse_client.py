@@ -1,8 +1,10 @@
 """
 Nflverse-backed client for fetching fantasy football player data.
 
-Defines the abstract ``DataDownloader`` contract and a concrete implementation
-that downloads nflverse CSV releases into a local cache.
+Weekly player stats are loaded from nflverse's current ``stats_player`` release
+(``stats_player_week_{season}.csv`` per season). The deprecated monolithic
+``player_stats/player_stats.csv`` export is no longer downloaded; any copy
+already on disk under the cache directory is left untouched.
 """
 
 import os
@@ -16,6 +18,11 @@ import requests
 from draft_buddy.data.nflverse_ids import normalize_gsis_id
 
 DEFAULT_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
+
+SEASON_PLAYER_STATS_URL = (
+    "https://github.com/nflverse/nflverse-data/releases/download/"
+    "stats_player/stats_player_week_{season}.csv"
+)
 
 
 class DataDownloader(ABC):
@@ -108,7 +115,7 @@ class NflverseCsvDownloader(DataDownloader):
         file_path = os.path.join(self._cache_dir, file_name)
         if not self._is_cache_fresh(file_path):
             self._download_from_url(url, file_path)
-        return pd.read_csv(file_path)
+        return pd.read_csv(file_path, low_memory=False)
 
     def _is_cache_fresh(self, file_path: str) -> bool:
         """Return True when a cached file exists, is non-empty, and isn't stale."""
@@ -159,26 +166,91 @@ class NflverseCsvDownloader(DataDownloader):
         )
         self.download_file(f"roster_{draft_year}.csv", roster_url)
 
+    def _harmonize_player_stats_schema(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Align stats_player weekly exports with scoring-engine column names.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Raw weekly player stats frame.
+
+        Returns
+        -------
+        pd.DataFrame
+            Copy with scoring-compatible column names where needed.
+        """
+        harmonized_df = df.copy()
+        if "recent_team" not in harmonized_df.columns and "team" in harmonized_df.columns:
+            harmonized_df["recent_team"] = harmonized_df["team"]
+        if "interceptions" not in harmonized_df.columns and "passing_interceptions" in harmonized_df.columns:
+            harmonized_df["interceptions"] = harmonized_df["passing_interceptions"]
+        if "sacks" not in harmonized_df.columns and "sacks_suffered" in harmonized_df.columns:
+            harmonized_df["sacks"] = harmonized_df["sacks_suffered"]
+        if "sack_yards" not in harmonized_df.columns and "sack_yards_lost" in harmonized_df.columns:
+            harmonized_df["sack_yards"] = harmonized_df["sack_yards_lost"]
+        return harmonized_df
+
+    def _fetch_season_player_stats(self, season: int) -> pd.DataFrame:
+        """Download one season of nflverse weekly player stats.
+
+        Parameters
+        ----------
+        season : int
+            Season year to download.
+
+        Returns
+        -------
+        pd.DataFrame
+            Weekly player stats for the requested season, or an empty frame
+            when nflverse has not published that season yet.
+        """
+        file_name = f"stats_player_week_{season}.csv"
+        url = SEASON_PLAYER_STATS_URL.format(season=season)
+        file_path = os.path.join(self._cache_dir, file_name)
+        if self._is_cache_fresh(file_path):
+            season_df = pd.read_csv(file_path, low_memory=False)
+            return self._harmonize_player_stats_schema(season_df)
+
+        try:
+            season_df = self.download_file(file_name, url)
+        except requests.HTTPError as error:
+            if error.response is not None and error.response.status_code == 404:
+                print(f"No nflverse weekly stats published yet for season {season}.")
+                return pd.DataFrame()
+            raise
+        return self._harmonize_player_stats_schema(season_df)
+
+    def _fetch_stats_player_week_range(self, start_year: int, end_year: int) -> pd.DataFrame:
+        """Download and concatenate nflverse weekly stats for a season range.
+
+        Parameters
+        ----------
+        start_year : int
+            First season to include.
+        end_year : int
+            Last season to include.
+
+        Returns
+        -------
+        pd.DataFrame
+            Combined weekly stats covering ``start_year`` through ``end_year``.
+        """
+        season_frames = [
+            self._fetch_season_player_stats(season)
+            for season in range(start_year, end_year + 1)
+        ]
+        non_empty_frames = [frame for frame in season_frames if not frame.empty]
+        if not non_empty_frames:
+            return pd.DataFrame()
+        return pd.concat(non_empty_frames, ignore_index=True, sort=False)
+
     def fetch_legacy_stats(
         self, draft_year: int, positions: list, start_year: int, end_year: int
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Fetch nflverse weekly stats split into legacy and draft-year frames."""
-        stats_url = (
-            "https://github.com/nflverse/nflverse-data/releases/download/"
-            "player_stats/player_stats.csv"
-        )
-        kicking_url = (
-            "https://github.com/nflverse/nflverse-data/releases/download/"
-            "player_stats/player_stats_kicking.csv"
-        )
-
-        ps_df = self.download_file("player_stats.csv", stats_url)
-        psk_df = self.download_file("player_stats_kicking.csv", kicking_url)
-
-        merge_cols = list(set(psk_df.columns).intersection(set(ps_df.columns)))
-        merged_df = ps_df.merge(psk_df, how="outer", on=merge_cols)
-        merged_df = merged_df[merged_df["season"].between(start_year, end_year)]
-        merged_df = merged_df[merged_df["position"].isin(positions)]
+        merged_df = self._fetch_stats_player_week_range(start_year, end_year)
+        if not merged_df.empty:
+            merged_df = merged_df[merged_df["position"].isin(positions)]
 
         legacy_stats_df = merged_df[merged_df["season"] < draft_year].copy()
         draft_year_stats_df = merged_df[merged_df["season"] == draft_year].copy()
