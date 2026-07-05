@@ -9,6 +9,7 @@ import uvicorn
 
 from draft_buddy.config import Config
 from draft_buddy.core import BotGM, DraftState, InferenceProvider, PlayerCatalog
+from draft_buddy.data.insights.loader import load_latest_player_insights
 from draft_buddy.rl.agent_bot import AgentModelBotGM
 from draft_buddy.rl.checkpoint_manager import CheckpointManager
 from draft_buddy.rl.feature_extractor import FeatureExtractor
@@ -172,7 +173,12 @@ def main() -> None:
     config = Config()
     inference_provider = RlInferenceProvider(config)
     session_manager = DraftSessionManager(config, inference_provider=inference_provider)
-    app = create_app(config=config, session_manager=session_manager)
+    loaded_insights = load_latest_player_insights(config.paths.DATA_DIR)
+    app = create_app(
+        config=config,
+        session_manager=session_manager,
+        loaded_insights=loaded_insights,
+    )
     port = int(os.environ.get("PORT", 5001))
     uvicorn.run(app, host="0.0.0.0", port=port)
 

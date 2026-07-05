@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -10,6 +11,16 @@ from fastapi.testclient import TestClient
 import numpy as np
 
 from draft_buddy.web.app import create_app
+from draft_buddy.data.insights.loader import LoadedPlayerInsights
+from draft_buddy.data.insights.schemas import (
+    Confidence,
+    DepthRole,
+    PlayerInsight,
+    PlayerInsightsFile,
+    PlayingTimeTier,
+    RecoveryStatus,
+    RiskLevel,
+)
 
 
 class FakeSessionManager:
@@ -313,3 +324,90 @@ def test_get_players_includes_sleeper_fields(config, fake_session) -> None:
     payload = response.json()[0]
 
     assert payload["sleeper_injury_status"] == "Questionable" and payload["sleeper_depth_chart_position"] == "QB"
+
+
+def _sample_loaded_insights(player_id: int = 1) -> LoadedPlayerInsights:
+    """Return a minimal loaded insights fixture for web API tests."""
+    insight = PlayerInsight(
+        outlook_phrase="Starter role expected",
+        summary="Should lead the backfield.",
+        depth_role=DepthRole.STARTER,
+        playing_time_tier=PlayingTimeTier.HIGH,
+        injury_risk=RiskLevel.LOW,
+        upside=RiskLevel.HIGH,
+        recovery_status=RecoveryStatus.NA,
+        overall_confidence=Confidence.HIGH,
+    )
+    meta = PlayerInsightsFile(
+        draft_year=2026,
+        generated_at=datetime(2026, 7, 4, 17, 7, 47, tzinfo=timezone.utc),
+        model="gemini-2.0-flash",
+        players={str(player_id): insight},
+    )
+    return LoadedPlayerInsights(
+        players={player_id: insight},
+        meta=meta,
+        source_path="/tmp/player_insights_2026_20260704T170747Z.json",
+    )
+
+
+def test_insights_meta_unavailable_when_not_loaded(config, fake_session) -> None:
+    """Verify insights meta reports unavailable when no export is loaded."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.get("/api/insights/meta")
+
+    assert response.status_code == 200
+    assert response.json()["available"] is False
+    assert response.json()["enriched_player_count"] == 0
+
+
+def test_insights_meta_returns_loaded_export_metadata(config, fake_session) -> None:
+    """Verify insights meta surfaces loaded export metadata."""
+    loaded = _sample_loaded_insights()
+    client = TestClient(
+        create_app(
+            config=config,
+            session_manager=FakeSessionManager(fake_session),
+            loaded_insights=loaded,
+        )
+    )
+    response = client.get("/api/insights/meta")
+    payload = response.json()
+
+    assert payload["available"] is True
+    assert payload["draft_year"] == 2026
+    assert payload["enriched_player_count"] == 1
+    assert payload["source_file"] == "player_insights_2026_20260704T170747Z.json"
+
+
+def test_get_players_includes_insight_when_enriched(config, fake_session) -> None:
+    """Verify enriched players include insight payloads on /api/players."""
+    loaded = _sample_loaded_insights(player_id=1)
+    client = TestClient(
+        create_app(
+            config=config,
+            session_manager=FakeSessionManager(fake_session),
+            loaded_insights=loaded,
+        )
+    )
+    response = client.get("/api/players?search=QB%20One")
+    payload = response.json()[0]
+
+    assert payload["insight"] is not None
+    assert payload["insight"]["outlook_phrase"] == "Starter role expected"
+
+
+def test_get_players_sets_insight_null_when_not_enriched(config, fake_session) -> None:
+    """Verify unenriched players return insight null on /api/players."""
+    loaded = _sample_loaded_insights(player_id=999)
+    client = TestClient(
+        create_app(
+            config=config,
+            session_manager=FakeSessionManager(fake_session),
+            loaded_insights=loaded,
+        )
+    )
+    response = client.get("/api/players?search=QB%20One")
+    payload = response.json()[0]
+
+    assert payload["insight"] is None

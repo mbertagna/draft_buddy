@@ -13,12 +13,15 @@ from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from draft_buddy.config import Config
+from draft_buddy.data.insights.loader import LoadedPlayerInsights
 from draft_buddy.simulator.service import SeasonSimulationService
 from draft_buddy.web.session import DraftSessionManager
 
 
 def create_app(
-    config: Optional[Config] = None, session_manager: Optional[DraftSessionManager] = None
+    config: Optional[Config] = None,
+    session_manager: Optional[DraftSessionManager] = None,
+    loaded_insights: Optional[LoadedPlayerInsights] = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -28,6 +31,8 @@ def create_app(
         Application configuration instance.
     session_manager : Optional[DraftSessionManager], optional
         Session manager instance, typically injected by composition root.
+    loaded_insights : Optional[LoadedPlayerInsights], optional
+        Pre-loaded player insights export for UI enrichment.
 
     Returns
     -------
@@ -39,6 +44,12 @@ def create_app(
     season_simulation_service = SeasonSimulationService(runtime_config)
     runtime_session_manager = session_manager or DraftSessionManager(runtime_config)
     frontend_index = Path(__file__).resolve().parents[3] / "frontend" / "index.html"
+    insights_store = loaded_insights or LoadedPlayerInsights(
+        players={}, meta=None, source_path=None
+    )
+    insights_by_id = insights_store.players
+    insights_file_meta = insights_store.meta
+    insights_source_path = insights_store.source_path
 
     def _session_id(request: Request, response: Optional[Response] = None) -> str:
         """Resolve session id from cookie or create one."""
@@ -277,6 +288,28 @@ def create_app(
             raise HTTPException(status_code=500, detail=f"Season simulation failed: {error}") from error
 
 
+    @app.get("/api/insights/meta")
+    def insights_meta() -> dict:
+        """Return metadata for the loaded player insights export."""
+        if insights_file_meta is None or insights_source_path is None:
+            return {
+                "available": False,
+                "draft_year": None,
+                "generated_at": None,
+                "model": None,
+                "enriched_player_count": 0,
+                "source_file": None,
+            }
+        return {
+            "available": True,
+            "draft_year": insights_file_meta.draft_year,
+            "generated_at": insights_file_meta.generated_at.isoformat().replace("+00:00", "Z"),
+            "model": insights_file_meta.model,
+            "enriched_player_count": len(insights_by_id),
+            "source_file": Path(insights_source_path).name,
+        }
+
+
     @app.get("/api/players")
     def get_players(
         request: Request,
@@ -323,6 +356,7 @@ def create_app(
         filtered_players.sort(key=sort_key, reverse=reverse)
         payload = []
         for player in filtered_players:
+            insight = insights_by_id.get(player.player_id)
             payload.append(
                 {
                     "player_id": player.player_id,
@@ -337,6 +371,7 @@ def create_app(
                     "sleeper_status": player.sleeper_status,
                     "sleeper_injury_status": player.sleeper_injury_status,
                     "sleeper_depth_chart_position": player.sleeper_depth_chart_position,
+                    "insight": insight.model_dump(mode="json") if insight else None,
                 }
             )
         return JSONResponse(payload)
