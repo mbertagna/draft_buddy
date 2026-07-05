@@ -104,13 +104,31 @@ def check_sleeper_roster_coverage(cache_dir: str, sleeper_league_id: str, output
     )
 
 
-def main(output_path, draft_year, rookie_projection_method, sleeper_league_id=None):
+def main(
+    output_path,
+    draft_year,
+    rookie_projection_method,
+    sleeper_league_id=None,
+    lookback_seasons=None,
+):
     """
     Main function to run the data processing and merging pipeline.
     """
     pd.set_option('display.max_columns', None)
 
+    runtime_config = Config()
+    resolved_lookback = (
+        lookback_seasons
+        if lookback_seasons is not None
+        else runtime_config.data.LEGACY_STATS_LOOKBACK_SEASONS
+    )
+    stats_start_year = draft_year - resolved_lookback
+
     print(f"--- Running Player Data Processor for {draft_year} Season ---")
+    print(
+        f"Using {resolved_lookback}-season nflverse lookback "
+        f"(start_year={stats_start_year}, veteran stats through {draft_year - 1})."
+    )
     output_dir = generated_output_dir(draft_year)
 
     bye_weeks = {
@@ -191,7 +209,7 @@ def main(output_path, draft_year, rookie_projection_method, sleeper_league_id=No
         scoring_rules=half_ppr_sleeper_scoring_rules,
         project_rookies=True,
         bye_weeks_override=bye_weeks.get(draft_year, {}),
-        start_year=draft_year - 2,
+        start_year=stats_start_year,
         positions=DRAFTABLE_POSITIONS,
         rookie_projection_method=rookie_projection_method,
         cache_dir=DATA_ROOT,
@@ -272,6 +290,15 @@ if __name__ == '__main__':
                         help='Method to project rookie points: draft (slot scaling), adp (ADP interpolation), or hybrid (average).')
     parser.add_argument('--sleeper_league_id', type=str, default=None,
                         help='Optional Sleeper league id to verify the base-catalog filter did not exclude a rostered player.')
+    parser.add_argument(
+        '--lookback-seasons',
+        type=int,
+        default=None,
+        help=(
+            'Number of completed seasons before --year to load from nflverse for '
+            'veteran projections. Default: Config.data.LEGACY_STATS_LOOKBACK_SEASONS (2).'
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -283,4 +310,5 @@ if __name__ == '__main__':
         draft_year=args.year,
         rookie_projection_method=args.rookie_projection_method,
         sleeper_league_id=args.sleeper_league_id,
+        lookback_seasons=args.lookback_seasons,
     )

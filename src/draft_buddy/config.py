@@ -209,11 +209,38 @@ class OpponentConfig:
         },
     ])
 
+
+@dataclass
+class DataConfig:
+    """Configuration for player data generation and nflverse stat loading."""
+
+    LEGACY_STATS_LOOKBACK_SEASONS: int = 2
+    NFLVERSE_STATS_RELEASE: str = "stats_player"
+    NFLVERSE_WEEK_STATS_TEMPLATE: str = "stats_player_week_{season}.csv"
+
+    def legacy_stats_start_year(self, draft_year: int) -> int:
+        """Return the first nflverse season to load for a draft year.
+
+        Parameters
+        ----------
+        draft_year : int
+            Target draft season.
+
+        Returns
+        -------
+        int
+            First season included when fetching weekly stats for veteran
+            projections (``draft_year - LEGACY_STATS_LOOKBACK_SEASONS``).
+        """
+        return draft_year - self.LEGACY_STATS_LOOKBACK_SEASONS
+
+
 class Config:
     """Main configuration class that aggregates all sub-configs."""
     def __init__(self):
         self.paths = PathsConfig()
         self.draft = DraftConfig()
+        self.data = DataConfig()
         self.training = TrainingConfig()
         self.reward = RewardConfig()
         self.opponent = OpponentConfig()
@@ -223,6 +250,7 @@ class Config:
         return {
             "paths": asdict(self.paths),
             "draft": asdict(self.draft),
+            "data": asdict(self.data),
             "training": asdict(self.training),
             "reward": asdict(self.reward),
             "opponent": asdict(self.opponent),
