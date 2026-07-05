@@ -15,6 +15,7 @@ from draft_buddy.config import Config
 from draft_buddy.data.cache_paths import (
     insights_search_cache_dir,
     insights_synthesis_cache_dir,
+    player_insights_exports_dir,
     player_insights_output_path,
 )
 from draft_buddy.data.insights.cse_gateway import SearchCacheStore
@@ -106,8 +107,12 @@ def main() -> int:
                     file=sys.stderr,
                 )
 
-    output_path = player_insights_output_path(args.data_root, args.year)
     insights_file = merge_insights_file(args.year, args.model, merged)
+    exports_dir = player_insights_exports_dir(args.data_root)
+    os.makedirs(exports_dir, exist_ok=True)
+    output_path = player_insights_output_path(
+        args.data_root, args.year, insights_file.generated_at
+    )
     with open(output_path, "w", encoding="utf-8") as handle:
         json.dump(insights_file.model_dump(mode="json"), handle, indent=2)
 

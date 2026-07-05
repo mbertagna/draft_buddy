@@ -126,7 +126,9 @@ docker compose run --rm insights-synthesize
 
 - Search cache: `data/cache/insights/search/{sleeper_id}/`
 - Synthesis cache: `data/cache/insights/synthesis/{sleeper_id}.json`
-- Merged insights file: `data/player_insights_2026.json`
+- Merged insights export: `data/insights/exports/player_insights_{year}_{timestamp}.json`
+
+Each synthesis run writes a new timestamped export file. The webapp loads the newest export by filename timestamp at startup. Legacy undated `data/player_insights_{year}.json` files are used as a fallback when no exports exist yet.
 
 **Partial re-runs:**
 
