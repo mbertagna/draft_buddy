@@ -387,8 +387,111 @@
         .board-cell.on-clock { border: 2px solid #ffc107; background-color: #fff9e6; }
 
         /* Info column/button */
-        #player-list th.info-col, #player-list td.info-col { width: 28px; text-align: center; }
-        .info-button { padding: 2px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; font-size: 0.9rem; line-height: 1; }
+        #player-list th.info-col, #player-list td.info-col { width: 52px; text-align: center; }
+        .info-actions { display: flex; gap: 2px; justify-content: center; align-items: center; }
+        .info-button { padding: 2px 5px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; font-size: 0.85rem; line-height: 1; }
+        #player-list th.role-col, #player-list td.role-col {
+            width: 52px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        #player-list td.role-col {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        #player-list td.role-col.missing { color: #aaa; font-weight: normal; }
+        #player-list td.role-col.role-starter { color: #1b5e20; }
+        #player-list td.role-col.role-co_starter { color: #2e7d32; }
+        #player-list td.role-col.role-committee { color: #b26a00; }
+        #player-list td.role-col.role-backup { color: #666; }
+        #player-list th.outlook-col { max-width: 180px; }
+        #player-list td.outlook-col {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.85rem;
+            color: #333;
+            cursor: default;
+        }
+        #player-list td.outlook-col.has-insight { cursor: help; }
+        #player-list td.outlook-col.missing { color: #aaa; }
+        #outlook-tooltip {
+            display: none;
+            position: fixed;
+            z-index: 900;
+            max-width: 320px;
+            padding: 10px 12px;
+            background: #1f2937;
+            color: #f9fafb;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            line-height: 1.45;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+            pointer-events: none;
+        }
+        #outlook-tooltip .tooltip-phrase { font-weight: 600; color: #86efac; margin-bottom: 6px; }
+        #outlook-tooltip .tooltip-role { font-size: 0.75rem; color: #d1d5db; margin-bottom: 6px; text-transform: capitalize; }
+        #outlook-tooltip .tooltip-summary { color: #e5e7eb; }
+        #insights-hint { font-size: 0.85rem; color: #666; margin-left: 8px; }
+        #insights-hint.missing { color: #999; font-style: italic; }
+
+        /* Insight detail modal */
+        #insight-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        #insight-modal.open { display: flex; }
+        .insight-modal-content {
+            background: #fff;
+            border-radius: 8px;
+            max-width: 520px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            padding: 20px 24px;
+        }
+        .insight-modal-content h3 { margin: 0 0 4px; font-size: 1.1rem; }
+        .insight-modal-phrase { color: #2e7d32; font-weight: 600; margin: 0 0 12px; font-size: 0.95rem; }
+        .insight-modal-summary { margin: 0 0 14px; line-height: 1.5; color: #333; }
+        .insight-tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+        .insight-tag {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #e8f5e9;
+            color: #1b5e20;
+            border: 1px solid #c8e6c9;
+        }
+        .insight-bullets { margin: 0 0 14px; padding-left: 18px; }
+        .insight-bullets li { margin-bottom: 6px; font-size: 0.9rem; line-height: 1.4; }
+        .insight-bullets a { color: #1565c0; }
+        .insight-modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px; flex-wrap: wrap; }
+        .insight-confidence { font-size: 0.8rem; color: #666; text-transform: capitalize; }
+        .insight-modal-actions { display: flex; gap: 8px; margin-left: auto; }
+        .insight-modal-google {
+            padding: 6px 14px;
+            border: 1px solid #1565c0;
+            border-radius: 4px;
+            background: #fff;
+            color: #1565c0;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .insight-modal-close {
+            padding: 6px 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #f5f5f5;
+            cursor: pointer;
+        }
 
         /* Rosters */
         .roster-card { border: 1px solid #ccc; border-radius: 4px; padding: 10px; margin-bottom: 10px; background-color: white; }
@@ -662,6 +765,7 @@
                     <label><input type="checkbox" name="position" value="TE"> TE</label>
                 </div>
                 <div class="gp-filter"><span>Min GP Frac</span><input type="number" id="gp-frac-min" step="0.01" min="0" max="1" placeholder="e.g., 0.75"></div>
+                <span id="insights-hint"></span>
                 <button id="new-draft-btn">Start New Draft</button>
             </div>
             <div style="flex: 1; overflow-y: auto;">
@@ -671,6 +775,8 @@
                             <th style="width:28px;">Blind</th>
                             <th data-sort-key="adp">ADP</th>
                             <th data-sort-key="name">Name</th>
+                            <th class="role-col" title="Projected depth role from offline insights">Role</th>
+                            <th class="outlook-col" id="outlook-col-header" title="Research outlook from offline insights">Outlook</th>
                             <th data-sort-key="position">Position</th>
                             <th data-sort-key="projected_points">Proj. Pts</th>
                             <th data-sort-key="vorp">VORP</th>
@@ -710,6 +816,29 @@
         </div>
     </main>
 
+    <div id="outlook-tooltip" aria-hidden="true">
+        <div class="tooltip-phrase" id="outlook-tooltip-phrase"></div>
+        <div class="tooltip-role" id="outlook-tooltip-role"></div>
+        <div class="tooltip-summary" id="outlook-tooltip-summary"></div>
+    </div>
+
+    <div id="insight-modal" role="dialog" aria-modal="true" aria-labelledby="insight-modal-title">
+        <div class="insight-modal-content">
+            <h3 id="insight-modal-title"></h3>
+            <p class="insight-modal-phrase" id="insight-modal-phrase"></p>
+            <p class="insight-modal-summary" id="insight-modal-summary"></p>
+            <div class="insight-tag-list" id="insight-modal-tags"></div>
+            <ul class="insight-bullets" id="insight-modal-bullets"></ul>
+            <div class="insight-modal-footer">
+                <span class="insight-confidence" id="insight-modal-confidence"></span>
+                <div class="insight-modal-actions">
+                    <button type="button" class="insight-modal-google" id="insight-modal-google">Search Google</button>
+                    <button type="button" class="insight-modal-close" id="insight-modal-close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const playerSearch = document.getElementById('player-search');
         const positionCheckboxes = document.querySelectorAll('input[name="position"]');
@@ -734,6 +863,23 @@
         const gpFracMinInput = document.getElementById('gp-frac-min');
         const simulateSeasonBtn = document.getElementById('simulate-season-btn');
         const seasonResultsDiv = document.getElementById('season-simulation-results');
+        const insightModal = document.getElementById('insight-modal');
+        const insightModalTitle = document.getElementById('insight-modal-title');
+        const insightModalPhrase = document.getElementById('insight-modal-phrase');
+        const insightModalSummary = document.getElementById('insight-modal-summary');
+        const insightModalTags = document.getElementById('insight-modal-tags');
+        const insightModalBullets = document.getElementById('insight-modal-bullets');
+        const insightModalConfidence = document.getElementById('insight-modal-confidence');
+        const insightModalClose = document.getElementById('insight-modal-close');
+        const insightModalGoogle = document.getElementById('insight-modal-google');
+        const insightsHint = document.getElementById('insights-hint');
+        const outlookColHeader = document.getElementById('outlook-col-header');
+        const outlookTooltip = document.getElementById('outlook-tooltip');
+        const outlookTooltipPhrase = document.getElementById('outlook-tooltip-phrase');
+        const outlookTooltipRole = document.getElementById('outlook-tooltip-role');
+        const outlookTooltipSummary = document.getElementById('outlook-tooltip-summary');
+
+        let modalPlayerName = null;
 
         const topPanel = document.getElementById('top-panel');
         const bottomPanel = document.getElementById('bottom-panel');
@@ -771,6 +917,7 @@
 
         let currentSortBy = 'vorp';
         let currentSortDir = 'desc'; // 'asc' or 'desc'
+        let lastRenderedPlayers = [];
         // Track players to ignore for AI suggestion
         const blindSet = new Set();
 
@@ -799,12 +946,10 @@
         function updateSortIndicators() {
             document.querySelectorAll('#player-list th').forEach(th => {
                 const key = th.dataset.sortKey;
-                if (!key) {
-                    if (th.dataset.label) th.innerText = th.dataset.label;
-                    return;
-                }
+                if (!key) return;
+                if (!th.dataset.label) th.dataset.label = th.textContent.replace(/ [▲▼]$/, '').trim();
                 const arrow = (key === currentSortBy) ? (currentSortDir === 'asc' ? ' ▲' : ' ▼') : '';
-                th.innerText = (th.dataset.label || th.innerText) + arrow;
+                th.textContent = th.dataset.label + arrow;
             });
         }
 
@@ -852,7 +997,7 @@
                 renderPlayers(players);
             } catch (error) {
                 console.error('Error fetching players:', error);
-                playerTbody.innerHTML = `<tr><td colspan="11" style="color: red;">Error loading players: ${error.message}</td></tr>`;
+                playerTbody.innerHTML = `<tr><td colspan="13" style="color: red;">Error loading players: ${error.message}</td></tr>`;
             }
         };
 
@@ -1020,12 +1165,157 @@
             window.open(url, '_blank');
         }
 
+        const DEPTH_ROLE_LABELS = {
+            starter: 'Starter',
+            co_starter: 'Co',
+            committee: 'Cmte',
+            backup: 'Bkup',
+            unknown: '—',
+        };
+
+        function formatDepthRoleLabel(depthRole) {
+            if (!depthRole || depthRole === 'unknown') return '—';
+            return DEPTH_ROLE_LABELS[depthRole] || formatInsightTagLabel(depthRole);
+        }
+
+        function formatPlayingTimeLabel(tier) {
+            if (!tier || tier === 'unknown') return null;
+            return `Playing time: ${tier}`;
+        }
+
+        function showOutlookTooltip(player, event) {
+            const insight = player.insight;
+            if (!insight || !insight.outlook_phrase) return;
+            outlookTooltipPhrase.textContent = insight.outlook_phrase;
+            const roleParts = [
+                formatDepthRoleLabel(insight.depth_role),
+                formatPlayingTimeLabel(insight.playing_time_tier),
+            ].filter(part => part && part !== '—');
+            outlookTooltipRole.textContent = roleParts.length
+                ? roleParts.join(' · ')
+                : '';
+            outlookTooltipRole.style.display = roleParts.length ? 'block' : 'none';
+            outlookTooltipSummary.textContent = insight.summary || '';
+            outlookTooltip.style.display = 'block';
+            positionOutlookTooltip(event);
+        }
+
+        function positionOutlookTooltip(event) {
+            const padding = 12;
+            const rect = outlookTooltip.getBoundingClientRect();
+            let left = event.clientX + padding;
+            let top = event.clientY + padding;
+            if (left + rect.width > window.innerWidth - padding) {
+                left = event.clientX - rect.width - padding;
+            }
+            if (top + rect.height > window.innerHeight - padding) {
+                top = event.clientY - rect.height - padding;
+            }
+            outlookTooltip.style.left = `${Math.max(padding, left)}px`;
+            outlookTooltip.style.top = `${Math.max(padding, top)}px`;
+        }
+
+        function hideOutlookTooltip() {
+            outlookTooltip.style.display = 'none';
+        }
+
+        function formatInsightTagLabel(value) {
+            if (!value) return '';
+            return String(value).replace(/_/g, ' ');
+        }
+
+        function openInsightModal(player) {
+            const insight = player.insight;
+            if (!insight) return;
+            modalPlayerName = player.name;
+            insightModalTitle.textContent = player.name;
+            insightModalPhrase.textContent = insight.outlook_phrase || '';
+            insightModalSummary.textContent = insight.summary || '';
+            insightModalTags.innerHTML = '';
+            const tagValues = [
+                ...(insight.tags || []),
+                insight.depth_role,
+                insight.injury_risk ? `injury: ${insight.injury_risk}` : null,
+            ].filter(Boolean);
+            tagValues.forEach(tag => {
+                const span = document.createElement('span');
+                span.className = 'insight-tag';
+                span.textContent = formatInsightTagLabel(tag);
+                insightModalTags.appendChild(span);
+            });
+            insightModalBullets.innerHTML = '';
+            (insight.bullets || []).forEach(bullet => {
+                const li = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = bullet.source_url;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.textContent = bullet.text;
+                li.appendChild(link);
+                if (bullet.source_domain) {
+                    const source = document.createElement('span');
+                    source.textContent = ` (${bullet.source_domain})`;
+                    source.style.color = '#888';
+                    source.style.fontSize = '0.8rem';
+                    li.appendChild(source);
+                }
+                insightModalBullets.appendChild(li);
+            });
+            insightModalConfidence.textContent = insight.overall_confidence
+                ? `Confidence: ${insight.overall_confidence}`
+                : '';
+            insightModal.classList.add('open');
+        }
+
+        function closeInsightModal() {
+            insightModal.classList.remove('open');
+            modalPlayerName = null;
+        }
+
+        insightModalClose.addEventListener('click', closeInsightModal);
+        insightModalGoogle.addEventListener('click', () => {
+            if (modalPlayerName) openPlayerInfo(modalPlayerName);
+        });
+        insightModal.addEventListener('click', (e) => {
+            if (e.target === insightModal) closeInsightModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && insightModal.classList.contains('open')) {
+                closeInsightModal();
+            }
+        });
+
+        async function loadInsightsMeta() {
+            try {
+                const response = await fetch('/api/insights/meta');
+                if (!response.ok) return;
+                const meta = await response.json();
+                if (!meta.available) {
+                    insightsHint.textContent = 'No player insights file found';
+                    insightsHint.classList.add('missing');
+                    return;
+                }
+                const generated = meta.generated_at
+                    ? new Date(meta.generated_at).toLocaleString()
+                    : 'unknown date';
+                const hint = `${meta.enriched_player_count} players enriched (${generated})`;
+                insightsHint.textContent = hint;
+                insightsHint.classList.remove('missing');
+                if (outlookColHeader) {
+                    outlookColHeader.title = `Outlook from ${meta.source_file || 'insights export'} — ${hint}`;
+                }
+            } catch (error) {
+                console.warn('Could not load insights meta:', error);
+            }
+        }
+
         const renderPlayers = (players) => {
-            playerTbody.innerHTML = ''; // Clear existing rows
+            lastRenderedPlayers = players;
+            playerTbody.innerHTML = '';
             if (players.length === 0) {
                 const row = playerTbody.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = 11;
+                cell.colSpan = 13;
                 cell.innerText = 'No players found with current filters.';
                 return;
             }
@@ -1075,6 +1365,43 @@
                 // Name
                 const nameCell = row.insertCell();
                 nameCell.innerText = player.name;
+                // Role
+                const roleCell = row.insertCell();
+                roleCell.classList.add('role-col');
+                if (player.insight && player.insight.depth_role) {
+                    const depthRole = player.insight.depth_role;
+                    roleCell.innerText = formatDepthRoleLabel(depthRole);
+                    if (depthRole !== 'unknown') {
+                        roleCell.classList.add(`role-${depthRole}`);
+                        roleCell.title = formatInsightTagLabel(depthRole);
+                    } else {
+                        roleCell.classList.add('missing');
+                        roleCell.title = 'Role unknown';
+                    }
+                } else {
+                    roleCell.innerText = '—';
+                    roleCell.classList.add('missing');
+                    roleCell.title = 'No offline insight for this player';
+                }
+                // Outlook
+                const outlookCell = row.insertCell();
+                outlookCell.classList.add('outlook-col');
+                if (player.insight && player.insight.outlook_phrase) {
+                    outlookCell.innerText = player.insight.outlook_phrase;
+                    outlookCell.title = player.insight.outlook_phrase;
+                    outlookCell.classList.add('has-insight');
+                    outlookCell.addEventListener('mouseenter', (e) => {
+                        showOutlookTooltip(player, e);
+                    });
+                    outlookCell.addEventListener('mousemove', (e) => {
+                        if (outlookTooltip.style.display === 'block') positionOutlookTooltip(e);
+                    });
+                    outlookCell.addEventListener('mouseleave', hideOutlookTooltip);
+                } else {
+                    outlookCell.innerText = '—';
+                    outlookCell.classList.add('missing');
+                    outlookCell.title = 'No offline insight for this player';
+                }
                 // Position
                 const posCell = row.insertCell();
                 posCell.innerText = player.position;
@@ -1086,14 +1413,14 @@
                 const vorpCell = row.insertCell();
                 const vorpVal = Number(player.vorp) || 0;
                 vorpCell.innerText = vorpVal.toFixed(1);
-                
+
                 // Games Played Fraction
                 const gpCell = row.insertCell();
                 const gpRawVal = player.games_played_frac;
                 const isRookie = (gpRawVal === 'R');
                 if (isRookie) {
                     gpCell.innerText = 'R';
-                    gpCell.style.backgroundColor = '#e0ccff'; // distinct rookie color
+                    gpCell.style.backgroundColor = '#e0ccff';
                     gpCell.style.color = '#3b2a64';
                     gpCell.style.fontWeight = 'bold';
                 } else {
@@ -1120,33 +1447,62 @@
                 const statusCell = row.insertCell();
                 const injuryStatus = player.sleeper_injury_status;
                 const rosterStatus = player.sleeper_status;
+                const depthChart = player.sleeper_depth_chart_position;
                 if (injuryStatus) {
                     statusCell.innerText = injuryStatus;
-                    statusCell.title = `Sleeper status: ${rosterStatus || 'Unknown'}`;
+                    statusCell.title = `Sleeper status: ${rosterStatus || 'Unknown'}${depthChart ? ` · Depth: ${depthChart}` : ''}`;
                     statusCell.style.backgroundColor = '#ffdada';
                     statusCell.style.color = '#7a1f1f';
                     statusCell.style.fontWeight = 'bold';
                 } else if (rosterStatus && rosterStatus !== 'Active') {
                     statusCell.innerText = rosterStatus;
+                    statusCell.title = depthChart ? `Depth: ${depthChart}` : '';
                     statusCell.style.backgroundColor = '#fff3cd';
                     statusCell.style.color = '#6b5300';
+                } else if (depthChart) {
+                    statusCell.innerText = depthChart;
+                    statusCell.title = rosterStatus ? `Active (Sleeper) · Depth: ${depthChart}` : `Depth: ${depthChart}`;
                 } else {
                     statusCell.innerText = rosterStatus ? '' : 'N/A';
                     statusCell.title = rosterStatus ? 'Active (Sleeper)' : 'No Sleeper match';
                 }
 
-                // Info button
+                // Info buttons
                 const infoCell = row.insertCell();
                 infoCell.classList.add('info-col');
-                const infoBtn = document.createElement('button');
-                infoBtn.className = 'info-button';
-                infoBtn.title = 'Open Google search';
-                infoBtn.textContent = '↗';
-                infoBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openPlayerInfo(player.name);
-                });
-                infoCell.appendChild(infoBtn);
+                const infoActions = document.createElement('div');
+                infoActions.className = 'info-actions';
+                if (player.insight) {
+                    const detailBtn = document.createElement('button');
+                    detailBtn.className = 'info-button';
+                    detailBtn.title = 'View player insight';
+                    detailBtn.textContent = 'i';
+                    detailBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openInsightModal(player);
+                    });
+                    const googleBtn = document.createElement('button');
+                    googleBtn.className = 'info-button';
+                    googleBtn.title = 'Open Google search';
+                    googleBtn.textContent = '↗';
+                    googleBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openPlayerInfo(player.name);
+                    });
+                    infoActions.appendChild(detailBtn);
+                    infoActions.appendChild(googleBtn);
+                } else {
+                    const googleBtn = document.createElement('button');
+                    googleBtn.className = 'info-button';
+                    googleBtn.title = 'Open Google search';
+                    googleBtn.textContent = '↗';
+                    googleBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openPlayerInfo(player.name);
+                    });
+                    infoActions.appendChild(googleBtn);
+                }
+                infoCell.appendChild(infoActions);
 
                 // ----- Conditional Coloring -----
                 if (adpValNum !== null) adpCell.style.background = getInvertedMetricColor(adpValNum, adpMin, adpMax);
@@ -1158,13 +1514,12 @@
                     posCell.style.backgroundColor = posColor;
                 }
 
-                // *** UPDATED: Apply background and text color for the team ***
                 const teamColors = getTeamColor(teamVal);
                 if (teamColors) {
                     teamCell.style.backgroundColor = teamColors.background;
                     teamCell.style.color = teamColors.text;
-                    byeCell.style.backgroundColor = teamColors.background; // Also color the bye week cell
-                    byeCell.style.color = teamColors.text; // And its text
+                    byeCell.style.backgroundColor = teamColors.background;
+                    byeCell.style.color = teamColors.text;
                 }
 
                 row.addEventListener('click', () => draftPlayer(player.player_id));
@@ -1172,7 +1527,18 @@
         };
 
         // Event Listeners
-        playerSearch.addEventListener('keyup', fetchPlayers);
+        playerSearch.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') return;
+            fetchPlayers();
+        });
+        playerSearch.addEventListener('keydown', async (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            if (!lastRenderedPlayers.length) return;
+            const topPlayer = lastRenderedPlayers[0];
+            playerSearch.value = '';
+            await draftPlayer(topPlayer.player_id);
+        });
         positionCheckboxes.forEach(checkbox => checkbox.addEventListener('change', fetchPlayers));
         gpFracMinInput.addEventListener('input', fetchPlayers);
         newDraftBtn.addEventListener('click', startNewDraft);
@@ -1184,6 +1550,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             setupSortHandlers();
+            loadInsightsMeta();
             loadInitialState();
             updatePositionMetaChips();
         });
