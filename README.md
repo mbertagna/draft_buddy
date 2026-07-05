@@ -47,6 +47,7 @@ Common output locations on the host:
 | `ast` | Generate Mermaid architecture diagrams | `python -m draft_buddy.arch_viz.cli --project-root /app --output-dir /app/viz --all-default-entries --strategy module` |
 | `insights-search` | Fetch web search snippets for top 150 ADP players (Valyu default) | `python scripts/fetch_player_insight_search.py --year 2026 --top-n 150 --search-provider valyu` |
 | `insights-synthesize` | Synthesize Gemini Flash player insights from cached search | `python scripts/synthesize_player_insights.py --year 2026 --top-n 150` |
+| `position-guide` | Generate static RL position probability cheat sheet | `python scripts/generate_position_guide.py --slot 5 --simulations 5000 --checkpoint-dir models/12_teams_random_start/v3` |
 
 ### Common Commands
 
@@ -141,6 +142,38 @@ docker compose run --rm insights-search python scripts/fetch_player_insight_sear
 docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --force
 ```
 
+### Position Guide (pre-draft cheat sheet)
+
+Offline Monte Carlo simulation produces a **static position probability guide** for your draft slot — useful as a fallback when the live dashboard is unavailable.
+
+**Prerequisites:**
+
+1. Generate player projections (if not already done): `docker compose run --rm data`
+2. A trained policy checkpoint (default: latest in `models/12_teams_random_start/v3/`)
+
+**Run (12-team league, slot 5):**
+
+```bash
+docker compose run --rm position-guide
+open data/guides/exports/position_guide_12teams_slot5_2026_*.html
+```
+
+**10-team league override:**
+
+```bash
+docker compose run --rm position-guide \
+  python scripts/generate_position_guide.py --num-teams 10 --slot 5 \
+  --checkpoint-dir models/10_teams_random_start/v1
+open data/guides/exports/position_guide_10teams_slot5_2026_*.html
+```
+
+**Outputs:**
+
+- JSON: `data/guides/exports/position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.json`
+- HTML: same basename with `.html` (printable cheat sheet)
+
+Each run writes a new timestamped export. Filenames include league size so 12-team and 10-team guides do not collide.
+
 ### `up` vs `run --rm`
 
 Use `docker compose up` for long-running services that should stay attached to a port, such as `webapp`.
@@ -192,3 +225,4 @@ behave consistently across services.
 - `scripts/generate_projections.py`
 - `scripts/fetch_player_insight_search.py`
 - `scripts/synthesize_player_insights.py`
+- `scripts/generate_position_guide.py`

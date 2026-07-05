@@ -16,6 +16,11 @@ PLAYER_INSIGHTS_EXPORT_PATTERN = re.compile(
     r"^player_insights_(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.json$"
 )
 
+POSITION_GUIDE_EXPORT_PATTERN = re.compile(
+    r"^position_guide_(?P<num_teams>\d+)teams_slot(?P<slot>\d+)_"
+    r"(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.(?P<ext>json|html)$"
+)
+
 
 def nflverse_cache_dir(data_root: str) -> str:
     """Return the nflverse raw-data cache directory under a data root.
@@ -211,6 +216,111 @@ def _resolve_latest_legacy_export(data_root: str) -> str | None:
     if not candidates:
         return None
     return max(candidates, key=os.path.getmtime)
+
+
+def position_guide_exports_dir(data_root: str) -> str:
+    """Return the directory for timestamped position guide exports.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+
+    Returns
+    -------
+    str
+        Path to the position guide exports directory.
+    """
+    return os.path.join(data_root, "guides", "exports")
+
+
+def position_guide_output_path(
+    data_root: str,
+    num_teams: int,
+    slot: int,
+    year: int,
+    generated_at: datetime,
+    ext: str = "json",
+) -> str:
+    """Return the path for a new timestamped position guide export.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+    num_teams : int
+        League size (e.g. ``12``).
+    slot : int
+        User draft slot (1-based).
+    year : int
+        Draft year (e.g. ``2026``).
+    generated_at : datetime
+        UTC generation timestamp embedded in the filename.
+    ext : str, optional
+        File extension without dot (``json`` or ``html``).
+
+    Returns
+    -------
+    str
+        Path to ``position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.{ext}``.
+    """
+    timestamp = _format_insights_timestamp(generated_at)
+    filename = f"position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.{ext}"
+    exports_dir = position_guide_exports_dir(data_root)
+    os.makedirs(exports_dir, exist_ok=True)
+    return os.path.join(exports_dir, filename)
+
+
+def resolve_latest_position_guide_path(
+    data_root: str,
+    num_teams: int,
+    slot: int,
+    year: int,
+    ext: str = "json",
+) -> str | None:
+    """Return the newest position guide export for league size, slot, and year.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+    num_teams : int
+        League size filter.
+    slot : int
+        Draft slot filter.
+    year : int
+        Draft year filter.
+    ext : str, optional
+        File extension without dot.
+
+    Returns
+    -------
+    str | None
+        Full path to the newest matching export, or ``None`` when none exist.
+    """
+    exports_dir = position_guide_exports_dir(data_root)
+    if not os.path.isdir(exports_dir):
+        return None
+
+    newest_path: str | None = None
+    newest_timestamp: str | None = None
+    for filename in os.listdir(exports_dir):
+        match = POSITION_GUIDE_EXPORT_PATTERN.match(filename)
+        if match is None:
+            continue
+        if (
+            int(match.group("num_teams")) != num_teams
+            or int(match.group("slot")) != slot
+            or int(match.group("year")) != year
+            or match.group("ext") != ext
+        ):
+            continue
+        timestamp = match.group("timestamp")
+        if newest_timestamp is None or timestamp > newest_timestamp:
+            newest_timestamp = timestamp
+            newest_path = os.path.join(exports_dir, filename)
+
+    return newest_path
 
 
 def resolve_latest_player_insights_path(data_root: str) -> str | None:

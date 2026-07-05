@@ -61,6 +61,60 @@ def save_run_metadata(config, run_name, version, run_version_dir):
     print(f"Run metadata saved to {metadata_path}")
 
 
+def _select_latest_checkpoint_path(checkpoint_paths: list[str]) -> str | None:
+    """Return the checkpoint path with the highest episode number.
+
+    Parameters
+    ----------
+    checkpoint_paths : list[str]
+        Candidate checkpoint file paths.
+
+    Returns
+    -------
+    str | None
+        Path to the newest checkpoint, or ``None`` when no valid paths exist.
+    """
+    latest_checkpoint = None
+    latest_episode_num = -1
+    for checkpoint_path in checkpoint_paths:
+        match = re.search(r"checkpoint_episode_(\d+)\.pth$", os.path.basename(checkpoint_path))
+        if not match:
+            continue
+        episode_num = int(match.group(1))
+        if episode_num > latest_episode_num:
+            latest_episode_num = episode_num
+            latest_checkpoint = checkpoint_path
+    return latest_checkpoint
+
+
+def find_latest_checkpoint_in_dir(version_dir: str) -> str | None:
+    """Find the latest checkpoint file in a version directory.
+
+    Parameters
+    ----------
+    version_dir : str
+        Directory containing ``checkpoint_episode_*.pth`` files.
+
+    Returns
+    -------
+    str | None
+        Path to the newest checkpoint, or ``None`` when none exist.
+    """
+    if not os.path.isdir(version_dir):
+        return None
+    checkpoints = glob.glob(os.path.join(version_dir, "checkpoint_episode_*.pth"))
+    if not checkpoints:
+        return None
+    latest_checkpoint = _select_latest_checkpoint_path(checkpoints)
+    if latest_checkpoint:
+        episode_match = re.search(
+            r"checkpoint_episode_(\d+)\.pth$", os.path.basename(latest_checkpoint)
+        )
+        episode_num = episode_match.group(1) if episode_match else "?"
+        print(f"Found latest checkpoint (episode {episode_num}): {latest_checkpoint}")
+    return latest_checkpoint
+
+
 def find_latest_checkpoint(config):
     """
     Find latest checkpoint path for current run name using highest episode number.
@@ -75,18 +129,13 @@ def find_latest_checkpoint(config):
     if not checkpoints:
         print(f"No checkpoint files found for run '{run_name}'.")
         return None
-    latest_checkpoint = None
-    latest_episode_num = -1
-    for checkpoint_path in checkpoints:
-        match = re.search(r"checkpoint_episode_(\d+)\.pth$", os.path.basename(checkpoint_path))
-        if not match:
-            continue
-        episode_num = int(match.group(1))
-        if episode_num > latest_episode_num:
-            latest_episode_num = episode_num
-            latest_checkpoint = checkpoint_path
+    latest_checkpoint = _select_latest_checkpoint_path(checkpoints)
     if latest_checkpoint:
-        print(f"Found latest checkpoint (episode {latest_episode_num}): {latest_checkpoint}")
+        episode_match = re.search(
+            r"checkpoint_episode_(\d+)\.pth$", os.path.basename(latest_checkpoint)
+        )
+        episode_num = episode_match.group(1) if episode_match else "?"
+        print(f"Found latest checkpoint (episode {episode_num}): {latest_checkpoint}")
     else:
         print(f"No checkpoint files with episode numbers found for run '{run_name}'.")
     return latest_checkpoint
