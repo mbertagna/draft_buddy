@@ -11,7 +11,13 @@ from .nflverse_client import NflverseCsvDownloader
 from .nflverse_crosswalk import NflverseCrosswalkBuilder
 from .nflverse_ids import normalize_gsis_id, normalize_sleeper_id
 from .rookie_projector import RookieProjector
-from .sleeper_catalog import SleeperCatalogBuilder
+from .sleeper_catalog import (
+    DEFAULT_SEARCH_RANK_SCAN_DEPTH,
+    DEFAULT_TOP_SEARCH_RANK_REPORT_SIZE,
+    SleeperCatalogBuilder,
+    build_search_rank_nflverse_match_report,
+    print_search_rank_nflverse_match_report,
+)
 from .sleeper_client import SleeperGateway, SleeperHttpGateway
 
 DEFAULT_SCORING_RULES = {
@@ -277,12 +283,16 @@ class FantasyDataProcessor:
         missing_nflverse_stats_df = pd.DataFrame()
         if self.project_rookies:
             print("Building Sleeper-anchored player catalog...")
+            all_sleeper_players_df = self._sleeper_gateway.fetch_all_players()
             catalog_df = self._sleeper_catalog_builder.build_base_catalog(
-                self._sleeper_gateway.fetch_all_players(), self.positions
+                all_sleeper_players_df, self.positions
             )
             crosswalk_df = self._crosswalk_builder.build(self.cache_dir, draft_year)
             draft_players_df = self._attach_legacy_stats_to_catalog(
                 catalog_df, legacy_stats_df, crosswalk_df
+            )
+            self._report_top_search_rank_nflverse_coverage(
+                all_sleeper_players_df, draft_players_df
             )
             missing_nflverse_stats_df = self._find_likely_veterans_missing_stats(draft_players_df)
             rookies_df = draft_players_df[draft_players_df['is_rookie_original'] == True]
@@ -311,6 +321,36 @@ class FantasyDataProcessor:
 
         print("Processing complete.")
         return draft_players_df, weekly_projections, missing_nflverse_stats_df
+
+    def _report_top_search_rank_nflverse_coverage(
+        self,
+        all_sleeper_players_df: pd.DataFrame,
+        catalog_with_stats_df: pd.DataFrame,
+        top_n: int = DEFAULT_TOP_SEARCH_RANK_REPORT_SIZE,
+    ) -> None:
+        """Print how many of Sleeper's top-ranked players matched nflverse stats.
+
+        Parameters
+        ----------
+        all_sleeper_players_df : pd.DataFrame
+            Full Sleeper player directory.
+        catalog_with_stats_df : pd.DataFrame
+            Catalog immediately after nflverse stats attach.
+        top_n : int, optional
+            Number of top ``search_rank`` players to evaluate.
+        """
+        if "search_rank" not in all_sleeper_players_df.columns:
+            print("Skipping Sleeper top-player match report: search_rank unavailable.")
+            return
+
+        report = build_search_rank_nflverse_match_report(
+            all_sleeper_players_df,
+            catalog_with_stats_df,
+            self.positions,
+            eligible_top_n=top_n,
+            scan_depth=DEFAULT_SEARCH_RANK_SCAN_DEPTH,
+        )
+        print_search_rank_nflverse_match_report(report)
 
     @staticmethod
     def _find_likely_veterans_missing_stats(draft_players_df: pd.DataFrame) -> pd.DataFrame:

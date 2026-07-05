@@ -28,6 +28,7 @@ PLAYER_DATAFRAME_COLUMNS = [
     "depth_chart_order",
     "gsis_id",
     "years_exp",
+    "search_rank",
 ]
 
 
@@ -146,6 +147,7 @@ class SleeperHttpGateway(SleeperGateway):
                 "depth_chart_order": player.get("depth_chart_order"),
                 "gsis_id": player.get("gsis_id"),
                 "years_exp": player.get("years_exp"),
+                "search_rank": player.get("search_rank"),
             }
             for sleeper_id, player in raw_players.items()
         ]

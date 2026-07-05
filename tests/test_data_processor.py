@@ -42,6 +42,7 @@ class FakeSleeperGateway:
                     "depth_chart_position": "QB",
                     "years_exp": 5,
                     "gsis_id": "00-0000001",
+                    "search_rank": 1,
                 },
                 {
                     "sleeper_id": "2",
@@ -53,6 +54,7 @@ class FakeSleeperGateway:
                     "depth_chart_position": "QB2",
                     "years_exp": 0,
                     "gsis_id": None,
+                    "search_rank": 2,
                 },
             ]
         )
