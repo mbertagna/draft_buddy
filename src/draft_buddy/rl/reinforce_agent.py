@@ -136,6 +136,8 @@ class ReinforceAgent:
         self, start_episode=1, run_version_dir=None, logs_dir=None
     ) -> Tuple[List[float], List[float]]:
         """Run main REINFORCE training loop."""
+        self.policy_network.train()
+        self.value_network.train()
         all_episode_rewards, all_policy_losses, all_actual_points = [], [], []
         metrics_logger = self._metrics_logger or MetricsLogger(logs_dir)
         interval = self.config.training.LOG_SAVE_INTERVAL_EPISODES

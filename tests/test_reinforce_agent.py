@@ -124,6 +124,17 @@ def test_save_checkpoint_writes_model_and_metrics(tiny_training_config) -> None:
     assert checkpoint_manager.saved[0][1] == 3 and metrics_logger.rewards == [1.0] and metrics_logger.losses == [0.5]
 
 
+def test_train_enables_training_mode_on_networks(tiny_training_config) -> None:
+    """Verify train() switches policy and value networks into training mode."""
+    agent = ReinforceAgent(FakeTrainingEnv(), tiny_training_config, checkpoint_manager=FakeCheckpointManager())
+    agent.policy_network.eval()
+    agent.value_network.eval()
+
+    agent.train(start_episode=1, run_version_dir=None, logs_dir=None)
+
+    assert agent.policy_network.training and agent.value_network.training
+
+
 def test_train_runs_single_episode_and_persists_metrics(tiny_training_config, monkeypatch) -> None:
     """Verify one-episode training writes rewards, losses, and checkpoints."""
     checkpoint_manager = FakeCheckpointManager()

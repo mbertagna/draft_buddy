@@ -164,7 +164,7 @@ def test_checkpoint_manager_loads_full_checkpoint_into_value_net_and_optimizer(
         str(checkpoint_path), tiny_training_config, is_training=True
     )
 
-    assert episode == 5 and not reloaded_policy.training and not reloaded_value.training
+    assert episode == 5 and reloaded_policy.training and reloaded_value.training
 
 
 def test_checkpoint_manager_rejects_training_without_embedded_config(

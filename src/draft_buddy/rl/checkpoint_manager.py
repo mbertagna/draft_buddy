@@ -100,7 +100,12 @@ class CheckpointManager:
             self._value_network.load_state_dict(checkpoint["value_state_dict"])
         if "optimizer_state_dict" in checkpoint and self._optimizer and is_training:
             self._optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        self._policy_network.eval()
-        if self._value_network:
-            self._value_network.eval()
+        if is_training:
+            self._policy_network.train()
+            if self._value_network:
+                self._value_network.train()
+        else:
+            self._policy_network.eval()
+            if self._value_network:
+                self._value_network.eval()
         return checkpoint.get("episode", 0)
