@@ -11,6 +11,7 @@ from typing import Dict, Optional
 import pandas as pd
 
 from draft_buddy.data.name_matching import standardize_name
+from draft_buddy.data.scoring.presets import ESPN_FULL_PPR_TRACKABLE
 
 from .engine import ScoringEngine
 
@@ -58,33 +59,8 @@ class ScoringService:
         self._scoring_rules = scoring_rules or self._default_rules()
 
     def _default_rules(self) -> Dict[str, float]:
-        """Returns default PPR scoring rules."""
-        return {
-            "passing_yards": 0.04,
-            "passing_tds": 4,
-            "interceptions": -2,
-            "passing_2pt_conversions": 2,
-            "passing_yards_300_399_game": 2,
-            "passing_yards_400_plus_game": 6,
-            "receiving_yards": 0.1,
-            "receptions": 1,
-            "receiving_tds": 6,
-            "receiving_2pt_conversions": 2,
-            "receiving_yards_100_199_game": 3,
-            "receiving_yards_200_plus_game": 6,
-            "rushing_yards": 0.1,
-            "rushing_tds": 6,
-            "rushing_2pt_conversions": 2,
-            "rushing_yards_100_199_game": 3,
-            "rushing_yards_200_plus_game": 6,
-            "pat_made": 1,
-            "fg_missed": -1,
-            "fg_made_0_39": 3,
-            "fg_made_40_49": 4,
-            "fg_made_50_59": 5,
-            "fg_made_60_": 6,
-            "total_fumbles_lost": -2,
-        }
+        """Return fallback scoring rules when no league profile is provided."""
+        return dict(ESPN_FULL_PPR_TRACKABLE)
 
     def apply_scoring(self, df: pd.DataFrame) -> pd.DataFrame:
         """
