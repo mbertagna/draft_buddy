@@ -134,6 +134,48 @@ def test_draft_controller_simulates_bot_pick(config, draft_state, player_catalog
     assert drafted_player.position == "RB" and draft_state.draft_history[0].player_id == drafted_player.player_id
 
 
+def test_draft_controller_simulates_policy_bot_pick(config, draft_state, player_catalog, rules_engine) -> None:
+    """Verify explicit policy bot simulation bypasses configured team bots."""
+
+    class PolicyBot(BotGM):
+        """Pick QB to distinguish from the heuristic stub bot."""
+
+        def execute_pick(
+            self,
+            team_id: int,
+            available_player_ids: set,
+            player_catalog,
+            team_roster,
+            roster_structure: dict,
+            bench_maxes: dict,
+            can_draft_position_fn,
+            try_select_player_fn,
+            build_state_fn=None,
+            get_action_mask_fn=None,
+            **kwargs,
+        ):
+            """Return the best available QB."""
+            _ = (team_roster, roster_structure, bench_maxes, kwargs, build_state_fn, get_action_mask_fn)
+            _valid, player = try_select_player_fn(team_id, "QB", available_player_ids)
+            return player
+
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+    drafted_player = controller.simulate_single_pick(
+        manual_draft_teams=set(),
+        build_state_fn=lambda _team_id: np.array([1.0], dtype=np.float32),
+        get_action_mask_fn=controller.get_action_mask_for_team,
+        policy_bot=PolicyBot(),
+    )
+
+    assert drafted_player.position == "QB"
+
+
 def test_draft_controller_action_mask_is_boolean_vector(draft_controller) -> None:
     """Verify action masks are typed and aligned with the action space."""
     mask = draft_controller.get_action_mask_for_team(1)

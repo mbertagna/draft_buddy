@@ -131,6 +131,80 @@
             font-size: 0.9rem;
             font-weight: 700;
         }
+        .assistant-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-left: 8px;
+        }
+        .assistant-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85rem;
+            color: #fff;
+            cursor: pointer;
+            user-select: none;
+        }
+        .assistant-toggle input {
+            cursor: pointer;
+        }
+        #ask-assistant-btn {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #2e7d32;
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        #ask-assistant-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        #assistant-scope-select {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            font-size: 0.85rem;
+        }
+        #assistant-banner {
+            display: none;
+            margin: 6px 0 0;
+            padding: 6px 10px;
+            border-radius: 6px;
+            background: rgba(255, 193, 7, 0.2);
+            color: #fff;
+            font-size: 0.85rem;
+        }
+        #assistant-banner.visible { display: block; }
+        #advisor-panel {
+            display: none;
+            margin: 8px 0 0;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        #advisor-panel.open { display: block; }
+        #advisor-panel h4 { margin: 0 0 8px; font-size: 1rem; }
+        #advisor-panel .advisor-loading { opacity: 0.85; font-style: italic; }
+        #advisor-panel .advisor-error { color: #ffcdd2; }
+        #advisor-panel ul { margin: 8px 0; padding-left: 18px; }
+        #advisor-panel .advisor-alternate { opacity: 0.9; font-size: 0.85rem; margin-top: 6px; }
+        #advisor-panel .advisor-close {
+            margin-top: 10px;
+            padding: 4px 10px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            cursor: pointer;
+        }
         .team-row {
             display: flex;
             align-items: center;
@@ -206,6 +280,14 @@
         #auto-draft-btn:disabled {
             opacity: 0.65;
             cursor: not-allowed;
+        }
+        #sim-mode-select {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.35);
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            font-size: 0.85rem;
         }
         #download-csv-btn { background-color: #6c757d; }
 
@@ -703,6 +785,13 @@
                 <span class="chip">TE <span id="te-drafted-display">N/A</span></span>
             </div>
             <div class="header-actions">
+                <label class="assistant-toggle" title="Sim Pick and Auto Draft engine">
+                    Sim
+                    <select id="sim-mode-select">
+                        <option value="bot">Bot</option>
+                        <option value="policy">Policy</option>
+                    </select>
+                </label>
                 <button id="undo-pick-btn">Undo</button>
                 <button id="simulate-pick-btn">Sim Pick</button>
                 <button type="button" id="auto-draft-btn">Auto Draft</button>
@@ -751,6 +840,23 @@
                 <span id="ai-text">AI</span>
                 <div id="ai-suggestion-display">N/A</div>
             </div>
+            <div class="assistant-controls">
+                <label class="assistant-toggle" title="Auto-run assistant on snake turns when scope allows">
+                    <input type="checkbox" id="assistant-auto-toggle">
+                    Auto assistant
+                </label>
+                <select id="assistant-scope-select" title="Auto assistant pick scope">
+                    <option value="agent_only">My picks only</option>
+                    <option value="all_teams">Every team</option>
+                </select>
+                <button type="button" id="ask-assistant-btn">Ask Assistant</button>
+            </div>
+        </div>
+        <div id="assistant-banner"></div>
+        <div id="advisor-panel" aria-live="polite">
+            <h4 id="advisor-panel-title">Assistant</h4>
+            <div id="advisor-panel-body"></div>
+            <button type="button" class="advisor-close" id="advisor-panel-close">Dismiss</button>
         </div>
     </header>
 
@@ -858,6 +964,7 @@
         const undoPickBtn = document.getElementById('undo-pick-btn');
         const simulatePickBtn = document.getElementById('simulate-pick-btn');
         const autoDraftBtn = document.getElementById('auto-draft-btn');
+        const simModeSelect = document.getElementById('sim-mode-select');
         const downloadCsvBtn = document.getElementById('download-csv-btn');
         const AUTO_DRAFT_LABEL = 'Auto Draft';
         const gpFracMinInput = document.getElementById('gp-frac-min');
@@ -878,6 +985,14 @@
         const outlookTooltipPhrase = document.getElementById('outlook-tooltip-phrase');
         const outlookTooltipRole = document.getElementById('outlook-tooltip-role');
         const outlookTooltipSummary = document.getElementById('outlook-tooltip-summary');
+        const assistantAutoToggle = document.getElementById('assistant-auto-toggle');
+        const assistantScopeSelect = document.getElementById('assistant-scope-select');
+        const askAssistantBtn = document.getElementById('ask-assistant-btn');
+        const assistantBanner = document.getElementById('assistant-banner');
+        const advisorPanel = document.getElementById('advisor-panel');
+        const advisorPanelTitle = document.getElementById('advisor-panel-title');
+        const advisorPanelBody = document.getElementById('advisor-panel-body');
+        const advisorPanelClose = document.getElementById('advisor-panel-close');
 
         let modalPlayerName = null;
 
@@ -920,6 +1035,187 @@
         let lastRenderedPlayers = [];
         // Track players to ignore for AI suggestion
         const blindSet = new Set();
+
+        let advisorInFlight = false;
+        let lastAutoAdvisorPickNumber = null;
+        let previousPickNumber = null;
+
+        function loadAssistantPreferences() {
+            const autoEnabled = sessionStorage.getItem('assistantAutoEnabled');
+            const scope = sessionStorage.getItem('assistantScope');
+            const simMode = sessionStorage.getItem('simEngineMode');
+            if (assistantAutoToggle && autoEnabled !== null) {
+                assistantAutoToggle.checked = autoEnabled === 'true';
+            }
+            if (assistantScopeSelect && scope) {
+                assistantScopeSelect.value = scope;
+            }
+            if (simModeSelect && simMode) {
+                simModeSelect.value = simMode;
+            }
+        }
+
+        function usePolicySimMode() {
+            return simModeSelect && simModeSelect.value === 'policy';
+        }
+
+        function buildSimRequestBody() {
+            return JSON.stringify({ use_policy: usePolicySimMode() });
+        }
+
+        function getAssistantScope() {
+            return assistantScopeSelect ? assistantScopeSelect.value : 'agent_only';
+        }
+
+        function getSnakeTeamOnTurn(state) {
+            if (state.snake_team_on_turn != null) {
+                return state.snake_team_on_turn;
+            }
+            const draftOrder = state.draft_order || [];
+            const snakePickIdx = state.current_pick_number - 1;
+            if (snakePickIdx >= 0 && snakePickIdx < draftOrder.length) {
+                return draftOrder[snakePickIdx];
+            }
+            return null;
+        }
+
+        function isOverrideActive(state) {
+            if (typeof state.override_active === 'boolean') {
+                return state.override_active;
+            }
+            const snakeTeam = getSnakeTeamOnTurn(state);
+            return snakeTeam != null && state.current_team_picking != null &&
+                Number(state.current_team_picking) !== Number(snakeTeam);
+        }
+
+        function isDraftActive(state) {
+            return Boolean(state && state.current_team_picking != null);
+        }
+
+        function getAdvisingTeamId(state, trigger) {
+            if (trigger === 'auto') {
+                return getSnakeTeamOnTurn(state);
+            }
+            return state.current_team_picking;
+        }
+
+        function shouldAutoAdvisor(state) {
+            if (!assistantAutoToggle || !assistantAutoToggle.checked) return false;
+            if (!isDraftActive(state)) return false;
+            if (isOverrideActive(state)) return false;
+            const snakeTeam = getSnakeTeamOnTurn(state);
+            if (snakeTeam == null) return false;
+            const agentTeamId = state.agent_start_position;
+            const scope = getAssistantScope();
+            if (scope === 'agent_only' && Number(snakeTeam) !== Number(agentTeamId)) {
+                return false;
+            }
+            if (lastAutoAdvisorPickNumber === state.current_pick_number) return false;
+            if (advisorInFlight) return false;
+            return true;
+        }
+
+        function updateAssistantBanner(state) {
+            if (!assistantBanner) return;
+            if (!state || !isDraftActive(state)) {
+                assistantBanner.classList.remove('visible');
+                assistantBanner.textContent = '';
+                return;
+            }
+            if (isOverrideActive(state)) {
+                assistantBanner.textContent =
+                    `Clock overridden — Ask Assistant will advise Team ${state.current_team_picking}. Auto assistant paused.`;
+                assistantBanner.classList.add('visible');
+                return;
+            }
+            assistantBanner.classList.remove('visible');
+            assistantBanner.textContent = '';
+        }
+
+        function updateAskAssistantButton(state) {
+            if (!askAssistantBtn) return;
+            askAssistantBtn.disabled = !isDraftActive(state);
+        }
+
+        function renderAdvisorLoading() {
+            if (!advisorPanel || !advisorPanelBody) return;
+            advisorPanel.classList.add('open');
+            advisorPanelTitle.textContent = 'Assistant';
+            advisorPanelBody.innerHTML = '<div class="advisor-loading">Thinking...</div>';
+        }
+
+        function renderAdvisorResult(data) {
+            if (!advisorPanel || !advisorPanelBody) return;
+            advisorPanel.classList.add('open');
+            advisorPanelTitle.textContent = `Pick: ${data.recommended_name}`;
+            const bullets = (data.rationale_bullets || [])
+                .map(item => `<li>${item}</li>`)
+                .join('');
+            const alternates = (data.alternates || [])
+                .map(item => `<div class="advisor-alternate">${item.name}: ${item.reason}</div>`)
+                .join('');
+            advisorPanelBody.innerHTML = `
+                <div><strong>Team ${data.advising_team_id}</strong> · confidence: ${data.confidence || 'n/a'}</div>
+                ${bullets ? `<ul>${bullets}</ul>` : ''}
+                ${alternates}
+            `;
+        }
+
+        function renderAdvisorError(message) {
+            if (!advisorPanel || !advisorPanelBody) return;
+            advisorPanel.classList.add('open');
+            advisorPanelTitle.textContent = 'Assistant';
+            advisorPanelBody.innerHTML = `<div class="advisor-error">${message}</div>`;
+        }
+
+        async function fetchAdvisor({ trigger = 'manual' } = {}) {
+            if (!currentDraftState || advisorInFlight) return;
+            const teamId = getAdvisingTeamId(currentDraftState, trigger);
+            if (teamId == null) {
+                renderAdvisorError('No team is currently on the clock.');
+                return;
+            }
+            advisorInFlight = true;
+            renderAdvisorLoading();
+            const gpMinStr = gpFracMinInput ? gpFracMinInput.value : '';
+            const payload = {
+                team_id: teamId,
+                scope: getAssistantScope(),
+                trigger,
+            };
+            if (gpMinStr !== '' && !Number.isNaN(parseFloat(gpMinStr))) {
+                payload.gp_min = parseFloat(gpMinStr);
+            }
+            try {
+                const response = await fetch('/api/draft/advisor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || `HTTP error! status: ${response.status}`);
+                }
+                renderAdvisorResult(data);
+                if (trigger === 'auto') {
+                    lastAutoAdvisorPickNumber = currentDraftState.current_pick_number;
+                }
+            } catch (error) {
+                console.error('Error fetching assistant recommendation:', error);
+                renderAdvisorError(error.message || 'Assistant request failed.');
+            } finally {
+                advisorInFlight = false;
+            }
+        }
+
+        function maybeAutoAdvisor(state) {
+            if (!shouldAutoAdvisor(state)) return;
+            window.setTimeout(() => {
+                if (shouldAutoAdvisor(currentDraftState)) {
+                    fetchAdvisor({ trigger: 'auto' });
+                }
+            }, 150);
+        }
 
         function setupSortHandlers() {
                 const ths = document.querySelectorAll('#player-list th');
@@ -1565,9 +1861,31 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             setupSortHandlers();
+            loadAssistantPreferences();
             loadInsightsMeta();
             loadInitialState();
             updatePositionMetaChips();
+            if (assistantAutoToggle) {
+                assistantAutoToggle.addEventListener('change', () => {
+                    sessionStorage.setItem('assistantAutoEnabled', String(assistantAutoToggle.checked));
+                });
+            }
+            if (assistantScopeSelect) {
+                assistantScopeSelect.addEventListener('change', () => {
+                    sessionStorage.setItem('assistantScope', assistantScopeSelect.value);
+                });
+            }
+            if (simModeSelect) {
+                simModeSelect.addEventListener('change', () => {
+                    sessionStorage.setItem('simEngineMode', simModeSelect.value);
+                });
+            }
+            if (askAssistantBtn) {
+                askAssistantBtn.addEventListener('click', () => fetchAdvisor({ trigger: 'manual' }));
+            }
+            if (advisorPanelClose) {
+                advisorPanelClose.addEventListener('click', () => advisorPanel.classList.remove('open'));
+            }
         });
 
         async function startNewDraft() {
@@ -1594,6 +1912,10 @@
         }
 
         function renderDraftState(state) {
+            if (previousPickNumber != null && state.current_pick_number < previousPickNumber) {
+                lastAutoAdvisorPickNumber = null;
+            }
+            previousPickNumber = state.current_pick_number;
             currentDraftState = state;
             currentPickDisplay.innerText = state.current_pick_number;
             teamOnClockDisplay.innerText = state.current_team_picking;
@@ -1735,6 +2057,9 @@
             }
 
             syncAutoDraftButtonState();
+            updateAssistantBanner(state);
+            updateAskAssistantButton(state);
+            maybeAutoAdvisor(state);
         }
 
         async function fetchAiSuggestionForTeam(teamId, ignoreIds) {
@@ -1905,7 +2230,11 @@
             }
             
             try {
-                const response = await fetch('/api/draft/simulate_pick', { method: 'POST' });
+                const response = await fetch('/api/draft/simulate_pick', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: buildSimRequestBody(),
+                });
                 const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data.error || `HTTP error! status: ${response.status}`);
@@ -1935,7 +2264,11 @@
             autoDraftBtn.textContent = "Drafting...";
 
             try {
-                const response = await fetch("/api/draft/simulate_rest", { method: "POST" });
+                const response = await fetch("/api/draft/simulate_rest", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: buildSimRequestBody(),
+                });
                 const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data.error || `HTTP error! status: ${response.status}`);

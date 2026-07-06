@@ -13,6 +13,36 @@ from draft_buddy.core import InferenceProvider
 from draft_buddy.web.session import DraftSession, DraftSessionManager
 
 
+class _PolicySimStubBot:
+    """Policy stub that picks QB when state callbacks are provided."""
+
+    def __init__(self, action_to_position: Dict[str, Any]) -> None:
+        self._action_to_position = action_to_position
+
+    def execute_pick(
+        self,
+        team_id: int,
+        available_player_ids: set,
+        player_catalog,
+        team_roster,
+        roster_structure: dict,
+        bench_maxes: dict,
+        can_draft_position_fn,
+        try_select_player_fn,
+        build_state_fn=None,
+        get_action_mask_fn=None,
+        **kwargs,
+    ):
+        """Return the best available QB when policy callbacks are wired."""
+        _ = (team_roster, roster_structure, bench_maxes, kwargs)
+        if build_state_fn is None or get_action_mask_fn is None:
+            return None
+        _ = build_state_fn(team_id)
+        _ = get_action_mask_fn(team_id)
+        _valid, player = try_select_player_fn(team_id, "QB", available_player_ids)
+        return player
+
+
 class StubInferenceProvider(InferenceProvider):
     """Simple inference provider used by session tests."""
 
@@ -20,6 +50,10 @@ class StubInferenceProvider(InferenceProvider):
         """Return no model-backed bot for tests."""
         _ = (team_id, strategy_config, action_to_position)
         return None
+
+    def create_policy_sim_bot(self, action_to_position: Dict[int, str]):
+        """Return a deterministic policy bot for simulated picks."""
+        return _PolicySimStubBot(action_to_position)
 
     def build_state_vector(self, team_id: int, draft_state, player_catalog) -> np.ndarray:
         """Return a deterministic state vector for tests."""
@@ -195,3 +229,79 @@ def test_draft_session_manager_create_new_replaces_existing_session(config) -> N
     second = manager.create_new("abc")
 
     assert first is not second and manager.get_or_create("abc") is second
+
+
+def test_get_ui_state_exposes_snake_team_and_override_flag(config, player_catalog) -> None:
+    """Verify UI state exposes snake turn and override metadata."""
+    session = DraftSession(config)
+    ui_state = session.get_ui_state()
+
+    assert ui_state["snake_team_on_turn"] == 1
+    assert ui_state["override_active"] is False
+    assert ui_state["current_team_picking"] == 1
+
+    session.set_current_team_picking(2)
+    ui_state = session.get_ui_state()
+
+    assert ui_state["snake_team_on_turn"] == 1
+    assert ui_state["override_active"] is True
+    assert ui_state["current_team_picking"] == 2
+
+
+class TeamAwareStubInferenceProvider(StubInferenceProvider):
+    """Return different probabilities per team for override tests."""
+
+    def predict_action_probabilities(
+        self,
+        team_id: int,
+        draft_state,
+        player_catalog,
+        action_to_position: Dict[str, Any],
+        get_action_mask_fn,
+    ) -> Dict[str, float]:
+        """Return team-specific position probabilities."""
+        _ = (draft_state, player_catalog, get_action_mask_fn)
+        if team_id == 2:
+            return {
+                action_to_position[0]: 0.1,
+                action_to_position[1]: 0.1,
+                action_to_position[2]: 0.7,
+                action_to_position[3]: 0.1,
+            }
+        return {
+            action_to_position[0]: 0.7,
+            action_to_position[1]: 0.1,
+            action_to_position[2]: 0.1,
+            action_to_position[3]: 0.1,
+        }
+
+
+def test_ai_suggestion_follows_override_team(config, player_catalog) -> None:
+    """Verify RL suggestions use the overridden on-clock team."""
+    session = DraftSession(config, inference_provider=TeamAwareStubInferenceProvider())
+
+    assert session.get_ai_suggestion()["QB"] == 0.7
+
+    session.set_current_team_picking(2)
+
+    assert session.get_ai_suggestion()["WR"] == 0.7
+
+
+def test_simulate_single_pick_uses_policy_when_requested(config, player_catalog) -> None:
+    """Verify policy simulation mode uses the inference provider bot."""
+    session = DraftSession(config, inference_provider=StubInferenceProvider())
+
+    session.simulate_single_pick(use_policy=True)
+
+    drafted = session.draft_history[0]
+    player = session.player_catalog.require(drafted.player_id)
+    assert player.position == "QB"
+
+
+def test_simulate_single_pick_policy_mode_requires_model(config, player_catalog) -> None:
+    """Verify policy simulation fails cleanly without an inference provider."""
+    session = DraftSession(config)
+
+    with pytest.raises(ValueError, match="Policy model not loaded"):
+        session.simulate_single_pick(use_policy=True)
+

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 
@@ -110,6 +110,23 @@ class DraftSession:
         return self._state.agent_team_id
 
     @property
+    def total_bench_size(self) -> int:
+        """Return configured bench size per team."""
+        return self._config.draft.TOTAL_BENCH_SIZE
+
+    @property
+    def snake_team_on_turn(self) -> Optional[int]:
+        """Return the team scheduled to pick in snake order."""
+        if self.current_pick_index >= len(self.draft_order):
+            return None
+        return self.draft_order[self.current_pick_index]
+
+    @property
+    def override_active(self) -> bool:
+        """Return whether a manual clock override is active."""
+        return self._state.override_team_id is not None
+
+    @property
     def available_player_ids(self) -> set[int]:
         """Return currently available player ids."""
         return self._state.available_player_ids
@@ -163,6 +180,8 @@ class DraftSession:
             "current_pick_index": self.current_pick_index,
             "current_pick_number": self.current_pick_number,
             "current_team_picking": self._controller.team_on_clock,
+            "snake_team_on_turn": self.snake_team_on_turn,
+            "override_active": self.override_active,
             "team_rosters": structured_rosters,
             "roster_counts": {
                 team_id: {
@@ -224,13 +243,73 @@ class DraftSession:
             raise ValueError(f"Invalid team ID: {team_id}. Must be between 1 and {self.num_teams}.")
         self._controller.set_override_team(team_id)
 
-    def simulate_single_pick(self) -> None:
-        """Simulate one opponent pick."""
-        self._controller.simulate_single_pick(manual_draft_teams=self.manual_draft_teams)
+    def _resolve_policy_simulation(self) -> tuple[Optional[BotGM], Optional[Callable], Optional[Callable]]:
+        """Build policy bot and callbacks for simulated picks.
 
-    def simulate_scheduled_picks_remaining(self) -> None:
-        """Simulate all remaining scheduled picks."""
-        self._controller.simulate_remaining(manual_draft_teams=self.manual_draft_teams)
+        Returns
+        -------
+        tuple[Optional[BotGM], Optional[Callable], Optional[Callable]]
+            Policy bot, state builder, and action-mask callbacks.
+        """
+        if self._inference_provider is None:
+            return None, None, None
+        policy_bot = self._inference_provider.create_policy_sim_bot(self._action_to_position)
+        if policy_bot is None:
+            return None, None, None
+        build_state_fn = lambda team_id: self._inference_provider.build_state_vector(
+            team_id,
+            self._state,
+            self.player_catalog,
+        )
+        return policy_bot, build_state_fn, self._controller.get_action_mask_for_team
+
+    def simulate_single_pick(self, use_policy: bool = False) -> None:
+        """Simulate one opponent pick.
+
+        Parameters
+        ----------
+        use_policy : bool, optional
+            When ``True``, use the loaded policy network instead of configured bots.
+        """
+        policy_bot = None
+        build_state_fn = None
+        get_action_mask_fn = None
+        if use_policy:
+            policy_bot, build_state_fn, get_action_mask_fn = self._resolve_policy_simulation()
+            if policy_bot is None:
+                raise ValueError(
+                    "Policy model not loaded. Switch sim mode to Bot or configure MODEL_PATH_TO_LOAD."
+                )
+        self._controller.simulate_single_pick(
+            manual_draft_teams=self.manual_draft_teams,
+            build_state_fn=build_state_fn,
+            get_action_mask_fn=get_action_mask_fn,
+            policy_bot=policy_bot,
+        )
+
+    def simulate_scheduled_picks_remaining(self, use_policy: bool = False) -> None:
+        """Simulate all remaining scheduled picks.
+
+        Parameters
+        ----------
+        use_policy : bool, optional
+            When ``True``, use the loaded policy network instead of configured bots.
+        """
+        policy_bot = None
+        build_state_fn = None
+        get_action_mask_fn = None
+        if use_policy:
+            policy_bot, build_state_fn, get_action_mask_fn = self._resolve_policy_simulation()
+            if policy_bot is None:
+                raise ValueError(
+                    "Policy model not loaded. Switch sim mode to Bot or configure MODEL_PATH_TO_LOAD."
+                )
+        self._controller.simulate_remaining(
+            manual_draft_teams=self.manual_draft_teams,
+            build_state_fn=build_state_fn,
+            get_action_mask_fn=get_action_mask_fn,
+            policy_bot=policy_bot,
+        )
 
     def get_ai_suggestion(self) -> Dict[str, Any]:
         """Return AI suggestion for the team currently on the clock."""

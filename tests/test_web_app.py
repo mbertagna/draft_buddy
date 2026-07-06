@@ -135,7 +135,7 @@ def test_override_team_maps_value_error_to_400(config, fake_session) -> None:
 
 def test_simulate_pick_maps_value_error_to_400(config, fake_session) -> None:
     """Verify simulate-pick validation errors become HTTP 400 responses."""
-    fake_session.simulate_single_pick = lambda: (_ for _ in ()).throw(ValueError("stop"))
+    fake_session.simulate_single_pick = lambda use_policy=False: (_ for _ in ()).throw(ValueError("stop"))
     client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
 
     response = client.post("/api/draft/simulate_pick")
@@ -145,7 +145,9 @@ def test_simulate_pick_maps_value_error_to_400(config, fake_session) -> None:
 
 def test_simulate_rest_maps_value_error_to_400(config, fake_session) -> None:
     """Verify simulate-rest validation errors become HTTP 400 responses."""
-    fake_session.simulate_scheduled_picks_remaining = lambda: (_ for _ in ()).throw(ValueError("halt"))
+    fake_session.simulate_scheduled_picks_remaining = lambda use_policy=False: (_ for _ in ()).throw(
+        ValueError("halt")
+    )
     client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
 
     response = client.post("/api/draft/simulate_rest")

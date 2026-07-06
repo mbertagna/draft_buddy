@@ -90,3 +90,18 @@ class InferenceProvider(ABC):
         Dict[str, float]
             Position-keyed probability values.
         """
+
+    def create_policy_sim_bot(self, action_to_position: Dict[int, str]) -> BotGM | None:
+        """Return a bot backed by the primary policy model for simulated picks.
+
+        Parameters
+        ----------
+        action_to_position : Dict[int, str]
+            Action-index to position mapping.
+
+        Returns
+        -------
+        BotGM | None
+            Policy-backed bot, or ``None`` when no model is available.
+        """
+        return None

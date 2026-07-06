@@ -78,6 +78,8 @@ Start the web application:
 docker compose up webapp
 ```
 
+In the header, use **Sim → Bot | Policy** to choose the engine for **Sim Pick** and **Auto Draft**. Bot uses configured heuristic/ADP strategies; Policy uses the loaded RL checkpoint (`MODEL_PATH_TO_LOAD`).
+
 Run training:
 
 ```bash
@@ -162,6 +164,20 @@ docker compose run --rm insights-search python scripts/fetch_player_insight_sear
 docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --search-provider google --force
 docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --force
 ```
+
+### Live Draft Assistant
+
+The web UI includes an on-demand **Gemini draft assistant** alongside the fast RL position chips. Set `GEMINI_API_KEY` in `.env` (same key as insight synthesis). Optional: `ADVISOR_GEMINI_MODEL` (default `gemini-2.5-flash`).
+
+**In the header:**
+
+- **Auto assistant** — when on, fires once per snake turn when scope allows (skipped during clock overrides)
+- **Scope** — *My picks only* (agent team from league config) or *Every team* (auto only)
+- **Ask Assistant** — always available during an active draft; uses the selected/on-clock team (including overrides)
+
+The assistant builds per-position shortlists (top 7 by VORP/ADP for the RL model's top two positions, top 5 for the others) and returns a structured pick recommendation. Min GP Frac from the player table is sent with each request.
+
+See [PLAYER_INSIGHTS_PART2_PLAN.md](PLAYER_INSIGHTS_PART2_PLAN.md) for architecture details.
 
 ### Position Guide (pre-draft cheat sheet)
 

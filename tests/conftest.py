@@ -242,8 +242,8 @@ def fake_session(player_catalog: PlayerCatalog):
         undo_last_pick=lambda: None,
         transfer_player=lambda player_id, to_team_id: None,
         set_current_team_picking=lambda team_id: None,
-        simulate_single_pick=lambda: None,
-        simulate_scheduled_picks_remaining=lambda: None,
+        simulate_single_pick=lambda use_policy=False: None,
+        simulate_scheduled_picks_remaining=lambda use_policy=False: None,
         get_ai_suggestion=lambda: {"QB": 0.7},
         get_ai_suggestions_all=lambda: {1: {"QB": 0.7}},
         get_ai_suggestion_for_team=lambda team_id, ignore_player_ids=None: {

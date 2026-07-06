@@ -219,6 +219,7 @@ class DraftController:
         manual_draft_teams: set[int],
         build_state_fn=None,
         get_action_mask_fn=None,
+        policy_bot: BotGM | None = None,
     ) -> Player:
         """Simulate a single non-manual team pick."""
         team_id = self.team_on_clock
@@ -227,11 +228,27 @@ class DraftController:
         self.state.override_team_id = None
         if team_id in manual_draft_teams:
             raise ValueError("It is a manual team's turn. Cannot simulate pick.")
-        selected_player = self._select_bot_pick(
-            team_id=team_id,
-            build_state_fn=build_state_fn,
-            get_action_mask_fn=get_action_mask_fn,
-        )
+        if policy_bot is not None:
+            if build_state_fn is None or get_action_mask_fn is None:
+                raise ValueError("Policy simulation requires state builder callbacks.")
+            selected_player = policy_bot.execute_pick(
+                team_id=team_id,
+                available_player_ids=self.available_player_ids,
+                player_catalog=self.player_catalog,
+                team_roster=self.state.roster_for_team(team_id),
+                roster_structure=self.state.roster_structure,
+                bench_maxes=self.state.bench_maxes,
+                can_draft_position_fn=self.can_draft_position,
+                try_select_player_fn=self.try_select_player_for_team,
+                build_state_fn=build_state_fn,
+                get_action_mask_fn=get_action_mask_fn,
+            )
+        else:
+            selected_player = self._select_bot_pick(
+                team_id=team_id,
+                build_state_fn=build_state_fn,
+                get_action_mask_fn=get_action_mask_fn,
+            )
         if selected_player is None:
             raise ValueError(f"Team {team_id} could not make a valid pick.")
         self.apply_pick(team_id=team_id, player_id=selected_player.player_id, is_manual_pick=False)
@@ -242,6 +259,7 @@ class DraftController:
         manual_draft_teams: set[int],
         build_state_fn=None,
         get_action_mask_fn=None,
+        policy_bot: BotGM | None = None,
     ) -> None:
         """Simulate remaining scheduled picks."""
         while self.current_pick_index < len(self.draft_order):
@@ -249,6 +267,7 @@ class DraftController:
                 manual_draft_teams=manual_draft_teams,
                 build_state_fn=build_state_fn,
                 get_action_mask_fn=get_action_mask_fn,
+                policy_bot=policy_bot,
             )
 
     def resolve_roster_players(self, team_id: int) -> list[Player]:

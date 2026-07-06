@@ -16,6 +16,8 @@ from draft_buddy.rl.feature_extractor import FeatureExtractor
 from draft_buddy.rl.policy_network import PolicyNetwork
 from draft_buddy.rl.state_normalizer import StateNormalizer
 from draft_buddy.web.app import create_app
+from draft_buddy.web.draft_advisor_gateway import GeminiFlashAdvisorGateway
+from draft_buddy.web.draft_advisor_service import DraftAdvisorService
 from draft_buddy.web.session import DraftSessionManager
 
 
@@ -54,6 +56,23 @@ class RlInferenceProvider(InferenceProvider):
         if model is None:
             return None
         return AgentModelBotGM(model, action_to_position)
+
+    def create_policy_sim_bot(self, action_to_position: Dict[int, str]) -> BotGM | None:
+        """Return a bot backed by the loaded suggestion policy checkpoint.
+
+        Parameters
+        ----------
+        action_to_position : Dict[int, str]
+            Action-index to position mapping.
+
+        Returns
+        -------
+        BotGM | None
+            Policy-backed bot, or ``None`` when the suggestion model is unavailable.
+        """
+        if self._suggestion_model is None:
+            return None
+        return AgentModelBotGM(self._suggestion_model, action_to_position)
 
     def build_state_vector(
         self, team_id: int, draft_state: DraftState, player_catalog: PlayerCatalog
@@ -174,10 +193,25 @@ def main() -> None:
     inference_provider = RlInferenceProvider(config)
     session_manager = DraftSessionManager(config, inference_provider=inference_provider)
     loaded_insights = load_latest_player_insights(config.paths.DATA_DIR)
+    advisor_service = None
+    gemini_api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if gemini_api_key:
+        advisor_model = os.environ.get("ADVISOR_GEMINI_MODEL", "gemini-2.5-flash")
+        try:
+            advisor_service = DraftAdvisorService(
+                GeminiFlashAdvisorGateway(api_key=gemini_api_key, model=advisor_model)
+            )
+        except ImportError as error:
+            print(
+                "Draft assistant disabled: google-genai is not installed. "
+                "Rebuild the Docker image with `docker compose build webapp`."
+            )
+            print(f"Import error: {error}")
     app = create_app(
         config=config,
         session_manager=session_manager,
         loaded_insights=loaded_insights,
+        advisor_service=advisor_service,
     )
     port = int(os.environ.get("PORT", 5001))
     uvicorn.run(app, host="0.0.0.0", port=port)

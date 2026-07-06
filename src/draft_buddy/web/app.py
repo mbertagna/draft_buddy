@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import uuid
@@ -15,6 +16,8 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from draft_buddy.config import Config
 from draft_buddy.data.insights.loader import LoadedPlayerInsights
 from draft_buddy.simulator.service import SeasonSimulationService
+from draft_buddy.web.draft_advisor_schemas import AdvisorRequest
+from draft_buddy.web.draft_advisor_service import DraftAdvisorError, DraftAdvisorService
 from draft_buddy.web.session import DraftSessionManager
 
 
@@ -22,6 +25,7 @@ def create_app(
     config: Optional[Config] = None,
     session_manager: Optional[DraftSessionManager] = None,
     loaded_insights: Optional[LoadedPlayerInsights] = None,
+    advisor_service: Optional[DraftAdvisorService] = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -33,6 +37,8 @@ def create_app(
         Session manager instance, typically injected by composition root.
     loaded_insights : Optional[LoadedPlayerInsights], optional
         Pre-loaded player insights export for UI enrichment.
+    advisor_service : Optional[DraftAdvisorService], optional
+        Draft assistant service for structured LLM recommendations.
 
     Returns
     -------
@@ -50,6 +56,7 @@ def create_app(
     insights_by_id = insights_store.players
     insights_file_meta = insights_store.meta
     insights_source_path = insights_store.source_path
+    runtime_advisor_service = advisor_service
 
     def _session_id(request: Request, response: Optional[Response] = None) -> str:
         """Resolve session id from cookie or create one."""
@@ -156,11 +163,18 @@ def create_app(
 
 
     @app.post("/api/draft/simulate_pick")
-    def simulate_pick(request: Request, response: Response) -> dict:
+    async def simulate_pick(request: Request, response: Response) -> dict:
         """Simulate one pick."""
         session = runtime_session_manager.get_or_create(_session_id(request, response))
+        use_policy = False
         try:
-            session.simulate_single_pick()
+            payload = await request.json()
+            if isinstance(payload, dict):
+                use_policy = bool(payload.get("use_policy", False))
+        except Exception:
+            pass
+        try:
+            session.simulate_single_pick(use_policy=use_policy)
             session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
@@ -168,11 +182,18 @@ def create_app(
 
 
     @app.post("/api/draft/simulate_rest")
-    def simulate_rest(request: Request, response: Response) -> dict:
+    async def simulate_rest(request: Request, response: Response) -> dict:
         """Simulate all remaining picks."""
         session = runtime_session_manager.get_or_create(_session_id(request, response))
+        use_policy = False
         try:
-            session.simulate_scheduled_picks_remaining()
+            payload = await request.json()
+            if isinstance(payload, dict):
+                use_policy = bool(payload.get("use_policy", False))
+        except Exception:
+            pass
+        try:
+            session.simulate_scheduled_picks_remaining(use_policy=use_policy)
             session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
@@ -209,6 +230,29 @@ def create_app(
                 if stripped.isdigit():
                     ignore_ids.append(int(stripped))
         return session.get_ai_suggestion_for_team(team_id=team_id, ignore_player_ids=ignore_ids)
+
+
+    @app.post("/api/draft/advisor")
+    async def draft_advisor(request: Request, response: Response) -> dict:
+        """Return a structured LLM draft recommendation for the advising team."""
+        if runtime_advisor_service is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Draft assistant is not configured. Set GEMINI_API_KEY.",
+            )
+        session = runtime_session_manager.get_or_create(_session_id(request, response))
+        payload = await request.json()
+        try:
+            advisor_request = AdvisorRequest.model_validate(payload or {})
+            recommendation = await asyncio.to_thread(
+                runtime_advisor_service.recommend,
+                session,
+                advisor_request,
+                insights_by_id,
+            )
+        except DraftAdvisorError as error:
+            raise HTTPException(status_code=error.status_code, detail=str(error)) from error
+        return recommendation.model_dump(mode="json")
 
 
     @app.get("/api/draft/summary")
