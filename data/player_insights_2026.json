@@ -1,0 +1,500 @@
+{
+  "schema_version": "1.0",
+  "draft_year": 2026,
+  "generated_at": "2026-07-04T17:07:47.722146Z",
+  "model": "gemini-2.5-flash",
+  "players": {
+    "9488": {
+      "outlook_phrase": "Highest-paid WR, reigning OPOY, poised for elite production.",
+      "summary": "Jaxon Smith-Njigba signed a record-breaking contract, becoming the highest-paid wide receiver in NFL history after being named the reigning NFL Offensive Player of the Year. He is expected to continue his elite production, having posted 1,793 receiving yards and 119 receptions in 2025.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "low",
+      "upside": "high",
+      "recovery_status": "na",
+      "tags": [],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "Smith-Njigba agreed to a four-year, $168.6 million contract extension with the Seahawks, making him the highest-paid WR.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "Jaxon Smith-Njigba, Seattle Seahawks, WR - Fantasy Football News, Stats - CBS Sports",
+          "source_url": "https://www.cbssports.com/nfl/players/3162959/jaxon-smith-njigba/fantasy/",
+          "published_date": "2026-03-23"
+        },
+        {
+          "text": "He was the reigning NFL Offensive Player of the Year at the time of his contract extension.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "Jaxon Smith-Njigba, Seattle Seahawks, WR - Fantasy Football News, Stats - CBS Sports",
+          "source_url": "https://www.cbssports.com/nfl/players/3162959/jaxon-smith-njigba/fantasy/",
+          "published_date": "2026-03-23"
+        },
+        {
+          "text": "In 2025, he recorded 119 receptions, 1,793 receiving yards, and 10 touchdowns.",
+          "source_domain": "www.rotowire.com",
+          "source_title": "Jaxon Smith-Njigba NFL Stats & News | RotoWire",
+          "source_url": "https://www.rotowire.com/football/player/jaxon-smith-njigba-16654",
+          "published_date": "2026-07-04"
+        },
+        {
+          "text": "He accounted for 44.1% of Seattle's receiving yards in 2025, the highest mark on the team.",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Jaxon Smith-Njigba Fantasy Football Notes & Advice | Seattle Seahawks | FantasyPros",
+          "source_url": "https://www.fantasypros.com/nfl/notes/jaxon-smith-njigba.php",
+          "published_date": "2026-07-04"
+        }
+      ],
+      "search_queries_used": [
+        "\"Jaxon Smith-Njigba\" SEA WR 2026 fantasy outlook injury role",
+        "\"Jaxon Smith-Njigba\" SEA target share WR1 WR2 depth chart"
+      ],
+      "snippet_count": 8
+    },
+    "9221": {
+      "outlook_phrase": "Bell cow with high fantasy upside for 2026.",
+      "summary": "Jahmyr Gibbs finished as the RB3 in fantasy points per game last year, with his usage significantly increasing after Week 10. Lions coach Dan Campbell has explicitly stated that Gibbs will be the team's \"bell cow\" in 2026.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "low",
+      "upside": "high",
+      "recovery_status": "na",
+      "tags": [
+        "role_expansion"
+      ],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "Lions coach Dan Campbell stated that Jahmyr Gibbs will be the team's \"bell cow\" in 2026, indicating a primary role.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "Jahmyr Gibbs, Detroit Lions, RB - Fantasy Football News, Stats - CBS Sports",
+          "source_url": "https://www.cbssports.com/nfl/players/3162723/jahmyr-gibbs/fantasy/",
+          "published_date": "2026-06-04"
+        },
+        {
+          "text": "After Week 10 last year, Gibbs' usage significantly increased, playing no less than 68% of snaps and averaging 20 touche",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Jahmyr Gibbs Fantasy Football Outlook (2026) - Derek Brown (FantasyPros)",
+          "source_url": "https://www.fantasypros.com/nfl/notes/418458/jahmyr-gibbs-2026-outlook.php",
+          "published_date": "2026-05-12"
+        },
+        {
+          "text": "He finished as the RB3 in fantasy points per game last year, demonstrating high production.",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Jahmyr Gibbs Fantasy Football Outlook (2026) - Derek Brown (FantasyPros)",
+          "source_url": "https://www.fantasypros.com/nfl/notes/418458/jahmyr-gibbs-2026-outlook.php",
+          "published_date": "2026-05-12"
+        },
+        {
+          "text": "Gibbs has maintained at least 5.0 yards per carry and blistering touchdown production in each of his three NFL seasons.",
+          "source_domain": "www.rotowire.com",
+          "source_title": "Jahmyr Gibbs NFL Stats & News | RotoWire",
+          "source_url": "https://www.rotowire.com/football/player/jahmyr-gibbs-16808",
+          "published_date": "2026-07-04"
+        }
+      ],
+      "search_queries_used": [
+        "\"Jahmyr Gibbs\" DET RB 2026 fantasy outlook injury role",
+        "\"Jahmyr Gibbs\" DET snap share touches committee starter"
+      ],
+      "snippet_count": 8
+    },
+    "4034": {
+      "outlook_phrase": "Top-five RB, but high usage raises injury concerns.",
+      "summary": "Christian McCaffrey is considered a top-five fantasy running back for 2026, capable of another RB1 overall season. However, his excessive usage in 2025 raises concerns about potential injury and a possible decline in production.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "high",
+      "upside": "high",
+      "recovery_status": "na",
+      "tags": [
+        "injury_risk"
+      ],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "McCaffrey is considered a top-five Fantasy running back for 2026, worth drafting toward the middle or end of Round 1.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "2026 Outlook: Christian McCaffrey - CBS Sports",
+          "source_url": "https://www.cbssports.com/fantasy/football/news/2026-outlook-christian-mccaffrey/",
+          "published_date": "2026-06-08"
+        },
+        {
+          "text": "He led the NFL in touches in 2025 with 450, and chasing RBs after monster touch totals is not a good bet.",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Christian McCaffrey Fantasy Football Outlook (2026) - Andrew Erickson (FantasyPros)",
+          "source_url": "https://www.fantasypros.com/nfl/notes/415490/christian-mccaffrey-2026-outlook.php",
+          "published_date": "2026-06-12"
+        },
+        {
+          "text": "McCaffrey is coming off a year with the most excessive usage of his life, making avoiding him in 2026 a consideration.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "CMC: The bust-case for drafting him in Round 1 - CBS Sports",
+          "source_url": "https://www.cbssports.com/fantasy/football/news/christian-mccaffrey-fantasy-football-outlook-2026-bust-avoid-drafting/",
+          "published_date": "2026-06-23"
+        },
+        {
+          "text": "He could easily post another RB1 overall season in 2026, or get dinged up and miss time due to his volume.",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Best Running Backs for Fantasy Football 2026 | FantasyPros",
+          "source_url": "https://www.fantasypros.com/2026/05/best-running-backs-for-fantasy-football/",
+          "published_date": "2026-05-31"
+        }
+      ],
+      "search_queries_used": [
+        "\"Christian McCaffrey\" SF RB 2026 fantasy outlook injury role",
+        "\"Christian McCaffrey\" SF snap share touches committee starter",
+        "\"Christian McCaffrey\" SF injury recovery cleared full practice 2026"
+      ],
+      "snippet_count": 8
+    },
+    "6794": {
+      "outlook_phrase": "Bounce-back candidate with high upside despite recent struggles.",
+      "summary": "Justin Jefferson experienced a \"horrible runout\" as WR28 last season, impacted by quarterback play and a decline in his separation and route win rates. Despite this, he is still considered a candidate to finish as a top-tier WR, with trade rumors also circulating.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "low",
+      "upside": "high",
+      "recovery_status": "na",
+      "tags": [
+        "qb_change",
+        "role_reduction",
+        "trade_rumor"
+      ],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "Last year, Justin Jefferson had a horrible runout as the WR28 in fantasy points per game (WR14 in expected fantasy point",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Justin Jefferson Fantasy Football News, Rankings, Projections | Minnesota Vikings | FantasyPros",
+          "source_url": "https://www.fantasypros.com/nfl/players/justin-jefferson.php",
+          "published_date": "2026-07-04"
+        },
+        {
+          "text": "A ton of his season was impacted by the level of quarterback play, but Jefferson also slid to 36th in separation score a",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Justin Jefferson Fantasy Football News, Rankings, Projections | Minnesota Vikings | FantasyPros",
+          "source_url": "https://www.fantasypros.com/nfl/players/justin-jefferson.php",
+          "published_date": "2026-07-04"
+        },
+        {
+          "text": "Fact or Feeling: Justin Jefferson will finish as WR3 or better?",
+          "source_domain": "www.espn.com",
+          "source_title": "Chicago Bears Scores, Stats and Highlights - ESPN",
+          "source_url": "https://www.espn.com/nfl/team/_/name/chi/chicago-bears",
+          "published_date": "2026-07-04"
+        },
+        {
+          "text": "Vikings Rumor Rundown: DeAndre Hopkins, a Justin Jefferson Trade, The Battle Winner",
+          "source_domain": "sports.yahoo.com",
+          "source_title": "Vikings Rumor Rundown: DeAndre Hopkins, a Justin Jefferson Trade, The Battle Winner - Yahoo Sports",
+          "source_url": "https://sports.yahoo.com/articles/vikings-rumor-rundown-deandre-hopkins-050500324.html",
+          "published_date": "2026-07-04"
+        }
+      ],
+      "search_queries_used": [
+        "\"Justin Jefferson\" MIN WR 2026 fantasy outlook injury role",
+        "\"Justin Jefferson\" MIN target share WR1 WR2 depth chart"
+      ],
+      "snippet_count": 8
+    },
+    "7547": {
+      "outlook_phrase": "Safest pick with consistent elite production.",
+      "summary": "Amon-Ra St. Brown has been a top-3 fantasy WR for three straight seasons, demonstrating remarkable consistency and a high floor.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "low",
+      "upside": "high",
+      "recovery_status": "na",
+      "tags": [
+        "coaching_change"
+      ],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "St. Brown remains one of the safest draft picks you can make on draft day, proving why managers were foolish to let him",
+          "source_domain": "www.cbssports.com",
+          "source_title": "2026 Outlook: Amon-Ra St. Brown - CBS Sports",
+          "source_url": "https://www.cbssports.com/fantasy/football/news/2026-outlook-amon-ra-st-brown/",
+          "published_date": "2026-06-08"
+        },
+        {
+          "text": "He has now racked up three consecutive seasons with at least 1,250 receiving yards and 141 targets, giving him one of th",
+          "source_domain": "www.cbssports.com",
+          "source_title": "2026 Outlook: Amon-Ra St. Brown - CBS Sports",
+          "source_url": "https://www.cbssports.com/fantasy/football/news/2026-outlook-amon-ra-st-brown/",
+          "published_date": "2026-06-08"
+        },
+        {
+          "text": "Amon-Ra St. Brown continued his remarkable consistency in 2025, finishing as a top-3 fantasy WR for the third straight s",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Best Wide Receivers for Fantasy Football 2026 | FantasyPros",
+          "source_url": "https://www.fantasypros.com/2026/06/best-wide-receivers-for-fantasy-football/",
+          "published_date": "2026-06-01"
+        },
+        {
+          "text": "Even with Detroit transitioning to a new offensive coordinator in 2026, St. Brown once again dominated high-value usage,",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Best Wide Receivers for Fantasy Football 2026 | FantasyPros",
+          "source_url": "https://www.fantasypros.com/2026/06/best-wide-receivers-for-fantasy-football/",
+          "published_date": "2026-06-01"
+        }
+      ],
+      "search_queries_used": [
+        "\"Amon-Ra St. Brown\" DET WR 2026 fantasy outlook injury role",
+        "\"Amon-Ra St. Brown\" DET target share WR1 WR2 depth chart"
+      ],
+      "snippet_count": 8
+    },
+    "9509": {
+      "outlook_phrase": "Elite RB2, top-two fantasy pick in 2026",
+      "summary": "Bijan Robinson is projected as a top fantasy pick and the RB2 for 2026, coming off a career year in yards and receptions. His strong performance metrics, including yards after contact and tackle avoid rate, position him as a high-volume starter, especially with Tyler Allgeier's departure.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "low",
+      "upside": "high",
+      "recovery_status": "na",
+      "tags": [
+        "role_expansion"
+      ],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "Robinson is projected as the RB2 in 2026 and is considered worth a top-two pick in a one-QB league.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "2026 Outlook: Bijan Robinson - CBS Sports",
+          "source_url": "https://www.cbssports.com/fantasy/football/news/2026-outlook-bijan-robinson/",
+          "published_date": "2026-06-08"
+        },
+        {
+          "text": "He is coming off a career year in terms of yards and receptions, demonstrating strong on-field performance.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "2026 Outlook: Bijan Robinson - CBS Sports",
+          "source_url": "https://www.cbssports.com/fantasy/football/news/2026-outlook-bijan-robinson/",
+          "published_date": "2026-06-08"
+        },
+        {
+          "text": "His 3.95 yards after contact per attempt ranked second, and his 30% tackle avoid rate was the best in the NFL.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "2026 Outlook: Bijan Robinson - CBS Sports",
+          "source_url": "https://www.cbssports.com/fantasy/football/news/2026-outlook-bijan-robinson/",
+          "published_date": "2026-06-08"
+        },
+        {
+          "text": "Tyler Allgeier is gone, which could lead to an expanded role for Robinson in the backfield.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "2026 Outlook: Bijan Robinson - CBS Sports",
+          "source_url": "https://www.cbssports.com/fantasy/football/news/2026-outlook-bijan-robinson/",
+          "published_date": "2026-06-08"
+        }
+      ],
+      "search_queries_used": [
+        "\"Bijan Robinson\" ATL RB 2026 fantasy outlook injury role",
+        "\"Bijan Robinson\" ATL snap share touches committee starter"
+      ],
+      "snippet_count": 8
+    },
+    "7564": {
+      "outlook_phrase": "Firmly an overall WR1 candidate for 2026.",
+      "summary": "Ja'Marr Chase remains a top-tier fantasy WR, commanding over a 30% target share and leading the Bengals' passing game. With a healthy Joe Burrow, he is a perennial first-round pick with high upside.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "low",
+      "upside": "high",
+      "recovery_status": "na",
+      "tags": [],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "Ja'Marr Chase remains firmly atop the conversation for the overall WR1 in fantasy football after a dominant 2025 season.",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Ja'Marr Chase Fantasy Football Outlook (2026) - Andrew Erickson (FantasyPros)",
+          "source_url": "https://www.fantasypros.com/nfl/notes/418951/jamarr-chase-2026-outlook.php",
+          "published_date": "2026-05-19"
+        },
+        {
+          "text": "He commanded over a 30% target share while averaging 88.3 receiving yards per game and ranking among league leaders in r",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Ja'Marr Chase Fantasy Football Outlook (2026) - Andrew Erickson (FantasyPros)",
+          "source_url": "https://www.fantasypros.com/nfl/notes/418951/jamarr-chase-2026-outlook.php",
+          "published_date": "2026-05-19"
+        },
+        {
+          "text": "Chase was the WR3 in fantasy points per game in 2025, finishing sixth in red zone targets and 18th in deep targets (tied",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Ja'Marr Chase Fantasy Football Notes & Advice | Cincinnati Bengals | FantasyPros",
+          "source_url": "https://www.fantasypros.com/nfl/notes/jamarr-chase.php",
+          "published_date": "2026-07-04"
+        },
+        {
+          "text": "He remains the leader of Cincinnati's wide receiver corps and is attached to a healthy Joe Burrow for the 2026 season.",
+          "source_domain": "www.cbssports.com",
+          "source_title": "Ja'Marr Chase, Cincinnati Bengals, WR - Fantasy Football News, Stats - CBS Sports",
+          "source_url": "https://www.cbssports.com/nfl/players/2966320/jamarr-chase/fantasy/",
+          "published_date": "2026-06-24"
+        }
+      ],
+      "search_queries_used": [
+        "\"Ja'Marr Chase\" CIN WR 2026 fantasy outlook injury role",
+        "\"Ja'Marr Chase\" CIN target share WR1 WR2 depth chart"
+      ],
+      "snippet_count": 8
+    },
+    "6813": {
+      "outlook_phrase": "Workhorse RB with high upside alongside Daniel Jones.",
+      "summary": "Jonathan Taylor was a top-tier fantasy RB when playing with Daniel Jones, averaging 21. 7 touches and 132.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "low",
+      "upside": "high",
+      "recovery_status": "na",
+      "tags": [
+        "role_expansion",
+        "qb_change"
+      ],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "Jonathan Taylor was the RB4 in fantasy points per game last year, performing as the RB2 with Daniel Jones (Weeks 1-13),",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Jonathan Taylor Fantasy Football Outlook (2026) - Derek Brown (FantasyPros)",
+          "source_url": "https://www.fantasypros.com/nfl/notes/418938/jonathan-taylor-2026-outlook.php",
+          "published_date": "2026-07-04"
+        },
+        {
+          "text": "After Daniel Jones was out of the lineup (Achilles), Taylor's production dropped to RB22 in fantasy points per game, des",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Jonathan Taylor Fantasy Football Outlook (2026) - Derek Brown (FantasyPros)",
+          "source_url": "https://www.fantasypros.com/nfl/notes/418938/jonathan-taylor-2026-outlook.php",
+          "published_date": "2026-07-04"
+        },
+        {
+          "text": "He is expected to remain in a workhorse role for the upcoming season.",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Jonathan Taylor (neck) off injury report for Week 2 - Jonathan Taylor News | FantasyPros",
+          "source_url": "https://www.fantasypros.com/nfl/news/539360/jonathan-taylor-neck-off-injury-report-week-2.php",
+          "published_date": "2025-09-11"
+        },
+        {
+          "text": "Taylor was not listed on the Colts injury report heading into Week 2, indicating no current injury concerns.",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Jonathan Taylor (neck) off injury report for Week 2 - Jonathan Taylor News | FantasyPros",
+          "source_url": "https://www.fantasypros.com/nfl/news/539360/jonathan-taylor-neck-off-injury-report-week-2.php",
+          "published_date": "2025-09-11"
+        }
+      ],
+      "search_queries_used": [
+        "\"Jonathan Taylor\" IND RB 2026 fantasy outlook injury role",
+        "\"Jonathan Taylor\" IND snap share touches committee starter"
+      ],
+      "snippet_count": 8
+    },
+    "12527": {
+      "outlook_phrase": "Poised for full-time, every-down workhorse role",
+      "summary": "Ashton Jeanty is projected for a full-time, every-down workhorse role in 2026 after a rookie season where he finished as the RB16 in PPR. Despite not meeting lofty expectations, experts view him as a bounce-back candidate with high upside.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "low",
+      "upside": "high",
+      "recovery_status": "na",
+      "tags": [
+        "role_expansion",
+        "breakout_candidate"
+      ],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "Raiders RB coach Omar Young said RB Ashton Jeanty is doing all the right things to ensure he takes on a full-time role t",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Ashton Jeanty Football News & Fantasy Analysis | Las Vegas Raiders | FantasyPros",
+          "source_url": "https://www.fantasypros.com/nfl/news/ashton-jeanty.php",
+          "published_date": "2026-07-04"
+        },
+        {
+          "text": "New Raiders coach Klint Kubiak hinted that Jeanty could play even more of an every-down workhorse role in his second sea",
+          "source_domain": "www.cbssports.com",
+          "source_title": "Ashton Jeanty, Las Vegas Raiders, RB - Fantasy Football News, Stats - CBS Sports",
+          "source_url": "https://www.cbssports.com/nfl/players/28874008/ashton-jeanty/fantasy/",
+          "published_date": "2026-05-21"
+        },
+        {
+          "text": "Jeanty was the RB15 in fantasy points per game, finishing with 321 touches and 1,321 total yards as a rookie.",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Ashton Jeanty Fantasy Football News, Rankings, Projections | Las Vegas Raiders | FantasyPros",
+          "source_url": "https://www.fantasypros.com/nfl/players/ashton-jeanty.php",
+          "published_date": "2026-07-04"
+        },
+        {
+          "text": "Experts love Ashton Jeanty as a bounce-back player for the 2026 fantasy football season.",
+          "source_domain": "www.fantasypros.com",
+          "source_title": "Fantasy Football 2026 Bounce-Back Players Experts Love (Brock Bowers, Ashton Jeanty, Brian Thomas Jr.) | FantasyPros",
+          "source_url": "https://www.fantasypros.com/2026/04/fantasy-football-2026-bounce-back-players-experts-love-brock-bowers-ashton-jeanty-brian-thomas-jr/",
+          "published_date": "2026-04-05"
+        }
+      ],
+      "search_queries_used": [
+        "\"Ashton Jeanty\" LV RB 2026 fantasy outlook injury role",
+        "\"Ashton Jeanty\" LV snap share touches committee starter"
+      ],
+      "snippet_count": 8
+    },
+    "9493": {
+      "outlook_phrase": "Recovered from injury, high-volume starter with upside.",
+      "summary": "Puka Nacua has recovered from his recent ankle injury, declaring himself ready to play. His impressive past production, including a rookie receiving record, points to a high-volume role and significant fantasy upside.",
+      "depth_role": "starter",
+      "playing_time_tier": "high",
+      "injury_risk": "medium",
+      "upside": "high",
+      "recovery_status": "recovered",
+      "tags": [
+        "injury_recovery"
+      ],
+      "overall_confidence": "high",
+      "fields_unknown": [],
+      "bullets": [
+        {
+          "text": "Nacua declared himself ready to return from an ankle injury to face the Saints in Week 9.",
+          "source_domain": "www.espn.com",
+          "source_title": "Rams' Puka Nacua says he'll return from ankle injury vs. Saints - ESPN",
+          "source_url": "https://www.espn.com/nfl/story/_/id/46786178/rams-puka-nacua-says-return-ankle-injury-vs-saints",
+          "published_date": "2025-10-30"
+        },
+        {
+          "text": "He was previously designated to return from injured reserve for a knee injury in October 2024 and later activated off IR",
+          "source_domain": "www.nfl.com",
+          "source_title": "Rams WR Puka Nacua (knee; injured reserve) returns to practice with 21-day window opened",
+          "source_url": "https://www.nfl.com/news/rams-wr-puka-nacua-knee-designated-to-return-from-injured-reserve-returns-to-practice",
+          "published_date": "2024-10-23"
+        },
+        {
+          "text": "Nacua set a rookie record with 1,486 receiving yards in 2023 and recorded 1,715 receiving yards in 2025.",
+          "source_domain": "www.rotowire.com",
+          "source_title": "Puka Nacua NFL Stats & News | RotoWire",
+          "source_url": "https://www.rotowire.com/football/headlines/puka-nacua-injury-cleared-to-practice-581789",
+          "published_date": "2024-10-23"
+        },
+        {
+          "text": "Despite being a fifth-round pick, his 2026 fantasy outlook is strong due to his high production.",
+          "source_domain": "www.rotowire.com",
+          "source_title": "Puka Nacua NFL Stats & News | RotoWire",
+          "source_url": "https://www.rotowire.com/football/headlines/puka-nacua-injury-cleared-to-practice-581789",
+          "published_date": "2024-10-23"
+        }
+      ],
+      "search_queries_used": [
+        "\"Puka Nacua\" LAR WR 2026 fantasy outlook injury role",
+        "\"Puka Nacua\" LAR target share WR1 WR2 depth chart",
+        "\"Puka Nacua\" LAR injury recovery cleared full practice 2026"
+      ],
+      "snippet_count": 8
+    }
+  }
+}

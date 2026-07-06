@@ -13,6 +13,9 @@ services:
     ports:
       - "5001:5001"
     command: python scripts/run_webapp.py
+    environment:
+      PYTHONPATH: /app/src
+      ADVISOR_GEMINI_MODEL: gemini-2.5-flash
 
   train:
     <<: *app-base

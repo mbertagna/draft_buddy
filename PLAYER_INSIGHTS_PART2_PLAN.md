@@ -1,193 +1,124 @@
-# Player Insights — Part 2 Plan: Live Draft Advisor & UI Pool Filtering
+# Player Insights — Part 2 Plan: Live Draft Assistant
 
 ## Status
 
-**Planned — not yet implemented.** Depends on Part 1 offline insight artifacts (`data/player_insights_{year}.json`) and the two manual Docker Compose enrichment services (search cache + Gemini synthesis).
+**Assistant implemented.** Part 1 offline enrichment and UI insight display are done. The live LLM draft assistant runs via `POST /api/draft/advisor` when `GEMINI_API_KEY` is set.
 
-Part 2 adds a real-time **LLM draft co-manager** and tightens **UI-side player pool filtering** so fragile veterans can be hidden without mutating the catalog, VORP baselines, or RL training data.
+**Already shipped (no Part 2 work):**
+
+| Component | Location |
+| --- | --- |
+| Insight loader + latest export resolution | `src/draft_buddy/data/insights/loader.py`, `cache_paths.py` |
+| Insights loaded at webapp startup | `scripts/run_webapp.py` |
+| `/api/players` insight join | `src/draft_buddy/web/app.py` |
+| `/api/insights/meta` | `src/draft_buddy/web/app.py` |
+| Outlook / Role columns, insight modal | `frontend/index.html` |
+| Min GP Frac filter (client-side, rookie bypass) | `frontend/index.html` |
+| Blind checkbox → RL ignore list | `frontend/index.html` |
+
+**Out of scope for this revision:** automatic research-override GP filtering, research badges, server-side catalog mutation, RL/training changes.
 
 ---
 
 ## Goals
 
-1. **Live pick advice** — On demand, recommend the next best player for the user's team with short, grounded reasoning.
-2. **UI pool filtering** — Let the user hide low-durability veterans via the existing **Min GP Frac** control without changing `load_player_catalog` or `DraftGymEnv`.
-3. **Research override** — Surface high-value sleepers who fall below the GP threshold when offline insights confirm injury recovery.
-4. **Preserve existing RL suggestions** — The header position-probability chips (`/api/draft/ai_suggestion_for_team`) stay fast and model-backed; the LLM advisor is a separate, slower, explainable layer.
+1. **Live pick advice** — On demand, recommend the best next player for the **advising team** with short, grounded reasoning.
+2. **Full manual filtering control** — User controls what they see (Min GP Frac) and what the RL model sees (blind checkboxes). No automatic un-hiding or pool overrides.
+3. **Token-conscious usage** — Master UI toggle enables/disables the assistant so Gemini is never called unless the user opts in.
+4. **Preserve RL suggestions** — Header position chips (`/api/draft/ai_suggestion_for_team`) stay fast and model-backed; the assistant is a separate, slower, explainable layer.
 
 ---
 
 ## Non-Goals (v1)
 
 - Multi-turn LLM tool use or live web search during a pick.
-- Server-side pool mutation at catalog load time (no training-serving skew).
-- Automatic insight refresh (Part 1 is entirely manual).
+- Automatic research-override GP filtering or `Research` badges.
+- Server-side pool mutation at catalog load time.
+- Automatic insight refresh (Part 1 remains manual).
 - Replacing the RL inference provider or bot simulation logic.
+- Advisor respecting `blindSet` (explicitly ignored for v1).
 
 ---
 
-## Relationship to Part 1
+## Decisions (resolved)
 
-| Part 1 delivers | Part 2 consumes |
+| Question | Decision |
 | --- | --- |
-| `data/player_insights_{year}.json` keyed by `sleeper_id` | `outlook_phrase`, `summary`, `tags`, `depth_role`, `playing_time_tier`, `injury_risk`, `recovery_status`, `bullets`, `fields_unknown` |
-| `data/cache/insights/search/{sleeper_id}/` raw CSE payloads | Not read at runtime (audit / re-synthesis only) |
-| Top **150** players by ADP enriched | Advisor context limited to enriched players; others show `"—"` in UI |
-
-The webapp loads insights once at startup (or on first request) alongside the player catalog. Missing insight records are valid — the advisor and UI degrade gracefully.
+| Insights file required? | **No.** Advisor works stats-only when insights are missing; enriched fields are included when available. |
+| Advising team | **Team on clock** (`current_team_picking`), which reflects UI board-header overrides via `/api/draft/override_team`. Optional `team_id` in request body for explicit override. |
+| Agent / “my team” | From **`config.draft.AGENT_START_POSITION`** (e.g. team **2** for `red_league_10` 2026). Exposed in UI state as `agent_start_position`. |
+| Pick scope | UI toggle: **My picks only** vs **Every team**. When “My picks only”, advisor is available only when the advising team equals `agent_start_position`. |
+| Candidate shortlist | **Top K by VORP and top K by ADP per position** (QB/RB/WR/TE). Include a field glossary in the prompt so the LLM understands each column. |
+| Insight year / file path | Derive from **`config.season.season`** via `load_runtime_config()`. Loader already resolves newest export under `data/insights/exports/` with legacy fallback. No separate `DRAFT_YEAR` env needed. |
+| Gemini model | **`ADVISOR_GEMINI_MODEL`** env (default `gemini-2.5-flash`), separate from **`INSIGHTS_GEMINI_MODEL`** used by Part 1 synthesis. |
+| Pool filter for advisor | **Shared Python module** under `web/`; client sends `gp_min` from the Min GP Frac input. Same rules as UI: rookie pass-through, numeric threshold, **no research override**. |
+| Package layout | All new advisor code under **`src/draft_buddy/web/`**. |
+| Test data | ~10 players in `data/player_insights_2026.json` is sufficient for v1 dev. |
 
 ---
 
 ## Architectural Principles
 
-1. **Deterministic math in Python, synthesis in the LLM** — VORP, roster needs, bye conflicts, positional scarcity, and pool membership are computed before the prompt is built.
-2. **Single-turn advisor** — One markdown context payload in, one structured JSON recommendation out. No agentic loops under a draft clock.
-3. **Filter in the UI, not the catalog** — `PlayerCatalog` and `available_player_ids` remain complete. Filtering affects display, advisor candidate sets, and optionally RL suggestion ignore lists — not persisted state.
-4. **Rookies always pass GP filter** — `games_played_frac === "R"` bypasses Min GP Frac (bug fix applied in frontend).
-5. **Explicit unknowns** — When Part 1 marked a field in `fields_unknown`, the advisor must say so rather than infer.
+1. **Deterministic math in Python, synthesis in the LLM** — VORP, roster needs, bye conflicts, positional baselines, and pool membership are computed before the prompt is built.
+2. **Single-turn assistant** — One markdown context payload in, one structured JSON recommendation out. No agentic loops under a draft clock.
+3. **Filter in the UI, not the catalog** — `PlayerCatalog` and `available_player_ids` remain complete. GP filter and blind list are user-controlled client concerns; advisor receives `gp_min` as a hint, not a server-side catalog change.
+4. **Explicit unknowns** — When Part 1 marked a field in `fields_unknown`, the assistant must say so rather than infer.
+5. **No surprise token spend** — Assistant master toggle off → no Gemini calls, button disabled/hidden.
 
 ---
 
-## Current Codebase Touchpoints
+## Manual Filtering (unchanged behavior)
 
-### Already exists
+### Min GP Frac (existing)
 
-| Component | Location | Role today |
-| --- | --- | --- |
-| Player table + GP filter | `frontend/index.html` (`#gp-frac-min`, `fetchPlayers`) | Client-side filter on `games_played_frac` |
-| Per-player blind checkbox | `frontend/index.html` (`blindSet`) | Excludes player from RL `ai_suggestion_for_team` via `ignore` query param |
-| RL position suggestions | `/api/draft/ai_suggestion_for_team` | Fast QB/RB/WR/TE probability chips in header |
-| `InferenceProvider` ABC | `src/draft_buddy/core/inference_provider.py` | RL-backed via `RlInferenceProvider` in `scripts/run_webapp.py` |
-| `get_ui_state()` | `src/draft_buddy/web/session.py` | Full draft board, rosters, bye weeks, pick clock |
-| `/api/players` | `src/draft_buddy/web/app.py` | Available players + live VORP + Sleeper status fields |
-| `Player` entity | `src/draft_buddy/core/entities.py` | `games_played_frac`, Sleeper injury/depth fields |
-
-### Does not exist yet
-
-- Insight JSON loader and join in API responses.
-- Research-override filter logic.
-- `/api/draft/advisor` endpoint and Gemini client.
-- Advisor UI panel / button.
-- `outlook_phrase` column and row expand for insight detail.
-
----
-
-## UI Pool Filtering (Durability Gate)
-
-### Min GP Frac control (existing, refined)
-
-**Location:** `frontend/index.html` — `#gp-frac-min` input, applied in `fetchPlayers()` after `/api/players` returns.
-
-**Rules (v1):**
+Client-side filter in `fetchPlayers()` after `/api/players` returns.
 
 ```
-function passesGpFilter(player, gpMin):
-    if player.games_played_frac === "R":
-        return true                          # rookies always visible
-
-    if hasResearchOverride(player):
-        return true                          # see below
-
-  if gpMin is empty:
-        return true
-
+passesGpFilter(player, gpMin):
+    if player.games_played_frac == "R": return true   # rookies always visible
+    if gpMin is empty: return true
     gp = Number(player.games_played_frac)
-    if not finite(gp):
-        return false
-
+    if not finite(gp): return false
     return gp >= gpMin
 ```
 
-**Default:** Empty (no filter). User may set e.g. `0.70` before/during draft.
+User sets e.g. `0.70` to hide fragile veterans. **No automatic research override** — if the user wants CMC visible despite low GP, they lower or clear the threshold manually.
 
-**Visual cues:**
+### Blind checkbox (existing)
 
-- Players hidden by GP filter: removed from table (current behavior).
-- Players shown only via research override: badge on row, e.g. `Research` chip next to name.
-- Players below threshold without override: not shown (same as today).
-
-### Research override (new)
-
-A player below the GP threshold is **unblinded** when offline insights satisfy all of:
-
-```python
-insight.recovery_status == "recovered"
-and "injury_recovery" in insight.tags
-and insight.overall_confidence in ("high", "medium")
-```
-
-**Examples from 2026 data:** Christian McCaffrey (`games_played_frac ≈ 0.24`), Rashee Rice (`≈ 0.15`) — high ADP but low historical availability; research may justify keeping them visible.
-
-**Implementation:** Frontend needs insights joined onto player payloads (see API changes). Override logic lives in `fetchPlayers()` filter function.
-
-### Manual blind checkbox (existing, unchanged)
-
-`blindSet` continues to exclude specific `player_id`s from RL header suggestions only. It does **not** remove players from the table or the LLM advisor unless we explicitly wire that later.
-
-**Future option:** Checkbox label could clarify "Exclude from AI suggestions" vs a separate "Hide from pool" — out of scope for v1.
-
-### What we are NOT doing
-
-- No `ENABLE_DURABILITY_POOL_FILTER` at `load_player_catalog` time.
-- No changes to `DraftGymEnv`, VORP baselines, or `FeatureExtractor` for v1.
-- Optional server-side filter flag documented here for a later training-serving parity pass if desired.
+`blindSet` excludes `player_id`s from RL header suggestions via the `ignore` query param on `/api/draft/ai_suggestion_for_team`. Does **not** affect the assistant candidate pool in v1.
 
 ---
 
-## Offline Insights in the UI (Part 2 scope)
+## Live LLM Draft Assistant
 
-### Player table
+### Master toggle (new)
 
-| Column | Source | Notes |
-| --- | --- | --- |
-| Outlook | `insight.outlook_phrase` | Max 8 words; `"—"` if missing |
-| Info (expand) | `summary`, `bullets`, `tags` | Click row or info icon |
+**Location:** Header controls near the AI chip.
 
-### Tag chips (controlled vocabulary from Part 1)
+| State | Behavior |
+| --- | --- |
+| **Off** (default) | “Ask Assistant” hidden/disabled. No `/api/draft/advisor` calls. |
+| **On** | “Ask Assistant” available per scope rules below. |
 
-Display as small chips: `injury_recovery`, `role_expansion`, `committee`, etc. Color `injury_risk: high` subtly (e.g. amber row accent).
+Persist toggle in `sessionStorage` so it survives page refresh during a draft session.
 
-### `/api/players` enrichment
+### Pick scope toggle (new)
 
-Extend payload per player:
+**Location:** Adjacent to master toggle.
 
-```json
-{
-  "player_id": 4034,
-  "name": "Christian McCaffrey",
-  "...": "...",
-  "insight": {
-    "outlook_phrase": "Full-go, bellcow if healthy",
-    "summary": "...",
-    "tags": ["injury_recovery"],
-    "depth_role": "starter",
-    "playing_time_tier": "high",
-    "injury_risk": "medium",
-    "recovery_status": "recovered",
-    "overall_confidence": "medium",
-    "fields_unknown": [],
-    "bullets": [{ "text": "...", "source_url": "..." }]
-  }
-}
-```
+| Mode | “Ask Assistant” enabled when |
+| --- | --- |
+| **My picks only** | Advising team (`current_team_picking` or request `team_id`) == `agent_start_position` |
+| **Every team** | Any advising team (useful for trade-bait / opponent analysis) |
 
-`insight: null` when no record exists for that `sleeper_id`.
-
-### Insight loader (new module)
-
-- `src/draft_buddy/data/player_insights.py` — `load_player_insights(year: int) -> dict[int, PlayerInsight]`
-- Path: `data/player_insights_{year}.json` (or year from config / env `DRAFT_YEAR=2026`)
-- Loaded once per `DraftSessionManager` / app factory; thread-safe read.
-
----
-
-## Live LLM Draft Advisor
+When scope blocks the action, show a short banner (e.g. “Assistant available on your picks only — switch scope or wait for your turn”) rather than calling Gemini.
 
 ### Trigger
 
-**On-demand** — User clicks **"Ask Advisor"** (or similar) in the header when it is their team's pick (or any time for analysis).
+**On-demand button click** — User clicks **“Ask Assistant”** when the master toggle is on and scope allows.
 
-Not polled on every pick sync tick. Typical latency budget: 2–5 seconds (Gemini Flash).
+Not polled on every pick sync. Typical latency budget: 2–5 seconds.
 
 ### Endpoint
 
@@ -195,63 +126,97 @@ Not polled on every pick sync tick. Typical latency budget: 2–5 seconds (Gemin
 POST /api/draft/advisor
 ```
 
-**Request body (optional):**
+**Request body:**
 
 ```json
 {
-  "team_id": 10,
+  "team_id": 2,
   "gp_min": 0.70,
-  "max_candidates": 12
+  "top_k": 5
 }
 ```
 
-Defaults: `team_id` = session agent team (or team on clock), `gp_min` from client state, `max_candidates` = 12.
+| Field | Default | Notes |
+| --- | --- | --- |
+| `team_id` | `current_team_picking` | Reflects UI clock override when user clicks a board header |
+| `gp_min` | omitted / null | No GP filter applied server-side |
+| `top_k` | `5` (or `ADVISOR_TOP_K_PER_POSITION`) | Per-position cap for each ranking (VORP and ADP) |
 
 **Response:** Structured JSON (Pydantic-validated):
 
 ```json
 {
+  "advising_team_id": 2,
+  "is_agent_team": true,
   "recommended_player_id": 9221,
   "recommended_name": "Jahmyr Gibbs",
   "confidence": "high",
   "rationale_bullets": [
-    "Best VORP among available RBs with high playing_time_tier.",
+    "Top RB by VORP in the shortlist with high playing_time_tier.",
     "Fills open RB starter slot; no week-6 bye conflict with your WR core."
   ],
   "alternates": [
-    { "player_id": 9509, "name": "Bijan Robinson", "reason": "Higher ceiling, slightly lower VORP at this pick." }
+    { "player_id": 9509, "name": "Bijan Robinson", "reason": "Higher ADP, slightly lower VORP." }
   ],
   "flags": ["none"],
   "unknown_factors": []
 }
 ```
 
-**Errors:** `503` if insights file missing; `502` if Gemini fails; always return deterministic fallback message suggesting RL chips.
+**Errors:**
 
-### Advisor service (new)
+| Code | When |
+| --- | --- |
+| `400` | Invalid team id or empty candidate pool after filters |
+| `403` | Scope is “My picks only” and advising team ≠ agent team (optional — may instead disable button client-side) |
+| `502` | Gemini failure; message suggests using RL chips |
+| `503` | Not used for missing insights (advisor degrades to stats-only) |
 
-`src/draft_buddy/web/draft_advisor.py` (or `src/draft_buddy/advisor/` if it grows):
+When candidate pool is empty after GP filter, return `400` with a clear message — do not call Gemini.
+
+### Service layout (under `web/`)
+
+```text
+src/draft_buddy/web/
+├── draft_advisor_schemas.py    # PickRecommendation, AdvisorRequest
+├── draft_advisor_filter.py     # shared GP filter (Python mirror of frontend)
+├── draft_advisor_context.py    # markdown context assembly + field glossary
+├── draft_advisor_gateway.py    # GeminiAdvisorGateway ABC + Flash impl
+├── draft_advisor_service.py    # orchestrates filter → context → recommend
+└── app.py                      # POST /api/draft/advisor
+```
 
 ```text
 DraftAdvisorService
-├── build_context(session, team_id, gp_min, insights) -> str   # markdown
-├── recommend(context) -> PickRecommendation                   # Gemini call
-└── apply_pool_filter(players, gp_min, insights) -> list       # same rules as UI
+├── apply_gp_filter(players, gp_min) -> list
+├── build_candidate_shortlists(players, baselines, top_k) -> dict[str, list]
+├── build_context(session, team_id, candidates, insights) -> str
+└── recommend(context) -> PickRecommendation
 ```
 
-**Dependency injection:** `GeminiAdvisorGateway` ABC + `GeminiFlashGateway` impl; API key via `GEMINI_API_KEY` env.
+**Dependency injection:** `GeminiAdvisorGateway` ABC; API key via `GEMINI_API_KEY`; model via `ADVISOR_GEMINI_MODEL`.
 
 ### Context payload (markdown, built in Python)
 
-Sections the service assembles before the LLM sees anything:
+Sections assembled before the LLM sees anything:
 
 ```markdown
+## Field glossary
+- **vorp**: Value Over Replacement Player — projected_points minus positional baseline.
+- **adp**: Average draft position; lower = drafted earlier.
+- **gp_frac**: Fraction of games played last season; "R" = rookie (no NFL sample).
+- **outlook_phrase**: Short research summary (offline, may be missing).
+- **depth_role**: starter | co_starter | committee | backup | unknown
+- **playing_time_tier**: high | medium | low | unknown
+- **injury_risk / recovery_status**: From offline research when available.
+- **fields_unknown**: Insight fields with insufficient reporting — do not infer these.
+
 ## Draft clock
 - Pick 47 (round 4, pick 11)
-- Team on clock: Michael Bertagna (team 10)
-- Agent team: 10
+- Advising team: Goofy's Kitchen (team 2)
+- Agent team: 2 | On clock: yes
 
-## Your roster
+## Advising team roster
 | slot | player | pos | proj | bye |
 ...
 
@@ -259,131 +224,123 @@ Sections the service assembles before the LLM sees anything:
 - Starters open: WR x1, FLEX x1
 - Bench: RB depth optional
 
-## Bye week pressure (weeks 5-14)
-- Heavy: 11 (3 starters)
-- Conflicts if drafting: [list players with bye 11 among top candidates]
+## Bye week pressure (weeks 4–14)
+- Week 11: 3 starters on bye (RB:1, WR:2)
+- Candidate bye conflicts: [players whose bye_week matches heavy weeks]
 
-## Positional baselines & scarcity
-- QB baseline: 18.2 | available QB count above baseline: 4
-- RB baseline: 12.1 | ...
-
-## Available candidates (pool after GP filter + research override)
-Sorted by VORP desc, max 12 rows.
-
-| player_id | name | pos | vorp | adp | gp_frac | outlook | depth_role | playing_time | injury_risk | recovery | tags | confidence | unknown_fields |
+## Positional baselines
+| pos | baseline | available above baseline |
 ...
 
+## Top candidates by position
+Each table: top K by VORP and top K by ADP (deduplicated within position).
+
+### RB — by VORP
+| player_id | name | vorp | adp | gp_frac | proj | bye | outlook | depth_role | playing_time | injury_risk | recovery | tags | confidence | fields_unknown |
+...
+
+### RB — by ADP
+...
+
+(repeat for QB, WR, TE)
+
 ## Instructions
-- Recommend exactly one player from the table.
-- Cite insight outlook/summary when relevant.
-- If fields_unknown is non-empty for a candidate, mention "insufficient reporting on X".
-- Do not recommend players not in the table.
+- Recommend exactly one player from the candidate tables above.
+- Prefer need-filling picks when VORP is close.
+- Cite insight outlook/summary when present; use stats only when insight is null.
+- If fields_unknown is non-empty, mention insufficient reporting — do not guess.
+- Do not recommend players not listed in the candidate tables.
 - Output JSON matching PickRecommendation schema only.
 ```
 
 **Deterministic pre-computation (not LLM):**
 
 - VORP from `session.get_positional_baselines()`
-- Roster slot needs from `categorize_roster_by_slots` / roster counts vs `ROSTER_STRUCTURE`
-- Bye aggregation from `get_ui_state()["team_bye_weeks"]` cross-referenced with candidate bye weeks
-- Pool filter identical to UI (`passesGpFilter` + research override)
-- Candidate cap: top N by VORP at need positions first, then fill with best overall VORP
+- Roster slot needs from roster counts vs `ROSTER_STRUCTURE`
+- Bye aggregation from `get_ui_state()["team_bye_weeks"]` for the **advising team**
+- GP filter from request `gp_min` (shared Python module)
+- Per-position shortlists: top K by VORP desc, top K by ADP asc (finite ADP only), merge/dedupe per position for the prompt tables
 
 ### Gemini contract
 
-- Model: `gemini-2.0-flash` (configurable)
+- Model: `ADVISOR_GEMINI_MODEL` (default `gemini-2.5-flash`)
 - Structured output via Pydantic `response_schema` / JSON mode
-- System prompt: single-turn analyst; no tools; must pick from candidate table
-- Temperature: low (0.2–0.3)
+- System prompt: single-turn draft analyst; no tools; must pick from candidate tables
+- Temperature: low (0.2)
 
 ### Coexistence with RL suggestions
 
-| Feature | Speed | Output | Use case |
+| Feature | Speed | Output | User control |
 | --- | --- | --- | --- |
-| RL header chips | ~100ms | QB/RB/WR/TE % | Glance at model lean |
-| LLM advisor | ~2–5s | Named player + why | Decision support at critical picks |
-| Manual blind | instant | Excludes from RL ignore set | Personal landmine list |
-
-The advisor candidate pool respects GP filter + research override but **not** `blindSet` unless we add an optional `respect_blind_set: true` flag later.
+| RL header chips | ~100ms | QB/RB/WR/TE % | Blind checkboxes |
+| LLM assistant | ~2–5s | Named player + why | Master toggle + scope toggle + manual click |
+| Min GP Frac | instant | Hides table rows | User input |
+| Blind checkbox | instant | RL ignore list | Per-player checkbox |
 
 ---
 
-## Frontend Changes
+## Frontend Changes (assistant only)
 
 ### Header
 
-- Add **"Ask Advisor"** button near `#ai-suggestion-display`.
-- On click: `POST /api/draft/advisor` with current `gpMin` and agent team.
-- Show result in a dismissible panel: recommended name, 2–3 rationale bullets, alternates, flags.
-- Loading state + error toast.
+- **Assistant enabled** master toggle (default off).
+- **Scope** toggle: “My picks only” | “Every team”.
+- **Ask Assistant** button — visible when master toggle on; enabled when scope allows.
+- On click: `POST /api/draft/advisor` with `team_id` = `current_team_picking`, `gp_min` from `#gp-frac-min`, `top_k` from config/default.
+- Dismissible result panel: recommended name, rationale bullets, alternates, flags.
+- Loading spinner + error toast (502 → suggest RL chips).
 
-### Player table
-
-- New column **Outlook** (`outlook_phrase`).
-- Research override badge on name cell.
-- Row expand or info icon → `summary`, linked `bullets`, tag chips.
-
-### GP filter fix (done)
-
-Rookies (`games_played_frac === "R"`) now return `true` from the GP min filter instead of being excluded.
+When advising team ≠ agent team and scope is “My picks only”, show informational banner; do not enable the button.
 
 ---
 
 ## Configuration & Environment
 
-| Variable | Purpose |
-| --- | --- |
-| `GEMINI_API_KEY` | Advisor + Part 1 synthesis |
-| `DRAFT_YEAR` | Default `2026` for insight file path |
-| `PLAYER_INSIGHTS_PATH` | Optional override for `data/player_insights_{year}.json` |
-| `ADVISOR_MODEL` | Default `gemini-2.0-flash` |
-| `ADVISOR_MAX_CANDIDATES` | Default `12` |
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | Advisor + Part 1 synthesis | (required for live calls) |
+| `ADVISOR_GEMINI_MODEL` | Assistant model | `gemini-2.5-flash` |
+| `INSIGHTS_GEMINI_MODEL` | Part 1 synthesis only | `gemini-2.5-flash` |
+| `ADVISOR_TOP_K_PER_POSITION` | Candidates per ranking per position | `5` |
 
-Add to `docker-compose.yml` `webapp` service `environment` block when implementing.
+**Not needed:** `DRAFT_YEAR` — season comes from `DRAFT_BUDDY_SEASON` / league season overlay (`config.season.season`). Insight file resolution uses `load_latest_player_insights(config.paths.DATA_DIR)`.
+
+Optional future: `PLAYER_INSIGHTS_PATH` override for testing.
+
+Add advisor env vars to `docker-compose.yml` `webapp` service when implementing.
 
 ---
 
 ## File Layout (new / modified)
 
 ```text
-src/draft_buddy/
-├── data/
-│   └── player_insights.py          # load + lookup by sleeper_id
-├── advisor/                        # optional package
-│   ├── __init__.py
-│   ├── schemas.py                  # PickRecommendation, AdvisorContext
-│   ├── context_builder.py          # markdown assembly
-│   └── gemini_gateway.py           # Gemini Flash structured call
-└── web/
-    ├── app.py                      # + insight join on /api/players, POST /api/draft/advisor
-    └── session.py                  # optional: expose agent_team_id helper
+src/draft_buddy/web/
+├── draft_advisor_schemas.py
+├── draft_advisor_filter.py
+├── draft_advisor_context.py
+├── draft_advisor_gateway.py
+├── draft_advisor_service.py
+└── app.py                          # POST /api/draft/advisor
 
 frontend/
-└── index.html                      # outlook column, advisor UI, GP + override filter
-
-data/
-└── player_insights_2026.json       # produced by Part 1 (manual)
+└── index.html                      # assistant toggles, button, result panel
 
 tests/
-├── test_player_insights_loader.py
-├── test_advisor_context_builder.py
-├── test_advisor_pool_filter.py
+├── test_draft_advisor_filter.py
+├── test_draft_advisor_context.py
 └── test_web_advisor_endpoint.py    # mocked Gemini
 ```
 
 ---
 
-## Sequencing (Part 2 implementation order)
+## Sequencing
 
-1. **`player_insights.py` loader** + tests with fixture JSON (no Gemini).
-2. **Join insights on `/api/players`** — frontend outlook column (read-only).
-3. **Research override in `fetchPlayers`** — requires step 2.
-4. **`DraftAdvisorService` context builder** — pure Python tests against fixture session state.
-5. **`GeminiAdvisorGateway`** + `POST /api/draft/advisor` — mocked in tests.
-6. **Frontend advisor panel** + button wiring.
-7. **Docs** — README section for advisor usage and env vars.
-
-Part 2 can start as soon as Part 1 has produced at least a partial `player_insights_2026.json` for testing (even a 5-player fixture).
+1. **`draft_advisor_filter.py`** — GP filter mirroring frontend; unit tests.
+2. **`draft_advisor_context.py`** — per-position top-K shortlists, markdown assembly, field glossary; fixture session tests.
+3. **`draft_advisor_schemas.py` + `draft_advisor_gateway.py`** — Pydantic models + mocked Gemini tests.
+4. **`draft_advisor_service.py` + `POST /api/draft/advisor`** — wire session, insights, config; endpoint tests.
+5. **Frontend** — master toggle, scope toggle, Ask Assistant button, result panel.
+6. **Docs** — README section for assistant usage and env vars.
 
 ---
 
@@ -391,11 +348,11 @@ Part 2 can start as soon as Part 1 has produced at least a partial `player_insig
 
 | Layer | Approach |
 | --- | --- |
-| Pool filter | Unit tests: rookie pass-through, GP threshold, override conditions, null insight |
-| Context builder | Snapshot or assert key markdown sections contain expected VORP/roster rows |
-| Gemini gateway | Mock HTTP; assert schema validation on response |
-| Web endpoint | `TestClient` with injected mock advisor service |
-| Frontend | Manual: set GP 0.70, verify CMC appears with override badge when insight qualifies |
+| GP filter | Unit tests: rookie pass-through, threshold, empty gp_min, null gp_frac |
+| Context builder | Assert markdown contains roster, bye weeks, per-position tables, glossary |
+| Gemini gateway | Mock client; assert schema validation |
+| Web endpoint | `TestClient` with injected mock service; scope + empty pool cases |
+| Frontend | Manual: toggle off → no calls; my-picks-only blocks on opponent clock; every-team allows |
 
 ---
 
@@ -403,34 +360,31 @@ Part 2 can start as soon as Part 1 has produced at least a partial `player_insig
 
 | Case | Behavior |
 | --- | --- |
-| No insights file | `/api/players` returns `insight: null`; advisor returns 503 with message to run Part 1 enrichment |
-| Player not in top 150 enriched set | No insight; still draftable; advisor uses stats-only row |
-| Gemini timeout | 502 + suggest using RL chips |
-| Synced Sleeper session (future) | Advisor read-only; uses same `get_ui_state` / available pool |
-| Empty candidate pool after filter | Advisor returns explicit "no players pass your filters" without calling Gemini |
-| Conflicting snippets (Part 1) | `overall_confidence: low` — advisor should mention uncertainty in `unknown_factors` |
+| No insights file | Stats-only candidate rows; `outlook` columns empty in prompt |
+| Player not in enriched set | Still in candidate tables on VORP/ADP merit |
+| Gemini timeout / error | 502 + suggest RL chips |
+| UI team override (board header click) | `current_team_picking` updates; advisor uses new team |
+| Empty pool after GP filter | 400, no Gemini call |
+| Master toggle off | Button disabled; client never POSTs |
+| Low insight confidence | Assistant mentions uncertainty in `unknown_factors` |
 
 ---
 
-## Future Extensions (explicitly deferred)
+## Future Extensions (deferred)
 
-- **Server-side pool filter** behind `Config.draft.ENABLE_DURABILITY_POOL_FILTER` for RL training parity.
-- **Auto-advisor** on pick clock (user preference).
-- **Sleeper live sync** (`SLEEPER_LIVE_DRAFT_SYNC_PLAN.md`) — advisor works unchanged on read-only synced sessions.
-- **Streaming advisor response** for faster perceived latency.
-- **User-editable landmine list** persisted to localStorage (beyond `blindSet` session scope).
-
----
-
-## Open Questions (resolve during implementation)
-
-1. **Advisor team default** — Always agent team (10) or team on clock? Recommend: agent team with optional override in request body.
-2. **Insight year** — Hardcode 2026 vs derive from config / player data metadata?
-3. **Candidate selection** — Pure top VORP vs positional-need-weighted shortlist? Recommend: 60% need positions, 40% best VORP fill for diversity.
-4. **Advisor during opponent picks** — Allow for trade bait analysis or disable button? Recommend: allow with clear "not your pick" banner.
+- Research-override GP filtering and `Research` badges.
+- Auto-assistant on pick clock (when master toggle on).
+- Server-side pool filter for RL training parity.
+- Advisor respecting `blindSet`.
+- Streaming assistant response.
+- Sleeper live sync (`SLEEPER_LIVE_DRAFT_SYNC_PLAN.md`).
 
 ---
+
+## Open Questions (remaining)
+
+All resolved for v1 implementation.
 
 ## Summary
 
-Part 2 layers a **single-turn Gemini advisor** and **richer UI filtering** on top of Part 1's offline research artifacts without touching catalog load or RL training. Python owns the math and pool rules; the LLM explains the pick. The existing RL probability chips remain the fast baseline; the advisor is the explainable co-manager invoked when the user wants a reasoned recommendation.
+Part 2 (revised) adds a **token-conscious, on-demand Gemini draft assistant** under `src/draft_buddy/web/`. Python owns VORP, roster needs, bye analysis, and GP filtering; the LLM picks from **per-position top-K VORP and ADP shortlists** with a field glossary. The user keeps full manual control of pool visibility and RL blind lists. RL position chips remain the fast baseline; the assistant is invoked only when the user enables it and clicks **Ask Assistant**.

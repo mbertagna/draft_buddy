@@ -11,3 +11,5 @@ fuzzywuzzy
 python-Levenshtein
 beautifulsoup4
 bokeh
+google-genai
+pydantic>=2.0
