@@ -1309,6 +1309,34 @@
             }
         }
 
+        function formatSleeperStatusDisplay(injuryStatus, rosterStatus, depthChart) {
+            const hasRosterStatus = Boolean(rosterStatus);
+            const statusPart = injuryStatus
+                || (rosterStatus && rosterStatus !== 'Active' ? rosterStatus : null);
+            const depthPart = depthChart || null;
+            const parts = [statusPart, depthPart].filter(Boolean);
+            const text = parts.length
+                ? parts.join(' · ')
+                : (hasRosterStatus ? '' : 'N/A');
+
+            const titleParts = [];
+            if (rosterStatus) titleParts.push(`Sleeper status: ${rosterStatus}`);
+            if (injuryStatus) titleParts.push(`Injury: ${injuryStatus}`);
+            if (depthPart) titleParts.push(`Depth: ${depthPart}`);
+            const title = titleParts.length ? titleParts.join(' · ') : 'No Sleeper match';
+
+            const style = {};
+            if (injuryStatus) {
+                style.backgroundColor = '#ffdada';
+                style.color = '#7a1f1f';
+                style.fontWeight = 'bold';
+            } else if (rosterStatus && rosterStatus !== 'Active') {
+                style.backgroundColor = '#fff3cd';
+                style.color = '#6b5300';
+            }
+            return { text, title, style };
+        }
+
         const renderPlayers = (players) => {
             lastRenderedPlayers = players;
             playerTbody.innerHTML = '';
@@ -1445,27 +1473,14 @@
 
                 // Sleeper Status / Injury
                 const statusCell = row.insertCell();
-                const injuryStatus = player.sleeper_injury_status;
-                const rosterStatus = player.sleeper_status;
-                const depthChart = player.sleeper_depth_chart_position;
-                if (injuryStatus) {
-                    statusCell.innerText = injuryStatus;
-                    statusCell.title = `Sleeper status: ${rosterStatus || 'Unknown'}${depthChart ? ` · Depth: ${depthChart}` : ''}`;
-                    statusCell.style.backgroundColor = '#ffdada';
-                    statusCell.style.color = '#7a1f1f';
-                    statusCell.style.fontWeight = 'bold';
-                } else if (rosterStatus && rosterStatus !== 'Active') {
-                    statusCell.innerText = rosterStatus;
-                    statusCell.title = depthChart ? `Depth: ${depthChart}` : '';
-                    statusCell.style.backgroundColor = '#fff3cd';
-                    statusCell.style.color = '#6b5300';
-                } else if (depthChart) {
-                    statusCell.innerText = depthChart;
-                    statusCell.title = rosterStatus ? `Active (Sleeper) · Depth: ${depthChart}` : `Depth: ${depthChart}`;
-                } else {
-                    statusCell.innerText = rosterStatus ? '' : 'N/A';
-                    statusCell.title = rosterStatus ? 'Active (Sleeper)' : 'No Sleeper match';
-                }
+                const statusDisplay = formatSleeperStatusDisplay(
+                    player.sleeper_injury_status,
+                    player.sleeper_status,
+                    player.sleeper_depth_chart_position,
+                );
+                statusCell.innerText = statusDisplay.text;
+                statusCell.title = statusDisplay.title;
+                Object.assign(statusCell.style, statusDisplay.style);
 
                 // Info buttons
                 const infoCell = row.insertCell();
