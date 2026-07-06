@@ -18,6 +18,27 @@ Draft Buddy uses Docker Compose as the primary local workflow for the refactored
 
 ### First-Time Setup
 
+Copy environment variables and set your active league:
+
+```bash
+cp .env.example .env
+```
+
+League profiles live under `config/leagues/` with per-season overlays in `config/seasons/`. Set these in `.env`:
+
+```bash
+DRAFT_BUDDY_LEAGUE=red_league_10      # ESPN Red League (10-team, full PPR)
+DRAFT_BUDDY_SEASON=2026
+```
+
+To switch to Redraft NBFL (12-team Sleeper, half PPR) later:
+
+```bash
+DRAFT_BUDDY_LEAGUE=redraft_nbfl_12
+```
+
+Each league uses its own generated player CSV under `data/leagues/{league_id}/generated/{year}/`. Run `docker compose run --rm data` after switching leagues so projections match that league's scoring.
+
 Build the image used by every service:
 
 ```bash
@@ -47,7 +68,7 @@ Common output locations on the host:
 | `ast` | Generate Mermaid architecture diagrams | `python -m draft_buddy.arch_viz.cli --project-root /app --output-dir /app/viz --all-default-entries --strategy module` |
 | `insights-search` | Fetch web search snippets for top 150 ADP players (Valyu default) | `python scripts/fetch_player_insight_search.py --year 2026 --top-n 150 --search-provider valyu` |
 | `insights-synthesize` | Synthesize Gemini Flash player insights from cached search | `python scripts/synthesize_player_insights.py --year 2026 --top-n 150` |
-| `position-guide` | Generate static RL position probability cheat sheet | `python scripts/generate_position_guide.py --slot 5 --simulations 5000 --checkpoint-dir models/12_teams_random_start/v3` |
+| `position-guide` | Generate static RL position probability cheat sheet | `python scripts/generate_position_guide.py --simulations 5000` |
 
 ### Common Commands
 
@@ -144,27 +165,24 @@ docker compose run --rm insights-synthesize python scripts/synthesize_player_ins
 
 ### Position Guide (pre-draft cheat sheet)
 
-Offline Monte Carlo simulation produces a **static position probability guide** for your draft slot — useful as a fallback when the live dashboard is unavailable.
+Offline Monte Carlo simulation produces a **static position probability guide** for your draft slot — useful as a fallback when the live dashboard is unavailable. Defaults (`num-teams`, `slot`, `checkpoint-dir`) come from the active league profile in `.env`.
 
 **Prerequisites:**
 
-1. Generate player projections (if not already done): `docker compose run --rm data`
-2. A trained policy checkpoint (default: latest in `models/12_teams_random_start/v3/`)
+1. Generate player projections for the active league: `docker compose run --rm data`
+2. A trained policy checkpoint for that league size (paths are set in `config/seasons/{league}_{year}.json`)
 
-**Run (12-team league, slot 5):**
+**Run (uses active league from `.env`):**
 
 ```bash
 docker compose run --rm position-guide
-open data/guides/exports/position_guide_12teams_slot5_2026_*.html
+open data/guides/exports/position_guide_*teams_slot*_*_*.html
 ```
 
-**10-team league override:**
+**Override league temporarily:**
 
 ```bash
-docker compose run --rm position-guide \
-  python scripts/generate_position_guide.py --num-teams 10 --slot 5 \
-  --checkpoint-dir models/10_teams_random_start/v1
-open data/guides/exports/position_guide_10teams_slot5_2026_*.html
+DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 docker compose run --rm position-guide
 ```
 
 **Outputs:**
@@ -172,7 +190,23 @@ open data/guides/exports/position_guide_10teams_slot5_2026_*.html
 - JSON: `data/guides/exports/position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.json`
 - HTML: same basename with `.html` (printable cheat sheet)
 
-Each run writes a new timestamped export. Filenames include league size so 12-team and 10-team guides do not collide.
+Each run writes a new timestamped export. Filenames include league size so 10-team and 12-team guides do not collide.
+
+### League profiles and season rollover
+
+| League | Profile ID | Platform | Scoring | 2026 draft slot |
+| --- | --- | --- | --- | --- |
+| Red League | `red_league_10` | ESPN | Full PPR | 2 |
+| Redraft NBFL | `redraft_nbfl_12` | Sleeper | Half PPR | 5 |
+
+**Season rollover checklist** (each August):
+
+1. Copy `config/seasons/{league}_2026.json` to `{league}_2027.json`
+2. Update `season`, `bye_weeks`, `draft.AGENT_START_POSITION`, and checkpoint paths
+3. Run `docker compose run --rm data` for each league you use
+4. Train or point `training.MODEL_PATH_TO_LOAD` at the correct `models/{N}_teams_*` checkpoint
+
+Player projections only include nflverse-trackable scoring rules. Bonuses without reliable stat columns (50+ yard TDs, D/ST details, IR slots) are omitted per league JSON.
 
 ### `up` vs `run --rm`
 
@@ -212,6 +246,9 @@ behave consistently across services.
 │   ├── rl/
 │   ├── simulator/
 │   └── web/
+├── config/
+│   ├── leagues/
+│   └── seasons/
 ├── viz/
 ├── docker-compose.yml
 ├── Dockerfile
