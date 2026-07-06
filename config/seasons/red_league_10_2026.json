@@ -1,0 +1,26 @@
+{
+  "draft": {
+    "AGENT_START_POSITION": 2,
+    "RANDOMIZE_AGENT_START_POSITION": true
+  },
+  "season": {
+    "season": 2026,
+    "bye_weeks": {
+      "5": ["CAR", "KC"],
+      "6": ["CIN", "DET", "MIA", "MIN"],
+      "7": ["BUF", "JAX", "LAC", "WAS"],
+      "8": ["HOU", "NO", "NYG", "SF"],
+      "9": ["PIT", "TEN"],
+      "10": ["CHI", "DEN", "PHI", "TB"],
+      "11": ["ATL", "CLE", "GB", "LAR", "NE", "SEA"],
+      "13": ["BAL", "IND", "LV", "NYJ"],
+      "14": ["ARI", "DAL"]
+    }
+  },
+  "training": {
+    "MODEL_PATH_TO_LOAD": "models/10_teams_random_start/v1/checkpoint_episode_10296.pth"
+  },
+  "position_guide": {
+    "checkpoint_dir": "models/10_teams_random_start/v1"
+  }
+}
