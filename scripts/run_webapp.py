@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import uvicorn
 
-from draft_buddy.config import Config
+from draft_buddy.config import Config, load_runtime_config
 from draft_buddy.core import BotGM, DraftState, InferenceProvider, PlayerCatalog
 from draft_buddy.data.insights.loader import load_latest_player_insights
 from draft_buddy.rl.agent_bot import AgentModelBotGM
@@ -170,7 +170,7 @@ class RlInferenceProvider(InferenceProvider):
 
 def main() -> None:
     """Start the web application server."""
-    config = Config()
+    config = load_runtime_config()
     inference_provider = RlInferenceProvider(config)
     session_manager = DraftSessionManager(config, inference_provider=inference_provider)
     loaded_insights = load_latest_player_insights(config.paths.DATA_DIR)

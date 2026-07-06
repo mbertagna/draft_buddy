@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 
-from draft_buddy.config import Config
+from draft_buddy.config import Config, load_runtime_config
 from draft_buddy.rl.reinforce_agent import ReinforceAgent
 from bokeh.plotting import figure, output_file, save
 from bokeh.models import HoverTool
@@ -213,11 +213,11 @@ def main() -> None:
 
     print("--- Starting Fantasy Football Draft AI Training ---")
     if args.plot_latest_csvs:
-        config = Config()
+        config = load_runtime_config()
         _run_plot_only_mode(config)
         return
 
-    config = Config()
+    config = load_runtime_config()
     run_name, version, run_version_dir, logs_dir = setup_run_directories(config)
     save_run_metadata(config, run_name, version, run_version_dir)
     print(f"Run: {run_name} | Version: {version}")

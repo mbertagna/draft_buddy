@@ -10,13 +10,17 @@ import pandas as pd
 import generate_projections
 
 
-def test_generated_output_dir_creates_year_scoped_directory(tmp_path: Path, monkeypatch) -> None:
-    """Verify the output directory is created under data/generated/{year}."""
+def test_generated_output_dir_creates_league_scoped_directory(tmp_path: Path, monkeypatch) -> None:
+    """Verify the output directory is created from the league-scoped player CSV path."""
     monkeypatch.chdir(tmp_path)
+    output_path = "data/leagues/red_league_10/generated/2026/generated_player_data.csv"
 
-    output_dir = generate_projections.generated_output_dir(2026)
+    output_dir = generate_projections.generated_output_dir(output_path)
 
-    assert os.path.samefile(output_dir, tmp_path / 'data' / 'generated' / '2026')
+    assert os.path.samefile(
+        output_dir,
+        tmp_path / "data" / "leagues" / "red_league_10" / "generated" / "2026",
+    )
 
 
 def test_save_missing_nflverse_stats_report_writes_csv_when_non_empty(tmp_path: Path) -> None:

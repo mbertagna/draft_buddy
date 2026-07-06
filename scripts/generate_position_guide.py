@@ -6,28 +6,40 @@ import argparse
 import os
 import sys
 
-from draft_buddy.config import Config
+from draft_buddy.config import load_runtime_config
 from draft_buddy.rl.position_guide.exporter import export_position_guide
 from draft_buddy.rl.position_guide.simulator import PositionGuideSimulator
 from draft_buddy.rl.run_utils import find_latest_checkpoint_in_dir
 
 
-DEFAULT_CHECKPOINT_DIR = "models/12_teams_random_start/v3"
-
-
-def parse_args() -> argparse.Namespace:
+def parse_args(runtime_defaults: argparse.Namespace) -> argparse.Namespace:
     """Parse CLI arguments for position guide generation."""
     parser = argparse.ArgumentParser(
         description="Generate a static position probability cheat sheet via Monte Carlo simulation."
     )
-    parser.add_argument("--num-teams", type=int, default=12, help="League size.")
-    parser.add_argument("--slot", type=int, default=5, help="Your draft slot (1-based).")
-    parser.add_argument("--year", type=int, default=2026, help="Draft year for export metadata.")
+    parser.add_argument(
+        "--num-teams",
+        type=int,
+        default=runtime_defaults.num_teams,
+        help="League size.",
+    )
+    parser.add_argument(
+        "--slot",
+        type=int,
+        default=runtime_defaults.slot,
+        help="Your draft slot (1-based).",
+    )
+    parser.add_argument(
+        "--year",
+        type=int,
+        default=runtime_defaults.year,
+        help="Draft year for export metadata.",
+    )
     parser.add_argument("--simulations", type=int, default=5000, help="Monte Carlo rollouts.")
     parser.add_argument(
         "--checkpoint-dir",
         type=str,
-        default=DEFAULT_CHECKPOINT_DIR,
+        default=runtime_defaults.checkpoint_dir,
         help="Directory containing checkpoint_episode_*.pth files.",
     )
     parser.add_argument(
@@ -72,8 +84,14 @@ def resolve_checkpoint_path(args: argparse.Namespace) -> str | None:
 
 def main() -> int:
     """Run position guide generation."""
-    args = parse_args()
-    config = Config()
+    config = load_runtime_config()
+    runtime_defaults = argparse.Namespace(
+        num_teams=config.draft.NUM_TEAMS,
+        slot=config.draft.AGENT_START_POSITION,
+        year=config.season.season,
+        checkpoint_dir=config.season.position_guide_checkpoint_dir,
+    )
+    args = parse_args(runtime_defaults)
     player_csv = args.player_csv or config.paths.PLAYER_DATA_CSV
 
     if not os.path.isfile(player_csv):

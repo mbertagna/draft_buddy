@@ -3,6 +3,7 @@ x-app-base: &app-base
   working_dir: /app
   volumes:
     - .:/app
+  env_file: .env
   environment:
     PYTHONPATH: /app/src
 
@@ -46,18 +47,12 @@ services:
 
   insights-search:
     <<: *app-base
-    env_file: .env
     command: python scripts/fetch_player_insight_search.py --year 2026 --top-n 10 --search-provider valyu
 
   insights-synthesize:
     <<: *app-base
-    env_file: .env
     command: python scripts/synthesize_player_insights.py --year 2026 --top-n 10
 
   position-guide:
     <<: *app-base
-    command: >
-      python scripts/generate_position_guide.py
-      --slot 5
-      --simulations 5000
-      --checkpoint-dir models/12_teams_random_start/v3
+    command: python scripts/generate_position_guide.py --simulations 5000

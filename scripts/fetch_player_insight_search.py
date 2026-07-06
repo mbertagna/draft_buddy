@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
 
-from draft_buddy.config import Config
+from draft_buddy.config import load_runtime_config
 from draft_buddy.data.cache_paths import insights_search_cache_dir
 from draft_buddy.data.insights.cse_gateway import (
     QuotaExceededError,
@@ -83,7 +83,7 @@ def main() -> int:
         print(str(error), file=sys.stderr)
         return 1
 
-    config = Config()
+    config = load_runtime_config()
     selector = InsightPlayerSelector(config.paths.PLAYER_DATA_CSV, draft_year=args.year)
     players = selector.select(
         top_n=args.top_n,

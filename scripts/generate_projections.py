@@ -10,7 +10,7 @@ import os
 
 import pandas as pd
 
-from draft_buddy.config import Config
+from draft_buddy.config import load_runtime_config
 from draft_buddy.data import (
     FantasyDataProcessor,
     SleeperCatalogBuilder,
@@ -23,24 +23,21 @@ DRAFTABLE_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 DATA_ROOT = './data'
 
 
-def generated_output_dir(draft_year: int) -> str:
+def generated_output_dir(output_path: str) -> str:
     """
-    Return the year-scoped directory for this run's generated outputs, creating it if needed.
-
-    Keeping each season's generated CSVs under their own directory prevents a
-    run for one draft year from silently overwriting another's diagnostics.
+    Return the directory for this run's generated outputs, creating it if needed.
 
     Parameters
     ----------
-    draft_year : int
-        The draft year being processed.
+    output_path : str
+        League-scoped player CSV path from the active config.
 
     Returns
     -------
     str
-        Path to ``./data/generated/{draft_year}``.
+        Parent directory of the generated player CSV.
     """
-    output_dir = os.path.join(DATA_ROOT, 'generated', str(draft_year))
+    output_dir = os.path.dirname(output_path)
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
@@ -108,6 +105,7 @@ def main(
     output_path,
     draft_year,
     rookie_projection_method,
+    runtime_config,
     sleeper_league_id=None,
     lookback_seasons=None,
 ):
@@ -116,7 +114,6 @@ def main(
     """
     pd.set_option('display.max_columns', None)
 
-    runtime_config = Config()
     resolved_lookback = (
         lookback_seasons
         if lookback_seasons is not None
@@ -124,91 +121,18 @@ def main(
     )
     stats_start_year = draft_year - resolved_lookback
 
-    print(f"--- Running Player Data Processor for {draft_year} Season ---")
+    league_name = runtime_config.league.display_name or runtime_config.league.league_id
+    print(f"--- Running Player Data Processor for {draft_year} Season ({league_name}) ---")
     print(
         f"Using {resolved_lookback}-season nflverse lookback "
         f"(start_year={stats_start_year}, veteran stats through {draft_year - 1})."
     )
-    output_dir = generated_output_dir(draft_year)
-
-    bye_weeks = {
-        2024: {
-            5: ['DET', 'LAC', 'PHI', 'TEN'],
-            6: ['KC', 'LAR', 'MIA', 'MIN'],
-            7: ['CHI', 'DAL'],
-            9: ['PIT', 'SF'],
-            10: ['CLE', 'GB', 'LV', 'SEA'],
-            11: ['ARI', 'CAR', 'NYG', 'TB'],
-            12: ['BUF', 'CIN', 'JAX', 'NYJ', 'HOU', 'DEN'],
-            14: ['ATL', 'BAL', 'IND', 'NE', 'NO', 'WAS']
-        },
-        2025: {
-            5: ["PIT", "CHI", "GB", "ATL"],
-            6: ["HOU", "MIN"],
-            7: ["BAL", "BUF"],
-            8: ["JAX", "LV", "DET", "ARI", "SEA", "LA"],
-            9: ["PHI", "CLE", "NYJ", "TB"],
-            10: ["KC", "CIN", "TEN", "DAL"],
-            11: ["IND", "NO"],
-            12: ["MIA", "DEN", "LAC", "WAS"],
-            14: ["NYG", "NE", "CAR", "SF"]
-        },
-        2026: {
-            5: ["CAR", "KC"],
-            6: ["CIN", "DET", "MIA", "MIN"],
-            7: ["BUF", "JAX", "LAC", "WAS"],
-            8: ["HOU", "NO", "NYG", "SF"],
-            9: ["PIT", "TEN"],
-            10: ["CHI", "DEN", "PHI", "TB"],
-            11: ["ATL", "CLE", "GB", "LAR", "NE", "SEA"],
-            13: ["BAL", "IND", "LV", "NYJ"],
-            14: ["ARI", "DAL"],
-        }
-    }
-
-    half_ppr_sleeper_scoring_rules = {
-        # Passing
-        "passing_yards": 0.04,          # 1 point per 25 yards
-        "passing_touchdowns": 6,
-        "interceptions": -3,
-        "sack_fumbles_lost": -3,        # turnovers
-        "two_point_conversions": 2,     # includes passing 2PCs if tracked
-
-        # Rushing
-        "rushing_yards": 0.1,           # 1 point per 10 yards
-        "rushing_touchdowns": 6,
-        "rushing_fumbles_lost": -3,
-
-        # Receiving
-        "receptions": 1,                # full PPR
-        "receiving_yards": 0.1,
-        "receiving_touchdowns": 6,
-        "receiving_fumbles_lost": -3,
-
-        # Kicking (no distance buckets — just flat yardage scoring)
-        "fg_made_yards": 0.1,           # 1 point per 10 yards of FG distance
-        "fg_missed": -1,
-        "xp_made": 1,
-        "xp_missed": -1,
-
-        # Defense / Special Teams
-        "sacks": 1,
-        "def_interceptions": 2,
-        "def_fumbles_recovered": 2,
-        "safeties": 2,
-        "def_touchdowns": 6,
-        "kick_return_touchdowns": 6,
-        "punt_return_touchdowns": 6,
-        "blocked_kicks": 2,
-
-        # Negative scoring
-        "points_allowed": None,         # handled separately as a tiered rule
-    }
+    output_dir = generated_output_dir(output_path)
 
     processor = FantasyDataProcessor(
-        scoring_rules=half_ppr_sleeper_scoring_rules,
+        scoring_rules=runtime_config.get_scoring_rules(),
         project_rookies=True,
-        bye_weeks_override=bye_weeks.get(draft_year, {}),
+        bye_weeks_override=runtime_config.season.bye_weeks,
         start_year=stats_start_year,
         positions=DRAFTABLE_POSITIONS,
         rookie_projection_method=rookie_projection_method,
@@ -273,10 +197,6 @@ def main(
         merged_df.to_csv(output_path, index=False)
         print(f"\n✅ Saved final merged data to '{output_path}'")
 
-        archive_path = os.path.join(output_dir, 'generated_player_data.csv')
-        merged_df.to_csv(archive_path, index=False)
-        print(f"✅ Archived a dated copy to '{archive_path}'")
-
     if not borderline_df.empty:
         borderline_path = os.path.join(output_dir, 'borderline_adp_matches.csv')
         borderline_df.to_csv(borderline_path, index=False)
@@ -302,13 +222,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    config = Config()
+    config = load_runtime_config()
     output_file_path = config.paths.PLAYER_DATA_CSV
 
     main(
         output_path=output_file_path,
         draft_year=args.year,
         rookie_projection_method=args.rookie_projection_method,
+        runtime_config=config,
         sleeper_league_id=args.sleeper_league_id,
         lookback_seasons=args.lookback_seasons,
     )
