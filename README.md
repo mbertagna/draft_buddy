@@ -132,7 +132,7 @@ Offline player insight enrichment is a **manual, two-step** pipeline that prepar
 
 1. Copy `.env.example` to `.env` and set:
    - `VALYU_API_KEY` from [Valyu](https://platform.valyu.ai/) (default search provider)
-   - `GEMINI_API_KEY` from [Google AI Studio](https://ai.google.dev/)
+   - `GEMINI_API_KEY` from [Google AI Studio](https://ai.google.dev/) and/or `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/)
 2. Optional: for Google CSE instead, set `INSIGHTS_SEARCH_PROVIDER=google`, `GOOGLE_CSE_API_KEY`, and `GOOGLE_CSE_ID` (note: CSE is closed to new customers and sunsets Jan 2027).
 
 **Run order:**
@@ -144,8 +144,17 @@ docker compose run --rm data
 # 2. Fetch and cache search snippets (Valyu by default)
 docker compose run --rm insights-search
 
-# 3. Synthesize structured insights with Gemini Flash
+# 3. Synthesize structured insights (Gemini or OpenRouter)
 docker compose run --rm insights-synthesize
+```
+
+**Synthesis model selection:**
+
+Defaults come from `.env` (`INSIGHTS_LLM_PROVIDER`, `INSIGHTS_LLM_MODEL`). Override per run:
+
+```bash
+docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py \
+  --provider openrouter --model deepseek/deepseek-v4-flash
 ```
 
 **Outputs:**
@@ -167,12 +176,15 @@ docker compose run --rm insights-synthesize python scripts/synthesize_player_ins
 
 ### Live Draft Assistant
 
-The web UI includes an on-demand **Gemini draft assistant** alongside the fast RL position chips. Set `GEMINI_API_KEY` in `.env` (same key as insight synthesis). Optional: `ADVISOR_GEMINI_MODEL` (default `gemini-2.5-flash`).
+The web UI includes an on-demand **LLM draft assistant** alongside the fast RL position chips. Set `GEMINI_API_KEY` and/or `OPENROUTER_API_KEY` in `.env`.
+
+**Supported models:** Gemini 2.5 Flash, Gemini 2.5 Flash Lite, DeepSeek V4 Pro, DeepSeek V4 Flash (via OpenRouter).
 
 **In the header:**
 
 - **Auto assistant** — when on, fires once per snake turn when scope allows (skipped during clock overrides)
 - **Scope** — *My picks only* (agent team from league config) or *Every team* (auto only)
+- **My model / Others** — separate model pickers for your team vs other teams (defaults from `ADVISOR_AGENT_MODEL` / `ADVISOR_OTHER_TEAMS_MODEL`)
 - **Ask Assistant** — always available during an active draft; uses the selected/on-clock team (including overrides)
 
 The assistant builds per-position shortlists (top 7 by VORP/ADP for the RL model's top two positions, top 5 for the others) and returns a structured pick recommendation. Min GP Frac from the player table is sent with each request.
