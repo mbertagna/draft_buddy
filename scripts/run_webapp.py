@@ -15,8 +15,8 @@ from draft_buddy.rl.checkpoint_manager import CheckpointManager
 from draft_buddy.rl.feature_extractor import FeatureExtractor
 from draft_buddy.rl.policy_network import PolicyNetwork
 from draft_buddy.rl.state_normalizer import StateNormalizer
+from draft_buddy.web.advisor_factory import AdvisorGatewayRegistry, build_advisor_registry
 from draft_buddy.web.app import create_app
-from draft_buddy.web.draft_advisor_gateway import GeminiFlashAdvisorGateway
 from draft_buddy.web.draft_advisor_service import DraftAdvisorService
 from draft_buddy.web.session import DraftSessionManager
 
@@ -193,25 +193,18 @@ def main() -> None:
     inference_provider = RlInferenceProvider(config)
     session_manager = DraftSessionManager(config, inference_provider=inference_provider)
     loaded_insights = load_latest_player_insights(config.paths.DATA_DIR)
-    advisor_service = None
-    gemini_api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if gemini_api_key:
-        advisor_model = os.environ.get("ADVISOR_GEMINI_MODEL", "gemini-2.5-flash")
-        try:
-            advisor_service = DraftAdvisorService(
-                GeminiFlashAdvisorGateway(api_key=gemini_api_key, model=advisor_model)
-            )
-        except ImportError as error:
-            print(
-                "Draft assistant disabled: google-genai is not installed. "
-                "Rebuild the Docker image with `docker compose build webapp`."
-            )
-            print(f"Import error: {error}")
+    advisor_registry = build_advisor_registry()
+    advisor_service = DraftAdvisorService(advisor_registry) if advisor_registry else None
+    if advisor_registry is None:
+        print(
+            "Draft assistant disabled: set GEMINI_API_KEY and/or OPENROUTER_API_KEY in .env."
+        )
     app = create_app(
         config=config,
         session_manager=session_manager,
         loaded_insights=loaded_insights,
         advisor_service=advisor_service,
+        advisor_registry=advisor_registry,
     )
     port = int(os.environ.get("PORT", 5001))
     uvicorn.run(app, host="0.0.0.0", port=port)

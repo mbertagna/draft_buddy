@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from draft_buddy.config import Config
 from draft_buddy.data.insights.loader import LoadedPlayerInsights
 from draft_buddy.simulator.service import SeasonSimulationService
+from draft_buddy.web.advisor_factory import AdvisorGatewayRegistry
 from draft_buddy.web.draft_advisor_schemas import AdvisorRequest
 from draft_buddy.web.draft_advisor_service import DraftAdvisorError, DraftAdvisorService
 from draft_buddy.web.session import DraftSessionManager
@@ -26,6 +27,7 @@ def create_app(
     session_manager: Optional[DraftSessionManager] = None,
     loaded_insights: Optional[LoadedPlayerInsights] = None,
     advisor_service: Optional[DraftAdvisorService] = None,
+    advisor_registry: Optional[AdvisorGatewayRegistry] = None,
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -39,6 +41,8 @@ def create_app(
         Pre-loaded player insights export for UI enrichment.
     advisor_service : Optional[DraftAdvisorService], optional
         Draft assistant service for structured LLM recommendations.
+    advisor_registry : Optional[AdvisorGatewayRegistry], optional
+        Registry exposing configured advisor models for the UI.
 
     Returns
     -------
@@ -57,6 +61,7 @@ def create_app(
     insights_file_meta = insights_store.meta
     insights_source_path = insights_store.source_path
     runtime_advisor_service = advisor_service
+    runtime_advisor_registry = advisor_registry
 
     def _session_id(request: Request, response: Optional[Response] = None) -> str:
         """Resolve session id from cookie or create one."""
@@ -232,13 +237,37 @@ def create_app(
         return session.get_ai_suggestion_for_team(team_id=team_id, ignore_player_ids=ignore_ids)
 
 
+    @app.get("/api/draft/advisor/models")
+    def draft_advisor_models() -> dict:
+        """Return configured advisor models and UI defaults."""
+        if runtime_advisor_registry is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Draft assistant is not configured. Set GEMINI_API_KEY and/or OPENROUTER_API_KEY.",
+            )
+        models = [
+            {
+                "id": option.id,
+                "label": option.label,
+                "provider": option.provider.value,
+            }
+            for option in runtime_advisor_registry.available_models()
+        ]
+        return {
+            "models": models,
+            "defaults": {
+                "agent_model": runtime_advisor_registry.default_agent_model(),
+                "other_teams_model": runtime_advisor_registry.default_other_teams_model(),
+            },
+        }
+
     @app.post("/api/draft/advisor")
     async def draft_advisor(request: Request, response: Response) -> dict:
         """Return a structured LLM draft recommendation for the advising team."""
         if runtime_advisor_service is None:
             raise HTTPException(
                 status_code=503,
-                detail="Draft assistant is not configured. Set GEMINI_API_KEY.",
+                detail="Draft assistant is not configured. Set GEMINI_API_KEY and/or OPENROUTER_API_KEY.",
             )
         session = runtime_session_manager.get_or_create(_session_id(request, response))
         payload = await request.json()

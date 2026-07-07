@@ -171,6 +171,20 @@
             color: #fff;
             font-size: 0.85rem;
         }
+        .assistant-model-select {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            font-size: 0.85rem;
+            max-width: 11rem;
+        }
+        .assistant-model-label {
+            font-size: 0.75rem;
+            opacity: 0.9;
+            margin-right: 4px;
+        }
         #assistant-banner {
             display: none;
             margin: 6px 0 0;
@@ -196,6 +210,20 @@
         #advisor-panel .advisor-error { color: #ffcdd2; }
         #advisor-panel ul { margin: 8px 0; padding-left: 18px; }
         #advisor-panel .advisor-alternate { opacity: 0.9; font-size: 0.85rem; margin-top: 6px; }
+        #advisor-panel .advisor-muted { opacity: 0.85; font-style: italic; margin-top: 6px; }
+        #advisor-panel .advisor-degraded-warning { color: #ffe082; margin-bottom: 8px; }
+        #advisor-panel .advisor-raw {
+            margin-top: 10px;
+            font-size: 0.75rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            opacity: 0.85;
+            max-height: 180px;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            border-radius: 4px;
+        }
         #advisor-panel .advisor-close {
             margin-top: 10px;
             padding: 4px 10px;
@@ -849,6 +877,10 @@
                     <option value="agent_only">My picks only</option>
                     <option value="all_teams">Every team</option>
                 </select>
+                <label class="assistant-model-label" for="assistant-agent-model-select">My model</label>
+                <select id="assistant-agent-model-select" class="assistant-model-select" title="Model for your team's picks"></select>
+                <label class="assistant-model-label" for="assistant-other-model-select">Others</label>
+                <select id="assistant-other-model-select" class="assistant-model-select" title="Model for other teams"></select>
                 <button type="button" id="ask-assistant-btn">Ask Assistant</button>
             </div>
         </div>
@@ -987,6 +1019,8 @@
         const outlookTooltipSummary = document.getElementById('outlook-tooltip-summary');
         const assistantAutoToggle = document.getElementById('assistant-auto-toggle');
         const assistantScopeSelect = document.getElementById('assistant-scope-select');
+        const assistantAgentModelSelect = document.getElementById('assistant-agent-model-select');
+        const assistantOtherModelSelect = document.getElementById('assistant-other-model-select');
         const askAssistantBtn = document.getElementById('ask-assistant-btn');
         const assistantBanner = document.getElementById('assistant-banner');
         const advisorPanel = document.getElementById('advisor-panel');
@@ -1039,6 +1073,55 @@
         let advisorInFlight = false;
         let lastAutoAdvisorPickNumber = null;
         let previousPickNumber = null;
+        let advisorModelsLoaded = false;
+
+        function populateAdvisorModelSelect(selectElement, models, selectedValue) {
+            if (!selectElement) return;
+            selectElement.innerHTML = '';
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.id;
+                option.textContent = model.label;
+                selectElement.appendChild(option);
+            });
+            if (selectedValue && models.some(model => model.id === selectedValue)) {
+                selectElement.value = selectedValue;
+            } else if (models.length > 0) {
+                selectElement.value = models[0].id;
+            }
+        }
+
+        async function loadAdvisorModels() {
+            if (!assistantAgentModelSelect || !assistantOtherModelSelect) return;
+            try {
+                const response = await fetch('/api/draft/advisor/models');
+                if (!response.ok) {
+                    assistantAgentModelSelect.disabled = true;
+                    assistantOtherModelSelect.disabled = true;
+                    if (askAssistantBtn) askAssistantBtn.disabled = true;
+                    return;
+                }
+                const data = await response.json();
+                const models = data.models || [];
+                const storedAgentModel = sessionStorage.getItem('assistantAgentModel');
+                const storedOtherModel = sessionStorage.getItem('assistantOtherTeamsModel');
+                populateAdvisorModelSelect(
+                    assistantAgentModelSelect,
+                    models,
+                    storedAgentModel || data.defaults?.agent_model
+                );
+                populateAdvisorModelSelect(
+                    assistantOtherModelSelect,
+                    models,
+                    storedOtherModel || data.defaults?.other_teams_model
+                );
+                advisorModelsLoaded = true;
+                if (askAssistantBtn) askAssistantBtn.disabled = models.length === 0;
+            } catch (error) {
+                console.error('Error loading advisor models:', error);
+                if (askAssistantBtn) askAssistantBtn.disabled = true;
+            }
+        }
 
         function loadAssistantPreferences() {
             const autoEnabled = sessionStorage.getItem('assistantAutoEnabled');
@@ -1147,18 +1230,64 @@
         function renderAdvisorResult(data) {
             if (!advisorPanel || !advisorPanelBody) return;
             advisorPanel.classList.add('open');
+            if (data.degraded) {
+                renderAdvisorDegraded(data);
+                return;
+            }
             advisorPanelTitle.textContent = `Pick: ${data.recommended_name}`;
             const bullets = (data.rationale_bullets || [])
                 .map(item => `<li>${item}</li>`)
                 .join('');
             const alternates = (data.alternates || [])
-                .map(item => `<div class="advisor-alternate">${item.name}: ${item.reason}</div>`)
+                .map(item => `<div class="advisor-alternate"><strong>${item.name}</strong>: ${item.reason}</div>`)
                 .join('');
+            const flags = (data.flags || []).filter(item => item && item !== 'none');
+            const unknowns = (data.unknown_factors || []).filter(Boolean);
+            const metaParts = [];
+            if (flags.length) metaParts.push(`Flags: ${flags.join(', ')}`);
+            if (unknowns.length) metaParts.push(`Unknown: ${unknowns.join(', ')}`);
             advisorPanelBody.innerHTML = `
                 <div><strong>Team ${data.advising_team_id}</strong> · confidence: ${data.confidence || 'n/a'}</div>
-                ${bullets ? `<ul>${bullets}</ul>` : ''}
-                ${alternates}
+                ${bullets ? `<ul>${bullets}</ul>` : '<div class="advisor-muted">No rationale bullets returned — try Pro or Gemini if this persists.</div>'}
+                ${alternates ? `<div><strong>Alternates</strong>${alternates}</div>` : ''}
+                ${metaParts.length ? `<div class="advisor-meta">${metaParts.join(' · ')}</div>` : ''}
             `;
+        }
+
+        function renderAdvisorDegraded(data) {
+            if (!advisorPanel || !advisorPanelBody) return;
+            const pickLabel = data.recommended_name
+                ? `Unverified: ${data.recommended_name}`
+                : 'Unverified response';
+            advisorPanelTitle.textContent = pickLabel;
+            const bullets = (data.rationale_bullets || [])
+                .map(item => `<li>${item}</li>`)
+                .join('');
+            const alternates = (data.alternates || [])
+                .map(item => `<div class="advisor-alternate"><strong>${item.name}</strong>: ${item.reason}</div>`)
+                .join('');
+            const rawBlock = data.raw_content
+                ? `<details><summary>Raw model output</summary><pre class="advisor-raw">${escapeHtml(data.raw_content)}</pre></details>`
+                : '';
+            advisorPanelBody.innerHTML = `
+                <div class="advisor-degraded-warning">
+                    Could not fully validate this response. Review before drafting.
+                    ${data.parse_error ? `<br><span class="advisor-muted">${escapeHtml(data.parse_error)}</span>` : ''}
+                </div>
+                <div><strong>Team ${data.advising_team_id}</strong>${data.confidence ? ` · confidence: ${data.confidence}` : ''}</div>
+                ${data.recommended_name ? `<div><strong>Suggested:</strong> ${escapeHtml(data.recommended_name)}${data.recommended_player_id ? ` (id ${data.recommended_player_id})` : ''}</div>` : ''}
+                ${bullets ? `<ul>${bullets}</ul>` : ''}
+                ${alternates ? `<div><strong>Alternates</strong>${alternates}</div>` : ''}
+                ${rawBlock}
+            `;
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
         }
 
         function renderAdvisorError(message) {
@@ -1183,6 +1312,12 @@
                 scope: getAssistantScope(),
                 trigger,
             };
+            if (assistantAgentModelSelect && assistantAgentModelSelect.value) {
+                payload.agent_model = assistantAgentModelSelect.value;
+            }
+            if (assistantOtherModelSelect && assistantOtherModelSelect.value) {
+                payload.other_teams_model = assistantOtherModelSelect.value;
+            }
             if (gpMinStr !== '' && !Number.isNaN(parseFloat(gpMinStr))) {
                 payload.gp_min = parseFloat(gpMinStr);
             }
@@ -1862,6 +1997,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             setupSortHandlers();
             loadAssistantPreferences();
+            loadAdvisorModels();
             loadInsightsMeta();
             loadInitialState();
             updatePositionMetaChips();
@@ -1873,6 +2009,16 @@
             if (assistantScopeSelect) {
                 assistantScopeSelect.addEventListener('change', () => {
                     sessionStorage.setItem('assistantScope', assistantScopeSelect.value);
+                });
+            }
+            if (assistantAgentModelSelect) {
+                assistantAgentModelSelect.addEventListener('change', () => {
+                    sessionStorage.setItem('assistantAgentModel', assistantAgentModelSelect.value);
+                });
+            }
+            if (assistantOtherModelSelect) {
+                assistantOtherModelSelect.addEventListener('change', () => {
+                    sessionStorage.setItem('assistantOtherTeamsModel', assistantOtherModelSelect.value);
                 });
             }
             if (simModeSelect) {

@@ -55,15 +55,23 @@ def test_build_advisor_context_includes_glossary_and_roster(config) -> None:
         "num_teams": 4,
         "snake_team_on_turn": 1,
         "override_active": False,
-        "team_rosters": {1: {"starters": {"RB": [players[0].to_dict()]}, "bench": []}},
-        "roster_counts": {1: {"QB": 0, "RB": 1, "WR": 0, "TE": 0, "FLEX": 0}},
-        "team_bye_weeks": {1: {}},
+        "total_roster_size_per_team": 16,
+        "team_rosters": {
+            1: {"starters": {"RB": [players[0].to_dict()]}, "bench": []},
+            2: {"starters": {}, "bench": []},
+        },
+        "roster_counts": {
+            1: {"QB": 0, "RB": 1, "WR": 0, "TE": 0, "FLEX": 0},
+            2: {"QB": 0, "RB": 0, "WR": 0, "TE": 0, "FLEX": 0},
+        },
+        "team_bye_weeks": {1: {}, 2: {}},
     }
     context = build_advisor_context(
         ui_state=ui_state,
         advising_team_id=1,
         agent_team_id=1,
         roster_structure=config.draft.ROSTER_STRUCTURE,
+        bench_maxes=config.draft.BENCH_MAXES,
         total_bench_size=config.draft.TOTAL_BENCH_SIZE,
         team_manager_mapping=config.draft.TEAM_MANAGER_MAPPING,
         candidate_rows=rows,
@@ -72,12 +80,43 @@ def test_build_advisor_context_includes_glossary_and_roster(config) -> None:
         rl_probs={"QB": 0.1, "RB": 0.6, "WR": 0.2, "TE": 0.1},
         rl_degraded=False,
         insights={},
+        recent_picks=[
+            {
+                "pick_number": 4,
+                "team_id": 2,
+                "player_name": "Recent RB",
+                "position": "RB",
+            }
+        ],
     )
 
     assert "## Field glossary" in context
     assert "## Advising team roster" in context
+    assert "## Roster targets" in context
+    assert "starters_req" in context
+    assert "## Recent picks" in context
+    assert "Recent RB" in context
+    assert "## League snapshot (other teams)" in context
     assert "RB — by VORP" in context
     assert "candidate shortlist K=7" in context
+
+
+def test_format_position_targets_table_shows_remaining_room(config) -> None:
+    """Verify roster target table includes per-position caps and open starter slots."""
+    from draft_buddy.web.draft_advisor_context import _format_position_targets_table
+
+    player = _player(1, "RB", 240.0, 2.0)
+    roster = {"starters": {"RB": [player.to_dict()]}, "bench": [], "players_flat": [player.to_dict()]}
+    table = _format_position_targets_table(
+        roster=roster,
+        roster_structure={"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 3},
+        bench_maxes={"QB": 3, "RB": 8, "WR": 8, "TE": 4},
+        total_bench_size=7,
+        total_roster_size=16,
+    )
+
+    assert "| RB | 1 | 2 | 1 |" in table
+    assert "room_at_pos" in table
 
 
 def test_collect_candidate_player_ids_unions_vorp_and_adp_tables() -> None:

@@ -5,28 +5,32 @@ from __future__ import annotations
 from typing import Dict, Optional
 
 from draft_buddy.data.insights.schemas import PlayerInsight
+from draft_buddy.web.advisor_factory import AdvisorGatewayRegistry
 from draft_buddy.web.draft_advisor_context import (
     DEFAULT_TOP_K,
     POSITIONS,
+    RECENT_PICKS_LIMIT,
     build_advisor_context,
     build_candidate_rows,
     collect_candidate_player_ids,
     filter_available_players,
     position_top_k_map,
 )
-from draft_buddy.web.draft_advisor_gateway import GeminiAdvisorGateway
 from draft_buddy.web.draft_advisor_schemas import (
     AdvisorRequest,
+    AdvisorResult,
     AdvisorScope,
     AdvisorTrigger,
-    PickRecommendation,
 )
+from draft_buddy.web.draft_advisor_resilience import recommend_with_resilience
 from draft_buddy.web.session import DraftSession
 
 SYSTEM_PROMPT = (
     "You are a fantasy football draft analyst. Recommend exactly one player from the "
     "candidate tables in the user message. Ground your reasoning in the provided stats "
-    "and offline insights. Never recommend a player who is not listed."
+    "and offline insights. Never recommend a player who is not listed. "
+    "Always populate rationale_bullets with 2-5 concise, evidence-based bullets. "
+    "Include up to 3 alternates from the candidate tables when useful."
 )
 
 
@@ -55,21 +59,21 @@ class DraftAdvisorValidationError(DraftAdvisorError):
 class DraftAdvisorService:
     """Build context and request a structured draft recommendation."""
 
-    def __init__(self, gateway: GeminiAdvisorGateway) -> None:
+    def __init__(self, registry: AdvisorGatewayRegistry) -> None:
         """
         Parameters
         ----------
-        gateway : GeminiAdvisorGateway
-            LLM gateway for structured recommendations.
+        registry : AdvisorGatewayRegistry
+            Registry of configured advisor LLM gateways.
         """
-        self._gateway = gateway
+        self._registry = registry
 
     def recommend(
         self,
         session: DraftSession,
         request: AdvisorRequest,
         insights: Dict[int, PlayerInsight],
-    ) -> PickRecommendation:
+    ) -> AdvisorResult:
         """Return a pick recommendation for the advising team.
 
         Parameters
@@ -83,8 +87,8 @@ class DraftAdvisorService:
 
         Returns
         -------
-        PickRecommendation
-            Structured recommendation from the LLM.
+        AdvisorResult
+            Structured or degraded recommendation from the LLM.
 
         Raises
         ------
@@ -99,6 +103,7 @@ class DraftAdvisorService:
             raise DraftAdvisorValidationError(f"Invalid team id {advising_team_id}.")
 
         self._enforce_scope(request, ui_state, advising_team_id, session.agent_team_id)
+        self._validate_models(request)
 
         available_players = [
             session.player_catalog.require(player_id)
@@ -125,6 +130,7 @@ class DraftAdvisorService:
             advising_team_id=advising_team_id,
             agent_team_id=session.agent_team_id,
             roster_structure=session.roster_structure,
+            bench_maxes=session.bench_maxes,
             total_bench_size=session.total_bench_size,
             team_manager_mapping=session.team_manager_mapping,
             candidate_rows=candidate_rows,
@@ -133,28 +139,63 @@ class DraftAdvisorService:
             rl_probs=rl_probs,
             rl_degraded=rl_degraded,
             insights=insights,
+            recent_picks=self._build_recent_pick_summaries(session),
         )
 
+        model_id = self._resolve_model_id(request, advising_team_id, session.agent_team_id)
+        gateway = self._registry.get(model_id)
+
         try:
-            recommendation = self._gateway.recommend(SYSTEM_PROMPT, context)
+            result = recommend_with_resilience(
+                system_prompt=SYSTEM_PROMPT,
+                user_prompt=context,
+                fetch_payload=lambda prompt: gateway.fetch_payload(SYSTEM_PROMPT, prompt),
+                advising_team_id=advising_team_id,
+                is_agent_team=advising_team_id == session.agent_team_id,
+                valid_player_ids=valid_player_ids,
+            )
         except Exception as error:
             raise DraftAdvisorError(
                 f"Assistant request failed: {error}. Try the RL position chips instead.",
                 status_code=502,
             ) from error
 
-        if recommendation.recommended_player_id not in valid_player_ids:
-            raise DraftAdvisorError(
-                "Assistant returned a player outside the candidate shortlist.",
-                status_code=502,
-            )
+        return result
 
-        return recommendation.model_copy(
-            update={
-                "advising_team_id": advising_team_id,
-                "is_agent_team": advising_team_id == session.agent_team_id,
-            }
-        )
+    def _build_recent_pick_summaries(self, session: DraftSession) -> list[dict[str, object]]:
+        """Return recent draft picks with player names for advisor context."""
+        recent_picks = session.draft_history[-RECENT_PICKS_LIMIT:]
+        summaries: list[dict[str, object]] = []
+        for pick in recent_picks:
+            player = session.player_catalog.get(pick.player_id)
+            summaries.append(
+                {
+                    "pick_number": pick.pick_number,
+                    "team_id": pick.team_id,
+                    "player_name": player.name if player is not None else f"Player {pick.player_id}",
+                    "position": player.position if player is not None else "?",
+                }
+            )
+        return summaries
+
+    def _validate_models(self, request: AdvisorRequest) -> None:
+        """Validate requested model ids against configured availability."""
+        try:
+            self._registry.validate_model(request.agent_model)
+            self._registry.validate_model(request.other_teams_model)
+        except ValueError as error:
+            raise DraftAdvisorValidationError(str(error)) from error
+
+    def _resolve_model_id(
+        self,
+        request: AdvisorRequest,
+        advising_team_id: int,
+        agent_team_id: int,
+    ) -> str:
+        """Return the model id for the advising team."""
+        if advising_team_id == agent_team_id:
+            return request.agent_model
+        return request.other_teams_model
 
     def _enforce_scope(
         self,
