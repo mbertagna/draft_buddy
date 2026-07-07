@@ -1,4 +1,4 @@
-"""Synthesize Gemini Flash player insights from cached search results."""
+"""Update synthesize script to use synthesis factory."""
 
 from __future__ import annotations
 
@@ -19,16 +19,17 @@ from draft_buddy.data.cache_paths import (
     player_insights_output_path,
 )
 from draft_buddy.data.insights.cse_gateway import SearchCacheStore
-from draft_buddy.data.insights.gemini_flash_gateway import DEFAULT_GEMINI_MODEL, GeminiFlashGateway
 from draft_buddy.data.insights.player_selector import InsightPlayerSelector
 from draft_buddy.data.insights.schemas import PlayerInsight
+from draft_buddy.data.insights.synthesis_factory import build_synthesis_gateway, resolve_synthesis_model
 from draft_buddy.data.insights.synthesizer import InsightSynthesizer, SynthesisCacheStore, merge_insights_file
+from draft_buddy.llm.model_registry import resolve_synthesis_provider
 
 
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments for the synthesis script."""
     parser = argparse.ArgumentParser(
-        description="Synthesize structured player insights from cached CSE search results."
+        description="Synthesize structured player insights from cached search results."
     )
     parser.add_argument("--year", type=int, default=2026, help="Draft year.")
     parser.add_argument("--top-n", type=int, default=150, help="Number of top ADP players.")
@@ -38,10 +39,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-players", type=int, default=None, help="Optional player cap.")
     parser.add_argument("--force", action="store_true", help="Re-synthesize even when cache exists.")
     parser.add_argument(
+        "--provider",
+        type=str,
+        default=os.environ.get("INSIGHTS_LLM_PROVIDER"),
+        help="LLM provider: gemini or openrouter (optional; inferred from model when omitted).",
+    )
+    parser.add_argument(
         "--model",
         type=str,
-        default=os.environ.get("INSIGHTS_GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
-        help="Gemini model name.",
+        default=None,
+        help="LLM model id (defaults to INSIGHTS_LLM_MODEL or gemini-2.5-flash).",
     )
     return parser.parse_args()
 
@@ -50,9 +57,14 @@ def main() -> int:
     """Run the synthesis pipeline."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     args = parse_args()
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("GEMINI_API_KEY environment variable is required.", file=sys.stderr)
+    provider = args.provider.strip() if args.provider else None
+    try:
+        model = resolve_synthesis_model(args.model)
+        if provider:
+            resolve_synthesis_provider(provider)
+        gateway = build_synthesis_gateway(model=model, provider=provider)
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
         return 1
 
     config = load_runtime_config()
@@ -65,7 +77,6 @@ def main() -> int:
 
     search_cache = SearchCacheStore(insights_search_cache_dir(args.data_root))
     synthesis_cache = SynthesisCacheStore(insights_synthesis_cache_dir(args.data_root))
-    gateway = GeminiFlashGateway(api_key=api_key, model=args.model)
     synthesizer = InsightSynthesizer(gateway, search_cache, synthesis_cache)
 
     missing_search: list[str] = [
@@ -107,7 +118,7 @@ def main() -> int:
                     file=sys.stderr,
                 )
 
-    insights_file = merge_insights_file(args.year, args.model, merged)
+    insights_file = merge_insights_file(args.year, model, merged)
     exports_dir = player_insights_exports_dir(args.data_root)
     os.makedirs(exports_dir, exist_ok=True)
     output_path = player_insights_output_path(

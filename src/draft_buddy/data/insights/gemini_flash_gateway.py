@@ -5,13 +5,12 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from draft_buddy.data.insights.gemini_gateway import GeminiGateway
+from draft_buddy.data.insights.gemini_gateway import InsightSynthesisGateway
 from draft_buddy.data.insights.schemas import PlayerInsight, sanitize_synthesis_payload
+from draft_buddy.llm.model_registry import DEFAULT_GEMINI_MODEL
 
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
-
-class GeminiFlashGateway(GeminiGateway):
+class GeminiFlashGateway(InsightSynthesisGateway):
     """Gemini Flash implementation using structured JSON output."""
 
     def __init__(self, api_key: str, model: str = DEFAULT_GEMINI_MODEL) -> None:
@@ -27,6 +26,11 @@ class GeminiFlashGateway(GeminiGateway):
 
         self._client = genai.Client(api_key=api_key)
         self._model = model
+
+    @property
+    def model(self) -> str:
+        """Return the configured Gemini model name."""
+        return self._model
 
     def synthesize(self, system_prompt: str, user_prompt: str) -> PlayerInsight:
         """Call Gemini Flash and parse a structured PlayerInsight response.

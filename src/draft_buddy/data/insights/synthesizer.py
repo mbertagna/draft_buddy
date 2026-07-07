@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Iterable
 
 from draft_buddy.data.insights.cse_gateway import SearchCacheStore, SearchSnippet
-from draft_buddy.data.insights.gemini_gateway import GeminiGateway
+from draft_buddy.data.insights.gemini_gateway import InsightSynthesisGateway
 from draft_buddy.data.insights.player_context import InsightPlayerContext
 from draft_buddy.data.insights.query_builder import InsightQueryBuilder
 from draft_buddy.data.insights.schemas import (
@@ -73,15 +73,15 @@ class InsightSynthesizer:
 
     def __init__(
         self,
-        gemini_gateway: GeminiGateway,
+        gemini_gateway: InsightSynthesisGateway,
         search_cache: SearchCacheStore,
         synthesis_cache: SynthesisCacheStore,
     ) -> None:
         """
         Parameters
         ----------
-        gemini_gateway : GeminiGateway
-            Gemini gateway for structured synthesis.
+        gemini_gateway : InsightSynthesisGateway
+            LLM gateway for structured synthesis.
         search_cache : SearchCacheStore
             Cached CSE search results.
         synthesis_cache : SynthesisCacheStore
