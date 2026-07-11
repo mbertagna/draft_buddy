@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRAFT BUDDY</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles/tokens.css">
+    <link rel="stylesheet" href="/static/styles/base.css">
+    <link rel="stylesheet" href="/static/styles/components.css">
+    <link rel="stylesheet" href="/static/styles/header.css">
+</head>
+<body>
+    <header>
+        <div class="header-top">
+            <div class="brand">DRAFT BUDDY</div>
+            <div class="stats-bar">
+                <span class="chip">Total <span id="total-picks-display">N/A</span></span>
+                <span class="chip">QB <span id="qb-drafted-display">N/A</span></span>
+                <span class="chip">RB <span id="rb-drafted-display">N/A</span></span>
+                <span class="chip">WR <span id="wr-drafted-display">N/A</span></span>
+                <span class="chip">TE <span id="te-drafted-display">N/A</span></span>
+            </div>
+            <div class="header-actions">
+                <label class="engine-label" title="Sim Pick and Auto Draft engine">
+                    Engine
+                    <select id="sim-mode-select" class="select-header">
+                        <option value="bot">Bot</option>
+                        <option value="policy">Policy</option>
+                    </select>
+                </label>
+                <button type="button" id="new-draft-btn-header" class="btn-ghost">Start new draft</button>
+                <button type="button" id="undo-pick-btn">Undo</button>
+                <button type="button" id="simulate-pick-btn">Sim pick</button>
+                <button type="button" id="auto-draft-btn">Auto draft</button>
+                <button type="button" id="download-csv-btn">CSV</button>
+            </div>
+        </div>
+
+        <div class="header-hero">
+            <span class="chip">Pick #<span id="current-pick-display">N/A</span></span>
+            <span class="chip">On clock: <span id="team-on-clock-display">N/A</span></span>
+            <div class="chip ai-chip" id="ai-chip">
+                <span id="ai-text">AI</span>
+                <div id="ai-suggestion-display">N/A</div>
+            </div>
+        </div>
+
+        <details class="header-details availability-details" open>
+            <summary>Availability</summary>
+            <div class="availability-bar">
+                <span class="chip availability" id="overall-avail-chip">
+                    <span class="chip-title">Overall</span>
+                    <span class="metric"><span class="label">ADP</span> <span class="value" id="overall-min-adp">N/A</span></span>
+                    <span class="metric"><span class="label">VORP</span> <span class="value" id="overall-max-vorp">N/A</span></span>
+                    <span class="metric"><span class="label">Pts</span> <span class="value" id="overall-max-pts">N/A</span></span>
+                </span>
+                <span class="chip availability" id="qb-avail-chip">
+                    <span class="chip-title">QB</span>
+                    <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
+                    <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
+                    <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
+                </span>
+                <span class="chip availability" id="rb-avail-chip">
+                    <span class="chip-title">RB</span>
+                    <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
+                    <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
+                    <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
+                </span>
+                <span class="chip availability" id="wr-avail-chip">
+                    <span class="chip-title">WR</span>
+                    <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
+                    <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
+                    <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
+                </span>
+                <span class="chip availability" id="te-avail-chip">
+                    <span class="chip-title">TE</span>
+                    <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
+                    <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
+                    <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
+                </span>
+            </div>
+        </details>
+
+        <div class="assistant-row">
+            <button type="button" id="ask-assistant-btn">Get recommendation</button>
+            <details class="header-details assistant-details">
+                <summary>Assistant settings</summary>
+                <div class="assistant-details-body">
+                    <label class="assistant-toggle" title="Auto-run assistant on snake turns when scope allows">
+                        <input type="checkbox" id="assistant-auto-toggle">
+                        Auto-recommend on my turn
+                    </label>
+                    <select id="assistant-scope-select" title="Auto assistant pick scope">
+                        <option value="agent_only">My picks only</option>
+                        <option value="all_teams">Every team</option>
+                    </select>
+                    <label class="assistant-model-label" for="assistant-agent-model-select">Your picks</label>
+                    <select id="assistant-agent-model-select" class="assistant-model-select" title="Model for your team's picks"></select>
+                    <label class="assistant-model-label" for="assistant-other-model-select">Other teams</label>
+                    <select id="assistant-other-model-select" class="assistant-model-select" title="Model for other teams"></select>
+                </div>
+            </details>
+        </div>
+
+        <div id="assistant-banner"></div>
+        <div id="advisor-panel" aria-live="polite">
+            <h4 id="advisor-panel-title">Assistant</h4>
+            <div id="advisor-panel-body"></div>
+            <button type="button" class="advisor-close" id="advisor-panel-close">Close</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="top-panel">
+            <div id="controls">
+                <input type="text" id="player-search" class="search-input" placeholder="Search by name...">
+                <div class="position-filters">
+                    <label><input type="checkbox" name="position" value="QB"> QB</label>
+                    <label><input type="checkbox" name="position" value="RB"> RB</label>
+                    <label><input type="checkbox" name="position" value="WR"> WR</label>
+                    <label><input type="checkbox" name="position" value="TE"> TE</label>
+                </div>
+                <div class="gp-filter">
+                    <span>Min GP Frac</span>
+                    <input type="number" id="gp-frac-min" step="0.01" min="0" max="1" placeholder="e.g., 0.75">
+                </div>
+                <span id="insights-hint"></span>
+            </div>
+            <div class="table-scroll">
+                <table id="player-list" class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width:28px;">Blind</th>
+                            <th class="sortable" data-sort-key="adp">ADP</th>
+                            <th class="sortable" data-sort-key="name">Name</th>
+                            <th class="role-col" title="Projected depth role from offline insights">Role</th>
+                            <th class="outlook-col" id="outlook-col-header" title="Research outlook from offline insights">Outlook</th>
+                            <th class="sortable" data-sort-key="position">Position</th>
+                            <th class="sortable" data-sort-key="projected_points">Proj. Pts</th>
+                            <th class="sortable" data-sort-key="vorp">VORP</th>
+                            <th class="sortable" data-sort-key="games_played_frac">GP Frac</th>
+                            <th class="sortable" data-sort-key="team">Team</th>
+                            <th class="sortable" data-sort-key="bye_week">Bye</th>
+                            <th title="Sleeper status / injury">Status</th>
+                            <th class="info-col">Info</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="resizer" id="h-resizer"></div>
+
+        <div id="bottom-panel">
+            <div class="bottom-tabs">
+                <button type="button" class="bottom-tab active" data-tab="board">Board</button>
+                <button type="button" class="bottom-tab" data-tab="season">Season sim</button>
+            </div>
+            <div class="bottom-panel-content active" data-panel="board">
+                <div id="draft-board-container">
+                    <table id="draft-board-table" class="data-table">
+                        <thead>
+                            <tr id="board-headers"></tr>
+                        </thead>
+                        <tbody id="board-rows"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="bottom-panel-content" data-panel="season" hidden>
+                <div id="season-sim-container">
+                    <button type="button" id="simulate-season-btn" class="btn btn-primary">Sim season</button>
+                    <div id="season-simulation-results"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="outlook-tooltip" aria-hidden="true">
+        <div class="tooltip-phrase" id="outlook-tooltip-phrase"></div>
+        <div class="tooltip-role" id="outlook-tooltip-role"></div>
+        <div class="tooltip-summary" id="outlook-tooltip-summary"></div>
+    </div>
+
+    <div id="insight-modal" role="dialog" aria-modal="true" aria-labelledby="insight-modal-title">
+        <div class="insight-modal-content">
+            <h3 id="insight-modal-title"></h3>
+            <p class="insight-modal-phrase" id="insight-modal-phrase"></p>
+            <p class="insight-modal-summary" id="insight-modal-summary"></p>
+            <div class="insight-tag-list" id="insight-modal-tags"></div>
+            <ul class="insight-bullets" id="insight-modal-bullets"></ul>
+            <div class="insight-modal-footer">
+                <span class="insight-confidence" id="insight-modal-confidence"></span>
+                <div class="insight-modal-actions">
+                    <button type="button" class="insight-modal-google" id="insight-modal-google">Search Google</button>
+                    <button type="button" class="insight-modal-close" id="insight-modal-close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js" defer></script>
+</body>
+</html>

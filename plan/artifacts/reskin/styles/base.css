@@ -1,0 +1,93 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-ui);
+    font-size: var(--text-base);
+    color: var(--text);
+    margin: 0;
+    background-color: var(--surface);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    line-height: 1.45;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+#top-panel {
+    flex: 0 0 50%;
+    overflow-y: auto;
+    padding: var(--space-2) var(--space-4);
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+}
+
+#bottom-panel {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: var(--space-2) var(--space-4);
+    min-height: 100px;
+    background: var(--surface-raised);
+}
+
+.table-scroll {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.resizer {
+    height: 8px;
+    cursor: row-resize;
+    background-color: var(--neutral-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.resizer:hover {
+    background-color: var(--border);
+}
+
+.resizer::after {
+    content: "";
+    width: 30px;
+    height: 4px;
+    border-top: 2px solid var(--text-muted);
+    border-bottom: 2px solid var(--text-muted);
+}
+
+/* Focus */
+:focus-visible {
+    outline: 2px solid var(--green-600);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #top-panel,
+    #bottom-panel {
+        padding: var(--space-2);
+    }
+}
