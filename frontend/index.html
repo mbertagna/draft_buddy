@@ -124,7 +124,7 @@
             border-bottom: 2px solid var(--text-muted);
         }
 
-        /* Header: compact, sticky, space-efficient */
+        /* Header: single sticky draft banner */
         header {
             position: sticky;
             top: 0;
@@ -132,28 +132,39 @@
             background-color: #4CAF50;
             color: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: grid;
-            grid-template-rows: auto auto auto;
-            gap: 6px;
-            padding: 8px 12px;
+            padding: 6px 10px;
         }
-        .toolbar {
+        .draft-banner {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            align-items: flex-start;
             gap: 10px;
+            min-height: 48px;
         }
-        .stats-bar {
+        .draft-clock {
+            flex-shrink: 0;
             display: flex;
-            flex-wrap: wrap;
+            align-items: baseline;
             gap: 6px;
-            align-items: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+            min-height: 40px;
+            padding-top: 8px;
         }
-        .availability-bar {
+        .draft-clock-sep { opacity: 0.55; font-weight: 500; }
+        #round-pick-display { letter-spacing: 0.02em; }
+        #team-on-clock-display { font-weight: 600; opacity: 0.95; }
+        .draft-banner-ai {
+            flex: 1 1 auto;
+            min-width: 0;
             display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            align-items: center;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .draft-banner-ai > .ai-chip {
+            flex-shrink: 0;
+            margin-top: 4px;
         }
         .chip {
             display: inline-flex;
@@ -167,43 +178,12 @@
             line-height: 1.2;
             white-space: nowrap;
         }
-        .chip.availability {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.18);
-            padding: 4px 10px;
-        }
-        .chip .chip-title { font-weight: 700; opacity: 0.95; }
-        .metric {
-            display: inline-flex;
-            align-items: baseline;
-            gap: 4px;
-            padding: 2px 6px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.22);
-        }
-        .metric .label { opacity: 0.85; font-size: 0.8rem; font-weight: 600; }
-        .metric .value { font-weight: 700; }
-        .status-row {
-            display: flex;
-            align-items: center;
-            gap: 8px; /* Reduced gap slightly */
-            font-weight: 600;
-            font-size: 0.95rem;
-            min-height: 24px;
-        }
-        .status-row .label {
-            opacity: 0.9;
-        }
         #ai-suggestion-display {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
-            max-width: 55vw;
             overflow-x: auto;
             overflow-y: hidden;
-            padding-bottom: 2px; /* for scrollbar */
         }
         .ai-suggestion-item {
             display: flex;
@@ -224,13 +204,6 @@
             font-size: 0.9rem;
             font-weight: 700;
         }
-        .assistant-controls {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-left: 8px;
-        }
         .assistant-toggle {
             display: inline-flex;
             align-items: center;
@@ -240,23 +213,24 @@
             cursor: pointer;
             user-select: none;
         }
-        .assistant-toggle input {
-            cursor: pointer;
-        }
+        .assistant-toggle input { cursor: pointer; }
         #ask-assistant-btn {
             padding: 6px 10px;
             border: none;
             border-radius: 4px;
-            background-color: #2e7d32;
+            background-color: #1b5e20;
             color: #fff;
             font-size: 0.85rem;
+            font-weight: 600;
             cursor: pointer;
         }
         #ask-assistant-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
-        #assistant-scope-select {
+        #assistant-scope-select,
+        .assistant-model-select,
+        #sim-mode-select {
             padding: 4px 8px;
             border-radius: 4px;
             border: 1px solid rgba(255,255,255,0.4);
@@ -264,23 +238,74 @@
             color: #fff;
             font-size: 0.85rem;
         }
-        .assistant-model-select {
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.4);
-            background: rgba(255,255,255,0.15);
-            color: #fff;
-            font-size: 0.85rem;
-            max-width: 11rem;
-        }
+        .assistant-model-select { max-width: 11rem; }
         .assistant-model-label {
             font-size: 0.75rem;
             opacity: 0.9;
             margin-right: 4px;
         }
+        .draft-banner-actions {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding-top: 4px;
+        }
+        .draft-banner-actions > button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            font-size: 0.85rem;
+        }
+        #undo-pick-btn { background-color: #ffc107; color: black; }
+        #simulate-pick-btn { background-color: #007bff; }
+        #auto-draft-btn {
+            background-color: #c62828;
+            color: #fff;
+            font-weight: 600;
+        }
+        #auto-draft-btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+        .banner-settings {
+            position: relative;
+        }
+        #banner-settings-toggle {
+            padding: 6px 10px;
+            border: 1px solid rgba(255,255,255,0.45);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        #banner-settings-panel {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 6px);
+            z-index: 1100;
+            min-width: 240px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #2e7d32;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        #banner-settings-panel[hidden] { display: none; }
+        #banner-settings-panel .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
         #assistant-banner {
             display: none;
-            margin: 6px 0 0;
+            margin-top: 6px;
             padding: 6px 10px;
             border-radius: 6px;
             background: rgba(255, 193, 7, 0.2);
@@ -288,43 +313,167 @@
             font-size: 0.85rem;
         }
         #assistant-banner.visible { display: block; }
-        #advisor-panel {
-            display: none;
-            margin: 8px 0 0;
-            padding: 12px 14px;
+        #ai-assistant-sliver {
+            position: relative;
+            flex: 1 1 auto;
+            min-width: 0;
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.12);
             color: #fff;
             font-size: 0.9rem;
+            overflow: hidden;
+            --lava-gradient:
+                radial-gradient(120% 180% at 0% 50%, #ff8a00 0%, transparent 50%),
+                radial-gradient(120% 180% at 100% 50%, #8a2be2 0%, transparent 50%),
+                radial-gradient(120% 180% at 50% 0%, #00e5ff 0%, transparent 50%),
+                radial-gradient(120% 180% at 50% 100%, #00ff6a 0%, transparent 50%),
+                linear-gradient(90deg, #ff0080, #ff8a00, #ffff00, #00ff6a, #00e5ff, #8a2be2, #ff0080);
+            --lava-size: 300% 300%;
         }
-        #advisor-panel.open { display: block; }
-        #advisor-panel h4 { margin: 0 0 8px; font-size: 1rem; }
-        #advisor-panel .advisor-loading { opacity: 0.85; font-style: italic; }
-        #advisor-panel .advisor-error { color: #ffcdd2; }
-        #advisor-panel ul { margin: 8px 0; padding-left: 18px; }
-        #advisor-panel .advisor-alternate { opacity: 0.9; font-size: 0.85rem; margin-top: 6px; }
-        #advisor-panel .advisor-muted { opacity: 0.85; font-style: italic; margin-top: 6px; }
-        #advisor-panel .advisor-degraded-warning { color: #ffe082; margin-bottom: 8px; }
-        #advisor-panel .advisor-raw {
-            margin-top: 10px;
+        #ai-assistant-sliver::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 2px;
+            border-radius: inherit;
+            background: var(--lava-gradient);
+            background-size: var(--lava-size);
+            animation: lavaMove 8s ease-in-out infinite, lavaHue 12s linear infinite;
+            -webkit-mask:
+                linear-gradient(#000 0 0) content-box,
+                linear-gradient(#000 0 0);
+            mask:
+                linear-gradient(#000 0 0) content-box,
+                linear-gradient(#000 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            z-index: 0;
+        }
+        #ai-assistant-sliver[hidden] { display: none; }
+        .ai-sliver-main {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+            min-height: 40px;
+            padding: 4px 10px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        .ai-confidence-dot {
+            flex-shrink: 0;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #95a5a6;
+        }
+        .ai-confidence-dot[data-level="high"] { background: #2ecc71; }
+        .ai-confidence-dot[data-level="medium"] { background: #f1c40f; }
+        .ai-confidence-dot[data-level="low"] { background: #e74c3c; }
+        #ai-sliver-primary {
+            flex-shrink: 0;
+            padding: 4px 10px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.18);
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #ai-sliver-primary.ai-sliver-loading {
+            font-style: italic;
+            font-weight: 500;
+            opacity: 0.85;
+        }
+        #ai-sliver-primary.ai-sliver-error {
+            color: #ffcdd2;
+            font-weight: 500;
+        }
+        .ai-sliver-alternates {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+        .ai-sliver-alternate-chip {
+            flex-shrink: 0;
+            padding: 3px 8px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .ai-sliver-meta {
+            flex-shrink: 0;
+            font-size: 0.8rem;
+            opacity: 0.9;
+            white-space: nowrap;
+        }
+        #ai-sliver-toggle,
+        #ai-sliver-dismiss {
+            flex-shrink: 0;
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        #ai-sliver-toggle[aria-expanded="true"] {
+            transform: rotate(180deg);
+        }
+        .ai-sliver-drawer {
+            position: relative;
+            z-index: 1;
+            padding: 8px 14px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 0 0 6px 6px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .ai-sliver-drawer[hidden] { display: none; }
+        .ai-sliver-drawer ul {
+            margin: 0 0 8px;
+            padding-left: 18px;
+        }
+        .ai-sliver-drawer li { margin-bottom: 4px; }
+        .ai-sliver-section-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            opacity: 0.85;
+            margin-bottom: 4px;
+        }
+        .ai-sliver-degraded-warning {
+            color: #ffe082;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        .ai-sliver-raw {
+            margin-top: 8px;
             font-size: 0.75rem;
             white-space: pre-wrap;
             word-break: break-word;
             opacity: 0.85;
-            max-height: 180px;
+            max-height: 120px;
             overflow: auto;
             background: rgba(0, 0, 0, 0.2);
             padding: 8px;
             border-radius: 4px;
         }
-        #advisor-panel .advisor-close {
-            margin-top: 10px;
-            padding: 4px 10px;
-            border: none;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.2);
-            color: #fff;
-            cursor: pointer;
+        @keyframes lavaHue {
+            from { filter: hue-rotate(0deg); }
+            to { filter: hue-rotate(360deg); }
         }
         .team-row {
             display: flex;
@@ -376,41 +525,7 @@
             opacity: 0.85;
         }
 
-        /* Header actions */
-        .header-actions {
-            display: inline-flex;
-            gap: 6px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .header-actions button {
-            padding: 6px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            color: white;
-            font-size: 0.85rem;
-        }
-        #undo-pick-btn { background-color: #ffc107; color: black; }
-        #simulate-pick-btn { background-color: #007bff; }
-        #auto-draft-btn {
-            background-color: #c62828;
-            color: #fff;
-            font-weight: 600;
-        }
-        #auto-draft-btn:disabled {
-            opacity: 0.65;
-            cursor: not-allowed;
-        }
-        #sim-mode-select {
-            padding: 6px 8px;
-            border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.35);
-            background: rgba(255,255,255,0.12);
-            color: #fff;
-            font-size: 0.85rem;
-        }
-        #download-csv-btn { background-color: #6c757d; }
+        /* Header actions (legacy selectors kept for button colors above) */
 
         /* Controls + table */
         #controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; gap: 10px; flex-wrap: wrap; }
@@ -471,6 +586,22 @@
         #player-list tbody tr:nth-child(even) { background-color: #f2f2f2; }
         #player-list tbody tr:hover { cursor: pointer; }
         #player-list tbody tr:hover td { box-shadow: inset 0 0 100vw 100vh rgba(0, 0, 0, 0.07); }
+        #player-list tbody tr.ai-row-primary td {
+            box-shadow: inset 3px 0 0 #2ecc71;
+            outline: 2px solid rgba(46, 204, 113, 0.85);
+            outline-offset: -2px;
+        }
+        #player-list tbody tr.ai-row-alternate td {
+            box-shadow: inset 3px 0 0 #f1c40f;
+            outline: 1.5px solid rgba(241, 196, 15, 0.75);
+            outline-offset: -2px;
+        }
+        #player-list tbody tr.ai-row-primary:hover td {
+            box-shadow: inset 3px 0 0 #2ecc71, inset 0 0 100vw 100vh rgba(46, 204, 113, 0.08);
+        }
+        #player-list tbody tr.ai-row-alternate:hover td {
+            box-shadow: inset 3px 0 0 #f1c40f, inset 0 0 100vw 100vh rgba(241, 196, 15, 0.08);
+        }
         #player-list th, #player-list td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         #player-list td:first-child { text-align: center; vertical-align: middle; }
 
@@ -897,92 +1028,85 @@
 </head>
 <body>
     <header>
-        <div class="toolbar">
-            <div class="stats-bar">
-                <span class="chip">Total <span id="total-picks-display">N/A</span></span>
-                <span class="chip">QB <span id="qb-drafted-display">N/A</span></span>
-                <span class="chip">RB <span id="rb-drafted-display">N/A</span></span>
-                <span class="chip">WR <span id="wr-drafted-display">N/A</span></span>
-                <span class="chip">TE <span id="te-drafted-display">N/A</span></span>
+        <div class="draft-banner">
+            <div class="draft-clock" id="draft-clock" title="Overall pick">
+                <span id="round-pick-display">R— · P—</span>
+                <span class="draft-clock-sep">·</span>
+                <span id="team-on-clock-display">Team —</span>
             </div>
-            <div class="header-actions">
-                <label class="assistant-toggle" title="Sim Pick and Auto Draft engine">
-                    Sim
-                    <select id="sim-mode-select">
-                        <option value="bot">Bot</option>
-                        <option value="policy">Policy</option>
-                    </select>
-                </label>
+            <div class="draft-banner-ai" id="draft-banner-ai">
+                <div class="chip ai-chip" id="ai-chip">
+                    <span id="ai-text">AI</span>
+                    <div id="ai-suggestion-display">N/A</div>
+                </div>
+                <section id="ai-assistant-sliver" aria-live="polite" hidden>
+                    <div id="ai-sliver-main" class="ai-sliver-main">
+                        <span id="ai-sliver-confidence" class="ai-confidence-dot" data-level="" title="Confidence"></span>
+                        <button type="button" id="ai-sliver-primary"
+                                data-action="draft-recommended"
+                                data-player-id=""></button>
+                        <div id="ai-sliver-alternates" class="ai-sliver-alternates"></div>
+                        <span id="ai-sliver-team" class="ai-sliver-meta"></span>
+                        <button type="button" id="ai-sliver-toggle"
+                                data-action="toggle-rationale"
+                                aria-expanded="false"
+                                aria-controls="ai-sliver-drawer">&#8964;</button>
+                        <button type="button" id="ai-sliver-dismiss"
+                                data-action="dismiss-assistant">Dismiss</button>
+                    </div>
+                    <div id="ai-sliver-drawer" class="ai-sliver-drawer" hidden>
+                        <ul id="ai-sliver-bullets"></ul>
+                        <div id="ai-sliver-flags"></div>
+                        <div id="ai-sliver-unknowns"></div>
+                        <div id="ai-sliver-degraded" hidden></div>
+                    </div>
+                </section>
+            </div>
+            <div class="draft-banner-actions">
+                <button type="button" id="ask-assistant-btn">Ask</button>
                 <button id="undo-pick-btn">Undo</button>
-                <button id="simulate-pick-btn">Sim Pick</button>
-                <button type="button" id="auto-draft-btn">Auto Draft</button>
-                <button id="download-csv-btn">CSV</button>
-            </div>
-        </div>
-
-        <div class="availability-bar">
-            <span class="chip availability" id="overall-avail-chip">
-                <span class="chip-title">Overall</span>
-                <span class="metric"><span class="label">ADP</span> <span class="value" id="overall-min-adp">N/A</span></span>
-                <span class="metric"><span class="label">VORP</span> <span class="value" id="overall-max-vorp">N/A</span></span>
-                <span class="metric"><span class="label">Pts</span> <span class="value" id="overall-max-pts">N/A</span></span>
-            </span>
-            <span class="chip availability" id="qb-avail-chip">
-                <span class="chip-title">QB</span>
-                <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
-                <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
-                <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
-            </span>
-            <span class="chip availability" id="rb-avail-chip">
-                <span class="chip-title">RB</span>
-                <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
-                <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
-                <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
-            </span>
-            <span class="chip availability" id="wr-avail-chip">
-                <span class="chip-title">WR</span>
-                <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
-                <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
-                <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
-            </span>
-            <span class="chip availability" id="te-avail-chip">
-                <span class="chip-title">TE</span>
-                <span class="metric"><span class="label">ADP</span> <span class="value" data-field="adp">N/A</span></span>
-                <span class="metric"><span class="label">VORP</span> <span class="value" data-field="vorp">N/A</span></span>
-                <span class="metric"><span class="label">Pts</span> <span class="value" data-field="pts">N/A</span></span>
-            </span>
-        </div>
-
-        <div class="status-row">
-            <span class="chip">Pick #<span id="current-pick-display" style="margin-left: 6px;">N/A</span></span>
-            <span class="chip">On Clock<span id="team-on-clock-display" style="margin-left: 6px;">N/A</span></span>
-            
-            <div class="chip ai-chip" id="ai-chip">
-                <span id="ai-text">AI</span>
-                <div id="ai-suggestion-display">N/A</div>
-            </div>
-            <div class="assistant-controls">
-                <label class="assistant-toggle" title="Auto-run assistant on snake turns when scope allows">
-                    <input type="checkbox" id="assistant-auto-toggle">
-                    Auto assistant
-                </label>
-                <select id="assistant-scope-select" title="Auto assistant pick scope">
-                    <option value="agent_only">My picks only</option>
-                    <option value="all_teams">Every team</option>
-                </select>
-                <label class="assistant-model-label" for="assistant-agent-model-select">My model</label>
-                <select id="assistant-agent-model-select" class="assistant-model-select" title="Model for your team's picks"></select>
-                <label class="assistant-model-label" for="assistant-other-model-select">Others</label>
-                <select id="assistant-other-model-select" class="assistant-model-select" title="Model for other teams"></select>
-                <button type="button" id="ask-assistant-btn">Ask Assistant</button>
+                <button id="simulate-pick-btn">Sim</button>
+                <button type="button" id="auto-draft-btn">Auto</button>
+                <div class="banner-settings">
+                    <button type="button" id="banner-settings-toggle"
+                            data-action="toggle-settings"
+                            aria-expanded="false"
+                            aria-controls="banner-settings-panel"
+                            title="Draft settings">Settings</button>
+                    <div id="banner-settings-panel" hidden>
+                        <div class="settings-row">
+                            <label class="assistant-toggle" title="Auto-run assistant on snake turns when scope allows">
+                                <input type="checkbox" id="assistant-auto-toggle">
+                                Auto assistant
+                            </label>
+                        </div>
+                        <div class="settings-row">
+                            <label for="assistant-scope-select">Scope</label>
+                            <select id="assistant-scope-select" title="Auto assistant pick scope">
+                                <option value="agent_only">My picks only</option>
+                                <option value="all_teams">Every team</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <label class="assistant-model-label" for="assistant-agent-model-select">My model</label>
+                            <select id="assistant-agent-model-select" class="assistant-model-select" title="Model for your team's picks"></select>
+                        </div>
+                        <div class="settings-row">
+                            <label class="assistant-model-label" for="assistant-other-model-select">Others</label>
+                            <select id="assistant-other-model-select" class="assistant-model-select" title="Model for other teams"></select>
+                        </div>
+                        <div class="settings-row">
+                            <label class="assistant-toggle" title="Sim Pick and Auto Draft engine" for="sim-mode-select">Sim engine</label>
+                            <select id="sim-mode-select">
+                                <option value="bot">Bot</option>
+                                <option value="policy">Policy</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="assistant-banner"></div>
-        <div id="advisor-panel" aria-live="polite">
-            <h4 id="advisor-panel-title">Assistant</h4>
-            <div id="advisor-panel-body"></div>
-            <button type="button" class="advisor-close" id="advisor-panel-close">Dismiss</button>
-        </div>
     </header>
 
     <main>
@@ -1077,21 +1201,17 @@
         const newDraftBtn = document.getElementById('new-draft-btn');
         const boardHeaders = document.getElementById('board-headers');
         const boardRows = document.getElementById('board-rows');
-        const currentPickDisplay = document.getElementById('current-pick-display');
+        const roundPickDisplay = document.getElementById('round-pick-display');
+        const draftClock = document.getElementById('draft-clock');
         const teamOnClockDisplay = document.getElementById('team-on-clock-display');
         const aiSuggestionDisplay = document.getElementById('ai-suggestion-display');
-        // We fetch AI suggestion only for the team currently picking
-        const totalPicksDisplay = document.getElementById('total-picks-display');
-        const qbDraftedDisplay = document.getElementById('qb-drafted-display');
-        const rbDraftedDisplay = document.getElementById('rb-drafted-display');
-        const wrDraftedDisplay = document.getElementById('wr-drafted-display');
-        const teDraftedDisplay = document.getElementById('te-drafted-display');
         const undoPickBtn = document.getElementById('undo-pick-btn');
         const simulatePickBtn = document.getElementById('simulate-pick-btn');
         const autoDraftBtn = document.getElementById('auto-draft-btn');
         const simModeSelect = document.getElementById('sim-mode-select');
-        const downloadCsvBtn = document.getElementById('download-csv-btn');
-        const AUTO_DRAFT_LABEL = 'Auto Draft';
+        const AUTO_DRAFT_LABEL = 'Auto';
+        const bannerSettingsToggle = document.getElementById('banner-settings-toggle');
+        const bannerSettingsPanel = document.getElementById('banner-settings-panel');
         const gpFracMinInput = document.getElementById('gp-frac-min');
         const simulateSeasonBtn = document.getElementById('simulate-season-btn');
         const seasonResultsDiv = document.getElementById('season-simulation-results');
@@ -1116,10 +1236,19 @@
         const assistantOtherModelSelect = document.getElementById('assistant-other-model-select');
         const askAssistantBtn = document.getElementById('ask-assistant-btn');
         const assistantBanner = document.getElementById('assistant-banner');
-        const advisorPanel = document.getElementById('advisor-panel');
-        const advisorPanelTitle = document.getElementById('advisor-panel-title');
-        const advisorPanelBody = document.getElementById('advisor-panel-body');
-        const advisorPanelClose = document.getElementById('advisor-panel-close');
+        const aiAssistantSliver = document.getElementById('ai-assistant-sliver');
+        const aiSliverPrimary = document.getElementById('ai-sliver-primary');
+        const aiSliverConfidence = document.getElementById('ai-sliver-confidence');
+        const aiSliverAlternates = document.getElementById('ai-sliver-alternates');
+        const aiSliverTeam = document.getElementById('ai-sliver-team');
+        const aiSliverToggle = document.getElementById('ai-sliver-toggle');
+        const aiSliverDrawer = document.getElementById('ai-sliver-drawer');
+        const aiSliverBullets = document.getElementById('ai-sliver-bullets');
+        const aiSliverFlags = document.getElementById('ai-sliver-flags');
+        const aiSliverUnknowns = document.getElementById('ai-sliver-unknowns');
+        const aiSliverDegraded = document.getElementById('ai-sliver-degraded');
+
+        let advisorHighlight = { primaryId: null, alternateIds: [] };
 
         let modalPlayerName = null;
 
@@ -1313,66 +1442,217 @@
             askAssistantBtn.disabled = !isDraftActive(state);
         }
 
+        function normalizeConfidenceLevel(confidence) {
+            if (!confidence) return '';
+            const normalized = String(confidence).toLowerCase().trim();
+            if (normalized === 'high' || normalized === 'medium' || normalized === 'low') {
+                return normalized;
+            }
+            return '';
+        }
+
+        function collapseSliverDrawer() {
+            if (!aiSliverDrawer || !aiSliverToggle) return;
+            aiSliverDrawer.hidden = true;
+            aiSliverToggle.setAttribute('aria-expanded', 'false');
+        }
+
+        function clearAdvisorHighlights() {
+            advisorHighlight = { primaryId: null, alternateIds: [] };
+            document.querySelectorAll('#player-list tbody tr').forEach(row => {
+                row.classList.remove('ai-row-primary', 'ai-row-alternate');
+            });
+        }
+
+        function applyAdvisorHighlightsToTable() {
+            const { primaryId, alternateIds } = advisorHighlight;
+            document.querySelectorAll('#player-list tbody tr').forEach(row => {
+                row.classList.remove('ai-row-primary', 'ai-row-alternate');
+                const playerId = Number(row.dataset.playerId);
+                if (!Number.isFinite(playerId)) return;
+                if (primaryId != null && playerId === Number(primaryId)) {
+                    row.classList.add('ai-row-primary');
+                } else if (alternateIds.some(id => Number(id) === playerId)) {
+                    row.classList.add('ai-row-alternate');
+                }
+            });
+        }
+
+        function setAdvisorHighlightsFromPayload(data) {
+            advisorHighlight = {
+                primaryId: data.recommended_player_id ?? null,
+                alternateIds: (data.alternates || []).map(item => item.player_id).filter(id => id != null),
+            };
+            applyAdvisorHighlightsToTable();
+        }
+
+        function populateSliverDrawer(data) {
+            if (!aiSliverBullets || !aiSliverFlags || !aiSliverUnknowns) return;
+            const bullets = (data.rationale_bullets || []).filter(Boolean);
+            aiSliverBullets.innerHTML = bullets.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+            const flags = (data.flags || []).filter(item => item && item !== 'none');
+            aiSliverFlags.innerHTML = flags.length
+                ? `<div class="ai-sliver-section-label">Flags</div><div>${flags.map(escapeHtml).join(', ')}</div>`
+                : '';
+            const unknowns = (data.unknown_factors || []).filter(Boolean);
+            aiSliverUnknowns.innerHTML = unknowns.length
+                ? `<div class="ai-sliver-section-label">Unknown factors</div><div>${unknowns.map(escapeHtml).join(', ')}</div>`
+                : '';
+        }
+
+        function renderAlternateChips(alternates) {
+            if (!aiSliverAlternates) return;
+            aiSliverAlternates.innerHTML = (alternates || [])
+                .map(item => `<button type="button" class="ai-sliver-alternate-chip"
+                    data-action="draft-alternate"
+                    data-player-id="${item.player_id}"
+                    title="${escapeHtml(item.reason || '')}">${escapeHtml(item.name)}</button>`)
+                .join('');
+        }
+
+        function showAiSliver() {
+            if (aiAssistantSliver) aiAssistantSliver.hidden = false;
+        }
+
+        function hideAiSliver() {
+            if (aiAssistantSliver) aiAssistantSliver.hidden = true;
+            collapseSliverDrawer();
+            clearAdvisorHighlights();
+            if (aiSliverDegraded) {
+                aiSliverDegraded.hidden = true;
+                aiSliverDegraded.innerHTML = '';
+            }
+        }
+
+        function formatRoundPickLabel(pickNumber, numTeams) {
+            const pick = Number(pickNumber);
+            const teams = Number(numTeams) || 10;
+            if (!Number.isFinite(pick) || pick < 1) return 'R— · P—';
+            const roundNumber = Math.ceil(pick / teams);
+            const pickInRound = ((pick - 1) % teams) + 1;
+            return `R${roundNumber} · P${pickInRound}`;
+        }
+
+        function updateDraftClock(state) {
+            const pickNumber = state.current_pick_number;
+            const numTeams = Number(state.num_teams) || 10;
+            if (roundPickDisplay) {
+                roundPickDisplay.textContent = formatRoundPickLabel(pickNumber, numTeams);
+            }
+            if (draftClock) {
+                draftClock.title = Number.isFinite(Number(pickNumber))
+                    ? `Overall pick ${pickNumber}`
+                    : 'Overall pick';
+            }
+            if (teamOnClockDisplay) {
+                const team = state.current_team_picking;
+                teamOnClockDisplay.textContent = team != null ? `Team ${team}` : 'Team —';
+            }
+        }
+
+        function setBannerSettingsOpen(open) {
+            if (!bannerSettingsPanel || !bannerSettingsToggle) return;
+            bannerSettingsPanel.hidden = !open;
+            bannerSettingsToggle.setAttribute('aria-expanded', String(open));
+        }
+
         function renderAdvisorLoading() {
-            if (!advisorPanel || !advisorPanelBody) return;
-            advisorPanel.classList.add('open');
-            advisorPanelTitle.textContent = 'Assistant';
-            advisorPanelBody.innerHTML = '<div class="advisor-loading">Thinking...</div>';
+            if (!aiAssistantSliver || !aiSliverPrimary) return;
+            showAiSliver();
+            collapseSliverDrawer();
+            clearAdvisorHighlights();
+            if (aiSliverConfidence) {
+                aiSliverConfidence.setAttribute('data-level', '');
+                aiSliverConfidence.title = 'Confidence';
+            }
+            aiSliverPrimary.textContent = 'Thinking...';
+            aiSliverPrimary.className = 'ai-sliver-loading';
+            aiSliverPrimary.removeAttribute('data-player-id');
+            if (aiSliverAlternates) aiSliverAlternates.innerHTML = '';
+            if (aiSliverTeam) aiSliverTeam.textContent = '';
+            if (aiSliverBullets) aiSliverBullets.innerHTML = '';
+            if (aiSliverFlags) aiSliverFlags.innerHTML = '';
+            if (aiSliverUnknowns) aiSliverUnknowns.innerHTML = '';
+            if (aiSliverDegraded) {
+                aiSliverDegraded.hidden = true;
+                aiSliverDegraded.innerHTML = '';
+            }
         }
 
         function renderAdvisorResult(data) {
-            if (!advisorPanel || !advisorPanelBody) return;
-            advisorPanel.classList.add('open');
+            if (!aiAssistantSliver || !aiSliverPrimary) return;
             if (data.degraded) {
                 renderAdvisorDegraded(data);
                 return;
             }
-            advisorPanelTitle.textContent = `Pick: ${data.recommended_name}`;
-            const bullets = (data.rationale_bullets || [])
-                .map(item => `<li>${item}</li>`)
-                .join('');
-            const alternates = (data.alternates || [])
-                .map(item => `<div class="advisor-alternate"><strong>${item.name}</strong>: ${item.reason}</div>`)
-                .join('');
-            const flags = (data.flags || []).filter(item => item && item !== 'none');
-            const unknowns = (data.unknown_factors || []).filter(Boolean);
-            const metaParts = [];
-            if (flags.length) metaParts.push(`Flags: ${flags.join(', ')}`);
-            if (unknowns.length) metaParts.push(`Unknown: ${unknowns.join(', ')}`);
-            advisorPanelBody.innerHTML = `
-                <div><strong>Team ${data.advising_team_id}</strong> · confidence: ${data.confidence || 'n/a'}</div>
-                ${bullets ? `<ul>${bullets}</ul>` : '<div class="advisor-muted">No rationale bullets returned — try Pro or Gemini if this persists.</div>'}
-                ${alternates ? `<div><strong>Alternates</strong>${alternates}</div>` : ''}
-                ${metaParts.length ? `<div class="advisor-meta">${metaParts.join(' · ')}</div>` : ''}
-            `;
+            showAiSliver();
+            collapseSliverDrawer();
+            aiSliverPrimary.className = '';
+            aiSliverPrimary.textContent = data.recommended_name || 'No recommendation';
+            if (data.recommended_player_id != null) {
+                aiSliverPrimary.setAttribute('data-player-id', String(data.recommended_player_id));
+            } else {
+                aiSliverPrimary.removeAttribute('data-player-id');
+            }
+            if (aiSliverConfidence) {
+                const level = normalizeConfidenceLevel(data.confidence);
+                aiSliverConfidence.setAttribute('data-level', level);
+                aiSliverConfidence.title = data.confidence ? `Confidence: ${data.confidence}` : 'Confidence';
+            }
+            if (aiSliverTeam) {
+                aiSliverTeam.textContent = `Team ${data.advising_team_id}`;
+            }
+            renderAlternateChips(data.alternates);
+            populateSliverDrawer(data);
+            if (aiSliverDegraded) {
+                aiSliverDegraded.hidden = true;
+                aiSliverDegraded.innerHTML = '';
+            }
+            setAdvisorHighlightsFromPayload(data);
         }
 
         function renderAdvisorDegraded(data) {
-            if (!advisorPanel || !advisorPanelBody) return;
-            const pickLabel = data.recommended_name
+            if (!aiAssistantSliver || !aiSliverPrimary) return;
+            showAiSliver();
+            collapseSliverDrawer();
+            aiSliverPrimary.className = '';
+            const label = data.recommended_name
                 ? `Unverified: ${data.recommended_name}`
                 : 'Unverified response';
-            advisorPanelTitle.textContent = pickLabel;
-            const bullets = (data.rationale_bullets || [])
-                .map(item => `<li>${item}</li>`)
-                .join('');
-            const alternates = (data.alternates || [])
-                .map(item => `<div class="advisor-alternate"><strong>${item.name}</strong>: ${item.reason}</div>`)
-                .join('');
-            const rawBlock = data.raw_content
-                ? `<details><summary>Raw model output</summary><pre class="advisor-raw">${escapeHtml(data.raw_content)}</pre></details>`
-                : '';
-            advisorPanelBody.innerHTML = `
-                <div class="advisor-degraded-warning">
-                    Could not fully validate this response. Review before drafting.
-                    ${data.parse_error ? `<br><span class="advisor-muted">${escapeHtml(data.parse_error)}</span>` : ''}
-                </div>
-                <div><strong>Team ${data.advising_team_id}</strong>${data.confidence ? ` · confidence: ${data.confidence}` : ''}</div>
-                ${data.recommended_name ? `<div><strong>Suggested:</strong> ${escapeHtml(data.recommended_name)}${data.recommended_player_id ? ` (id ${data.recommended_player_id})` : ''}</div>` : ''}
-                ${bullets ? `<ul>${bullets}</ul>` : ''}
-                ${alternates ? `<div><strong>Alternates</strong>${alternates}</div>` : ''}
-                ${rawBlock}
-            `;
+            aiSliverPrimary.textContent = label;
+            if (data.recommended_player_id != null) {
+                aiSliverPrimary.setAttribute('data-player-id', String(data.recommended_player_id));
+            } else {
+                aiSliverPrimary.removeAttribute('data-player-id');
+            }
+            if (aiSliverConfidence) {
+                const level = normalizeConfidenceLevel(data.confidence);
+                aiSliverConfidence.setAttribute('data-level', level);
+                aiSliverConfidence.title = data.confidence ? `Confidence: ${data.confidence}` : 'Confidence';
+            }
+            if (aiSliverTeam) {
+                aiSliverTeam.textContent = `Team ${data.advising_team_id}`;
+            }
+            renderAlternateChips(data.alternates);
+            populateSliverDrawer(data);
+            if (aiSliverDegraded) {
+                const rawBlock = data.raw_content
+                    ? `<details><summary>Raw model output</summary><pre class="ai-sliver-raw">${escapeHtml(data.raw_content)}</pre></details>`
+                    : '';
+                aiSliverDegraded.hidden = false;
+                aiSliverDegraded.innerHTML = `
+                    <div class="ai-sliver-degraded-warning">
+                        Could not fully validate this response. Review before drafting.
+                        ${data.parse_error ? `<br><span>${escapeHtml(data.parse_error)}</span>` : ''}
+                    </div>
+                    ${rawBlock}
+                `;
+            }
+            if (data.recommended_player_id != null || (data.alternates || []).length) {
+                setAdvisorHighlightsFromPayload(data);
+            } else {
+                clearAdvisorHighlights();
+            }
         }
 
         function escapeHtml(value) {
@@ -1384,10 +1664,26 @@
         }
 
         function renderAdvisorError(message) {
-            if (!advisorPanel || !advisorPanelBody) return;
-            advisorPanel.classList.add('open');
-            advisorPanelTitle.textContent = 'Assistant';
-            advisorPanelBody.innerHTML = `<div class="advisor-error">${message}</div>`;
+            if (!aiAssistantSliver || !aiSliverPrimary) return;
+            showAiSliver();
+            collapseSliverDrawer();
+            clearAdvisorHighlights();
+            aiSliverPrimary.textContent = message;
+            aiSliverPrimary.className = 'ai-sliver-error';
+            aiSliverPrimary.removeAttribute('data-player-id');
+            if (aiSliverConfidence) {
+                aiSliverConfidence.setAttribute('data-level', '');
+                aiSliverConfidence.title = 'Confidence';
+            }
+            if (aiSliverAlternates) aiSliverAlternates.innerHTML = '';
+            if (aiSliverTeam) aiSliverTeam.textContent = '';
+            if (aiSliverBullets) aiSliverBullets.innerHTML = '';
+            if (aiSliverFlags) aiSliverFlags.innerHTML = '';
+            if (aiSliverUnknowns) aiSliverUnknowns.innerHTML = '';
+            if (aiSliverDegraded) {
+                aiSliverDegraded.hidden = true;
+                aiSliverDegraded.innerHTML = '';
+            }
         }
 
         async function fetchAdvisor({ trigger = 'manual' } = {}) {
@@ -1524,54 +1820,6 @@
                 playerTbody.innerHTML = `<tr><td colspan="13" style="color: red;">Error loading players: ${error.message}</td></tr>`;
             }
         };
-
-        async function updatePositionMetaChips() {
-            try {
-                const resp = await fetch('/api/players');
-                if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
-                const allPlayers = await resp.json();
-                const positions = ['QB', 'RB', 'WR', 'TE'];
-                const byPos = { QB: [], RB: [], WR: [], TE: [] };
-                allPlayers.forEach(p => { if (byPos[p.position]) byPos[p.position].push(p); });
-
-                function stats(arr) {
-                    if (!arr || arr.length === 0) return { minAdp: 'N/A', maxVorp: 'N/A', maxPts: 'N/A' };
-                    const adps = arr.map(p => p.adp).filter(v => v !== null && v !== undefined && isFinite(Number(v))).map(Number);
-                    const vorps = arr.map(p => p.vorp).filter(v => v !== null && v !== undefined && isFinite(Number(v))).map(Number);
-                    const pts = arr.map(p => p.projected_points).filter(v => v !== null && v !== undefined && isFinite(Number(v))).map(Number);
-                    return {
-                        minAdp: adps.length ? Math.min(...adps).toFixed(1) : 'N/A',
-                        maxVorp: vorps.length ? Math.max(...vorps).toFixed(1) : 'N/A',
-                        maxPts: pts.length ? Math.max(...pts).toFixed(1) : 'N/A',
-                    };
-                }
-
-                const qbStats = stats(byPos.QB);
-                const rbStats = stats(byPos.RB);
-                const wrStats = stats(byPos.WR);
-                const teStats = stats(byPos.TE);
-
-                const allStats = stats(allPlayers);
-                const setChipValues = (chipId, s) => {
-                    const chip = document.getElementById(chipId);
-                    if (!chip) return;
-                    const adpEl = chip.querySelector('[data-field="adp"], #overall-min-adp');
-                    const vorpEl = chip.querySelector('[data-field="vorp"], #overall-max-vorp');
-                    const ptsEl = chip.querySelector('[data-field="pts"], #overall-max-pts');
-                    if (adpEl) adpEl.textContent = s.minAdp;
-                    if (vorpEl) vorpEl.textContent = s.maxVorp;
-                    if (ptsEl) ptsEl.textContent = s.maxPts;
-                };
-
-                setChipValues('overall-avail-chip', allStats);
-                setChipValues('qb-avail-chip', qbStats);
-                setChipValues('rb-avail-chip', rbStats);
-                setChipValues('wr-avail-chip', wrStats);
-                setChipValues('te-avail-chip', teStats);
-            } catch (e) {
-                console.error('Error updating position meta chips:', e);
-            }
-        }
 
         // ----- Coloring Utilities -----
         const POS_COLORS = {
@@ -2063,6 +2311,7 @@
 
                 row.addEventListener('click', () => draftPlayer(player.player_id));
             });
+            applyAdvisorHighlightsToTable();
         };
 
         // Event Listeners
@@ -2084,7 +2333,6 @@
         undoPickBtn.addEventListener('click', undoLastPick);
         simulatePickBtn.addEventListener('click', simulateNextPick);
         autoDraftBtn.addEventListener('click', autoDraftRest);
-        downloadCsvBtn.addEventListener('click', downloadCsv);
         if (simulateSeasonBtn) simulateSeasonBtn.addEventListener('click', simulateSeason);
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -2093,7 +2341,6 @@
             loadAdvisorModels();
             loadInsightsMeta();
             loadInitialState();
-            updatePositionMetaChips();
             if (assistantAutoToggle) {
                 assistantAutoToggle.addEventListener('change', () => {
                     sessionStorage.setItem('assistantAutoEnabled', String(assistantAutoToggle.checked));
@@ -2122,8 +2369,40 @@
             if (askAssistantBtn) {
                 askAssistantBtn.addEventListener('click', () => fetchAdvisor({ trigger: 'manual' }));
             }
-            if (advisorPanelClose) {
-                advisorPanelClose.addEventListener('click', () => advisorPanel.classList.remove('open'));
+            if (bannerSettingsToggle && bannerSettingsPanel) {
+                bannerSettingsToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setBannerSettingsOpen(bannerSettingsPanel.hidden);
+                });
+                document.addEventListener('click', (e) => {
+                    if (bannerSettingsPanel.hidden) return;
+                    if (bannerSettingsPanel.contains(e.target) || bannerSettingsToggle.contains(e.target)) {
+                        return;
+                    }
+                    setBannerSettingsOpen(false);
+                });
+            }
+            if (aiAssistantSliver) {
+                aiAssistantSliver.addEventListener('click', (e) => {
+                    const target = e.target.closest('[data-action]');
+                    if (!target || !aiAssistantSliver.contains(target)) return;
+                    const action = target.getAttribute('data-action');
+                    if (action === 'toggle-rationale') {
+                        if (!aiSliverDrawer || !aiSliverToggle) return;
+                        const isOpen = !aiSliverDrawer.hidden;
+                        aiSliverDrawer.hidden = isOpen;
+                        aiSliverToggle.setAttribute('aria-expanded', String(!isOpen));
+                        return;
+                    }
+                    if (action === 'dismiss-assistant') {
+                        hideAiSliver();
+                        return;
+                    }
+                    if (action === 'draft-recommended' || action === 'draft-alternate') {
+                        const id = Number(target.getAttribute('data-player-id'));
+                        if (Number.isFinite(id)) draftPlayer(id);
+                    }
+                });
             }
         });
 
@@ -2156,13 +2435,9 @@
             }
             previousPickNumber = state.current_pick_number;
             currentDraftState = state;
-            currentPickDisplay.innerText = state.current_pick_number;
-            teamOnClockDisplay.innerText = state.current_team_picking;
+            updateDraftClock(state);
 
             updateHeaderSuggestion(state);
-
-            fetchDraftSummary();
-            updatePositionMetaChips();
 
             const numTeams = Number(state.num_teams) || 10;
             const agentTeamId = state.agent_start_position;
@@ -2340,25 +2615,6 @@
 
         // Removed bulk prefetch; suggestions are fetched on demand for the team on clock
 
-        async function fetchDraftSummary() {
-            try {
-                const response = await fetch('/api/draft/summary');
-                const data = await response.json();
-                if (response.ok) {
-                    totalPicksDisplay.innerText = data.total_picks;
-                    qbDraftedDisplay.innerText = data.picks_by_position.QB;
-                    rbDraftedDisplay.innerText = data.picks_by_position.RB;
-                    wrDraftedDisplay.innerText = data.picks_by_position.WR;
-                    teDraftedDisplay.innerText = data.picks_by_position.TE;
-                } else {
-                    totalPicksDisplay.innerText = 'Error';
-                }
-            } catch (error) {
-                console.error('Error fetching draft summary:', error);
-                totalPicksDisplay.innerText = 'Error';
-            }
-        }
-
         async function draftPlayer(playerId) {
             if (!currentDraftState) {
                 alert("Please start a new draft before selecting a player.");
@@ -2521,10 +2777,6 @@
                 autoDraftBtn.textContent = AUTO_DRAFT_LABEL;
                 syncAutoDraftButtonState();
             }
-        }
-
-        function downloadCsv() {
-            window.location.href = '/api/draft/export_csv';
         }
 
         function formatTeamLabel(teamId, fallback = 'Unknown') {
