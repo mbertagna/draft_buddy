@@ -1059,6 +1059,35 @@
             vertical-align: middle;
         }
         .matchup-row.team-agent .team-name { color: #1976d2; }
+
+        #toast-container {
+            position: fixed;
+            bottom: var(--space-4);
+            right: var(--space-4);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            max-width: min(360px, 90vw);
+            pointer-events: none;
+        }
+        .toast {
+            pointer-events: auto;
+            padding: var(--space-2) var(--space-3);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-md);
+            color: var(--text-on-green);
+            font-family: var(--font-ui);
+            font-size: var(--text-sm);
+            line-height: 1.4;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast-error { background: var(--danger); }
+        .toast-success { background: var(--green-600); }
+        .toast-info { background: var(--neutral); }
     </style>
 </head>
 <body>
@@ -1878,7 +1907,7 @@
                 fetchPlayers(); // Now fetch players
             } catch (error) {
                 console.error('Error loading initial draft state:', error);
-                alert(`Could not load draft state: ${error.message}`);
+                showNotification(`Could not load draft state: ${error.message}`, 'error');
             }
         }
 
@@ -2515,19 +2544,58 @@
             }
         });
 
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+            toast.textContent = message;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 220);
+            }, 4000);
+        }
+
+        // Single POST helper: the server is the source of truth. On any failure
+        // it surfaces the server message as a toast and rejects so callers can
+        // simply skip re-rendering. Successful responses return the parsed body.
+        async function postJson(url, body) {
+            const options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            };
+            if (body !== undefined && body !== null) {
+                options.body = typeof body === 'string' ? body : JSON.stringify(body);
+            }
+            const response = await fetch(url, options);
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (_) {
+                data = {};
+            }
+            if (!response.ok || data.success === false) {
+                const message = data.message || data.detail || data.error ||
+                    `Request failed (${response.status})`;
+                showNotification(message, 'error');
+                throw new Error(message);
+            }
+            return data;
+        }
+
         async function startNewDraft() {
             if (!confirm('Are you sure you want to start a new draft? This will archive the current draft state.')) {
                 return;
             }
             try {
-                const response = await fetch('/api/draft/new', { method: 'POST' });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const data = await response.json();
+                const data = await postJson('/api/draft/new');
                 renderDraftState(data);
                 fetchPlayers(); // Refresh player list
             } catch (error) {
                 console.error('Error starting new draft:', error);
-                alert(`Error starting new draft: ${error.message}`);
             }
         }
 
@@ -2727,75 +2795,48 @@
 
         async function draftPlayer(playerId) {
             if (!currentDraftState) {
-                alert("Please start a new draft before selecting a player.");
+                showNotification("Please start a new draft before selecting a player.", 'error');
                 return;
             }
-
             try {
-                const response = await fetch('/api/draft/pick', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ player_id: playerId })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
-                }
-                
+                const data = await postJson('/api/draft/pick', { player_id: playerId });
                 renderDraftState(data);
                 fetchPlayers();
             } catch (error) {
                 console.error('Error drafting player:', error);
-                alert(`Error drafting player: ${error.message}`);
             }
         }
 
         async function undoLastPick() {
             if (!currentDraftState) {
-                alert("No draft in progress to undo.");
+                showNotification("No draft in progress to undo.", 'error');
                 return;
             }
             try {
-                const response = await fetch('/api/draft/undo', { method: 'POST' });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
-                }
+                const data = await postJson('/api/draft/undo');
                 renderDraftState(data);
                 fetchPlayers();
             } catch (error) {
                 console.error('Error undoing pick:', error);
-                alert(`Error undoing pick: ${error.message}`);
             }
         }
 
         async function overrideTeam(teamId) {
             if (!currentDraftState) {
-                alert("Please start a new draft first.");
+                showNotification("Please start a new draft first.", 'error');
                 return;
             }
             try {
-                const response = await fetch('/api/draft/override_team', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ team_id: teamId })
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
-                }
+                const data = await postJson('/api/draft/override_team', { team_id: teamId });
                 renderDraftState(data);
             } catch (error) {
                 console.error('Error overriding team:', error);
-                alert(`Error overriding team: ${error.message}`);
             }
         }
 
         async function transferDraftedPlayer(player, fromTeamId) {
             if (!currentDraftState) {
-                alert("Please start a new draft first.");
+                showNotification("Please start a new draft first.", 'error');
                 return;
             }
             const destination = prompt(
@@ -2807,55 +2848,38 @@
             }
             const toTeamId = Number(destination);
             if (!Number.isInteger(toTeamId)) {
-                alert("Enter a valid team number.");
+                showNotification("Enter a valid team number.", 'error');
                 return;
             }
             try {
-                const response = await fetch('/api/draft/transfer', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ player_id: player.player_id, to_team_id: toTeamId })
+                const data = await postJson('/api/draft/transfer', {
+                    player_id: player.player_id,
+                    to_team_id: toTeamId,
                 });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.detail || `HTTP error! status: ${response.status}`);
-                }
                 renderDraftState(data);
                 fetchPlayers();
             } catch (error) {
                 console.error('Error transferring player:', error);
-                alert(`Error transferring player: ${error.message}`);
             }
         }
 
         async function simulateNextPick() {
             if (!currentDraftState) {
-                alert("Please start a new draft first.");
+                showNotification("Please start a new draft first.", 'error');
                 return;
             }
-            
             try {
-                const response = await fetch('/api/draft/simulate_pick', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: buildSimRequestBody(),
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
-                }
+                const data = await postJson('/api/draft/simulate_pick', buildSimRequestBody());
                 renderDraftState(data);
                 fetchPlayers();
-
             } catch (error) {
                 console.error('Error simulating pick:', error);
-                alert(`Error simulating pick: ${error.message}`);
             }
         }
 
         async function autoDraftRest() {
             if (!currentDraftState) {
-                alert("Please start a new draft first.");
+                showNotification("Please start a new draft first.", 'error');
                 return;
             }
             const message =
@@ -2869,20 +2893,11 @@
             autoDraftBtn.textContent = "Drafting...";
 
             try {
-                const response = await fetch("/api/draft/simulate_rest", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: buildSimRequestBody(),
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
-                }
+                const data = await postJson('/api/draft/simulate_rest', buildSimRequestBody());
                 renderDraftState(data);
                 fetchPlayers();
             } catch (error) {
                 console.error("Error auto-drafting:", error);
-                alert(`Error auto-drafting: ${error.message}`);
             } finally {
                 autoDraftBtn.textContent = AUTO_DRAFT_LABEL;
                 syncAutoDraftButtonState();
@@ -3094,5 +3109,6 @@
             initSeasonTabs(seasonResultsDiv);
         }
     </script>
+    <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 </body>
 </html>

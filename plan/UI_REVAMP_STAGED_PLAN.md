@@ -147,14 +147,24 @@ Run after each stage; all must pass before committing:
 - Remove dead `.stats-bar` / `.team-summary*` CSS.
 - **Deliverable:** rarely-used aggregate stats tucked away but one click accessible.
 
-### Stage 5 — Action-driven server validation + toasts (blueprint Phase 2)
-- Global `POST` fetch wrapper expecting `{ success: boolean, message: string }`; on failure
-  (or non-200) route to a reusable `showNotification(message, type)` toast pipeline (fixed
-  container, auto-dismiss ~4s).
-- Remove remaining frontend `disabled`/guard logic for business rules.
-- Standardize the response shape in `src/draft_buddy/web/app.py` for override, pick,
-  transfer, and undo. **Touches backend.**
-- Verify an invalid override/pick surfaces a red error toast with the server's message.
+### Stage 5 — Action-driven server validation + toasts (blueprint Phase 2) — DONE
+- Global `POST` fetch wrapper (`postJson`) expecting `{ success: boolean, message: string }`;
+  on failure (or non-200) it routes to a reusable `showNotification(message, type)` toast
+  pipeline (fixed `#toast-container`, red error toast, auto-dismiss ~4s). Done.
+- Standardized the error response shape via a single `@app.exception_handler(HTTPException)`
+  in `src/draft_buddy/web/app.py` returning `{ success: false, message }` for every endpoint
+  (pick, undo, transfer, override, simulate, advisor, etc.); success responses still return
+  the draft state the frontend re-renders. **Touches backend.** Done.
+- Every mutation action (`startNewDraft`, `draftPlayer`, `undoLastPick`, `overrideTeam`,
+  `transferDraftedPlayer`, `simulateNextPick`, `autoDraftRest`) and the initial state load
+  now surface errors as toasts instead of blocking `alert()` dialogs. Done.
+- Verified: `POST /api/draft/pick` with no body returns `400 {success:false,
+  message:"Player ID is required"}` (TestClient).
+- Note on disabled/guard logic: the override-out-of-turn breakage (blueprint 2.1's concern)
+  was already resolved in Stage 2, so the board override has no disabled guard. The remaining
+  `disabled` states are kept intentionally: advisor-model availability (server capability, not
+  draft state) and the in-flight auto-draft double-submit guard. Null-guards (`if
+  (!currentDraftState)`) were retained but now emit toasts. Can strip further if desired.
 - **Deliverable:** consistent, resilient action feedback; no silent UI breakage.
 
 ### Stage 6 — Theme switcher (blueprint Phase 3)

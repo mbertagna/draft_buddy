@@ -63,6 +63,22 @@ def create_app(
     runtime_advisor_service = advisor_service
     runtime_advisor_registry = advisor_registry
 
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
+        """Return HTTP errors in a consistent success/message envelope.
+
+        The frontend treats every mutation response uniformly: successful
+        responses carry the draft state, while failures carry a human-readable
+        message. Centralizing the error shape here keeps individual endpoints
+        free of response-formatting concerns.
+        """
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"success": False, "message": exc.detail},
+        )
+
     def _session_id(request: Request, response: Optional[Response] = None) -> str:
         """Resolve session id from cookie or create one."""
         existing = request.cookies.get("draft_session_id")
