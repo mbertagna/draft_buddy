@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Optional
 
-from draft_buddy.core.entities import DraftAction, Pick, Player, TeamRoster, Transfer
+from draft_buddy.core.entities import DraftAction, Pick, Player, Swap, TeamRoster, Transfer
 
 
 class DraftState:
@@ -117,9 +117,19 @@ class DraftState:
         return self._transfer_history
 
     @property
+    def swap_history(self) -> list[Swap]:
+        """Return typed swap history."""
+        return self._swap_history
+
+    @property
     def action_history(self) -> list[DraftAction]:
         """Return chronological undo-stack actions."""
         return self._action_history
+
+    @property
+    def visual_board(self) -> dict[int, dict[int, Optional[int]]]:
+        """Return team -> round -> player_id visual placement grid."""
+        return self._visual_board
 
     def roster_for_team(self, team_id: int) -> TeamRoster:
         """Return one team's roster, creating it on first access."""
@@ -168,6 +178,114 @@ class DraftState:
         for player_id in roster.player_ids:
             self._update_roster_counts_for_pick(team_id, player_lookup(player_id))
 
+    def ensure_visual_board(
+        self, num_teams: Optional[int] = None, rounds: Optional[int] = None
+    ) -> None:
+        """Ensure the visual board has empty cells for every team and round.
+
+        Parameters
+        ----------
+        num_teams : int, optional
+            Highest team id to include. Defaults to max draft-order team id.
+        rounds : int, optional
+            Number of visual rounds. Defaults to ``total_roster_size_per_team``.
+        """
+        team_count = num_teams
+        if team_count is None:
+            team_ids = self._team_ids_for_board()
+            team_count = max(team_ids) if team_ids else 0
+        round_count = rounds if rounds is not None else self.total_roster_size_per_team
+        for team_id in range(1, team_count + 1):
+            if team_id not in self._visual_board:
+                self._visual_board[team_id] = {}
+            for round_index in range(round_count):
+                if round_index not in self._visual_board[team_id]:
+                    self._visual_board[team_id][round_index] = None
+
+    def find_player_cell(self, player_id: int) -> Optional[tuple[int, int]]:
+        """Return ``(team_id, round)`` for a player on the visual board.
+
+        Parameters
+        ----------
+        player_id : int
+            Player to locate.
+
+        Returns
+        -------
+        tuple[int, int] or None
+            Team and round coordinates when found.
+        """
+        for team_id, rounds in self._visual_board.items():
+            for round_index, cell_player_id in rounds.items():
+                if cell_player_id == player_id:
+                    return team_id, round_index
+        return None
+
+    def first_empty_round(self, team_id: int) -> Optional[int]:
+        """Return the lowest empty round index for a team.
+
+        Parameters
+        ----------
+        team_id : int
+            Team column to search.
+
+        Returns
+        -------
+        int or None
+            First empty round, or ``None`` when the column is full.
+        """
+        rounds = self._visual_board.get(team_id, {})
+        for round_index in sorted(rounds.keys()):
+            if rounds[round_index] is None:
+                return round_index
+        return None
+
+    def place_player_visual(self, team_id: int, round_index: int, player_id: int) -> None:
+        """Place a player id into one visual-board cell.
+
+        Parameters
+        ----------
+        team_id : int
+            Destination team column.
+        round_index : int
+            Destination round row.
+        player_id : int
+            Player to place.
+        """
+        if team_id not in self._visual_board:
+            self._visual_board[team_id] = {}
+        self._visual_board[team_id][round_index] = player_id
+
+    def clear_cell(self, team_id: int, round_index: int) -> None:
+        """Clear one visual-board cell.
+
+        Parameters
+        ----------
+        team_id : int
+            Team column.
+        round_index : int
+            Round row.
+        """
+        if team_id in self._visual_board and round_index in self._visual_board[team_id]:
+            self._visual_board[team_id][round_index] = None
+
+    def cell_player_id(self, team_id: int, round_index: int) -> Optional[int]:
+        """Return the player id in a visual-board cell.
+
+        Parameters
+        ----------
+        team_id : int
+            Team column.
+        round_index : int
+            Round row.
+
+        Returns
+        -------
+        int or None
+            Occupying player id, or ``None`` when empty or missing.
+        """
+        return self._visual_board.get(team_id, {}).get(round_index)
+
     def advance_pick(self) -> None:
         """Advance the draft cursor to the next pick."""
         self.current_pick_index += 1
@@ -181,6 +299,10 @@ class DraftState:
         """Append one transfer to transfer history."""
         self._transfer_history.append(transfer)
 
+    def append_swap(self, swap: Swap) -> None:
+        """Append one swap to swap history."""
+        self._swap_history.append(swap)
+
     def append_action(self, action: DraftAction) -> None:
         """Append one chronological undo action."""
         self._action_history.append(action)
@@ -192,6 +314,10 @@ class DraftState:
     def pop_transfer(self) -> Optional[Transfer]:
         """Pop the latest transfer from transfer history when present."""
         return self._transfer_history.pop() if self._transfer_history else None
+
+    def pop_swap(self) -> Optional[Swap]:
+        """Pop the latest swap from swap history when present."""
+        return self._swap_history.pop() if self._swap_history else None
 
     def pop_action(self) -> Optional[DraftAction]:
         """Pop the latest chronological undo action when present."""
@@ -207,8 +333,11 @@ class DraftState:
         self._agent_team_id = agent_team_id
         self._draft_history: list[Pick] = []
         self._transfer_history: list[Transfer] = []
+        self._swap_history: list[Swap] = []
         self._action_history: list[DraftAction] = []
         self._override_team_id: Optional[int] = None
+        self._visual_board: dict[int, dict[int, Optional[int]]] = {}
+        self.ensure_visual_board()
 
     def to_dict(self) -> dict:
         """Serialize state to a JSON-friendly dictionary."""
@@ -222,9 +351,16 @@ class DraftState:
             "current_pick_number": self.current_pick_number,
             "draft_history": [pick.to_dict() for pick in self.draft_history],
             "transfer_history": [transfer.to_dict() for transfer in self.transfer_history],
+            "swap_history": [swap.to_dict() for swap in self.swap_history],
             "action_history": [action.to_dict() for action in self.action_history],
             "override_team_id": self.override_team_id,
             "agent_team_id": self.agent_team_id,
+            "visual_board": {
+                str(team_id): {
+                    str(round_index): player_id for round_index, player_id in rounds.items()
+                }
+                for team_id, rounds in self._visual_board.items()
+            },
         }
 
     def load_from_dict(self, payload: dict) -> None:
@@ -249,6 +385,9 @@ class DraftState:
             Transfer.from_dict(transfer_payload)
             for transfer_payload in payload.get("transfer_history", [])
         ]
+        self._swap_history = [
+            Swap.from_dict(swap_payload) for swap_payload in payload.get("swap_history", [])
+        ]
         if "action_history" in payload:
             self._action_history = [
                 DraftAction.from_dict(action_payload)
@@ -261,6 +400,45 @@ class DraftState:
             ]
         self.override_team_id = payload.get("override_team_id")
         self.agent_team_id = int(payload.get("agent_team_id", self.agent_team_id))
+        self._visual_board = {}
+        if "visual_board" in payload:
+            self._load_visual_board(payload.get("visual_board", {}))
+        else:
+            self._backfill_visual_board_from_rosters()
+        self.ensure_visual_board()
+
+    def _team_ids_for_board(self) -> list[int]:
+        """Return team ids that should appear on the visual board."""
+        team_ids = set(self._draft_order) | set(self._team_rosters.keys())
+        return sorted(team_ids)
+
+    def _load_visual_board(self, payload: dict) -> None:
+        """Load visual board cells from a serialized payload."""
+        for team_id_str, rounds_payload in payload.items():
+            try:
+                team_id = int(team_id_str)
+            except (TypeError, ValueError):
+                continue
+            self._visual_board[team_id] = {}
+            if not isinstance(rounds_payload, dict):
+                continue
+            for round_str, player_id in rounds_payload.items():
+                try:
+                    round_index = int(round_str)
+                except (TypeError, ValueError):
+                    continue
+                self._visual_board[team_id][round_index] = (
+                    int(player_id) if player_id is not None else None
+                )
+
+    def _backfill_visual_board_from_rosters(self) -> None:
+        """Populate visual board densely from logical roster order."""
+        self.ensure_visual_board()
+        for team_id, roster in self._team_rosters.items():
+            for round_index, player_id in enumerate(roster.player_ids):
+                if round_index >= self.total_roster_size_per_team:
+                    break
+                self.place_player_visual(team_id, round_index, player_id)
 
     def _update_roster_counts_for_pick(self, team_id: int, player: Player) -> None:
         """Update roster counters for one drafted player."""

@@ -72,7 +72,7 @@ def test_draft_pick_maps_value_error_to_400(config, fake_session) -> None:
     client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
     response = client.post("/api/draft/pick", json={"player_id": 1})
 
-    assert response.status_code == 400 and response.json()["detail"] == "bad pick"
+    assert response.status_code == 400 and response.json()["message"] == "bad pick"
 
 
 def test_undo_pick_maps_value_error_to_400(config, fake_session) -> None:
@@ -82,7 +82,7 @@ def test_undo_pick_maps_value_error_to_400(config, fake_session) -> None:
 
     response = client.post("/api/draft/undo")
 
-    assert response.status_code == 400 and response.json()["detail"] == "cannot undo"
+    assert response.status_code == 400 and response.json()["message"] == "cannot undo"
 
 
 def test_transfer_requires_player_id(config, fake_session) -> None:
@@ -90,7 +90,7 @@ def test_transfer_requires_player_id(config, fake_session) -> None:
     client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
     response = client.post("/api/draft/transfer", json={"to_team_id": 2})
 
-    assert response.status_code == 400 and response.json()["detail"] == "Player ID is required"
+    assert response.status_code == 400 and response.json()["message"] == "Player ID is required"
 
 
 def test_transfer_requires_destination_team_id(config, fake_session) -> None:
@@ -99,19 +99,61 @@ def test_transfer_requires_destination_team_id(config, fake_session) -> None:
     response = client.post("/api/draft/transfer", json={"player_id": 1})
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Destination team ID is required"
+    assert response.json()["message"] == "Destination team ID is required"
 
 
 def test_transfer_maps_value_error_to_400(config, fake_session) -> None:
     """Verify transfer validation errors become HTTP 400 responses."""
-    fake_session.transfer_player = lambda _player_id, _to_team_id: (
+    fake_session.transfer_player = lambda _player_id, _to_team_id, to_round=None: (
         _ for _ in ()
     ).throw(ValueError("bad transfer"))
     client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
 
     response = client.post("/api/draft/transfer", json={"player_id": 1, "to_team_id": 2})
 
-    assert response.status_code == 400 and response.json()["detail"] == "bad transfer"
+    assert response.status_code == 400 and response.json()["message"] == "bad transfer"
+
+
+def test_swap_requires_both_player_ids(config, fake_session) -> None:
+    """Verify swap rejects payloads missing either player id."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+
+    response = client.post("/api/draft/swap", json={"player_id_1": 1})
+
+    assert response.status_code == 400
+    assert response.json()["message"] == "Both player_id_1 and player_id_2 are required"
+
+
+def test_swap_maps_value_error_to_400(config, fake_session) -> None:
+    """Verify swap validation errors become HTTP 400 responses."""
+    fake_session.swap_players = lambda _player_id_1, _player_id_2: (
+        _ for _ in ()
+    ).throw(ValueError("bad swap"))
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+
+    response = client.post(
+        "/api/draft/swap", json={"player_id_1": 1, "player_id_2": 2}
+    )
+
+    assert response.status_code == 400 and response.json()["message"] == "bad swap"
+
+
+def test_transfer_accepts_optional_to_round(config, fake_session) -> None:
+    """Verify transfer forwards an optional destination round."""
+    calls: list[tuple] = []
+
+    def _transfer(player_id, to_team_id, to_round=None):
+        calls.append((player_id, to_team_id, to_round))
+
+    fake_session.transfer_player = _transfer
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+
+    response = client.post(
+        "/api/draft/transfer",
+        json={"player_id": 1, "to_team_id": 2, "to_round": 3},
+    )
+
+    assert response.status_code == 200 and calls == [(1, 2, 3)]
 
 
 def test_override_team_requires_team_id(config, fake_session) -> None:
@@ -120,7 +162,7 @@ def test_override_team_requires_team_id(config, fake_session) -> None:
 
     response = client.post("/api/draft/override_team", json={})
 
-    assert response.status_code == 400 and response.json()["detail"] == "Team ID is required"
+    assert response.status_code == 400 and response.json()["message"] == "Team ID is required"
 
 
 def test_override_team_maps_value_error_to_400(config, fake_session) -> None:
@@ -130,7 +172,7 @@ def test_override_team_maps_value_error_to_400(config, fake_session) -> None:
 
     response = client.post("/api/draft/override_team", json={"team_id": 9})
 
-    assert response.status_code == 400 and response.json()["detail"] == "bad team"
+    assert response.status_code == 400 and response.json()["message"] == "bad team"
 
 
 def test_simulate_pick_maps_value_error_to_400(config, fake_session) -> None:
@@ -140,7 +182,7 @@ def test_simulate_pick_maps_value_error_to_400(config, fake_session) -> None:
 
     response = client.post("/api/draft/simulate_pick")
 
-    assert response.status_code == 400 and response.json()["detail"] == "stop"
+    assert response.status_code == 400 and response.json()["message"] == "stop"
 
 
 def test_simulate_rest_maps_value_error_to_400(config, fake_session) -> None:
@@ -152,7 +194,7 @@ def test_simulate_rest_maps_value_error_to_400(config, fake_session) -> None:
 
     response = client.post("/api/draft/simulate_rest")
 
-    assert response.status_code == 400 and response.json()["detail"] == "halt"
+    assert response.status_code == 400 and response.json()["message"] == "halt"
 
 
 def test_dashboard_returns_500_when_frontend_file_missing(config, fake_session, monkeypatch) -> None:
@@ -234,7 +276,7 @@ def test_simulate_season_maps_missing_file_to_400(config, fake_session, monkeypa
 
     response = client.post("/api/simulate_season")
 
-    assert response.status_code == 400 and response.json()["detail"] == "schedule missing"
+    assert response.status_code == 400 and response.json()["message"] == "schedule missing"
 
 
 def test_simulate_season_maps_generic_error_to_500(config, fake_session, monkeypatch) -> None:
@@ -248,7 +290,7 @@ def test_simulate_season_maps_generic_error_to_500(config, fake_session, monkeyp
     client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
     response = client.post("/api/simulate_season")
 
-    assert response.status_code == 500 and "Season simulation failed: boom" in response.json()["detail"]
+    assert response.status_code == 500 and "Season simulation failed: boom" in response.json()["message"]
 
 
 def test_get_players_filters_by_search(config, fake_session) -> None:

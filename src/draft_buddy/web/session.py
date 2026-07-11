@@ -175,6 +175,14 @@ class DraftSession:
             }
             team_is_full[team_id] = team_roster.size >= self.total_roster_size_per_team
 
+        visual_board = {
+            team_id: {
+                round_index: player_id
+                for round_index, player_id in rounds.items()
+            }
+            for team_id, rounds in self._state.visual_board.items()
+        }
+
         return {
             "draft_order": self.draft_order,
             "current_pick_index": self.current_pick_index,
@@ -183,6 +191,7 @@ class DraftSession:
             "snake_team_on_turn": self.snake_team_on_turn,
             "override_active": self.override_active,
             "team_rosters": structured_rosters,
+            "visual_board": visual_board,
             "roster_counts": {
                 team_id: {
                     "QB": team_roster.qb_count,
@@ -233,9 +242,15 @@ class DraftSession:
         """Undo latest draft action."""
         self._controller.undo_last_pick()
 
-    def transfer_player(self, player_id: int, to_team_id: int) -> None:
-        """Move a drafted player to another team."""
-        self._controller.transfer_player(player_id, to_team_id)
+    def transfer_player(
+        self, player_id: int, to_team_id: int, to_round: Optional[int] = None
+    ) -> None:
+        """Move a drafted player to another team or visual slot."""
+        self._controller.transfer_player(player_id, to_team_id, to_round=to_round)
+
+    def swap_players(self, player_id_1: int, player_id_2: int) -> None:
+        """Swap two drafted players' teams and visual slots."""
+        self._controller.swap_players(player_id_1, player_id_2)
 
     def set_current_team_picking(self, team_id: int) -> None:
         """Override next pick team."""

@@ -227,16 +227,20 @@ class Pick:
 
 @dataclass(frozen=True, slots=True)
 class Transfer:
-    """Represents a player ownership change during the draft.
+    """Represents a player ownership or visual-slot change during the draft.
 
     Parameters
     ----------
     player_id : int
         Identifier of the moved player.
     from_team_id : int
-        Team that gave up the player.
+        Team that gave up the player (or same team for visual reposition).
     to_team_id : int
-        Team that received the player.
+        Team that received the player (or same team for visual reposition).
+    from_round : int, optional
+        Source visual-board round index (0-based).
+    to_round : int, optional
+        Destination visual-board round index (0-based).
     previous_override_team_id : int, optional
         Team override active before the transfer was applied.
     """
@@ -244,6 +248,8 @@ class Transfer:
     player_id: int
     from_team_id: int
     to_team_id: int
+    from_round: int = 0
+    to_round: int = 0
     previous_override_team_id: Optional[int] = None
 
     def to_dict(self) -> dict:
@@ -252,6 +258,8 @@ class Transfer:
             "player_id": self.player_id,
             "from_team_id": self.from_team_id,
             "to_team_id": self.to_team_id,
+            "from_round": self.from_round,
+            "to_round": self.to_round,
             "previous_override_team_id": self.previous_override_team_id,
         }
 
@@ -262,6 +270,64 @@ class Transfer:
             player_id=int(payload["player_id"]),
             from_team_id=int(payload["from_team_id"]),
             to_team_id=int(payload["to_team_id"]),
+            from_round=int(payload.get("from_round", 0)),
+            to_round=int(payload.get("to_round", 0)),
+            previous_override_team_id=payload.get("previous_override_team_id"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Swap:
+    """Represents an atomic two-player visual and roster swap.
+
+    Parameters
+    ----------
+    player_id_1 : int
+        First player involved in the swap.
+    team_id_1 : int
+        Team owning ``player_id_1`` before the swap.
+    round_1 : int
+        Visual-board round for ``player_id_1`` before the swap.
+    player_id_2 : int
+        Second player involved in the swap.
+    team_id_2 : int
+        Team owning ``player_id_2`` before the swap.
+    round_2 : int
+        Visual-board round for ``player_id_2`` before the swap.
+    previous_override_team_id : int, optional
+        Team override active before the swap was applied.
+    """
+
+    player_id_1: int
+    team_id_1: int
+    round_1: int
+    player_id_2: int
+    team_id_2: int
+    round_2: int
+    previous_override_team_id: Optional[int] = None
+
+    def to_dict(self) -> dict:
+        """Serialize the swap for JSON storage."""
+        return {
+            "player_id_1": self.player_id_1,
+            "team_id_1": self.team_id_1,
+            "round_1": self.round_1,
+            "player_id_2": self.player_id_2,
+            "team_id_2": self.team_id_2,
+            "round_2": self.round_2,
+            "previous_override_team_id": self.previous_override_team_id,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict) -> "Swap":
+        """Build a swap from serialized data."""
+        return cls(
+            player_id_1=int(payload["player_id_1"]),
+            team_id_1=int(payload["team_id_1"]),
+            round_1=int(payload["round_1"]),
+            player_id_2=int(payload["player_id_2"]),
+            team_id_2=int(payload["team_id_2"]),
+            round_2=int(payload["round_2"]),
             previous_override_team_id=payload.get("previous_override_team_id"),
         )
 
@@ -273,7 +339,7 @@ class DraftAction:
     Parameters
     ----------
     action_type : str
-        Mutation kind, such as ``"pick"`` or ``"transfer"``.
+        Mutation kind: ``"pick"``, ``"transfer"``, or ``"swap"``.
     history_index : int
         Index into the matching typed history list.
     """

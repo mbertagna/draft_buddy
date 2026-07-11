@@ -11,7 +11,7 @@ import numpy as np
 
 from draft_buddy.core.bot_gm import BotGM
 from draft_buddy.core.draft_state import DraftState
-from draft_buddy.core.entities import DraftAction, Pick, Player, PlayerCatalog, Transfer
+from draft_buddy.core.entities import DraftAction, Pick, Player, PlayerCatalog, Swap, Transfer
 from draft_buddy.core.rules_engine import RulesEngine
 
 
@@ -165,10 +165,15 @@ class DraftController:
         if last_action.action_type == "transfer":
             self._undo_latest_transfer_action(last_action)
             return
+        if last_action.action_type == "swap":
+            self._undo_latest_swap_action(last_action)
+            return
         raise ValueError(f"Cannot undo unknown action type: {last_action.action_type}.")
 
-    def transfer_player(self, player_id: int, to_team_id: int) -> Transfer:
-        """Transfer one drafted player to another team.
+    def transfer_player(
+        self, player_id: int, to_team_id: int, to_round: Optional[int] = None
+    ) -> Transfer:
+        """Transfer or visually reposition one drafted player.
 
         Parameters
         ----------
@@ -176,6 +181,8 @@ class DraftController:
             Drafted player to move.
         to_team_id : int
             Destination team id.
+        to_round : int, optional
+            Destination visual-board round. Defaults to the first empty slot.
 
         Returns
         -------
@@ -188,27 +195,115 @@ class DraftController:
         from_team_id = self.state.find_player_team_id(player_id)
         if from_team_id is None:
             raise ValueError(f"Player with ID {player_id} is not currently rostered.")
-        if from_team_id == to_team_id:
-            raise ValueError("Cannot transfer a player to the same team.")
         if not self._is_valid_team_id(to_team_id):
             raise ValueError(f"Invalid team ID: {to_team_id}.")
-        if not self.rules_engine.can_accept_transfer(self.state, to_team_id, player.position):
-            raise ValueError(f"Team {to_team_id} cannot receive a {player.position}.")
+
+        cell = self.state.find_player_cell(player_id)
+        if cell is None:
+            raise ValueError(f"Player with ID {player_id} has no visual board placement.")
+        from_round = cell[1]
+
+        resolved_round = to_round
+        if resolved_round is None:
+            resolved_round = self.state.first_empty_round(to_team_id)
+            if resolved_round is None:
+                raise ValueError(f"Team {to_team_id} has no empty visual board slots.")
+        if not self._is_valid_round(to_team_id, resolved_round):
+            raise ValueError(f"Invalid round index: {resolved_round}.")
+        if from_team_id == to_team_id and from_round == resolved_round:
+            raise ValueError("Player is already in the destination slot.")
+        if self.state.cell_player_id(to_team_id, resolved_round) is not None:
+            raise ValueError("Destination cell is occupied. Use swap to exchange players.")
+
+        if from_team_id != to_team_id:
+            if not self.rules_engine.can_accept_transfer(self.state, to_team_id, player.position):
+                raise ValueError(f"Team {to_team_id} cannot receive a {player.position}.")
+            self.state.move_player_between_rosters(from_team_id, to_team_id, player)
+            self.state.recalculate_roster_counts(from_team_id, self.player_catalog.require)
+            self.state.recalculate_roster_counts(to_team_id, self.player_catalog.require)
+
+        self.state.clear_cell(from_team_id, from_round)
+        self.state.place_player_visual(to_team_id, resolved_round, player_id)
 
         transfer = Transfer(
             player_id=player_id,
             from_team_id=from_team_id,
             to_team_id=to_team_id,
+            from_round=from_round,
+            to_round=resolved_round,
             previous_override_team_id=self.state.override_team_id,
         )
-        self.state.move_player_between_rosters(from_team_id, to_team_id, player)
-        self.state.recalculate_roster_counts(from_team_id, self.player_catalog.require)
-        self.state.recalculate_roster_counts(to_team_id, self.player_catalog.require)
         self.state.append_transfer(transfer)
         self.state.append_action(
             DraftAction(action_type="transfer", history_index=len(self.state.transfer_history) - 1)
         )
         return transfer
+
+    def swap_players(self, player_id_1: int, player_id_2: int) -> Swap:
+        """Swap two drafted players' teams and visual-board slots.
+
+        Parameters
+        ----------
+        player_id_1 : int
+            First drafted player.
+        player_id_2 : int
+            Second drafted player.
+
+        Returns
+        -------
+        Swap
+            Applied swap record.
+        """
+        if player_id_1 == player_id_2:
+            raise ValueError("Cannot swap a player with themselves.")
+        player_1 = self.player_catalog.get(player_id_1)
+        player_2 = self.player_catalog.get(player_id_2)
+        if player_1 is None or player_2 is None:
+            raise ValueError("Unknown player id in swap request.")
+        cell_1 = self.state.find_player_cell(player_id_1)
+        cell_2 = self.state.find_player_cell(player_id_2)
+        if cell_1 is None or cell_2 is None:
+            raise ValueError("Both players must have visual board placements to swap.")
+        team_id_1, round_1 = cell_1
+        team_id_2, round_2 = cell_2
+
+        if team_id_1 != team_id_2:
+            self.state.remove_player_from_roster(team_id_1, player_1, restore_availability=False)
+            self.state.remove_player_from_roster(team_id_2, player_2, restore_availability=False)
+            if not self.rules_engine.can_accept_transfer(self.state, team_id_1, player_2.position):
+                self.state.roster_for_team(team_id_1).player_ids.append(player_id_1)
+                self.state.roster_for_team(team_id_2).player_ids.append(player_id_2)
+                self.state.recalculate_roster_counts(team_id_1, self.player_catalog.require)
+                self.state.recalculate_roster_counts(team_id_2, self.player_catalog.require)
+                raise ValueError(f"Team {team_id_1} cannot receive a {player_2.position}.")
+            if not self.rules_engine.can_accept_transfer(self.state, team_id_2, player_1.position):
+                self.state.roster_for_team(team_id_1).player_ids.append(player_id_1)
+                self.state.roster_for_team(team_id_2).player_ids.append(player_id_2)
+                self.state.recalculate_roster_counts(team_id_1, self.player_catalog.require)
+                self.state.recalculate_roster_counts(team_id_2, self.player_catalog.require)
+                raise ValueError(f"Team {team_id_2} cannot receive a {player_1.position}.")
+            self.state.roster_for_team(team_id_1).player_ids.append(player_id_2)
+            self.state.roster_for_team(team_id_2).player_ids.append(player_id_1)
+            self.state.recalculate_roster_counts(team_id_1, self.player_catalog.require)
+            self.state.recalculate_roster_counts(team_id_2, self.player_catalog.require)
+
+        self.state.place_player_visual(team_id_1, round_1, player_id_2)
+        self.state.place_player_visual(team_id_2, round_2, player_id_1)
+
+        swap = Swap(
+            player_id_1=player_id_1,
+            team_id_1=team_id_1,
+            round_1=round_1,
+            player_id_2=player_id_2,
+            team_id_2=team_id_2,
+            round_2=round_2,
+            previous_override_team_id=self.state.override_team_id,
+        )
+        self.state.append_swap(swap)
+        self.state.append_action(
+            DraftAction(action_type="swap", history_index=len(self.state.swap_history) - 1)
+        )
+        return swap
 
     def set_override_team(self, team_id: int) -> None:
         """Override the next team on the clock."""
@@ -297,6 +392,10 @@ class DraftController:
             DraftAction(action_type="pick", history_index=len(self.state.draft_history) - 1)
         )
         self.state.add_player_to_roster(team_id, player)
+        empty_round = self.state.first_empty_round(team_id)
+        if empty_round is None:
+            raise ValueError(f"Team {team_id} has no empty visual board slots.")
+        self.state.place_player_visual(team_id, empty_round, player_id)
         self.state.advance_pick()
         self.state.override_team_id = None
 
@@ -374,6 +473,9 @@ class DraftController:
         if last_pick is None:
             raise ValueError("No pick history to undo.")
         player = self.player_catalog.require(last_pick.player_id)
+        cell = self.state.find_player_cell(last_pick.player_id)
+        if cell is not None:
+            self.state.clear_cell(cell[0], cell[1])
         self.state.remove_player_from_roster(last_pick.team_id, player)
         self.state.recalculate_roster_counts(last_pick.team_id, self.player_catalog.require)
         self.state.current_pick_index = last_pick.previous_pick_index
@@ -392,15 +494,51 @@ class DraftController:
         current_team_id = self.state.find_player_team_id(transfer.player_id)
         if current_team_id != transfer.to_team_id:
             raise ValueError("Cannot undo transfer because player ownership changed.")
-        self.state.move_player_between_rosters(
-            transfer.to_team_id, transfer.from_team_id, player
+        if transfer.from_team_id != transfer.to_team_id:
+            self.state.move_player_between_rosters(
+                transfer.to_team_id, transfer.from_team_id, player
+            )
+            self.state.recalculate_roster_counts(transfer.to_team_id, self.player_catalog.require)
+            self.state.recalculate_roster_counts(transfer.from_team_id, self.player_catalog.require)
+        self.state.clear_cell(transfer.to_team_id, transfer.to_round)
+        self.state.place_player_visual(
+            transfer.from_team_id, transfer.from_round, transfer.player_id
         )
-        self.state.recalculate_roster_counts(transfer.to_team_id, self.player_catalog.require)
-        self.state.recalculate_roster_counts(transfer.from_team_id, self.player_catalog.require)
         self.state.pop_transfer()
+        self.state.pop_action()
+
+    def _undo_latest_swap_action(self, action: DraftAction) -> None:
+        """Undo the latest action when it points to the latest swap."""
+        if action.history_index != len(self.state.swap_history) - 1:
+            raise ValueError("Cannot undo swap out of chronological order.")
+        if not self.state.swap_history:
+            raise ValueError("No swap history to undo.")
+        swap = self.state.swap_history[-1]
+        player_1 = self.player_catalog.require(swap.player_id_1)
+        player_2 = self.player_catalog.require(swap.player_id_2)
+        if swap.team_id_1 != swap.team_id_2:
+            self.state.remove_player_from_roster(
+                swap.team_id_2, player_1, restore_availability=False
+            )
+            self.state.remove_player_from_roster(
+                swap.team_id_1, player_2, restore_availability=False
+            )
+            self.state.roster_for_team(swap.team_id_1).player_ids.append(swap.player_id_1)
+            self.state.roster_for_team(swap.team_id_2).player_ids.append(swap.player_id_2)
+            self.state.recalculate_roster_counts(swap.team_id_1, self.player_catalog.require)
+            self.state.recalculate_roster_counts(swap.team_id_2, self.player_catalog.require)
+        self.state.place_player_visual(swap.team_id_1, swap.round_1, swap.player_id_1)
+        self.state.place_player_visual(swap.team_id_2, swap.round_2, swap.player_id_2)
+        self.state.pop_swap()
         self.state.pop_action()
 
     def _is_valid_team_id(self, team_id: int) -> bool:
         """Return whether a team id belongs to the draft."""
         valid_team_ids = set(self.state.draft_order) | set(self.state.team_rosters.keys())
         return team_id in valid_team_ids
+
+    def _is_valid_round(self, team_id: int, round_index: int) -> bool:
+        """Return whether a round index exists on a team's visual board."""
+        if round_index < 0:
+            return False
+        return round_index in self.state.visual_board.get(team_id, {})

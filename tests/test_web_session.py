@@ -170,6 +170,29 @@ def test_draft_session_transfers_player_and_unified_undo_restores_it(config, pla
     assert session.team_rosters[1].player_ids == [1] and session.team_rosters[2].player_ids == []
 
 
+def test_get_ui_state_includes_visual_board(config, player_catalog) -> None:
+    """Verify UI state exposes visual board placements for the frontend."""
+    session = DraftSession(config)
+    session.draft_player(1)
+    ui_state = session.get_ui_state()
+
+    assert ui_state["visual_board"][1][0] == 1
+
+
+def test_draft_session_transfer_to_round_and_swap(config, player_catalog) -> None:
+    """Verify session transfer-to-round and swap update visual board state."""
+    session = DraftSession(config)
+    session.draft_player(1)
+    session.draft_player(2)
+
+    session.transfer_player(player_id=1, to_team_id=1, to_round=2)
+    session.swap_players(1, 2)
+    ui_state = session.get_ui_state()
+
+    assert ui_state["visual_board"][1][2] == 2
+    assert ui_state["visual_board"][2][0] == 1
+
+
 def test_draft_session_create_bot_strategy_falls_back_when_provider_returns_none(config) -> None:
     """Verify bot creation falls back to configured core strategies."""
     session = DraftSession(config, inference_provider=StubInferenceProvider())

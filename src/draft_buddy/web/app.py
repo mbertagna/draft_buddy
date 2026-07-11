@@ -150,17 +150,38 @@ def create_app(
 
     @app.post("/api/draft/transfer")
     async def transfer_player(request: Request, response: Response) -> dict:
-        """Transfer one drafted player to another team."""
+        """Transfer one drafted player to another team or visual slot."""
         session = runtime_session_manager.get_or_create(_session_id(request, response))
         payload = await request.json()
         player_id = payload.get("player_id")
         to_team_id = payload.get("to_team_id")
+        to_round = payload.get("to_round")
         if player_id is None:
             raise HTTPException(status_code=400, detail="Player ID is required")
         if to_team_id is None:
             raise HTTPException(status_code=400, detail="Destination team ID is required")
         try:
-            session.transfer_player(int(player_id), int(to_team_id))
+            resolved_round = int(to_round) if to_round is not None else None
+            session.transfer_player(int(player_id), int(to_team_id), to_round=resolved_round)
+            session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return session.get_ui_state()
+
+
+    @app.post("/api/draft/swap")
+    async def swap_players(request: Request, response: Response) -> dict:
+        """Swap two drafted players' teams and visual slots."""
+        session = runtime_session_manager.get_or_create(_session_id(request, response))
+        payload = await request.json()
+        player_id_1 = payload.get("player_id_1")
+        player_id_2 = payload.get("player_id_2")
+        if player_id_1 is None or player_id_2 is None:
+            raise HTTPException(
+                status_code=400, detail="Both player_id_1 and player_id_2 are required"
+            )
+        try:
+            session.swap_players(int(player_id_1), int(player_id_2))
             session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error

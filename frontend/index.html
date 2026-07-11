@@ -898,6 +898,16 @@
         .board-cell .team { font-size: 0.7rem; opacity: 0.9; }
         .board-cell.empty { background-color: var(--surface); color: var(--text-muted); border: 1px dashed var(--border); }
         .board-cell.on-clock { border: 2px solid var(--on-clock); background-color: var(--on-clock-bg); }
+        .board-cell.selected-for-move {
+            outline: 3px solid var(--on-clock);
+            outline-offset: 1px;
+            box-shadow: 0 0 0 2px rgba(232, 163, 23, 0.35);
+            animation: selected-for-move-pulse 1.1s ease-in-out infinite;
+        }
+        @keyframes selected-for-move-pulse {
+            0%, 100% { box-shadow: 0 0 0 2px rgba(232, 163, 23, 0.25); }
+            50% { box-shadow: 0 0 0 4px rgba(232, 163, 23, 0.55); }
+        }
 
         /* Info column/button */
         #player-list th.info-col, #player-list td.info-col { width: 52px; text-align: center; }
@@ -1536,6 +1546,7 @@
         }
 
         let currentDraftState = null;
+        let selectedPlayerForMove = null;
 
         let currentSortBy = 'vorp';
         let currentSortDir = 'desc'; // 'asc' or 'desc'
@@ -2769,6 +2780,7 @@
                 return;
             }
             try {
+                selectedPlayerForMove = null;
                 const data = await postJson('/api/draft/new');
                 renderDraftState(data);
                 fetchPlayers(); // Refresh player list
@@ -2881,31 +2893,54 @@
             }
 
             // --- Render Board Rows (Rounds) ---
+            const playerById = {};
+            for (let teamKey = 1; teamKey <= numTeams; teamKey++) {
+                const flat = (state.team_rosters[teamKey] || {}).players_flat || [];
+                flat.forEach(player => {
+                    if (player && player.player_id != null) {
+                        playerById[player.player_id] = player;
+                    }
+                });
+            }
+            const visualBoard = state.visual_board || {};
+
             boardRows.innerHTML = '';
             for (let r = 0; r < totalRounds; r++) {
                 const tr = document.createElement('tr');
                 for (let t = 1; t <= numTeams; t++) {
                     const teamId = t;
                     const td = document.createElement('td');
-                    const roster = state.team_rosters[teamId] || {};
-                    const players = roster.players_flat || [];
-                    const player = players[r];
+                    const teamBoard = visualBoard[teamId] || visualBoard[String(teamId)] || {};
+                    const cellPlayerId = teamBoard[r] ?? teamBoard[String(r)] ?? null;
+                    const player = cellPlayerId != null ? playerById[cellPlayerId] : null;
 
                     const cell = document.createElement('div');
                     cell.className = 'board-cell';
+                    cell.dataset.teamId = String(teamId);
+                    cell.dataset.round = String(r);
 
-                    // Check if this cell is currently on clock
-                    // Pick index = r * numTeams + (r % 2 === 0 ? t-1 : numTeams - t)
-                    // But we want to know if it's Team t's turn in Round r.
-                    // If team t is on clock and they have r players, then Round r+1 cell is on clock.
-                    const isNextForTeam = (teamId === teamOnClock && players.length === r);
+                    const firstEmptyRound = (() => {
+                        for (let roundIndex = 0; roundIndex < totalRounds; roundIndex++) {
+                            const occupied = teamBoard[roundIndex] ?? teamBoard[String(roundIndex)] ?? null;
+                            if (occupied == null) return roundIndex;
+                        }
+                        return null;
+                    })();
+                    const isNextForTeam = (teamId === teamOnClock && firstEmptyRound === r && !player);
                     if (isNextForTeam) cell.classList.add('on-clock');
+
+                    if (
+                        selectedPlayerForMove &&
+                        selectedPlayerForMove.teamId === teamId &&
+                        selectedPlayerForMove.round === r
+                    ) {
+                        cell.classList.add('selected-for-move');
+                    }
 
                     if (player) {
                         cell.style.backgroundColor = POS_COLORS[player.position] || '#fff';
                         const teamColors = getTeamColor(player.team);
                         if (teamColors) {
-                            // Subtle indicator for NFL team
                             cell.style.borderLeft = `4px solid ${teamColors.background}`;
                         }
 
@@ -2914,12 +2949,17 @@
                             <span class="name">${player.name}</span>
                             <span class="team">${player.team || 'N/A'} (B:${player.bye_week})</span>
                         `;
-                        cell.title = 'Click to transfer this player';
-                        cell.addEventListener('click', () => transferDraftedPlayer(player, teamId));
+                        cell.title = 'Click to select, then click a slot to move or another player to swap';
+                        cell.dataset.playerId = String(player.player_id);
                     } else {
                         cell.classList.add('empty');
                         cell.innerText = `Round ${r + 1}`;
+                        cell.title = selectedPlayerForMove
+                            ? 'Click to move selected player here'
+                            : 'Empty slot';
                     }
+
+                    cell.addEventListener('click', () => handleBoardCellClick(teamId, r, player));
                     td.appendChild(cell);
                     tr.appendChild(td);
                 }
@@ -2991,6 +3031,7 @@
                 return;
             }
             try {
+                selectedPlayerForMove = null;
                 const data = await postJson('/api/draft/undo');
                 renderDraftState(data);
                 fetchPlayers();
@@ -3012,34 +3053,74 @@
             }
         }
 
-        async function transferDraftedPlayer(player, fromTeamId) {
+        function clearPlayerMoveSelection() {
+            selectedPlayerForMove = null;
+            if (currentDraftState) {
+                renderDraftState(currentDraftState);
+            }
+        }
+
+        async function handleBoardCellClick(teamId, roundIndex, player) {
             if (!currentDraftState) {
                 showNotification("Please start a new draft first.", 'error');
                 return;
             }
-            const destination = prompt(
-                `Move ${player.name} from Team ${fromTeamId} to which team?`,
-                String(fromTeamId)
-            );
-            if (destination === null) {
+
+            if (!selectedPlayerForMove) {
+                if (!player) {
+                    return;
+                }
+                selectedPlayerForMove = {
+                    playerId: player.player_id,
+                    teamId: teamId,
+                    round: roundIndex,
+                };
+                renderDraftState(currentDraftState);
                 return;
             }
-            const toTeamId = Number(destination);
-            if (!Number.isInteger(toTeamId)) {
-                showNotification("Enter a valid team number.", 'error');
+
+            if (
+                selectedPlayerForMove.teamId === teamId &&
+                selectedPlayerForMove.round === roundIndex
+            ) {
+                clearPlayerMoveSelection();
                 return;
             }
+
+            if (!player) {
+                try {
+                    const data = await postJson('/api/draft/transfer', {
+                        player_id: selectedPlayerForMove.playerId,
+                        to_team_id: teamId,
+                        to_round: roundIndex,
+                    });
+                    selectedPlayerForMove = null;
+                    renderDraftState(data);
+                    fetchPlayers();
+                } catch (error) {
+                    console.error('Error transferring player:', error);
+                }
+                return;
+            }
+
             try {
-                const data = await postJson('/api/draft/transfer', {
-                    player_id: player.player_id,
-                    to_team_id: toTeamId,
+                const data = await postJson('/api/draft/swap', {
+                    player_id_1: selectedPlayerForMove.playerId,
+                    player_id_2: player.player_id,
                 });
+                selectedPlayerForMove = null;
                 renderDraftState(data);
                 fetchPlayers();
             } catch (error) {
-                console.error('Error transferring player:', error);
+                console.error('Error swapping players:', error);
             }
         }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && selectedPlayerForMove) {
+                clearPlayerMoveSelection();
+            }
+        });
 
         async function simulateNextPick() {
             if (!currentDraftState) {

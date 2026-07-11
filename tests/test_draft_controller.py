@@ -112,12 +112,12 @@ def test_draft_controller_transfer_requires_drafted_player(draft_controller) -> 
         draft_controller.transfer_player(player_id=1, to_team_id=2)
 
 
-def test_draft_controller_transfer_rejects_same_team(draft_controller) -> None:
-    """Verify transfers must change player ownership."""
+def test_draft_controller_transfer_rejects_same_slot(draft_controller) -> None:
+    """Verify transferring a player onto their current slot is rejected."""
     draft_controller.draft_player(1)
 
-    with pytest.raises(ValueError, match="same team"):
-        draft_controller.transfer_player(player_id=1, to_team_id=1)
+    with pytest.raises(ValueError, match="already in the destination slot"):
+        draft_controller.transfer_player(player_id=1, to_team_id=1, to_round=0)
 
 
 def test_draft_controller_simulates_bot_pick(config, draft_state, player_catalog, rules_engine) -> None:
@@ -388,3 +388,94 @@ def test_draft_controller_falls_back_to_random_pick_when_bot_returns_none(
     drafted_player = controller.simulate_single_pick(manual_draft_teams=set())
 
     assert drafted_player.player_id == 1
+
+
+def test_draft_controller_pick_fills_first_empty_visual_slot(draft_controller, draft_state) -> None:
+    """Verify picks place players into the first empty visual board cell."""
+    draft_controller.draft_player(1)
+
+    assert draft_state.visual_board[1][0] == 1
+
+
+def test_draft_controller_transfer_to_round_leaves_visual_gap(draft_controller, draft_state) -> None:
+    """Verify targeted transfers can leave empty visual rounds behind."""
+    draft_controller.draft_player(1)
+
+    draft_controller.transfer_player(player_id=1, to_team_id=2, to_round=2)
+
+    assert draft_state.visual_board[1][0] is None
+    assert draft_state.visual_board[2][2] == 1
+    assert draft_state.roster_for_team(2).player_ids == [1]
+
+
+def test_draft_controller_same_team_visual_reposition(draft_controller, draft_state) -> None:
+    """Verify same-team moves update only visual placement."""
+    draft_controller.draft_player(1)
+
+    draft_controller.transfer_player(player_id=1, to_team_id=1, to_round=3)
+
+    assert draft_state.roster_for_team(1).player_ids == [1]
+    assert draft_state.visual_board[1][0] is None
+    assert draft_state.visual_board[1][3] == 1
+
+
+def test_draft_controller_transfer_rejects_occupied_destination(draft_controller) -> None:
+    """Verify transfers never overwrite an occupied visual cell."""
+    draft_controller.draft_player(1)
+    draft_controller.draft_player(2)
+
+    with pytest.raises(ValueError, match="occupied"):
+        draft_controller.transfer_player(player_id=1, to_team_id=2, to_round=0)
+
+
+def test_draft_controller_swap_players_across_teams(draft_controller, draft_state) -> None:
+    """Verify swaps exchange roster membership and visual coordinates."""
+    draft_controller.draft_player(1)
+    draft_controller.draft_player(2)
+
+    draft_controller.swap_players(1, 2)
+
+    assert draft_state.roster_for_team(1).player_ids == [2]
+    assert draft_state.roster_for_team(2).player_ids == [1]
+    assert draft_state.visual_board[1][0] == 2
+    assert draft_state.visual_board[2][0] == 1
+
+
+def test_draft_controller_swap_players_same_team(draft_controller, draft_state) -> None:
+    """Verify same-team swaps only exchange visual slots."""
+    draft_controller.draft_player(1)
+    draft_controller.set_override_team(1)
+    draft_controller.draft_player(2)
+
+    draft_controller.transfer_player(player_id=2, to_team_id=1, to_round=2)
+    draft_controller.swap_players(1, 2)
+
+    assert set(draft_state.roster_for_team(1).player_ids) == {1, 2}
+    assert draft_state.visual_board[1][0] == 2
+    assert draft_state.visual_board[1][2] == 1
+
+
+def test_draft_controller_undo_restores_transfer_visual_cell(draft_controller, draft_state) -> None:
+    """Verify undo restores transfer visual coordinates and ownership."""
+    draft_controller.draft_player(1)
+    draft_controller.transfer_player(player_id=1, to_team_id=2, to_round=1)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.roster_for_team(1).player_ids == [1]
+    assert draft_state.visual_board[1][0] == 1
+    assert draft_state.visual_board[2][1] is None
+
+
+def test_draft_controller_undo_restores_swap(draft_controller, draft_state) -> None:
+    """Verify undo reverses an atomic player swap."""
+    draft_controller.draft_player(1)
+    draft_controller.draft_player(2)
+    draft_controller.swap_players(1, 2)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.roster_for_team(1).player_ids == [1]
+    assert draft_state.roster_for_team(2).player_ids == [2]
+    assert draft_state.visual_board[1][0] == 1
+    assert draft_state.visual_board[2][0] == 2
