@@ -282,10 +282,12 @@
             opacity: 0.65;
             cursor: not-allowed;
         }
-        .banner-settings {
+        .banner-settings,
+        .banner-stats {
             position: relative;
         }
-        #banner-settings-toggle {
+        #banner-settings-toggle,
+        #banner-stats-toggle {
             padding: var(--space-2) var(--space-3);
             border: 1px solid rgba(255, 255, 255, 0.45);
             border-radius: var(--radius-sm);
@@ -295,8 +297,10 @@
             cursor: pointer;
             font-family: var(--font-ui);
         }
-        #banner-settings-toggle:hover { background: rgba(255, 255, 255, 0.2); }
-        #banner-settings-panel {
+        #banner-settings-toggle:hover,
+        #banner-stats-toggle:hover { background: rgba(255, 255, 255, 0.2); }
+        #banner-settings-panel,
+        #banner-stats-panel {
             position: absolute;
             right: 0;
             top: calc(100% + 6px);
@@ -310,12 +314,32 @@
             flex-direction: column;
             gap: var(--space-2);
         }
-        #banner-settings-panel[hidden] { display: none; }
+        #banner-settings-panel[hidden],
+        #banner-stats-panel[hidden] { display: none; }
         #banner-settings-panel .settings-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
+        }
+        #banner-stats-panel .stats-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-4);
+            font-size: var(--text-sm);
+            color: var(--text-on-green);
+        }
+        #banner-stats-panel .stats-label { font-weight: 600; }
+        #banner-stats-panel .stats-value {
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+        }
+        #banner-stats-panel .stats-row.stats-total {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+            padding-bottom: var(--space-2);
+            margin-bottom: var(--space-1);
         }
         #assistant-banner {
             display: none;
@@ -871,15 +895,6 @@
         /* Bye week grid */
         .bye-week-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 5px; }
         .bye-week-cell { padding: 5px; text-align: center; border-radius: 3px; font-size: 0.8rem; border: 1px solid #000; }
-
-        /* Team summary grid */
-        .team-summary { margin: 6px 0 10px; }
-        .team-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
-        .team-summary-item { display: flex; align-items: center; gap: 8px; background: #ffffff; color: #333; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 8px; flex-wrap: wrap; overflow: hidden; }
-        .team-summary-item .chip { background: rgba(76, 175, 80, 0.12); color: #1b5e20; }
-        .team-summary-item .metric { background: rgba(0,0,0,0.05); white-space: nowrap; flex-shrink: 0; }
-        .team-summary-item .metric .value { font-variant-numeric: tabular-nums; }
-
         /* AI "lava lamp" effect: multi-color gradient for text and ring border */
         .ai-chip {
             /* Static fill like other chips */
@@ -934,13 +949,6 @@
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-
-        /* Summary chip robustness */
-        .team-summary-item { display: flex; align-items: center; gap: 8px; background: #ffffff; color: #333; border: 1px solid #e5e5e5; border-radius: 8px; padding: 6px 8px; flex-wrap: wrap; overflow: hidden; }
-        .team-summary-item .chip { background: rgba(76, 175, 80, 0.12); color: #1b5e20; }
-        .team-summary-item .metric { background: rgba(0,0,0,0.05); white-space: nowrap; flex-shrink: 0; }
-        .team-summary-item .metric .value { font-variant-numeric: tabular-nums; }
-
         /* Season results styling */
         .standings-table { width: 100%; border-collapse: collapse; }
         .standings-table th, .standings-table td { border: 1px solid #ddd; padding: 6px; }
@@ -1094,6 +1102,35 @@
                 <button id="undo-pick-btn">Undo</button>
                 <button id="simulate-pick-btn">Sim</button>
                 <button type="button" id="auto-draft-btn">Auto</button>
+                <div class="banner-stats">
+                    <button type="button" id="banner-stats-toggle"
+                            data-action="toggle-stats"
+                            aria-expanded="false"
+                            aria-controls="banner-stats-panel"
+                            title="Draft stats">Stats</button>
+                    <div id="banner-stats-panel" hidden>
+                        <div class="stats-row stats-total">
+                            <span class="stats-label">Total picks</span>
+                            <span class="stats-value" id="total-picks-display">—</span>
+                        </div>
+                        <div class="stats-row">
+                            <span class="stats-label">QB drafted</span>
+                            <span class="stats-value" id="qb-drafted-display">—</span>
+                        </div>
+                        <div class="stats-row">
+                            <span class="stats-label">RB drafted</span>
+                            <span class="stats-value" id="rb-drafted-display">—</span>
+                        </div>
+                        <div class="stats-row">
+                            <span class="stats-label">WR drafted</span>
+                            <span class="stats-value" id="wr-drafted-display">—</span>
+                        </div>
+                        <div class="stats-row">
+                            <span class="stats-label">TE drafted</span>
+                            <span class="stats-value" id="te-drafted-display">—</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="banner-settings">
                     <button type="button" id="banner-settings-toggle"
                             data-action="toggle-settings"
@@ -1239,6 +1276,13 @@
         const AUTO_DRAFT_LABEL = 'Auto';
         const bannerSettingsToggle = document.getElementById('banner-settings-toggle');
         const bannerSettingsPanel = document.getElementById('banner-settings-panel');
+        const bannerStatsToggle = document.getElementById('banner-stats-toggle');
+        const bannerStatsPanel = document.getElementById('banner-stats-panel');
+        const totalPicksDisplay = document.getElementById('total-picks-display');
+        const qbDraftedDisplay = document.getElementById('qb-drafted-display');
+        const rbDraftedDisplay = document.getElementById('rb-drafted-display');
+        const wrDraftedDisplay = document.getElementById('wr-drafted-display');
+        const teDraftedDisplay = document.getElementById('te-drafted-display');
         const gpFracMinInput = document.getElementById('gp-frac-min');
         const simulateSeasonBtn = document.getElementById('simulate-season-btn');
         const seasonResultsDiv = document.getElementById('season-simulation-results');
@@ -1581,6 +1625,31 @@
             if (!bannerSettingsPanel || !bannerSettingsToggle) return;
             bannerSettingsPanel.hidden = !open;
             bannerSettingsToggle.setAttribute('aria-expanded', String(open));
+        }
+
+        function setBannerStatsOpen(open) {
+            if (!bannerStatsPanel || !bannerStatsToggle) return;
+            bannerStatsPanel.hidden = !open;
+            bannerStatsToggle.setAttribute('aria-expanded', String(open));
+        }
+
+        async function fetchDraftSummary() {
+            if (!totalPicksDisplay) return;
+            try {
+                const response = await fetch('/api/draft/summary');
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }
+                totalPicksDisplay.textContent = data.total_picks;
+                qbDraftedDisplay.textContent = data.picks_by_position.QB;
+                rbDraftedDisplay.textContent = data.picks_by_position.RB;
+                wrDraftedDisplay.textContent = data.picks_by_position.WR;
+                teDraftedDisplay.textContent = data.picks_by_position.TE;
+            } catch (error) {
+                console.error('Error fetching draft summary:', error);
+                totalPicksDisplay.textContent = 'Error';
+            }
         }
 
         function renderAdvisorLoading() {
@@ -2409,6 +2478,19 @@
                     setBannerSettingsOpen(false);
                 });
             }
+            if (bannerStatsToggle && bannerStatsPanel) {
+                bannerStatsToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setBannerStatsOpen(bannerStatsPanel.hidden);
+                });
+                document.addEventListener('click', (e) => {
+                    if (bannerStatsPanel.hidden) return;
+                    if (bannerStatsPanel.contains(e.target) || bannerStatsToggle.contains(e.target)) {
+                        return;
+                    }
+                    setBannerStatsOpen(false);
+                });
+            }
             if (aiAssistantSliver) {
                 aiAssistantSliver.addEventListener('click', (e) => {
                     const target = e.target.closest('[data-action]');
@@ -2465,6 +2547,7 @@
             updateDraftClock(state);
 
             updateHeaderSuggestion(state);
+            fetchDraftSummary();
 
             const numTeams = Number(state.num_teams) || 10;
             const agentTeamId = state.agent_start_position;
