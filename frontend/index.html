@@ -6,7 +6,7 @@
     <title>DRAFT BUDDY</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&family=Chakra+Petch:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Oxanium:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             /* Surfaces */
@@ -19,7 +19,9 @@
             --green-50: #E8F5E9;
             --green-700: #1B5E20;
 
-            /* Text */
+            /* Text scale (emphasis tiers, theme-driven):
+               strong = highest contrast (headings), text = body, muted = secondary */
+            --text-strong: #0B0D0E;
             --text: #1A1D1F;
             --text-muted: #5F6368;
             --text-on-green: #FFFFFF;
@@ -89,9 +91,11 @@
             --green-500: #43A047;
             --green-50: #14301A;
             --green-700: #A5D6A7;
+            --text-strong: #F5F7FA;
             --text: #E6E9ED;
             --text-muted: #9AA4B2;
             --text-on-green: #FFFFFF;
+            --font-ui: "Space Grotesk", system-ui, -apple-system, sans-serif;
             --border: #2C333C;
             --on-clock: #E8A317;
             --on-clock-bg: #3A2E12;
@@ -113,9 +117,11 @@
             --green-500: #A100D4;
             --green-50: #2A0A3A;
             --green-700: #E9A8FF;
+            --text-strong: #FFFFFF;
             --text: #E6F1FF;
             --text-muted: #8A9BB8;
             --text-on-green: #FFFFFF;
+            --font-ui: "Chakra Petch", system-ui, -apple-system, sans-serif;
             --border: #2E2350;
             --on-clock: #F5D90A;
             --on-clock-bg: #2E2A08;
@@ -137,9 +143,11 @@
             --green-500: #C96A2E;
             --green-50: #3A2A1E;
             --green-700: #F0B080;
+            --text-strong: #FBF6F0;
             --text: #EDE6DE;
             --text-muted: #A89B8C;
             --text-on-green: #FFFFFF;
+            --font-ui: "Sora", system-ui, -apple-system, sans-serif;
             --border: #3D362F;
             --on-clock: #E8A317;
             --on-clock-bg: #3A2E12;
@@ -151,6 +159,36 @@
             --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
             --header-bg: #C96A2E;
             --chip-on-header: rgba(255, 255, 255, 0.16);
+            --chip-on-header-hover: rgba(255, 255, 255, 0.24);
+        }
+
+        /* Mission Control: HUD-style deep space blue-black, teal readouts,
+           amber alerts, and the Oxanium control-panel typeface. Exercises the
+           full text scale: --text-strong (bright teal-white headings), --text
+           (light body), --text-muted (dim slate secondary). */
+        html[data-theme="mission-control"] {
+            --surface: #070B10;
+            --surface-raised: #0F1720;
+            --green-600: #2DD4BF;
+            --green-500: #0D9488;
+            --green-50: #0A2A2A;
+            --green-700: #99F6E4;
+            --text-strong: #F0FDFA;
+            --text: #C8D6D3;
+            --text-muted: #6E837E;
+            --text-on-green: #ECFEFF;
+            --font-ui: "Oxanium", system-ui, -apple-system, sans-serif;
+            --border: #1E2C33;
+            --on-clock: #FBBF24;
+            --on-clock-bg: #2A2008;
+            --danger: #FB7185;
+            --danger-hover: #F43F5E;
+            --neutral: #5B6B72;
+            --neutral-bg: #101C22;
+            --shadow-sm: 0 1px 2px rgba(45, 212, 191, 0.15);
+            --shadow-md: 0 4px 16px rgba(45, 212, 191, 0.18);
+            --header-bg: #0D9488;
+            --chip-on-header: rgba(255, 255, 255, 0.14);
             --chip-on-header-hover: rgba(255, 255, 255, 0.24);
         }
 
@@ -175,6 +213,7 @@
 
         body { font-family: var(--font-ui); font-size: var(--text-base); color: var(--text); margin: 0; background-color: var(--surface); display: flex; flex-direction: column; height: 100vh; line-height: 1.45; }
         main { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+        h1, h2, h3, h4, h5, h6 { color: var(--text-strong); }
         
         #top-panel { flex: 0 0 50%; overflow-y: auto; padding: var(--space-2) var(--space-4); min-height: 100px; display: flex; flex-direction: column; }
         #bottom-panel { flex: 1 1 auto; overflow-y: auto; padding: var(--space-2) var(--space-4); min-height: 100px; background: var(--surface-raised); }
@@ -182,6 +221,9 @@
         @media (max-width: 768px) {
             #top-panel,
             #bottom-panel { padding: var(--space-2); }
+            .draft-banner { flex-wrap: wrap; }
+            .draft-banner-actions { flex-wrap: wrap; }
+            #controls { gap: var(--space-2); }
         }
 
         .resizer {
@@ -1301,6 +1343,7 @@
                                 <option value="dark-slate">Dark Slate</option>
                                 <option value="cyberpunk">Cyberpunk</option>
                                 <option value="warm-charcoal">Warm Charcoal</option>
+                                <option value="mission-control">Mission Control</option>
                             </select>
                         </div>
                     </div>

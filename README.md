@@ -126,7 +126,7 @@ docker compose run --rm ast
 
 ### Player Insights (manual pre-draft enrichment)
 
-Offline player insight enrichment is a **manual, two-step** pipeline that prepares research-backed outlook data for the draft UI (see [PLAYER_INSIGHTS_PART2_PLAN.md](PLAYER_INSIGHTS_PART2_PLAN.md)).
+Offline player insight enrichment is a **manual, two-step** pipeline that prepares research-backed outlook data for the draft UI (see [PLAYER_INSIGHTS_PART2_PLAN.md](docs/PLAYER_INSIGHTS_PART2_PLAN.md)).
 
 **Prerequisites:**
 
@@ -189,7 +189,7 @@ The web UI includes an on-demand **LLM draft assistant** alongside the fast RL p
 
 The assistant builds per-position shortlists (top 7 by VORP/ADP for the RL model's top two positions, top 5 for the others) and returns a structured pick recommendation. Min GP Frac from the player table is sent with each request.
 
-See [PLAYER_INSIGHTS_PART2_PLAN.md](PLAYER_INSIGHTS_PART2_PLAN.md) for architecture details.
+See [PLAYER_INSIGHTS_PART2_PLAN.md](docs/PLAYER_INSIGHTS_PART2_PLAN.md) for architecture details.
 
 ### Position Guide (pre-draft cheat sheet)
 

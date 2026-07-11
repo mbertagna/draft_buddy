@@ -182,12 +182,26 @@ Run after each stage; all must pass before committing:
 - **Deliverable:** persistent, structure-free theming. Pending user visual pass across
   banner, drawers, board, and table.
 
-### Stage 7 — Cohesion & polish (frontend-design critique)
-- Confirm responsive/mobile, visible focus, and reduced-motion (lava animation disabled).
-- Final self-critique with screenshots; "remove one accessory" for restraint.
-- Fix README links pointing at the old root-level plan paths now under `docs/`.
-- Remove `plan/artifacts/` scaffolding once the revamp is stable.
+### Stage 7 — Cohesion & polish (frontend-design critique) — IN PROGRESS
+- Verified a11y/responsive: `:focus-visible` (theme-aware outline), `prefers-reduced-motion`
+  (global rule disables the lava animations), and a `max-width: 768px` query that now also
+  wraps the draft banner + actions and tightens `#controls`. Done.
+- Fixed README links to the relocated `docs/PLAYER_INSIGHTS_PART2_PLAN.md`. Done.
+- Remove `plan/artifacts/` scaffolding once the revamp is confirmed stable. **Deferred** until
+  after the final visual pass (kept as reference for now).
+- Final self-critique / "remove one accessory": pending user visual pass.
 - **Deliverable:** functional, cohesive, distinctive UI.
+
+#### Stage 7 enhancements (user request)
+- **Grouped text scale:** added `--text-strong` (headings, bound via `h1..h6`) alongside the
+  existing `--text` / `--text-muted`. All three tiers are theme-driven; darker themes invert
+  lightness while keeping emphasis semantics (strong > body > muted).
+- **Per-theme UI font:** each theme overrides `--font-ui` only (DM Sans / Space Grotesk /
+  Chakra Petch / Sora / Oxanium). `--font-stats` (IBM Plex Sans) and `--font-mono` (IBM Plex
+  Mono) stay fixed so table body text and tabular numerics remain aligned and readable.
+- **New theme — Mission Control (`mission-control`):** HUD deep-space blue-black surfaces,
+  teal readouts, amber on-clock alerts, teal-glow shadows, and the Oxanium control-panel
+  typeface; chosen to exercise all three text tiers.
 
 ## Resolved Decisions
 
