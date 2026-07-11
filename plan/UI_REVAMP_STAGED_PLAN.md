@@ -167,14 +167,20 @@ Run after each stage; all must pass before committing:
   (!currentDraftState)`) were retained but now emit toasts. Can strip further if desired.
 - **Deliverable:** consistent, resilient action feedback; no silent UI breakage.
 
-### Stage 6 — Theme switcher (blueprint Phase 3)
-- Add `data-theme` blocks (`dark-slate`, `cyberpunk`, `warm-charcoal`) layered over the
-  `:root` tokens.
-- Add `<select id="theme-select" data-action="switch-theme">`; on load read
-  `localStorage.getItem('draftBuddyTheme')`, apply if present else default light; on change
-  set `data-theme` on `<html>` and persist.
-- Verify every theme across banner, drawers, board, and table.
-- **Deliverable:** persistent, structure-free theming.
+### Stage 6 — Theme switcher (blueprint Phase 3) — DONE
+- Added `html[data-theme]` blocks (`dark-slate`, `cyberpunk`, `warm-charcoal`) that redefine
+  only color/shadow tokens over `:root`; structure, spacing, typography, and the lava gradient
+  are untouched. The `--green-50`/`--green-700` accent-tint/accent-text pair is inverted in
+  dark themes so paired components (insight tags) keep contrast. Done.
+- Added `<select id="theme-select" data-action="switch-theme">` in the **settings drawer**
+  (rarely-changed, tucked away). Done.
+- Persistence: an inline `<head>` script applies `localStorage.draftBuddyTheme` before first
+  paint (no flash); `initThemeSwitcher()` syncs the picker value and, on change, sets
+  `data-theme` on `<html>` and persists. `light` clears the attribute (bare `:root`). Done.
+- Native `<select>` option lists in the panel now use `--text`/`--surface-raised` so dropdowns
+  stay readable on every theme.
+- **Deliverable:** persistent, structure-free theming. Pending user visual pass across
+  banner, drawers, board, and table.
 
 ### Stage 7 — Cohesion & polish (frontend-design critique)
 - Confirm responsive/mobile, visible focus, and reduced-motion (lava animation disabled).

@@ -74,6 +74,86 @@
             --chip-on-header-hover: rgba(255, 255, 255, 0.26);
         }
 
+        /*
+         * Themes layer over the :root tokens. Only color/shadow tokens are
+         * redefined so structure, spacing, and typography stay identical. The
+         * lava gradient is intentionally left untouched (signature AI accent).
+         * --green-50 / --green-700 are an accent-tint / accent-text pair: in
+         * dark themes the tint darkens and the text lightens so components that
+         * pair them (insight tags) keep their contrast.
+         */
+        html[data-theme="dark-slate"] {
+            --surface: #0F1419;
+            --surface-raised: #1A2027;
+            --green-600: #66BB6A;
+            --green-500: #43A047;
+            --green-50: #14301A;
+            --green-700: #A5D6A7;
+            --text: #E6E9ED;
+            --text-muted: #9AA4B2;
+            --text-on-green: #FFFFFF;
+            --border: #2C333C;
+            --on-clock: #E8A317;
+            --on-clock-bg: #3A2E12;
+            --danger: #EF5350;
+            --danger-hover: #E53935;
+            --neutral: #8B93A1;
+            --neutral-bg: #232A32;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.55);
+            --header-bg: #1B5E20;
+            --chip-on-header: rgba(255, 255, 255, 0.12);
+            --chip-on-header-hover: rgba(255, 255, 255, 0.2);
+        }
+
+        html[data-theme="cyberpunk"] {
+            --surface: #0B0F1A;
+            --surface-raised: #12172A;
+            --green-600: #D400FF;
+            --green-500: #A100D4;
+            --green-50: #2A0A3A;
+            --green-700: #E9A8FF;
+            --text: #E6F1FF;
+            --text-muted: #8A9BB8;
+            --text-on-green: #FFFFFF;
+            --border: #2E2350;
+            --on-clock: #F5D90A;
+            --on-clock-bg: #2E2A08;
+            --danger: #FF3B6B;
+            --danger-hover: #E62E5C;
+            --neutral: #7A6B99;
+            --neutral-bg: #1B1330;
+            --shadow-sm: 0 1px 2px rgba(0, 229, 255, 0.18);
+            --shadow-md: 0 4px 16px rgba(0, 229, 255, 0.18);
+            --header-bg: #A100D4;
+            --chip-on-header: rgba(255, 255, 255, 0.16);
+            --chip-on-header-hover: rgba(255, 255, 255, 0.28);
+        }
+
+        html[data-theme="warm-charcoal"] {
+            --surface: #1C1917;
+            --surface-raised: #292420;
+            --green-600: #E07B39;
+            --green-500: #C96A2E;
+            --green-50: #3A2A1E;
+            --green-700: #F0B080;
+            --text: #EDE6DE;
+            --text-muted: #A89B8C;
+            --text-on-green: #FFFFFF;
+            --border: #3D362F;
+            --on-clock: #E8A317;
+            --on-clock-bg: #3A2E12;
+            --danger: #E5544B;
+            --danger-hover: #D6473E;
+            --neutral: #8A7D6E;
+            --neutral-bg: #332D27;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+            --header-bg: #C96A2E;
+            --chip-on-header: rgba(255, 255, 255, 0.16);
+            --chip-on-header-hover: rgba(255, 255, 255, 0.24);
+        }
+
         *,
         *::before,
         *::after { box-sizing: border-box; }
@@ -232,7 +312,8 @@
         }
         #assistant-scope-select,
         .assistant-model-select,
-        #sim-mode-select {
+        #sim-mode-select,
+        #theme-select {
             padding: 4px 8px;
             border-radius: var(--radius-sm);
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -240,6 +321,12 @@
             color: var(--text-on-green);
             font-size: var(--text-sm);
             font-family: var(--font-ui);
+        }
+        .assistant-model-select option,
+        #sim-mode-select option,
+        #theme-select option {
+            color: var(--text);
+            background: var(--surface-raised);
         }
         .assistant-model-select { max-width: 11rem; }
         .assistant-model-label {
@@ -1059,7 +1146,7 @@
             vertical-align: middle;
         }
         .matchup-row.team-agent .team-name { color: #1976d2; }
-
+        /* --- toasts (Stage 5) --- */
         #toast-container {
             position: fixed;
             bottom: var(--space-4);
@@ -1089,6 +1176,18 @@
         .toast-success { background: var(--green-600); }
         .toast-info { background: var(--neutral); }
     </style>
+    <script>
+        // Apply the saved theme before first paint to avoid a flash of the
+        // default light theme. The main script wires the picker after load.
+        (function () {
+            try {
+                var saved = localStorage.getItem('draftBuddyTheme');
+                if (saved && saved !== 'light') {
+                    document.documentElement.setAttribute('data-theme', saved);
+                }
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body>
     <header>
@@ -1193,6 +1292,15 @@
                             <select id="sim-mode-select">
                                 <option value="bot">Bot</option>
                                 <option value="policy">Policy</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <label for="theme-select">Theme</label>
+                            <select id="theme-select" data-action="switch-theme" title="Color theme">
+                                <option value="light">Light</option>
+                                <option value="dark-slate">Dark Slate</option>
+                                <option value="cyberpunk">Cyberpunk</option>
+                                <option value="warm-charcoal">Warm Charcoal</option>
                             </select>
                         </div>
                     </div>
@@ -2585,6 +2693,33 @@
             }
             return data;
         }
+
+        function applyTheme(theme) {
+            const root = document.documentElement;
+            if (theme && theme !== 'light') {
+                root.setAttribute('data-theme', theme);
+            } else {
+                root.removeAttribute('data-theme');
+            }
+        }
+
+        (function initThemeSwitcher() {
+            let saved = 'light';
+            try {
+                saved = localStorage.getItem('draftBuddyTheme') || 'light';
+            } catch (e) {}
+            applyTheme(saved);
+            const select = document.getElementById('theme-select');
+            if (!select) return;
+            select.value = saved;
+            select.addEventListener('change', () => {
+                const theme = select.value;
+                applyTheme(theme);
+                try {
+                    localStorage.setItem('draftBuddyTheme', theme);
+                } catch (e) {}
+            });
+        })();
 
         async function startNewDraft() {
             if (!confirm('Are you sure you want to start a new draft? This will archive the current draft state.')) {
