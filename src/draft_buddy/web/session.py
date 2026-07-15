@@ -86,7 +86,7 @@ class DraftSession:
 
     @property
     def team_manager_mapping(self) -> Dict[int, str]:
-        """Return team manager mapping."""
+        """Return cosmetic team display names keyed by team id."""
         return self._config.draft.TEAM_MANAGER_MAPPING
 
     @property
@@ -222,6 +222,13 @@ class DraftSession:
             "total_roster_size_per_team": self.total_roster_size_per_team,
             "team_bye_weeks": self._aggregate_bye_weeks(),
             "agent_start_position": self.agent_team_id,
+            "team_display_names": {
+                team_id: self.team_manager_mapping.get(team_id) or f"Team {team_id}"
+                for team_id in range(1, self.num_teams + 1)
+            },
+            "pick_by_player_id": {
+                pick.player_id: pick.pick_number for pick in self.draft_history
+            },
         }
 
     def save_state(self, file_path: str) -> None:

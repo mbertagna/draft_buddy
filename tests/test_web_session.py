@@ -177,6 +177,18 @@ def test_get_ui_state_includes_visual_board(config, player_catalog) -> None:
     ui_state = session.get_ui_state()
 
     assert ui_state["visual_board"][1][0] == 1
+    assert ui_state["pick_by_player_id"][1] == 1
+
+
+def test_get_ui_state_falls_back_when_display_names_missing(config, player_catalog) -> None:
+    """Verify cosmetic display names always resolve to Team {id} labels."""
+    config.draft.TEAM_MANAGER_MAPPING = {}
+    session = DraftSession(config)
+    ui_state = session.get_ui_state()
+
+    assert ui_state["team_display_names"][1] == "Team 1"
+    assert ui_state["team_display_names"][4] == "Team 4"
+    assert ui_state["pick_by_player_id"] == {}
 
 
 def test_draft_session_transfer_to_round_and_swap(config, player_catalog) -> None:
@@ -262,6 +274,8 @@ def test_get_ui_state_exposes_snake_team_and_override_flag(config, player_catalo
     assert ui_state["snake_team_on_turn"] == 1
     assert ui_state["override_active"] is False
     assert ui_state["current_team_picking"] == 1
+    assert ui_state["team_display_names"][1] == "Team 1"
+    assert ui_state["team_display_names"][4] == "Team 4"
 
     session.set_current_team_picking(2)
     ui_state = session.get_ui_state()
