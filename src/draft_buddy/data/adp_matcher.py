@@ -328,30 +328,10 @@ class AdpMatcher:
         print("\n--- ADP Merge Diagnostics ---")
         total_adp_rows = len(adp_df) if len(adp_df) > 0 else 1
         matched_count = int(matched_mask.sum())
-        print(f"Total ADP Players: {total_adp_rows}")
-        print(f"Successfully Matched: {matched_count} ({matched_count / total_adp_rows:.2%})")
-        print(f"Borderline Cases ({match_threshold-10}-{match_threshold}): {len(borderline_df)}")
-        print(f"Unmatched: {len(unmatched_df)}")
-
-        print("\nUnmatched Players with Highest Potential Scores:")
-        for _, row in unmatched_df.head(5).iterrows():
-            print(f"- {row['Player']} (Team: {row.get('Team', 'N/A')}, Top Score: {row['match_score']:.0f})")
-
-        adp_val_col = "AVG" if "AVG" in adp_df.columns else ("Rank" if "Rank" in adp_df.columns else None)
-        pos_col = "Pos" if "Pos" in adp_df.columns else None
-        if adp_val_col and pos_col and not unmatched_df.empty and adp_val_col in unmatched_df.columns:
-            tmp = unmatched_df[[pos_col, "Player", "Team", adp_val_col]].copy()
-            tmp[adp_val_col] = pd.to_numeric(tmp[adp_val_col], errors="coerce")
-            tmp = tmp[pd.notna(tmp[adp_val_col])]
-            if not tmp.empty:
-                tmp["PosBase"] = tmp[pos_col].astype(str).str.extract(r"([A-Za-z]+)")[0]
-                print("\nUnmatched Highest-ADP per Position:")
-                for position_value, g in tmp.groupby("PosBase"):
-                    g_sorted = g.sort_values(by=adp_val_col, ascending=False)
-                    r = g_sorted.iloc[0]
-                    print(
-                        f"- {position_value}: {r['Player']} "
-                        f"(Team: {r.get('Team', 'N/A')}, ADP: {r[adp_val_col]})"
-                    )
+        print(
+            f"ADP match: {matched_count}/{len(adp_df)} matched "
+            f"({matched_count / total_adp_rows:.2%}); "
+            f"{len(unmatched_df)} unmatched, {len(borderline_df)} borderline."
+        )
 
         return merged_df, unmatched_df, borderline_df

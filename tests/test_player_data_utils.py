@@ -23,6 +23,7 @@ def test_convert_to_simulation_format_builds_pts_from_week_keys() -> None:
 
 def test_get_simulation_dfs_converts_processor_output(monkeypatch) -> None:
     """Verify get_simulation_dfs converts process_draft_data output into simulator format."""
+    from draft_buddy.data.pipeline_diagnostics import ProcessDraftResult, empty_stage_counts
 
     class FakeProcessor:
         def __init__(self, **kwargs):
@@ -30,7 +31,13 @@ def test_get_simulation_dfs_converts_processor_output(monkeypatch) -> None:
 
         def process_draft_data(self, **kwargs):
             _ = kwargs
-            return pd.DataFrame([{"player_id": 1}]), {1: {"position": "QB", 1: 5.0, 2: 0.0}}, pd.DataFrame()
+            return ProcessDraftResult(
+                draft_players_df=pd.DataFrame([{"player_id": 1}]),
+                weekly_projections={1: {"position": "QB", 1: 5.0, 2: 0.0}},
+                missing_nflverse_stats_df=pd.DataFrame(),
+                stage_counts=empty_stage_counts(),
+                search_rank_report=None,
+            )
 
     monkeypatch.setattr("draft_buddy.data.player_data_utils.FantasyDataProcessor", FakeProcessor)
     draft_players_df, weekly_projections = get_simulation_dfs(season=2025, ps_start_year=2020)

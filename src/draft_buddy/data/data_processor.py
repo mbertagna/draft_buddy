@@ -11,13 +11,20 @@ from .cache_paths import nflverse_cache_dir, sleeper_cache_dir
 from .nflverse_client import NflverseCsvDownloader
 from .nflverse_crosswalk import NflverseCrosswalkBuilder
 from .nflverse_ids import normalize_gsis_id, normalize_sleeper_id
+from .pipeline_diagnostics import (
+    ProcessDraftResult,
+    StageCounts,
+    build_stage_counts,
+    empty_stage_counts,
+)
 from .rookie_projector import RookieProjector
 from .sleeper_catalog import (
     DEFAULT_SEARCH_RANK_SCAN_DEPTH,
     DEFAULT_TOP_SEARCH_RANK_REPORT_SIZE,
+    SearchRankMatchReport,
     SleeperCatalogBuilder,
     build_search_rank_nflverse_match_report,
-    print_search_rank_nflverse_match_report,
+    format_search_rank_match_summary,
 )
 from .sleeper_client import SleeperGateway, SleeperHttpGateway
 
@@ -232,7 +239,7 @@ class FantasyDataProcessor:
                            measure_of_center: str = 'median',
                            adp_filepath: str | None = None,
                            adp_match_threshold: int = 85,
-                           adp_col_map: dict | None = None) -> tuple:
+                           adp_col_map: dict | None = None) -> ProcessDraftResult:
         """
         Orchestrate the data pipeline: fetch, score, aggregate, merge, project rookies.
 
@@ -251,14 +258,14 @@ class FantasyDataProcessor:
 
         Returns
         -------
-        tuple
-            (draft_players_df, weekly_projections, missing_nflverse_stats_df).
-            ``missing_nflverse_stats_df`` lists Sleeper players with no
-            nflverse legacy stats match who are unlikely to be rookies
-            (``years_exp > 0``) -- worth a manual look. Empty when
-            ``project_rookies`` is False.
+        ProcessDraftResult
+            Draft players, weekly projections, missing-veteran frame, stage
+            counts, and optional Sleeper rank-scan report.
         """
         missing_nflverse_stats_df = pd.DataFrame()
+        search_rank_report: SearchRankMatchReport | None = None
+        stage_counts = empty_stage_counts()
+
         if self.project_rookies:
             print("Building Sleeper-anchored player catalog...")
             all_sleeper_players_df = self._sleeper_gateway.fetch_all_players()
@@ -283,11 +290,20 @@ class FantasyDataProcessor:
             draft_players_df = self._attach_legacy_stats_to_catalog(
                 resolved_catalog_df, legacy_stats_df
             )
-            self._report_top_search_rank_nflverse_coverage(
+            search_rank_report = self._build_search_rank_nflverse_coverage(
                 all_sleeper_players_df, draft_players_df
             )
+            if search_rank_report is not None:
+                print(format_search_rank_match_summary(search_rank_report))
             missing_nflverse_stats_df = self._find_likely_veterans_missing_stats(draft_players_df)
             rookies_df = draft_players_df[draft_players_df['is_rookie_original'] == True]
+            stage_counts = build_stage_counts(
+                sleeper_directory=len(all_sleeper_players_df),
+                catalog=len(catalog_df),
+                gsis_resolved=int(resolved_catalog_df["nflverse_player_id"].notna().sum()),
+                nflverse_matched=int((~draft_players_df["is_rookie_original"]).sum()),
+                rookie_projected=int(draft_players_df["is_rookie_original"].sum()),
+            )
             if not rookies_df.empty:
                 print(f"Estimating points for {len(rookies_df)} rookies using method='{self.rookie_projection_method}'...")
                 draft_players_df = self._rookie_projector.project_rookies(
@@ -318,6 +334,13 @@ class FantasyDataProcessor:
             draft_players_df = self._scoring_service.merge_draft_year_with_legacy(
                 draft_year_scored, legacy_stats_df
             )
+            stage_counts = StageCounts(
+                sleeper_directory=0,
+                catalog=len(roster_df),
+                gsis_resolved=len(allowlist),
+                nflverse_matched=len(draft_players_df),
+                rookie_projected=0,
+            )
 
         team_bye_weeks = self._get_team_bye_weeks()
         draft_players_df = draft_players_df.copy()
@@ -328,15 +351,21 @@ class FantasyDataProcessor:
         draft_players_df = self._scoring_service.finalize_draft_players(draft_players_df)
 
         print("Processing complete.")
-        return draft_players_df, weekly_projections, missing_nflverse_stats_df
+        return ProcessDraftResult(
+            draft_players_df=draft_players_df,
+            weekly_projections=weekly_projections,
+            missing_nflverse_stats_df=missing_nflverse_stats_df,
+            stage_counts=stage_counts,
+            search_rank_report=search_rank_report,
+        )
 
-    def _report_top_search_rank_nflverse_coverage(
+    def _build_search_rank_nflverse_coverage(
         self,
         all_sleeper_players_df: pd.DataFrame,
         catalog_with_stats_df: pd.DataFrame,
         top_n: int = DEFAULT_TOP_SEARCH_RANK_REPORT_SIZE,
-    ) -> None:
-        """Print how many of Sleeper's top-ranked players matched nflverse stats.
+    ) -> SearchRankMatchReport | None:
+        """Build Sleeper rank-order nflverse match coverage without printing the scan.
 
         Parameters
         ----------
@@ -346,19 +375,23 @@ class FantasyDataProcessor:
             Catalog immediately after nflverse stats attach.
         top_n : int, optional
             Number of top ``search_rank`` players to evaluate.
+
+        Returns
+        -------
+        SearchRankMatchReport or None
+            Structured report when ``search_rank`` is available.
         """
         if "search_rank" not in all_sleeper_players_df.columns:
             print("Skipping Sleeper top-player match report: search_rank unavailable.")
-            return
+            return None
 
-        report = build_search_rank_nflverse_match_report(
+        return build_search_rank_nflverse_match_report(
             all_sleeper_players_df,
             catalog_with_stats_df,
             self.positions,
             eligible_top_n=top_n,
             scan_depth=DEFAULT_SEARCH_RANK_SCAN_DEPTH,
         )
-        print_search_rank_nflverse_match_report(report)
 
     @staticmethod
     def _find_likely_veterans_missing_stats(draft_players_df: pd.DataFrame) -> pd.DataFrame:

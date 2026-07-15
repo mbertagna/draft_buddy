@@ -98,11 +98,13 @@ def get_simulation_dfs(
         cache_dir=DATA_ROOT,
     )
 
-    draft_players_df, weekly_projections_raw, _ = processor.process_draft_data(
+    process_result = processor.process_draft_data(
         draft_year=season,
         measure_of_center=measure_of_center,
         adp_filepath=adp_file,
     )
+    draft_players_df = process_result.draft_players_df
+    weekly_projections_raw = process_result.weekly_projections
 
     weekly_projections = _convert_to_simulation_format(weekly_projections_raw)
     return draft_players_df, weekly_projections

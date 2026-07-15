@@ -187,9 +187,10 @@ def test_process_draft_data_projects_rookies_and_applies_bye_week_mapping() -> N
         sleeper_gateway=FakeSleeperGateway(),
         crosswalk_builder=FakeCrosswalkBuilder(),
     )
-    draft_players_df, weekly_projections, _ = processor.process_draft_data(draft_year=2025)
+    draft_result = processor.process_draft_data(draft_year=2025)
 
-    assert set(draft_players_df["bye_week"]) == {7, 10} and weekly_projections[2][1] == 15.0
+    assert set(draft_result.draft_players_df["bye_week"]) == {7, 10}
+    assert draft_result.weekly_projections[2][1] == 15.0
     assert "attach_legacy_stats_by_player_id" in scoring_service.calls
 
 

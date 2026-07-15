@@ -49,6 +49,7 @@ Each service bind-mounts the repository into `/app` and runs with `PYTHONPATH=/a
 Common output locations on the host:
 
 - `data/`: generated player data and draft state files
+- `data/leagues/{league_id}/generated/{year}/pipeline_report.html`: data-pipeline diagnostics report
 - `logs/`: training metrics, dashboards, and run logs
 - `models/`: checkpoints and trained model artifacts
 - `coverage.xml`: XML coverage report from `test-cov`

@@ -18,6 +18,9 @@ from draft_buddy.data import (
     adp_cache_dir,
     sleeper_cache_dir,
 )
+from draft_buddy.data.pipeline_diagnostics import build_pipeline_diagnostics
+from draft_buddy.data.pipeline_report import export_pipeline_report
+from draft_buddy.data.sleeper_catalog import format_search_rank_match_summary
 
 DRAFTABLE_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 DATA_ROOT = './data'
@@ -145,10 +148,12 @@ def main(
         f'fantasypros-{draft_year}-overall-adp-rankings.html',
     )
 
-    computed_players_df, _, missing_nflverse_stats_df = processor.process_draft_data(
+    process_result = processor.process_draft_data(
         draft_year=draft_year,
         adp_filepath=adp_file,
     )
+    computed_players_df = process_result.draft_players_df
+    missing_nflverse_stats_df = process_result.missing_nflverse_stats_df
     save_missing_nflverse_stats_report(missing_nflverse_stats_df, output_dir)
 
     if sleeper_league_id:
@@ -175,22 +180,30 @@ def main(
     unmatched_df = unmatched_df.rename(columns={'player_display_name': 'name', 'total_pts': 'projected_points'})
     borderline_df = borderline_df.rename(columns={'player_display_name': 'name', 'total_pts': 'projected_points'})
 
-    # Extra diagnostic: unmatched highest-ADP per position (ADP worst values)
-    if not unmatched_df.empty:
-        adp_col = 'adp' if 'adp' in unmatched_df.columns else ('Rank' if 'Rank' in unmatched_df.columns else None)
-        if adp_col and 'Pos' in unmatched_df.columns:
-            tmp = unmatched_df[['Pos', 'Player', 'Team', adp_col]].copy()
-            tmp[adp_col] = pd.to_numeric(tmp[adp_col], errors='coerce')
-            tmp = tmp[pd.notna(tmp[adp_col])]
-            if not tmp.empty:
-                # Normalize positions like WR1 -> WR
-                tmp['PosBase'] = tmp['Pos'].astype(str).str.extract(r'([A-Za-z]+)')[0]
-                print("\nUnmatched Highest-ADP per Position:")
-                for position_value, g in tmp.groupby('PosBase'):
-                    r = g.sort_values(by=adp_col, ascending=False).iloc[0]
-                    print(f"- {position_value}: {r['Player']} (Team: {r.get('Team', 'N/A')}, ADP: {r[adp_col]})")
-    # ID normalization and assignment now handled inside FantasyDataProcessor.
-    # No additional ID manipulation required here.
+    matched_adp_count = len(merged_df)
+    total_adp_players = matched_adp_count + len(unmatched_df)
+
+    search_rank_summary = (
+        format_search_rank_match_summary(process_result.search_rank_report)
+        if process_result.search_rank_report is not None
+        else "Sleeper nflverse match report unavailable."
+    )
+    diagnostics = build_pipeline_diagnostics(
+        league_id=runtime_config.league.league_id,
+        league_name=league_name,
+        draft_year=draft_year,
+        lookback_seasons=resolved_lookback,
+        stage_counts=process_result.stage_counts,
+        search_rank_report=process_result.search_rank_report,
+        search_rank_summary=search_rank_summary,
+        missing_nflverse_stats_df=missing_nflverse_stats_df,
+        unmatched_adp_df=unmatched_df,
+        borderline_adp_df=borderline_df,
+        total_adp_players=total_adp_players,
+        matched_adp_count=matched_adp_count,
+    )
+    _json_path, html_path = export_pipeline_report(diagnostics, output_dir)
+    print(f"Pipeline report: {html_path}")
 
     if not merged_df.empty:
         print(f"\n\n--- Successfully Merged Data for {draft_year} ---")
