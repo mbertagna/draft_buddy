@@ -354,6 +354,18 @@ def test_draft_controller_uses_override_team_for_manual_pick(draft_controller) -
     assert draft_controller.state.draft_history[-1].team_id == 3
 
 
+def test_draft_controller_set_override_team_clears_when_selecting_snake_team(draft_controller) -> None:
+    """Verify selecting the natural snake team removes an active override."""
+    snake_team_id = draft_controller.draft_order[draft_controller.current_pick_index]
+
+    draft_controller.set_override_team(3)
+    assert draft_controller.state.override_team_id == 3
+
+    draft_controller.set_override_team(snake_team_id)
+    assert draft_controller.state.override_team_id is None
+    assert draft_controller.team_on_clock == snake_team_id
+
+
 def test_draft_controller_computes_zero_baseline_when_position_is_empty(
     draft_controller, draft_state, player_catalog
 ) -> None:

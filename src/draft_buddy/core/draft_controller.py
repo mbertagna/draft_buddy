@@ -306,7 +306,17 @@ class DraftController:
         return swap
 
     def set_override_team(self, team_id: int) -> None:
-        """Override the next team on the clock."""
+        """Override the next team on the clock.
+
+        Selecting the natural snake team clears any active override.
+        """
+        if self.current_pick_index >= len(self.draft_order):
+            self.state.override_team_id = team_id
+            return
+        snake_team_id = self.draft_order[self.current_pick_index]
+        if team_id == snake_team_id:
+            self.state.override_team_id = None
+            return
         self.state.override_team_id = team_id
 
     def simulate_single_pick(

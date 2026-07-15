@@ -270,6 +270,12 @@ def test_get_ui_state_exposes_snake_team_and_override_flag(config, player_catalo
     assert ui_state["override_active"] is True
     assert ui_state["current_team_picking"] == 2
 
+    session.set_current_team_picking(1)
+    ui_state = session.get_ui_state()
+
+    assert ui_state["override_active"] is False
+    assert ui_state["current_team_picking"] == 1
+
 
 class TeamAwareStubInferenceProvider(StubInferenceProvider):
     """Return different probabilities per team for override tests."""

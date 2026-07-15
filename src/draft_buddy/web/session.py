@@ -123,8 +123,13 @@ class DraftSession:
 
     @property
     def override_active(self) -> bool:
-        """Return whether a manual clock override is active."""
-        return self._state.override_team_id is not None
+        """Return whether the clock differs from the natural snake pick."""
+        override_id = self._state.override_team_id
+        if override_id is None:
+            return False
+        if self.current_pick_index >= len(self.draft_order):
+            return False
+        return override_id != self.draft_order[self.current_pick_index]
 
     @property
     def available_player_ids(self) -> set[int]:
