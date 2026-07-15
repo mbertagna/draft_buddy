@@ -10,7 +10,7 @@ already on disk under the cache directory is left untouched.
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Collection, Tuple
 
 import pandas as pd
 import requests
@@ -32,7 +32,11 @@ class DataDownloader(ABC):
 
     @abstractmethod
     def fetch_legacy_stats(
-        self, draft_year: int, positions: list, start_year: int, end_year: int
+        self,
+        draft_year: int,
+        start_year: int,
+        end_year: int,
+        nflverse_player_ids: Collection[int],
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Fetch historical and draft-year weekly stats for scoring.
@@ -41,12 +45,14 @@ class DataDownloader(ABC):
         ----------
         draft_year : int
             The year of the draft.
-        positions : list
-            List of positions to include (e.g., ['QB', 'RB', 'WR', 'TE']).
         start_year : int
             First year of historical data.
         end_year : int
             Last year of historical data (typically draft_year).
+        nflverse_player_ids : Collection[int]
+            Allowlist of normalized nflverse/GSIS player ids to retain.
+            Weekly ``position`` labels are ignored so two-way players keep
+            their offensive production.
 
         Returns
         -------
@@ -245,18 +251,44 @@ class NflverseCsvDownloader(DataDownloader):
         return pd.concat(non_empty_frames, ignore_index=True, sort=False)
 
     def fetch_legacy_stats(
-        self, draft_year: int, positions: list, start_year: int, end_year: int
+        self,
+        draft_year: int,
+        start_year: int,
+        end_year: int,
+        nflverse_player_ids: Collection[int],
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Fetch nflverse weekly stats split into legacy and draft-year frames."""
+        """Fetch nflverse weekly stats split into legacy and draft-year frames.
+
+        Parameters
+        ----------
+        draft_year : int
+            The year of the draft.
+        start_year : int
+            First year of historical data.
+        end_year : int
+            Last year of historical data (typically draft_year).
+        nflverse_player_ids : Collection[int]
+            Allowlist of normalized nflverse/GSIS player ids to retain.
+
+        Returns
+        -------
+        Tuple[pd.DataFrame, pd.DataFrame]
+            (legacy_stats_df, draft_year_stats_df). Empty when the allowlist
+            is empty.
+        """
+        allowlist = {int(player_id) for player_id in nflverse_player_ids}
+        if not allowlist:
+            return pd.DataFrame(), pd.DataFrame()
+
         merged_df = self._fetch_stats_player_week_range(start_year, end_year)
-        if not merged_df.empty:
-            merged_df = merged_df[merged_df["position"].isin(positions)]
+        if merged_df.empty:
+            return pd.DataFrame(), pd.DataFrame()
+
+        self._normalize_player_id_column(merged_df)
+        merged_df = merged_df[merged_df["player_id"].isin(allowlist)].copy()
 
         legacy_stats_df = merged_df[merged_df["season"] < draft_year].copy()
         draft_year_stats_df = merged_df[merged_df["season"] == draft_year].copy()
-
-        self._normalize_player_id_column(legacy_stats_df)
-        self._normalize_player_id_column(draft_year_stats_df)
 
         return legacy_stats_df, draft_year_stats_df
 

@@ -186,31 +186,46 @@ class FantasyDataProcessor:
 
     def _attach_legacy_stats_to_catalog(
         self,
-        catalog_df: pd.DataFrame,
+        resolved_catalog_df: pd.DataFrame,
         legacy_stats_df: pd.DataFrame,
-        crosswalk_df: pd.DataFrame,
     ) -> pd.DataFrame:
-        """Attach aggregated nflverse stats onto the Sleeper catalog by player id.
+        """Attach aggregated nflverse stats onto a resolved Sleeper catalog.
 
         Parameters
         ----------
-        catalog_df : pd.DataFrame
-            Sleeper-anchored base catalog.
+        resolved_catalog_df : pd.DataFrame
+            Catalog with ``nflverse_player_id`` already resolved.
         legacy_stats_df : pd.DataFrame
             Aggregated legacy stats keyed by nflverse ``player_id``.
-        crosswalk_df : pd.DataFrame
-            sleeper_id to GSIS crosswalk for players missing Sleeper ``gsis_id``.
 
         Returns
         -------
         pd.DataFrame
-            Catalog with ``total_pts``, ``games_played_frac``,
-            ``draft_number``, and ``is_rookie_original`` columns added.
+            Catalog with ``total_pts``, ``games_played_frac``, and
+            ``is_rookie_original`` columns added.
         """
-        resolved_df = self._resolve_nflverse_player_ids(catalog_df, crosswalk_df)
         return self._scoring_service.attach_legacy_stats_by_player_id(
-            resolved_df, legacy_stats_df
+            resolved_catalog_df, legacy_stats_df
         )
+
+    @staticmethod
+    def _nflverse_player_id_allowlist(resolved_df: pd.DataFrame) -> set[int]:
+        """Return non-null normalized nflverse player ids from a resolved frame.
+
+        Parameters
+        ----------
+        resolved_df : pd.DataFrame
+            Frame with an ``nflverse_player_id`` column.
+
+        Returns
+        -------
+        set[int]
+            Allowlist of integer nflverse/GSIS player ids.
+        """
+        if "nflverse_player_id" not in resolved_df.columns:
+            return set()
+        ids = resolved_df["nflverse_player_id"].dropna()
+        return {int(player_id) for player_id in ids}
 
     def process_draft_data(self,
                            draft_year: int,
@@ -243,19 +258,6 @@ class FantasyDataProcessor:
             (``years_exp > 0``) -- worth a manual look. Empty when
             ``project_rookies`` is False.
         """
-        print("Fetching player pool and historical data...")
-        legacy_raw_df, draft_year_stats_df = self._downloader.fetch_legacy_stats(
-            draft_year=draft_year,
-            positions=self.positions,
-            start_year=self.start_year,
-            end_year=draft_year,
-        )
-
-        scored_historical = self._scoring_service.apply_scoring(legacy_raw_df)
-        legacy_stats_df = self._scoring_service.aggregate_legacy_stats(
-            scored_historical, measure_of_center
-        )
-
         missing_nflverse_stats_df = pd.DataFrame()
         if self.project_rookies:
             print("Building Sleeper-anchored player catalog...")
@@ -264,8 +266,22 @@ class FantasyDataProcessor:
                 all_sleeper_players_df, self.positions
             )
             crosswalk_df = self._crosswalk_builder.build(self.cache_dir, draft_year)
+            resolved_catalog_df = self._resolve_nflverse_player_ids(catalog_df, crosswalk_df)
+            allowlist = self._nflverse_player_id_allowlist(resolved_catalog_df)
+
+            print("Fetching player pool and historical data...")
+            legacy_raw_df, _draft_year_stats_df = self._downloader.fetch_legacy_stats(
+                draft_year=draft_year,
+                start_year=self.start_year,
+                end_year=draft_year,
+                nflverse_player_ids=allowlist,
+            )
+            scored_historical = self._scoring_service.apply_scoring(legacy_raw_df)
+            legacy_stats_df = self._scoring_service.aggregate_legacy_stats(
+                scored_historical, measure_of_center
+            )
             draft_players_df = self._attach_legacy_stats_to_catalog(
-                catalog_df, legacy_stats_df, crosswalk_df
+                resolved_catalog_df, legacy_stats_df
             )
             self._report_top_search_rank_nflverse_coverage(
                 all_sleeper_players_df, draft_players_df
@@ -282,6 +298,22 @@ class FantasyDataProcessor:
                     adp_col_map=adp_col_map,
                 )
         else:
+            print("Building nflverse draft-year roster pool...")
+            roster_df = self._downloader.fetch_draft_year_roster(draft_year, self.positions)
+            roster_allowlist_df = roster_df.rename(columns={"player_id": "nflverse_player_id"})
+            allowlist = self._nflverse_player_id_allowlist(roster_allowlist_df)
+
+            print("Fetching player pool and historical data...")
+            legacy_raw_df, draft_year_stats_df = self._downloader.fetch_legacy_stats(
+                draft_year=draft_year,
+                start_year=self.start_year,
+                end_year=draft_year,
+                nflverse_player_ids=allowlist,
+            )
+            scored_historical = self._scoring_service.apply_scoring(legacy_raw_df)
+            legacy_stats_df = self._scoring_service.aggregate_legacy_stats(
+                scored_historical, measure_of_center
+            )
             draft_year_scored = self._scoring_service.apply_scoring(draft_year_stats_df)
             draft_players_df = self._scoring_service.merge_draft_year_with_legacy(
                 draft_year_scored, legacy_stats_df

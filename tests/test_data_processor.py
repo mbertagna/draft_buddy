@@ -10,8 +10,14 @@ from draft_buddy.data.data_processor import FantasyDataProcessor
 class FakeDownloader:
     """Downloader returning deterministic frames."""
 
-    def fetch_legacy_stats(self, draft_year: int, positions: list, start_year: int, end_year: int):
-        _ = (draft_year, positions, start_year, end_year)
+    def fetch_legacy_stats(
+        self,
+        draft_year: int,
+        start_year: int,
+        end_year: int,
+        nflverse_player_ids,
+    ):
+        _ = (draft_year, start_year, end_year, nflverse_player_ids)
         historical = pd.DataFrame(
             [{"player_id": 1, "player_display_name": "Vet", "position": "QB", "recent_team": "BUF", "season": 2024, "week": 1, "total_pts": 20.0}]
         )
@@ -22,7 +28,16 @@ class FakeDownloader:
 
     def fetch_draft_year_roster(self, draft_year: int, positions: list) -> pd.DataFrame:
         _ = (draft_year, positions)
-        return pd.DataFrame()
+        return pd.DataFrame(
+            [
+                {
+                    "player_id": 1,
+                    "player_display_name": "Vet",
+                    "position": "QB",
+                    "recent_team": "BUF",
+                }
+            ]
+        )
 
 
 class FakeSleeperGateway:
@@ -248,8 +263,9 @@ def test_attach_legacy_stats_to_catalog_matches_veteran_by_gsis_id() -> None:
     legacy_stats_df = pd.DataFrame(
         [{"player_id": 34827, "total_pts": 12.2, "games_played_frac": 0.9}]
     )
+    resolved_df = processor._resolve_nflverse_player_ids(catalog_df, pd.DataFrame())
 
-    result = processor._attach_legacy_stats_to_catalog(catalog_df, legacy_stats_df, pd.DataFrame())
+    result = processor._attach_legacy_stats_to_catalog(resolved_df, legacy_stats_df)
 
     assert float(result.iloc[0]["total_pts"]) == 12.2
     assert bool(result.iloc[0]["is_rookie_original"]) is False
@@ -277,8 +293,9 @@ def test_attach_legacy_stats_to_catalog_uses_crosswalk_when_sleeper_gsis_missing
     legacy_stats_df = pd.DataFrame(
         [{"player_id": 39040, "total_pts": 20.5, "games_played_frac": 1.0}]
     )
+    resolved_df = processor._resolve_nflverse_player_ids(catalog_df, crosswalk_df)
 
-    result = processor._attach_legacy_stats_to_catalog(catalog_df, legacy_stats_df, crosswalk_df)
+    result = processor._attach_legacy_stats_to_catalog(resolved_df, legacy_stats_df)
 
     assert float(result.iloc[0]["total_pts"]) == 20.5
     assert bool(result.iloc[0]["is_rookie_original"]) is False
@@ -300,7 +317,36 @@ def test_attach_legacy_stats_to_catalog_marks_unmatched_rows_as_rookies() -> Non
             }
         ]
     )
+    resolved_df = processor._resolve_nflverse_player_ids(catalog_df, pd.DataFrame())
 
-    result = processor._attach_legacy_stats_to_catalog(catalog_df, pd.DataFrame(), pd.DataFrame())
+    result = processor._attach_legacy_stats_to_catalog(resolved_df, pd.DataFrame())
 
     assert bool(result.iloc[0]["is_rookie_original"]) is True
+
+
+def test_attach_legacy_stats_matches_wr_when_weekly_stats_tagged_cb() -> None:
+    """Verify a Sleeper WR keeps stats when nflverse weekly rows are tagged CB."""
+    processor = FantasyDataProcessor()
+    catalog_df = pd.DataFrame(
+        [
+            {
+                "player_id": 12530,
+                "player_display_name": "Travis Hunter",
+                "position": "WR",
+                "recent_team": "JAX",
+                "sleeper_id": "12530",
+                "gsis_id": "00-0040718",
+                "years_exp": 1,
+            }
+        ]
+    )
+    legacy_stats_df = pd.DataFrame(
+        [{"player_id": 40718, "total_pts": 9.3, "games_played_frac": 1.0}]
+    )
+    resolved_df = processor._resolve_nflverse_player_ids(catalog_df, pd.DataFrame())
+
+    result = processor._attach_legacy_stats_to_catalog(resolved_df, legacy_stats_df)
+
+    assert float(result.iloc[0]["total_pts"]) == 9.3
+    assert bool(result.iloc[0]["is_rookie_original"]) is False
+    assert result.iloc[0]["position"] == "WR"
