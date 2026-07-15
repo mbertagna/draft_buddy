@@ -38,4 +38,4 @@ def test_readme_package_tree_matches_canonical_layout() -> None:
     """Verify README documents only the canonical package buckets."""
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert all(label in readme for label in ["core/", "data/", "simulator/", "rl/", "web/", "arch_viz/"])
+    assert all(label in readme for label in ["core/", "data/", "simulator/", "rl/", "web/"])

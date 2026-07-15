@@ -7,7 +7,6 @@ Draft Buddy uses Docker Compose as the primary local workflow for the refactored
 - `data`: player loading and projection generation
 - `simulator`: stateless season evaluation
 - `core`: shared draft state, controller, rules, bots, and entities
-- `arch_viz`: architecture visualization tooling
 
 ## Docker Compose Usage
 
@@ -54,7 +53,6 @@ Common output locations on the host:
 - `models/`: checkpoints and trained model artifacts
 - `coverage.xml`: XML coverage report from `test-cov`
 - `htmlcov/`: HTML coverage report from `test-cov`
-- `viz/`: Mermaid architecture output from `ast`
 
 ### Services
 
@@ -65,7 +63,6 @@ Common output locations on the host:
 | `test` | Run the test suite | `python -m pytest tests/` |
 | `test-cov` | Run tests with coverage outputs | `python -m pytest tests/ --cov=src/draft_buddy ...` |
 | `data` | Generate player projections and merged draft data | `python scripts/generate_projections.py --year 2026` |
-| `ast` | Generate Mermaid architecture diagrams | `python -m draft_buddy.arch_viz.cli --project-root /app --output-dir /app/viz --all-default-entries --strategy module` |
 | `insights-search` | Fetch web search snippets for top 150 ADP players (Valyu default) | `python scripts/fetch_player_insight_search.py --year 2026 --top-n 150 --search-provider valyu` |
 | `insights-synthesize` | Synthesize Gemini Flash player insights from cached search | `python scripts/synthesize_player_insights.py --year 2026 --top-n 150` |
 | `position-guide` | Generate static RL position probability cheat sheet | `python scripts/generate_position_guide.py --simulations 5000` |
@@ -116,12 +113,6 @@ Override the data-generation command:
 
 ```bash
 docker compose run --rm data python scripts/generate_projections.py --year 2024 --rookie_projection_method hybrid
-```
-
-Generate architecture diagrams:
-
-```bash
-docker compose run --rm ast
 ```
 
 ### Player Insights (manual pre-draft enrichment)
@@ -240,7 +231,7 @@ Player projections only include nflverse-trackable scoring rules. Bonuses withou
 
 Use `docker compose up` for long-running services that should stay attached to a port, such as `webapp`.
 
-Use `docker compose run --rm` for one-off tasks such as training, tests, coverage, data generation, and architecture visualization. The `--rm` flag removes the container when the command exits.
+Use `docker compose run --rm` for one-off tasks such as training, tests, coverage, and data generation. The `--rm` flag removes the container when the command exits.
 
 Because every service uses `working_dir: /app`, command overrides run from the repository root inside the container. That means overrides like:
 
@@ -254,7 +245,6 @@ behave consistently across services.
 
 - Web UI: [http://localhost:5001](http://localhost:5001)
 - Coverage HTML report: [htmlcov/index.html](htmlcov/index.html)
-- Architecture diagrams: `viz/`
 - Training logs and dashboards: `logs/`
 - Model checkpoints: `models/`
 
@@ -268,7 +258,6 @@ behave consistently across services.
 ├── models/
 ├── scripts/
 ├── src/draft_buddy/
-│   ├── arch_viz/
 │   ├── core/
 │   ├── data/
 │   ├── rl/
@@ -277,7 +266,6 @@ behave consistently across services.
 ├── config/
 │   ├── leagues/
 │   └── seasons/
-├── viz/
 ├── docker-compose.yml
 ├── Dockerfile
 └── pyproject.toml

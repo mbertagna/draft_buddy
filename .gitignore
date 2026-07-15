@@ -163,8 +163,6 @@ cython_debug/
 /logs
 repomix-output.xml
 
-# Generated Mermaid architecture diagrams (draft-arch --output-dir)
-/viz/
 **/.DS_Store
 data/draft_state.json
 data/cache/
