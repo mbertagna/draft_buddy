@@ -1,24 +1,22 @@
 """
 ADP matcher service for fuzzy-matching external ADP data to roster players.
 
-Encapsulates ADP file loading, content cleaning, name standardization,
+Encapsulates FantasyPros HTML ADP table loading, name standardization,
 and weighted fuzzy matching logic.
 """
 
 import re
-from io import StringIO
 from typing import Optional, Tuple
 
 import pandas as pd
+from bs4 import BeautifulSoup
 from fuzzywuzzy import fuzz
 
 from draft_buddy.data.name_matching import standardize_name as _standardize_name
 
-# Some FantasyPros exports combine name, team, and bye week into a single
-# "Player (Team / Bye)" column (e.g. "Jahmyr Gibbs   DET (6)") instead of the
-# standard export's separate Player/Team/Bye columns.
-_COMBINED_PLAYER_COLUMN_PATTERN = re.compile(r'^Player\s*\(')
-_COMBINED_PLAYER_VALUE_PATTERN = re.compile(r'^(?P<name>.+?)\s+(?P<team>[A-Z]{2,4})\s*\(\s*(?P<bye>\d+)\s*\)\s*$')
+_TEAM_BYE_PATTERN = re.compile(
+    r"^(?P<team>[A-Z]{2,4})\s*\(\s*(?P<bye>\d+)\s*\)\s*$"
+)
 
 
 class AdpMatcher:
@@ -26,59 +24,131 @@ class AdpMatcher:
     Merges external ADP data with computed player data using weighted fuzzy matching.
     """
 
-    def _clean_adp_content(self, content: str) -> str:
+    def _parse_team_bye(self, team_bye_text: str) -> Tuple[Optional[str], Optional[str]]:
         """
-        Apply regex fixes to raw ADP file content.
+        Split a FantasyPros team/bye span into separate values.
 
         Parameters
         ----------
-        content : str
-            Raw file content from the ADP CSV.
+        team_bye_text : str
+            Text like ``DET (6)`` from ``.reports__player-team``.
+
+        Returns
+        -------
+        Tuple[Optional[str], Optional[str]]
+            ``(team, bye)`` when parseable, otherwise ``(None, None)``.
+        """
+        if not team_bye_text:
+            return None, None
+        match = _TEAM_BYE_PATTERN.match(team_bye_text.strip())
+        if match is None:
+            return None, None
+        return match.group("team"), match.group("bye")
+
+    def _select_adp_table(self, soup: BeautifulSoup):
+        """
+        Locate the FantasyPros ADP results table in a saved HTML fragment.
+
+        Parameters
+        ----------
+        soup : BeautifulSoup
+            Parsed HTML document or fragment.
+
+        Returns
+        -------
+        Tag or None
+            Matching table element, or None when not found.
+        """
+        for table in soup.select("table.mcu-table"):
+            caption = table.find("caption")
+            if caption is None:
+                return table
+            caption_text = caption.get_text(" ", strip=True)
+            if "Average Draft Position" in caption_text:
+                return table
+        for table in soup.find_all("table"):
+            caption = table.find("caption")
+            if caption and "Average Draft Position" in caption.get_text(" ", strip=True):
+                return table
+        return soup.select_one("table.mcu-table") or soup.find("table")
+
+    def _cell_text(self, row, css_class: str) -> str:
+        """
+        Return stripped text from the first matching cell in a table row.
+
+        Parameters
+        ----------
+        row : Tag
+            Table row element.
+        css_class : str
+            CSS class of the target cell.
 
         Returns
         -------
         str
-            Cleaned content suitable for CSV parsing.
+            Cell text, or an empty string when missing.
         """
-        content = re.sub(r'","N","12 O","', '","NO","12","', content)
-        content = re.sub(r'","","\'', '\'', content)
-        content = re.sub(r'","III","', ' III","",', content)
-        content = re.sub(r'","II","', ' II","",', content)
-        content = re.sub(r'","Gay","', ' Gay","","', content)
-        content = re.sub(r'","Ali","', ' Ali","","', content)
-        content = re.sub(r'","HU","14 O","', '","HOU","14","', content)
-        return content
+        cell = row.select_one(f"td.{css_class}")
+        if cell is None:
+            return ""
+        return cell.get_text(" ", strip=True)
 
-    def _split_combined_player_column(self, adp_df: pd.DataFrame) -> pd.DataFrame:
+    def _load_adp_dataframe(self, filepath: str) -> pd.DataFrame:
         """
-        Normalize a combined "Player (Team / Bye)" column into separate columns.
+        Load FantasyPros ADP rankings from a saved HTML table fragment.
 
         Parameters
         ----------
-        adp_df : pd.DataFrame
-            Raw ADP dataframe as read from the CSV.
+        filepath : str
+            Path to ``fantasypros-{year}-overall-adp-rankings.html``.
 
         Returns
         -------
         pd.DataFrame
-            Dataframe with a plain 'Player' column and, where extractable,
-            'Team' and 'Bye' columns. Returned unchanged if no combined
-            column is present.
+            Columns ``Rank``, ``Player``, ``Team``, ``Bye``, ``POS``, ``AVG``.
         """
-        combined_col = next(
-            (col for col in adp_df.columns if _COMBINED_PLAYER_COLUMN_PATTERN.match(col)), None
-        )
-        if combined_col is None:
-            return adp_df
+        with open(filepath, "r", encoding="utf-8") as file:
+            soup = BeautifulSoup(file.read(), "html.parser")
 
-        raw_values = adp_df[combined_col].astype(str)
-        parsed = raw_values.str.extract(_COMBINED_PLAYER_VALUE_PATTERN)
+        table = self._select_adp_table(soup)
+        if table is None:
+            raise ValueError(f"No ADP table found in {filepath}")
 
-        adp_df = adp_df.drop(columns=[combined_col])
-        adp_df['Player'] = parsed['name'].fillna(raw_values).str.strip()
-        adp_df['Team'] = parsed['team']
-        adp_df['Bye'] = parsed['bye']
-        return adp_df
+        rows = table.select("tbody tr.mcu-table__data-row")
+        if not rows:
+            rows = [
+                row
+                for row in table.select("tbody tr")
+                if row.select_one("a[fp-player-name]") is not None
+            ]
+
+        records = []
+        for row in rows:
+            player_anchor = row.select_one("a[fp-player-name]")
+            if player_anchor is None:
+                continue
+            player_name = player_anchor.get("fp-player-name", "").strip()
+            if not player_name:
+                continue
+
+            team_span = row.select_one(".reports__player-team")
+            team_bye_text = team_span.get_text(" ", strip=True) if team_span else ""
+            team, bye = self._parse_team_bye(team_bye_text)
+
+            records.append(
+                {
+                    "Rank": self._cell_text(row, "mcu-table__cell--rank"),
+                    "Player": player_name,
+                    "Team": team,
+                    "Bye": bye,
+                    "POS": self._cell_text(row, "mcu-table__cell--pos"),
+                    "AVG": self._cell_text(row, "mcu-table__cell--avg"),
+                }
+            )
+
+        if not records:
+            raise ValueError(f"No ADP player rows found in {filepath}")
+        return pd.DataFrame.from_records(records)
 
     def merge_adp_data(
         self,
@@ -95,7 +165,7 @@ class AdpMatcher:
         computed_df : pd.DataFrame
             Player roster with columns player_id, player_display_name, position, recent_team, etc.
         adp_filepath : str
-            Path to the ADP CSV file.
+            Path to the FantasyPros ADP HTML table snapshot.
         match_threshold : int, optional
             Minimum fuzzy match score (0-100) to accept a match. Default 85.
         adp_col_map : dict, optional
@@ -107,133 +177,153 @@ class AdpMatcher:
             (merged_df, unmatched_df, borderline_df).
         """
         if adp_col_map is None:
-            adp_col_map = {'Player': 'Player', 'Team': 'Team', 'POS': 'POS'}
+            adp_col_map = {"Player": "Player", "Team": "Team", "POS": "POS"}
 
-        print(f"Loading and cleaning ADP data from {adp_filepath}...")
+        print(f"Loading ADP data from {adp_filepath}...")
         try:
-            with open(adp_filepath, 'r', encoding='utf-8') as file:
-                content = self._clean_adp_content(file.read())
-            adp_df = pd.read_csv(StringIO(content))
+            adp_df = self._load_adp_dataframe(adp_filepath)
         except Exception as e:
             print(f"Error loading ADP file: {e}")
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-        adp_df = self._split_combined_player_column(adp_df)
-
-        if adp_col_map['Team'] in adp_df.columns:
-            adp_df.rename(columns={adp_col_map['Team']: 'Team'}, inplace=True)
-            adp_df['Team'] = adp_df['Team'].replace({'JAC': 'JAX', 'LA': 'LAR'})
-        if adp_col_map['POS'] in adp_df.columns:
-            adp_df.rename(columns={adp_col_map['POS']: 'Pos'}, inplace=True)
-            adp_df['Pos'] = adp_df['Pos'].astype(str)
-            adp_df['Pos'] = adp_df['Pos'].str.extract(r'([A-Za-z]+)')
-        if adp_col_map['Player'] in adp_df.columns:
-            adp_df.rename(columns={adp_col_map['Player']: 'Player'}, inplace=True)
+        if adp_col_map["Team"] in adp_df.columns:
+            adp_df.rename(columns={adp_col_map["Team"]: "Team"}, inplace=True)
+            adp_df["Team"] = adp_df["Team"].replace({"JAC": "JAX", "LA": "LAR"})
+        if adp_col_map["POS"] in adp_df.columns:
+            adp_df.rename(columns={adp_col_map["POS"]: "Pos"}, inplace=True)
+            adp_df["Pos"] = adp_df["Pos"].astype(str)
+            adp_df["Pos"] = adp_df["Pos"].str.extract(r"([A-Za-z]+)")
+        if adp_col_map["Player"] in adp_df.columns:
+            adp_df.rename(columns={adp_col_map["Player"]: "Player"}, inplace=True)
 
         computed_df = computed_df.copy()
-        if 'player_id' not in computed_df.columns:
-            computed_df['player_id'] = computed_df.index.astype(int)
-        computed_df['std_name'] = computed_df['player_display_name'].apply(_standardize_name)
-        adp_df['std_name'] = adp_df['Player'].apply(_standardize_name)
+        if "player_id" not in computed_df.columns:
+            computed_df["player_id"] = computed_df.index.astype(int)
+        computed_df["std_name"] = computed_df["player_display_name"].apply(_standardize_name)
+        adp_df["std_name"] = adp_df["Player"].apply(_standardize_name)
 
         def _pos_base(val):
             if pd.isna(val):
                 return None
-            m = re.search(r'([A-Za-z]+)', str(val))
+            m = re.search(r"([A-Za-z]+)", str(val))
             return m.group(1).upper() if m else None
 
-        if 'Pos' in adp_df.columns:
-            adp_df['PosBase'] = adp_df['Pos'].apply(_pos_base)
+        if "Pos" in adp_df.columns:
+            adp_df["PosBase"] = adp_df["Pos"].apply(_pos_base)
         else:
-            adp_df['PosBase'] = None
-        if 'position' in computed_df.columns:
-            computed_df['PosBase'] = computed_df['position'].astype(str).apply(_pos_base)
+            adp_df["PosBase"] = None
+        if "position" in computed_df.columns:
+            computed_df["PosBase"] = computed_df["position"].astype(str).apply(_pos_base)
         else:
-            computed_df['PosBase'] = None
+            computed_df["PosBase"] = None
 
-        adp_rank_col = 'AVG' if 'AVG' in adp_df.columns else ('Rank' if 'Rank' in adp_df.columns else None)
+        adp_rank_col = "AVG" if "AVG" in adp_df.columns else ("Rank" if "Rank" in adp_df.columns else None)
         if adp_rank_col is not None:
-            adp_df[adp_rank_col] = pd.to_numeric(adp_df[adp_rank_col], errors='coerce')
+            adp_df[adp_rank_col] = pd.to_numeric(adp_df[adp_rank_col], errors="coerce")
             adp_df = adp_df.sort_values(by=[adp_rank_col], ascending=True)
-        dedupe_keys = ['std_name']
-        if 'Team' in adp_df.columns:
-            dedupe_keys.append('Team')
-        if 'Pos' in adp_df.columns:
-            dedupe_keys.append('Pos')
-        adp_df = adp_df.drop_duplicates(subset=dedupe_keys, keep='first').reset_index(drop=True)
+        dedupe_keys = ["std_name"]
+        if "Team" in adp_df.columns:
+            dedupe_keys.append("Team")
+        if "Pos" in adp_df.columns:
+            dedupe_keys.append("Pos")
+        adp_df = adp_df.drop_duplicates(subset=dedupe_keys, keep="first").reset_index(drop=True)
 
         print("Performing fuzzy match with weighted scoring...")
-        if 'player_id' in computed_df.columns:
-            computed_df = computed_df.drop_duplicates(subset=['player_id'], keep='first')
-        roster_choices = computed_df.to_dict('records')
+        if "player_id" in computed_df.columns:
+            computed_df = computed_df.drop_duplicates(subset=["player_id"], keep="first")
+        roster_choices = computed_df.to_dict("records")
         stdname_to_roster = {}
         for rp in roster_choices:
-            key = rp.get('std_name')
+            key = rp.get("std_name")
             if isinstance(key, str):
                 stdname_to_roster.setdefault(key, []).append(rp)
-        adp_df['matched_name'] = pd.NA
-        adp_df['matched_player_id'] = pd.NA
-        adp_df['match_score'] = 0
+        adp_df["matched_name"] = pd.NA
+        adp_df["matched_player_id"] = pd.NA
+        adp_df["match_score"] = 0
 
         for adp_idx, adp_row in adp_df.iterrows():
-            if pd.isna(adp_row['std_name']):
+            if pd.isna(adp_row["std_name"]):
                 continue
 
             best_score = -1
             best_match_name = None
             best_match_player_id = None
 
-            exact_candidates = stdname_to_roster.get(adp_row['std_name'], [])
+            exact_candidates = stdname_to_roster.get(adp_row["std_name"], [])
             if exact_candidates:
                 candidates = exact_candidates
-                if len(candidates) > 1 and adp_row.get('PosBase') is not None:
-                    filtered = [c for c in candidates if c.get('PosBase') == adp_row.get('PosBase')]
+                if len(candidates) > 1 and adp_row.get("PosBase") is not None:
+                    filtered = [c for c in candidates if c.get("PosBase") == adp_row.get("PosBase")]
                     if len(filtered) == 1:
                         candidates = filtered
                 if len(candidates) == 1:
                     rp = candidates[0]
-                    team_bonus = 15 if pd.notna(adp_row.get('Team')) and (adp_row['Team'] == rp.get('recent_team')) else 0
-                    pos_bonus = 5 if adp_row.get('PosBase') is not None and (adp_row.get('PosBase') == rp.get('PosBase')) else 0
+                    team_bonus = (
+                        15
+                        if pd.notna(adp_row.get("Team")) and (adp_row["Team"] == rp.get("recent_team"))
+                        else 0
+                    )
+                    pos_bonus = (
+                        5
+                        if adp_row.get("PosBase") is not None
+                        and (adp_row.get("PosBase") == rp.get("PosBase"))
+                        else 0
+                    )
                     best_score = min(100, 100 + team_bonus + pos_bonus)
-                    best_match_name = rp.get('std_name')
-                    best_match_player_id = rp.get('player_id')
-                    adp_df.at[adp_idx, 'matched_name'] = best_match_name
-                    adp_df.at[adp_idx, 'matched_player_id'] = best_match_player_id
-                    adp_df.at[adp_idx, 'match_score'] = best_score
+                    best_match_name = rp.get("std_name")
+                    best_match_player_id = rp.get("player_id")
+                    adp_df.at[adp_idx, "matched_name"] = best_match_name
+                    adp_df.at[adp_idx, "matched_player_id"] = best_match_player_id
+                    adp_df.at[adp_idx, "match_score"] = best_score
                     continue
 
             for roster_player in roster_choices:
-                name_score = fuzz.token_sort_ratio(adp_row['std_name'], roster_player['std_name'])
-                team_bonus = 15 if pd.notna(adp_row.get('Team')) and (adp_row['Team'] == roster_player.get('recent_team')) else 0
-                pos_bonus = 5 if adp_row.get('PosBase') is not None and (adp_row.get('PosBase') == roster_player.get('PosBase')) else 0
+                name_score = fuzz.token_sort_ratio(adp_row["std_name"], roster_player["std_name"])
+                team_bonus = (
+                    15
+                    if pd.notna(adp_row.get("Team"))
+                    and (adp_row["Team"] == roster_player.get("recent_team"))
+                    else 0
+                )
+                pos_bonus = (
+                    5
+                    if adp_row.get("PosBase") is not None
+                    and (adp_row.get("PosBase") == roster_player.get("PosBase"))
+                    else 0
+                )
                 current_score = min(100, name_score + team_bonus + pos_bonus)
 
                 if current_score > best_score:
                     best_score = current_score
-                    best_match_name = roster_player['std_name']
-                    best_match_player_id = roster_player.get('player_id')
+                    best_match_name = roster_player["std_name"]
+                    best_match_player_id = roster_player.get("player_id")
 
             if best_score >= match_threshold:
-                adp_df.at[adp_idx, 'matched_name'] = best_match_name
-                adp_df.at[adp_idx, 'matched_player_id'] = best_match_player_id
-            adp_df.at[adp_idx, 'match_score'] = best_score
+                adp_df.at[adp_idx, "matched_name"] = best_match_name
+                adp_df.at[adp_idx, "matched_player_id"] = best_match_player_id
+            adp_df.at[adp_idx, "match_score"] = best_score
 
-        matched_mask = adp_df['matched_player_id'].notna()
+        matched_mask = adp_df["matched_player_id"].notna()
         merge_left = adp_df[matched_mask].copy()
-        adp_sort_col = 'AVG' if 'AVG' in merge_left.columns else ('Rank' if 'Rank' in merge_left.columns else None)
+        adp_sort_col = "AVG" if "AVG" in merge_left.columns else ("Rank" if "Rank" in merge_left.columns else None)
         if adp_sort_col is not None:
-            merge_left[adp_sort_col] = pd.to_numeric(merge_left[adp_sort_col], errors='coerce')
+            merge_left[adp_sort_col] = pd.to_numeric(merge_left[adp_sort_col], errors="coerce")
             merge_left = merge_left.sort_values(by=adp_sort_col, ascending=True)
-        merge_left = merge_left.drop_duplicates(subset=['matched_player_id'], keep='first')
+        merge_left = merge_left.drop_duplicates(subset=["matched_player_id"], keep="first")
         merged_df = pd.merge(
-            merge_left, computed_df,
-            left_on='matched_player_id', right_on='player_id',
-            how='left', suffixes=('_adp', '_roster')
+            merge_left,
+            computed_df,
+            left_on="matched_player_id",
+            right_on="player_id",
+            how="left",
+            suffixes=("_adp", "_roster"),
         )
 
-        unmatched_df = adp_df[~matched_mask].sort_values('match_score', ascending=False)
-        borderline_mask = (adp_df['match_score'] < match_threshold) & (adp_df['match_score'] >= match_threshold - 10)
-        borderline_df = adp_df[borderline_mask].sort_values('match_score', ascending=False)
+        unmatched_df = adp_df[~matched_mask].sort_values("match_score", ascending=False)
+        borderline_mask = (adp_df["match_score"] < match_threshold) & (
+            adp_df["match_score"] >= match_threshold - 10
+        )
+        borderline_df = adp_df[borderline_mask].sort_values("match_score", ascending=False)
 
         print("\n--- ADP Merge Diagnostics ---")
         total_adp_rows = len(adp_df) if len(adp_df) > 0 else 1
@@ -247,18 +337,21 @@ class AdpMatcher:
         for _, row in unmatched_df.head(5).iterrows():
             print(f"- {row['Player']} (Team: {row.get('Team', 'N/A')}, Top Score: {row['match_score']:.0f})")
 
-        adp_val_col = 'AVG' if 'AVG' in adp_df.columns else ('Rank' if 'Rank' in adp_df.columns else None)
-        pos_col = 'Pos' if 'Pos' in adp_df.columns else None
+        adp_val_col = "AVG" if "AVG" in adp_df.columns else ("Rank" if "Rank" in adp_df.columns else None)
+        pos_col = "Pos" if "Pos" in adp_df.columns else None
         if adp_val_col and pos_col and not unmatched_df.empty and adp_val_col in unmatched_df.columns:
-            tmp = unmatched_df[[pos_col, 'Player', 'Team', adp_val_col]].copy()
-            tmp[adp_val_col] = pd.to_numeric(tmp[adp_val_col], errors='coerce')
+            tmp = unmatched_df[[pos_col, "Player", "Team", adp_val_col]].copy()
+            tmp[adp_val_col] = pd.to_numeric(tmp[adp_val_col], errors="coerce")
             tmp = tmp[pd.notna(tmp[adp_val_col])]
             if not tmp.empty:
-                tmp['PosBase'] = tmp[pos_col].astype(str).str.extract(r'([A-Za-z]+)')[0]
+                tmp["PosBase"] = tmp[pos_col].astype(str).str.extract(r"([A-Za-z]+)")[0]
                 print("\nUnmatched Highest-ADP per Position:")
-                for position_value, g in tmp.groupby('PosBase'):
+                for position_value, g in tmp.groupby("PosBase"):
                     g_sorted = g.sort_values(by=adp_val_col, ascending=False)
                     r = g_sorted.iloc[0]
-                    print(f"- {position_value}: {r['Player']} (Team: {r.get('Team', 'N/A')}, ADP: {r[adp_val_col]})")
+                    print(
+                        f"- {position_value}: {r['Player']} "
+                        f"(Team: {r.get('Team', 'N/A')}, ADP: {r[adp_val_col]})"
+                    )
 
         return merged_df, unmatched_df, borderline_df

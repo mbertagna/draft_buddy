@@ -55,7 +55,10 @@ def sleeper_cache_dir(data_root: str) -> str:
 
 
 def adp_cache_dir(data_root: str) -> str:
-    """Return the directory for manually-downloaded FantasyPros ADP files.
+    """Return the directory for FantasyPros ADP HTML table snapshots.
+
+    Expected filename pattern:
+    ``fantasypros-{year}-overall-adp-rankings.html``.
 
     Parameters
     ----------

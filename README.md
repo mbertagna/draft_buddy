@@ -115,6 +115,18 @@ Override the data-generation command:
 docker compose run --rm data python scripts/generate_projections.py --year 2024 --rookie_projection_method hybrid
 ```
 
+### FantasyPros ADP (manual HTML snapshot)
+
+Projection generation merges FantasyPros consensus ADP from a saved HTML table (not the CSV export).
+
+1. Open [FantasyPros PPR Overall ADP](https://www.fantasypros.com/nfl/adp/ppr-overall.php)
+2. In DevTools inspector, select the ADP results **`<table>`** whose classes include `mcu-table` / `reports__table-inner` (caption text starts with `Average Draft Position (ADP)`)
+3. Copy that table element's **outer HTML** only (not the full page, and not an ECR rankings table)
+4. Save it as `data/cache/adp/fantasypros-{year}-overall-adp-rankings.html` (example: `fantasypros-2026-overall-adp-rankings.html`)
+5. Run `docker compose run --rm data`
+
+Do **not** use the ECR / rankings page table. The ADP table must include an `AVG` column.
+
 ### Player Insights (manual pre-draft enrichment)
 
 Offline player insight enrichment is a **manual, two-step** pipeline that prepares research-backed outlook data for the draft UI (see [PLAYER_INSIGHTS_PART2_PLAN.md](docs/PLAYER_INSIGHTS_PART2_PLAN.md)).

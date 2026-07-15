@@ -84,7 +84,10 @@ def get_simulation_dfs(
         is in the format expected by simulate_season_fast.
     """
     bye_weeks = custom_bye_weeks or {}
-    adp_file = os.path.join(adp_cache_dir(DATA_ROOT), f'FantasyPros_{season}_Overall_ADP_Rankings.csv')
+    adp_file = os.path.join(
+        adp_cache_dir(DATA_ROOT),
+        f'fantasypros-{season}-overall-adp-rankings.html',
+    )
 
     processor = FantasyDataProcessor(
         project_rookies=True,

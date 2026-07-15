@@ -140,7 +140,10 @@ def main(
     )
 
     # ADP file path for the given season
-    adp_file = os.path.join(adp_cache_dir(DATA_ROOT), f'FantasyPros_{draft_year}_Overall_ADP_Rankings.csv')
+    adp_file = os.path.join(
+        adp_cache_dir(DATA_ROOT),
+        f'fantasypros-{draft_year}-overall-adp-rankings.html',
+    )
 
     computed_players_df, _, missing_nflverse_stats_df = processor.process_draft_data(
         draft_year=draft_year,
