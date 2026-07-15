@@ -107,7 +107,6 @@ def check_sleeper_roster_coverage(cache_dir: str, sleeper_league_id: str, output
 def main(
     output_path,
     draft_year,
-    rookie_projection_method,
     runtime_config,
     sleeper_league_id=None,
     lookback_seasons=None,
@@ -138,7 +137,6 @@ def main(
         bye_weeks_override=runtime_config.season.bye_weeks,
         start_year=stats_start_year,
         positions=DRAFTABLE_POSITIONS,
-        rookie_projection_method=rookie_projection_method,
         cache_dir=DATA_ROOT,
     )
 
@@ -222,8 +220,6 @@ def main(
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process fantasy football data for a given year.')
     parser.add_argument('--year', type=int, default=2025, help='The draft year to process data for.')
-    parser.add_argument('--rookie_projection_method', type=str, default='draft', choices=['draft', 'adp', 'hybrid'],
-                        help='Method to project rookie points: draft (slot scaling), adp (ADP interpolation), or hybrid (average).')
     parser.add_argument('--sleeper_league_id', type=str, default=None,
                         help='Optional Sleeper league id to verify the base-catalog filter did not exclude a rostered player.')
     parser.add_argument(
@@ -244,7 +240,6 @@ if __name__ == '__main__':
     main(
         output_path=output_file_path,
         draft_year=args.year,
-        rookie_projection_method=args.rookie_projection_method,
         runtime_config=config,
         sleeper_league_id=args.sleeper_league_id,
         lookback_seasons=args.lookback_seasons,

@@ -154,8 +154,8 @@ def test_project_rookies_with_adp_uses_neighbor_or_position_median_fallbacks() -
     )
 
 
-def test_project_rookies_adp_mode_falls_back_to_draft_slot_for_remaining_nan(monkeypatch) -> None:
-    """Verify ADP mode fills any remaining rookie gaps with draft-slot estimates."""
+def test_project_rookies_falls_back_to_draft_slot_for_remaining_nan(monkeypatch) -> None:
+    """Verify ADP gaps are filled with draft-slot estimates."""
     projector = RookieProjector(adp_matcher=object())
     dataframe = pd.DataFrame(
         [
@@ -165,42 +165,13 @@ def test_project_rookies_adp_mode_falls_back_to_draft_slot_for_remaining_nan(mon
     )
     monkeypatch.setattr(projector, "_project_rookies_with_adp", lambda draft_players_df, **kwargs: draft_players_df)
 
-    result = projector.project_rookies(dataframe, method="adp", adp_filepath="adp.csv")
+    result = projector.project_rookies(dataframe, adp_filepath="adp.csv")
 
     assert result["total_pts"].notna().all()
-
-
-def test_project_rookies_draft_mode_projects_only_rookies() -> None:
-    """Verify draft mode keeps veterans and fills rookie totals from draft slot."""
-    dataframe = pd.DataFrame(
-        [
-            {"player_id": 1, "is_rookie_original": False, "total_pts": 18.0, "position": "QB", "draft_number": 1},
-            {"player_id": 2, "is_rookie_original": True, "total_pts": None, "position": "QB", "draft_number": 5},
-        ]
-    )
-
-    result = RookieProjector().project_rookies(dataframe, method="draft")
-
-    assert float(result.loc[result["player_id"] == 1, "total_pts"].iloc[0]) == 18.0 and result["total_pts"].notna().all()
 
 
 def test_project_rookies_returns_original_frame_when_no_rookies() -> None:
     """Verify no-rookie inputs bypass projection logic."""
     dataframe = pd.DataFrame([{"player_id": 1, "is_rookie_original": False, "total_pts": 10.0, "position": "QB"}])
 
-    assert RookieProjector().project_rookies(dataframe, method="draft").equals(dataframe)
-
-
-def test_project_rookies_hybrid_falls_back_to_draft_slot_when_adp_missing(monkeypatch) -> None:
-    """Verify hybrid mode falls back to draft-slot estimates when ADP leaves gaps."""
-    projector = RookieProjector(adp_matcher=object())
-    dataframe = pd.DataFrame(
-        [
-            {"player_id": 1, "is_rookie_original": False, "total_pts": 20.0, "position": "QB", "draft_number": 1},
-            {"player_id": 2, "is_rookie_original": True, "total_pts": None, "position": "QB", "draft_number": 2},
-        ]
-    )
-    monkeypatch.setattr(projector, "_project_rookies_with_adp", lambda draft_players_df, **kwargs: draft_players_df)
-    result = projector.project_rookies(dataframe, method="hybrid", adp_filepath="adp.csv")
-
-    assert result["total_pts"].notna().all()
+    assert RookieProjector().project_rookies(dataframe).equals(dataframe)

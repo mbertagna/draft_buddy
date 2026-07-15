@@ -1,8 +1,9 @@
 """
 Rookie projection logic for fantasy football.
 
-Encapsulates the statistical logic for estimating rookie performance
-based on draft slot or ADP interpolation.
+Primary estimation uses ADP neighbor interpolation among veterans at the
+same position. NFL draft-slot percentile scaling is retained only as a
+fallback when ADP leaves gaps.
 """
 
 from typing import Optional
@@ -13,7 +14,10 @@ import pandas as pd
 
 class RookieProjector:
     """
-    Estimates fantasy points for rookies based on draft number or ADP.
+    Estimates fantasy points for rookies via ADP interpolation.
+
+    Draft-slot percentile scaling is used only when ADP matching cannot
+    fill a rookie's projected points.
     """
 
     def __init__(
@@ -27,13 +31,13 @@ class RookieProjector:
         Parameters
         ----------
         scale_min : int
-            Minimum percentile for drafted players.
+            Minimum percentile for drafted players in the draft-slot fallback.
         scale_max : int
-            Maximum percentile for drafted players.
+            Maximum percentile for drafted players in the draft-slot fallback.
         udfa_percentile : float
-            Percentile for undrafted free agents.
+            Percentile for undrafted free agents in the draft-slot fallback.
         adp_matcher : AdpMatcher, optional
-            Injected ADP matcher for adp/hybrid projection methods.
+            Injected ADP matcher used for primary projection.
         """
         self._scale_min = scale_min
         self._scale_max = scale_max
@@ -108,7 +112,7 @@ class RookieProjector:
         draft_players_df : pd.DataFrame
             Draft players with rookies (total_pts NaN).
         adp_filepath : str
-            Path to ADP CSV file.
+            Path to FantasyPros ADP HTML snapshot.
         match_threshold : int, optional
             Fuzzy match threshold.
         adp_col_map : dict, optional
@@ -237,22 +241,19 @@ class RookieProjector:
     def project_rookies(
         self,
         draft_players_df: pd.DataFrame,
-        method: str,
         adp_filepath: Optional[str] = None,
         match_threshold: int = 85,
         adp_col_map: Optional[dict] = None,
     ) -> pd.DataFrame:
         """
-        Project rookie points using the specified method (draft, adp, or hybrid).
+        Project rookie points via ADP interpolation with draft-slot fallback.
 
         Parameters
         ----------
         draft_players_df : pd.DataFrame
             Draft players with veterans and rookies (is_rookie_original).
-        method : str
-            'draft', 'adp', or 'hybrid'.
         adp_filepath : str, optional
-            Path to ADP CSV (required for adp/hybrid).
+            Path to FantasyPros ADP HTML snapshot used for interpolation.
         match_threshold : int, optional
             Fuzzy match threshold for ADP.
         adp_col_map : dict, optional
@@ -273,69 +274,21 @@ class RookieProjector:
         if rookies_df.empty:
             return draft_players_df
 
-        if method == "adp":
-            draft_players_df = self._project_rookies_with_adp(
-                draft_players_df=draft_players_df,
-                adp_filepath=adp_filepath or "",
-                match_threshold=match_threshold,
-                adp_col_map=adp_col_map,
-            )
-            remaining = draft_players_df[draft_players_df["total_pts"].isna()].copy()
-            if not remaining.empty:
-                fallback = self.estimate_by_draft_slot(remaining, veterans_df)
-                draft_players_df = pd.concat(
-                    [
-                        draft_players_df[draft_players_df["total_pts"].notna()],
-                        fallback,
-                    ],
-                    ignore_index=True,
-                )
-        elif method == "hybrid":
-            adp_version = self._project_rookies_with_adp(
-                draft_players_df=draft_players_df.copy(),
-                adp_filepath=adp_filepath or "",
-                match_threshold=match_threshold,
-                adp_col_map=adp_col_map,
-            )
-            draft_based = pd.concat(
+        draft_players_df = self._project_rookies_with_adp(
+            draft_players_df=draft_players_df,
+            adp_filepath=adp_filepath or "",
+            match_threshold=match_threshold,
+            adp_col_map=adp_col_map,
+        )
+        remaining = draft_players_df[draft_players_df["total_pts"].isna()].copy()
+        if not remaining.empty:
+            fallback = self.estimate_by_draft_slot(remaining, veterans_df)
+            draft_players_df = pd.concat(
                 [
-                    veterans_df,
-                    self.estimate_by_draft_slot(rookies_df, veterans_df),
+                    draft_players_df[draft_players_df["total_pts"].notna()],
+                    fallback,
                 ],
                 ignore_index=True,
-            )
-            merged_versions = draft_based[["player_id", "total_pts"]].merge(
-                adp_version[["player_id", "total_pts"]],
-                on="player_id",
-                how="outer",
-                suffixes=("_draft", "_adp"),
-            )
-            merged_versions["total_pts_final"] = merged_versions[
-                ["total_pts_draft", "total_pts_adp"]
-            ].mean(axis=1, skipna=True)
-            draft_players_df = draft_players_df.merge(
-                merged_versions[["player_id", "total_pts_final"]],
-                on="player_id",
-                how="left",
-            )
-            draft_players_df["total_pts"] = draft_players_df["total_pts"].combine_first(
-                draft_players_df["total_pts_final"]
-            )
-            draft_players_df.drop(columns=["total_pts_final"], inplace=True)
-            remaining = draft_players_df[draft_players_df["total_pts"].isna()].copy()
-            if not remaining.empty:
-                fallback = self.estimate_by_draft_slot(remaining, veterans_df)
-                draft_players_df = pd.concat(
-                    [
-                        draft_players_df[draft_players_df["total_pts"].notna()],
-                        fallback,
-                    ],
-                    ignore_index=True,
-                )
-        else:
-            projected = self.estimate_by_draft_slot(rookies_df, veterans_df)
-            draft_players_df = pd.concat(
-                [veterans_df, projected], ignore_index=True
             )
 
         return draft_players_df

@@ -44,7 +44,6 @@ class FantasyDataProcessor:
         cache_dir: str = "./data",
         bye_weeks_override: dict = None,
         project_rookies: bool = True,
-        rookie_projection_method: str = "draft",
         rookie_projection_params: dict = None,
         start_year: int = 1999,
         data_downloader=None,
@@ -72,10 +71,8 @@ class FantasyDataProcessor:
             Bye week data {week: [teams]}.
         project_rookies : bool, optional
             Whether to project rookies.
-        rookie_projection_method : str, optional
-            'draft', 'adp', or 'hybrid'.
         rookie_projection_params : dict, optional
-            Parameters for rookie projection.
+            Parameters for draft-slot fallback scaling.
         start_year : int, optional
             First year of historical data.
         data_downloader : DataDownloader, optional
@@ -99,7 +96,6 @@ class FantasyDataProcessor:
         self.cache_dir = cache_dir
         self.bye_weeks_override = bye_weeks_override
         self.project_rookies = project_rookies
-        self.rookie_projection_method = rookie_projection_method
         self.rookie_projection_params = rookie_projection_params or {
             "scale_min": 5,
             "scale_max": 80,
@@ -250,7 +246,7 @@ class FantasyDataProcessor:
         measure_of_center : str, optional
             'median' or 'mean' for legacy stats aggregation.
         adp_filepath : str, optional
-            Path to ADP CSV for adp/hybrid rookie projection.
+            Path to FantasyPros ADP HTML used for rookie point interpolation.
         adp_match_threshold : int, optional
             Fuzzy match threshold for ADP.
         adp_col_map : dict, optional
@@ -305,10 +301,12 @@ class FantasyDataProcessor:
                 rookie_projected=int(draft_players_df["is_rookie_original"].sum()),
             )
             if not rookies_df.empty:
-                print(f"Estimating points for {len(rookies_df)} rookies using method='{self.rookie_projection_method}'...")
+                print(
+                    f"Estimating points for {len(rookies_df)} rookies "
+                    "via ADP interpolation (draft-slot fallback)..."
+                )
                 draft_players_df = self._rookie_projector.project_rookies(
                     draft_players_df,
-                    method=self.rookie_projection_method,
                     adp_filepath=adp_filepath,
                     match_threshold=adp_match_threshold,
                     adp_col_map=adp_col_map,

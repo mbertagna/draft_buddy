@@ -113,8 +113,10 @@ Veteran weekly stats are downloaded from nflverse's current `stats_player` relea
 Override the data-generation command:
 
 ```bash
-docker compose run --rm data python scripts/generate_projections.py --year 2024 --rookie_projection_method hybrid
+docker compose run --rm data python scripts/generate_projections.py --year 2024
 ```
+
+Rookie points are estimated by ADP neighbor interpolation among same-position veterans, with NFL draft-slot scaling as a fallback when ADP matching leaves gaps.
 
 ### FantasyPros ADP (manual HTML snapshot)
 

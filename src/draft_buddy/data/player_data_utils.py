@@ -94,7 +94,6 @@ def get_simulation_dfs(
         bye_weeks_override=bye_weeks,
         start_year=ps_start_year,
         positions=['QB', 'RB', 'WR', 'TE'],
-        rookie_projection_method='draft',
         cache_dir=DATA_ROOT,
     )
 
