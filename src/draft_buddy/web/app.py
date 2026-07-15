@@ -389,7 +389,7 @@ def create_app(
             return season_simulation_service.simulate_season(
                 draft_state=session._state,
                 player_catalog=session.player_catalog,
-                team_manager_mapping=session.team_manager_mapping,
+                team_display_names=session.team_manager_mapping,
                 weekly_projections=session.weekly_projections,
             )
         except FileNotFoundError as error:

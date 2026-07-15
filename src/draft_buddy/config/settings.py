@@ -86,6 +86,7 @@ class DraftConfig:
         default_factory=lambda: {"QB": 1, "RB": 3, "WR": 3, "TE": 2}
     )
     TOTAL_BENCH_SIZE: int = 6
+    # Cosmetic display names only (UI / LLM prompts). Never use as compute keys.
     TEAM_MANAGER_MAPPING: Dict[int, str] = field(
         default_factory=lambda: {
             1: "Ryan Freilich",

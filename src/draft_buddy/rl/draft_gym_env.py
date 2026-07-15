@@ -23,7 +23,7 @@ from draft_buddy.rl.checkpoint_manager import CheckpointManager
 from draft_buddy.rl.feature_extractor import FeatureExtractor
 from draft_buddy.rl.policy_network import PolicyNetwork
 from draft_buddy.rl.state_normalizer import StateNormalizer
-from draft_buddy.simulator import generate_round_robin_schedule
+from draft_buddy.simulator.service import SeasonSimulationService
 
 
 class DraftGymEnv(gym.Env):
@@ -167,7 +167,7 @@ class DraftGymEnv(gym.Env):
 
     @property
     def team_manager_mapping(self) -> Dict[int, str]:
-        """Return team manager mapping."""
+        """Return cosmetic team display names keyed by team id."""
         return self.config.draft.TEAM_MANAGER_MAPPING
 
     def resolve_roster_players(self, team_id: int) -> list[object]:
@@ -477,27 +477,15 @@ class DraftGymEnv(gym.Env):
         )
 
     def _load_matchups(self) -> pd.DataFrame:
-        """Load configured matchup schedule or generate one when requested."""
-        if self.config.reward.USE_RANDOM_MATCHUPS:
-            manager_names = [
-                self.team_manager_mapping.get(team_id)
-                for team_id in range(1, self.config.draft.NUM_TEAMS + 1)
-                if self.team_manager_mapping.get(team_id)
-            ]
-            num_weeks = int(self.config.reward.NUM_REGULAR_SEASON_WEEKS)
-            return generate_round_robin_schedule(manager_names, num_weeks)
-        default_matchups_filename = "red_league_matchups_2025.csv"
-        size_specific_filename = (
-            f"red_league_matchups_2025_{self.config.draft.NUM_TEAMS}_team.csv"
+        """Load a team-id-keyed matchup schedule for season-sim rewards.
+
+        Display names from ``TEAM_MANAGER_MAPPING`` are used only when
+        translating legacy CSV schedules; compute identity is always
+        ``Team {id}``.
+        """
+        return SeasonSimulationService(self.config).resolve_matchups(
+            self.team_manager_mapping
         )
-        candidates = [
-            os.path.join(self.config.paths.DATA_DIR, size_specific_filename),
-            os.path.join(self.config.paths.DATA_DIR, default_matchups_filename),
-        ]
-        for candidate in candidates:
-            if os.path.exists(candidate):
-                return pd.read_csv(candidate)
-        return pd.DataFrame()
 
     def _generate_snake_draft_order(self, num_teams: int, total_picks_per_team: int) -> list[int]:
         """Generate the full snake draft order."""

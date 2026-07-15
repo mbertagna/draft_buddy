@@ -176,17 +176,28 @@ def test_draft_gym_env_get_ai_suggestion_rejects_invalid_team(config, player_cat
 
 
 def test_draft_gym_env_load_matchups_prefers_generated_schedule(config, player_catalog, monkeypatch) -> None:
-    """Verify random-matchup mode delegates to schedule generation."""
+    """Verify random-matchup mode generates Team-{id} schedules."""
     config.reward.USE_RANDOM_MATCHUPS = True
+    captured = {}
+
+    def fake_schedule(names, weeks):
+        captured["names"] = list(names)
+        captured["weeks"] = weeks
+        return pd.DataFrame(
+            [{"Week": 1, "Home Manager(s)": names[0], "Away Manager(s)": names[1]}]
+        )
+
     monkeypatch.setattr(
-        "draft_buddy.rl.draft_gym_env.generate_round_robin_schedule",
-        lambda names, weeks: pd.DataFrame([{"Week": 1, "Home Manager(s)": names[0], "Away Manager(s)": names[1]}]),
+        "draft_buddy.simulator.service.generate_round_robin_schedule",
+        fake_schedule,
     )
     env = DraftGymEnv(config, training=False, player_catalog=player_catalog)
 
     matchups = env._load_matchups()
 
     assert len(matchups) == 1
+    assert captured["names"] == ["Team 1", "Team 2", "Team 3", "Team 4"]
+    assert matchups.iloc[0]["Home Manager(s)"] == "Team 1"
 
 
 def test_draft_gym_env_load_matchups_prefers_size_specific_file(

@@ -10,6 +10,7 @@ import pandas as pd
 from draft_buddy.core.roster_utils import calculate_roster_scores
 from draft_buddy.core.stacking import calculate_stack_count
 from draft_buddy.simulator.evaluator import simulate_season_fast
+from draft_buddy.simulator.team_identity import team_label
 
 
 class RewardCalculator:
@@ -147,9 +148,8 @@ class RewardCalculator:
             or config.reward.ENABLE_SEASON_SIM_REWARD
         ) and matchups_df is not None and not matchups_df.empty:
             sim_rosters = {
-                config.draft.TEAM_MANAGER_MAPPING.get(team_id): list(team_roster.player_ids)
+                team_label(team_id): list(team_roster.player_ids)
                 for team_id, team_roster in env.team_rosters.items()
-                if config.draft.TEAM_MANAGER_MAPPING.get(team_id)
             }
             try:
                 num_playoff_teams = int(config.reward.REGULAR_SEASON_REWARD.get("NUM_PLAYOFF_TEAMS", 6))
@@ -162,10 +162,10 @@ class RewardCalculator:
                     False,
                     num_playoff_teams,
                 )
-                agent_manager_name = config.draft.TEAM_MANAGER_MAPPING.get(agent_team_id)
+                agent_team_key = team_label(agent_team_id)
                 sim_reward = 0.0
                 seed_reward, made_playoffs, seed_value = RewardCalculator.compute_regular_season_reward(
-                    config, regular_records, agent_manager_name
+                    config, regular_records, agent_team_key
                 )
                 sim_reward += seed_reward
                 info["made_playoffs"] = bool(made_playoffs)
@@ -173,7 +173,7 @@ class RewardCalculator:
                     info["playoff_seed"] = int(seed_value)
                     info["regular_season_seed_reward"] = float(seed_reward)
                 placement_reward, placement_label = RewardCalculator.compute_playoff_placement_reward(
-                    config, regular_records, playoff_results_df, winner, agent_manager_name
+                    config, regular_records, playoff_results_df, winner, agent_team_key
                 )
                 sim_reward += placement_reward
                 info["playoff_placement"] = placement_label
@@ -186,17 +186,17 @@ class RewardCalculator:
 
     @staticmethod
     def compute_regular_season_reward(
-        config, regular_records: List[Tuple], agent_manager_name: str
+        config, regular_records: List[Tuple], agent_team_key: str
     ) -> Tuple[float, bool, Optional[int]]:
-        """Compute regular season playoff-seeding reward."""
+        """Compute regular season playoff-seeding reward for a team label."""
         reward_config = config.reward.REGULAR_SEASON_REWARD
         if not reward_config:
             return 0.0, False, None
         num_playoff_teams = int(reward_config.get("NUM_PLAYOFF_TEAMS", 6))
         seeding_list = [record[0] for record in regular_records[:num_playoff_teams]]
-        if agent_manager_name not in seeding_list:
+        if agent_team_key not in seeding_list:
             return 0.0, False, None
-        seed_index = seeding_list.index(agent_manager_name)
+        seed_index = seeding_list.index(agent_team_key)
         seed = seed_index + 1
         total_reward = float(reward_config.get("MAKE_PLAYOFFS_BONUS", 0.0))
         mode = reward_config.get("SEED_REWARD_MODE", "LINEAR").upper()
@@ -220,17 +220,17 @@ class RewardCalculator:
         regular_records: List[Tuple],
         playoff_results_df: pd.DataFrame,
         winner: str,
-        agent_manager_name: str,
+        agent_team_key: str,
     ) -> Tuple[float, str]:
-        """Compute playoff placement reward and label."""
+        """Compute playoff placement reward and label for a team label."""
         reward_config = config.reward.PLAYOFF_PLACEMENT_REWARDS
         if not reward_config:
             return 0.0, "NON_PLAYOFF"
         num_playoff_teams = int(config.reward.REGULAR_SEASON_REWARD.get("NUM_PLAYOFF_TEAMS", 6))
         playoff_teams = [record[0] for record in regular_records[:num_playoff_teams]]
-        if agent_manager_name not in playoff_teams:
+        if agent_team_key not in playoff_teams:
             return float(reward_config.get("NON_PLAYOFF", 0.0)), "NON_PLAYOFF"
-        if winner == agent_manager_name:
+        if winner == agent_team_key:
             return float(reward_config.get("CHAMPION", 0.0)), "CHAMPION"
         try:
             last_row = playoff_results_df.iloc[-1]
@@ -241,12 +241,12 @@ class RewardCalculator:
             )
         except Exception:
             finalist = None
-        if finalist == agent_manager_name:
+        if finalist == agent_team_key:
             return float(reward_config.get("RUNNER_UP", 0.0)), "RUNNER_UP"
         try:
             appears_mask = (
-                playoff_results_df["Home Manager(s)"] == agent_manager_name
-            ) | (playoff_results_df["Away Manager(s)"] == agent_manager_name)
+                playoff_results_df["Home Manager(s)"] == agent_team_key
+            ) | (playoff_results_df["Away Manager(s)"] == agent_team_key)
             appearances = playoff_results_df[appears_mask]
             if appearances.empty:
                 return float(reward_config.get("NON_PLAYOFF", 0.0)), "NON_PLAYOFF"

@@ -132,6 +132,7 @@ def test_final_reward_adds_average_opponent_mode_and_std_penalty(config, fake_en
 def test_final_reward_adds_season_simulation_rewards(config, fake_env, monkeypatch) -> None:
     """Verify season-simulation rewards are merged into the terminal reward."""
     config.reward.ENABLE_SEASON_SIM_REWARD = True
+    config.draft.TEAM_MANAGER_MAPPING = {1: "Club 33", 2: "Goofy's Kitchen"}
     config.reward.REGULAR_SEASON_REWARD = {
         "NUM_PLAYOFF_TEAMS": 2,
         "MAKE_PLAYOFFS_BONUS": 1.0,
@@ -139,9 +140,11 @@ def test_final_reward_adds_season_simulation_rewards(config, fake_env, monkeypat
         "SEED_REWARD_MAPPING": {1: 3.0},
     }
     config.reward.PLAYOFF_PLACEMENT_REWARDS = {"CHAMPION": 5.0, "RUNNER_UP": 2.0, "NON_PLAYOFF": 0.0}
-    monkeypatch.setattr(
-        "draft_buddy.rl.reward_calculator.simulate_season_fast",
-        lambda *_args, **_kwargs: (
+    captured = {}
+
+    def fake_simulate(weekly_projections, matchups_df, rosters, *args, **kwargs):
+        captured["rosters"] = rosters
+        return (
             None,
             [("Team 1", {}), ("Team 2", {})],
             pd.DataFrame(
@@ -149,13 +152,18 @@ def test_final_reward_adds_season_simulation_rewards(config, fake_env, monkeypat
             ),
             "",
             "Team 1",
-        ),
+        )
+
+    monkeypatch.setattr(
+        "draft_buddy.rl.reward_calculator.simulate_season_fast",
+        fake_simulate,
     )
 
     reward, info = RewardCalculator.calculate_final_reward(
         config, fake_env, pd.DataFrame([{"Week": 1}])
     )
 
+    assert set(captured["rosters"]) == {"Team 1", "Team 2"}
     assert info["playoff_placement"] == "CHAMPION" and info["season_sim_reward"] == 9.0 and reward >= 9.0
 
 

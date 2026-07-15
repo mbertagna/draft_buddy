@@ -376,7 +376,7 @@ def _format_league_snapshot(
         if team_id == advising_team_id:
             continue
 
-        manager_name = team_manager_mapping.get(team_id, f"Team {team_id}")
+        display_name = team_manager_mapping.get(team_id, f"Team {team_id}")
         roster = team_rosters.get(team_id, {})
         counts = roster_counts.get(team_id, {})
         open_needs = _compute_open_needs(counts, roster_structure, total_bench_size)
@@ -406,7 +406,7 @@ def _format_league_snapshot(
         on_roster = _count_players_by_position(roster)
         position_summary = ", ".join(f"{position}:{on_roster[position]}" for position in POSITIONS)
         other_team_lines.append(
-            f"- Team {team_id} ({manager_name}): {position_summary}; "
+            f"- Team {team_id} ({display_name}): {position_summary}; "
             f"open needs: {needs_text}; top: {top_text}; bye pressure: {bye_text}"
         )
 
@@ -545,7 +545,7 @@ def build_advisor_context(
     num_teams = ui_state.get("num_teams", 10)
     round_number = math.ceil(pick_number / num_teams) if num_teams else 1
     pick_in_round = ((pick_number - 1) % num_teams) + 1 if num_teams else pick_number
-    manager_name = team_manager_mapping.get(advising_team_id, f"Team {advising_team_id}")
+    display_name = team_manager_mapping.get(advising_team_id, f"Team {advising_team_id}")
     snake_team = ui_state.get("snake_team_on_turn")
     override_active = ui_state.get("override_active", False)
 
@@ -571,7 +571,7 @@ def build_advisor_context(
         "",
         "## Draft clock",
         f"- Pick {pick_number} (round {round_number}, pick {pick_in_round})",
-        f"- Advising team: {manager_name} (team {advising_team_id})",
+        f"- Advising team: {display_name} (team {advising_team_id})",
         f"- Agent team: {agent_team_id} | Snake turn team: {snake_team}",
         f"- Override active: {'yes' if override_active else 'no'}",
         "",
