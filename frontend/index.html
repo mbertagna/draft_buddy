@@ -431,57 +431,77 @@
             align-items: center;
             gap: 6px;
         }
-        .draft-banner-actions > button {
+        /* Banner + season controls share one button language:
+           ghost = utility, accent = simulate, outline = restart, danger = bulk. */
+        .draft-banner-actions > button,
+        #banner-settings-toggle,
+        #banner-stats-toggle,
+        #simulate-season-btn {
             padding: var(--space-2) var(--space-3);
             border: 1px solid transparent;
             border-radius: var(--radius-sm);
             cursor: pointer;
-            color: var(--text-on-accent);
             font-size: var(--text-sm);
             font-weight: 600;
             font-family: var(--font-display);
+            line-height: 1.2;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
         }
-        #undo-pick-btn {
+        #undo-pick-btn,
+        #banner-settings-toggle,
+        #banner-stats-toggle {
             background: var(--panel-alt);
             color: var(--text);
-            border: 1px solid var(--border-strong);
+            border-color: var(--border-strong);
         }
-        #undo-pick-btn:hover { background: var(--border); }
-        #simulate-pick-btn { background-color: var(--accent); }
-        #simulate-pick-btn:hover { background-color: var(--accent-hover); }
-        #auto-draft-btn {
-            background-color: var(--danger);
+        #undo-pick-btn:hover,
+        #banner-settings-toggle:hover,
+        #banner-stats-toggle:hover {
+            background: var(--border);
+            color: var(--text-strong);
+        }
+        #simulate-pick-btn,
+        #simulate-season-btn {
+            background: var(--accent);
             color: var(--text-on-accent);
+            border-color: var(--accent);
+        }
+        #simulate-pick-btn:hover,
+        #simulate-season-btn:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+        #new-draft-btn {
+            background: var(--accent-soft);
+            color: var(--accent-hover);
+            border-color: var(--accent);
             font-weight: 700;
         }
-        #auto-draft-btn:hover { background-color: var(--danger-hover); }
+        #new-draft-btn:hover {
+            background: var(--accent);
+            color: var(--text-on-accent);
+        }
+        #auto-draft-btn {
+            background: var(--danger);
+            color: var(--text-on-accent);
+            border-color: var(--danger);
+            font-weight: 700;
+        }
+        #auto-draft-btn:hover { background: var(--danger-hover); border-color: var(--danger-hover); }
         #auto-draft-btn:disabled {
             opacity: 0.65;
             cursor: wait;
         }
-        #new-draft-btn {
-            background-color: var(--accent);
-            color: var(--text-on-accent);
-            font-weight: 700;
+        #season-sim-container {
+            margin-top: var(--space-3);
         }
-        #new-draft-btn:hover { background-color: var(--accent-hover); }
+        #season-simulation-results {
+            margin-top: var(--space-3);
+        }
         .banner-settings,
         .banner-stats {
             position: relative;
         }
-        #banner-settings-toggle,
-        #banner-stats-toggle {
-            padding: var(--space-2) var(--space-3);
-            border: 1px solid var(--border-strong);
-            border-radius: var(--radius-sm);
-            background: var(--panel-alt);
-            color: var(--text);
-            font-size: var(--text-sm);
-            cursor: pointer;
-            font-family: var(--font-display);
-        }
-        #banner-settings-toggle:hover,
-        #banner-stats-toggle:hover { background: var(--border); }
         #banner-settings-panel,
         #banner-stats-panel {
             position: absolute;
@@ -588,6 +608,12 @@
             opacity: 0.85;
             border-color: rgba(255, 255, 255, 0.2);
             box-shadow: none;
+            cursor: default;
+            pointer-events: none;
+        }
+        #ai-sliver-primary:disabled {
+            cursor: default;
+            pointer-events: none;
         }
         #ai-sliver-primary.ai-sliver-error {
             color: #ffcdd2;
@@ -1544,7 +1570,7 @@
                                 <span id="ai-sliver-confidence" class="ai-confidence-dot" data-level="" title="Confidence"></span>
                                 <button type="button" id="ai-sliver-primary"
                                         data-action="draft-recommended"
-                                        data-player-id=""></button>
+                                        disabled></button>
                                 <div class="ai-sliver-alternates-wrap">
                                     <span class="ai-sliver-alt-label">Also</span>
                                     <div id="ai-sliver-alternates" class="ai-sliver-alternates"></div>
@@ -1634,7 +1660,7 @@
                             <label class="assistant-toggle" title="Sim Pick and Auto Draft engine" for="sim-mode-select">Sim engine</label>
                             <select id="sim-mode-select">
                                 <option value="bot">Bot</option>
-                                <option value="policy">Policy</option>
+                                <option value="policy" selected>Policy</option>
                             </select>
                         </div>
                         <div class="settings-row">
@@ -1711,9 +1737,9 @@
                     </tbody>
                 </table>
             </div>
-            <div id="season-sim-container" style="margin-top:12px;">
-                <button id="simulate-season-btn" style="background-color:#8a2be2; color:#fff; padding:8px 12px; border:none; border-radius:6px; cursor:pointer;">Sim Season</button>
-                <div id="season-simulation-results" style="margin-top:12px;"></div>
+            <div id="season-sim-container">
+                <button type="button" id="simulate-season-btn">Sim Season</button>
+                <div id="season-simulation-results"></div>
             </div>
         </div>
     </main>
@@ -1868,6 +1894,44 @@
             }
         }
 
+        const PREF_KEYS = {
+            autoEnabled: 'draftBuddyAssistantAuto',
+            scope: 'draftBuddyAssistantScope',
+            agentModel: 'draftBuddyAgentModel',
+            otherModel: 'draftBuddyOtherTeamsModel',
+            simEngine: 'draftBuddySimEngineMode',
+        };
+        const LEGACY_PREF_KEYS = {
+            autoEnabled: 'assistantAutoEnabled',
+            scope: 'assistantScope',
+            agentModel: 'assistantAgentModel',
+            otherModel: 'assistantOtherTeamsModel',
+            simEngine: 'simEngineMode',
+        };
+
+        function readPreference(key) {
+            try {
+                const value = localStorage.getItem(PREF_KEYS[key]);
+                if (value !== null) return value;
+                const legacy = sessionStorage.getItem(LEGACY_PREF_KEYS[key]);
+                if (legacy !== null) {
+                    localStorage.setItem(PREF_KEYS[key], legacy);
+                    return legacy;
+                }
+            } catch (error) {
+                console.warn('Unable to read preference', key, error);
+            }
+            return null;
+        }
+
+        function writePreference(key, value) {
+            try {
+                localStorage.setItem(PREF_KEYS[key], value);
+            } catch (error) {
+                console.warn('Unable to save preference', key, error);
+            }
+        }
+
         async function loadAdvisorModels() {
             if (!assistantAgentModelSelect || !assistantOtherModelSelect) return;
             try {
@@ -1879,8 +1943,8 @@
                 }
                 const data = await response.json();
                 const models = data.models || [];
-                const storedAgentModel = sessionStorage.getItem('assistantAgentModel');
-                const storedOtherModel = sessionStorage.getItem('assistantOtherTeamsModel');
+                const storedAgentModel = readPreference('agentModel');
+                const storedOtherModel = readPreference('otherModel');
                 populateAdvisorModelSelect(
                     assistantAgentModelSelect,
                     models,
@@ -1898,17 +1962,17 @@
         }
 
         function loadAssistantPreferences() {
-            const autoEnabled = sessionStorage.getItem('assistantAutoEnabled');
-            const scope = sessionStorage.getItem('assistantScope');
-            const simMode = sessionStorage.getItem('simEngineMode');
+            const autoEnabled = readPreference('autoEnabled');
+            const scope = readPreference('scope');
+            const simMode = readPreference('simEngine');
             if (assistantAutoToggle && autoEnabled !== null) {
                 assistantAutoToggle.checked = autoEnabled === 'true';
             }
             if (assistantScopeSelect && scope) {
                 assistantScopeSelect.value = scope;
             }
-            if (simModeSelect && simMode) {
-                simModeSelect.value = simMode;
+            if (simModeSelect) {
+                simModeSelect.value = simMode || 'policy';
             }
         }
 
@@ -2206,6 +2270,7 @@
             aiSliverPrimary.textContent = 'Thinking...';
             aiSliverPrimary.className = 'ai-sliver-loading';
             aiSliverPrimary.removeAttribute('data-player-id');
+            aiSliverPrimary.disabled = true;
             if (aiSliverAlternates) aiSliverAlternates.innerHTML = '';
             if (aiSliverRecap) {
                 aiSliverRecap.hidden = true;
@@ -2221,6 +2286,17 @@
             }
         }
 
+        function setPrimaryPickAction(playerId) {
+            if (!aiSliverPrimary) return;
+            if (playerId != null && Number(playerId) > 0) {
+                aiSliverPrimary.setAttribute('data-player-id', String(playerId));
+                aiSliverPrimary.disabled = false;
+            } else {
+                aiSliverPrimary.removeAttribute('data-player-id');
+                aiSliverPrimary.disabled = true;
+            }
+        }
+
         function renderAdvisorResult(data) {
             if (!aiAssistantSliver || !aiSliverPrimary) return;
             if (data.degraded) {
@@ -2230,11 +2306,7 @@
             showAiSliver();
             aiSliverPrimary.className = '';
             setSliverPrimaryPick(data.recommended_player_id, data.recommended_name || 'No recommendation');
-            if (data.recommended_player_id != null) {
-                aiSliverPrimary.setAttribute('data-player-id', String(data.recommended_player_id));
-            } else {
-                aiSliverPrimary.removeAttribute('data-player-id');
-            }
+            setPrimaryPickAction(data.recommended_player_id);
             setConfidenceBadge(normalizeConfidenceLevel(data.confidence), data.confidence);
             renderAlternateChips(data.alternates);
             populateSliverDrawer(data);
@@ -2253,11 +2325,7 @@
                 ? `Unverified: ${data.recommended_name}`
                 : 'Unverified response';
             aiSliverPrimary.textContent = label;
-            if (data.recommended_player_id != null) {
-                aiSliverPrimary.setAttribute('data-player-id', String(data.recommended_player_id));
-            } else {
-                aiSliverPrimary.removeAttribute('data-player-id');
-            }
+            setPrimaryPickAction(data.recommended_player_id);
             setConfidenceBadge(normalizeConfidenceLevel(data.confidence), data.confidence);
             renderAlternateChips(data.alternates);
             populateSliverDrawer(data);
@@ -2297,6 +2365,9 @@
                 return;
             }
             advisorInFlight = true;
+            const pickAtRequest = currentDraftState
+                ? currentDraftState.current_pick_number
+                : null;
             renderAdvisorLoading();
             const teamId = currentDraftState
                 ? getAdvisingTeamId(currentDraftState, trigger)
@@ -2323,13 +2394,22 @@
             }
             try {
                 const data = await postJson('/api/draft/advisor', payload);
+                const pickUnchanged = pickAtRequest == null
+                    || (currentDraftState
+                        && currentDraftState.current_pick_number === pickAtRequest);
+                if (!pickUnchanged) {
+                    return;
+                }
                 renderAdvisorResult(data);
                 if (trigger === 'auto' && currentDraftState) {
                     lastAutoAdvisorPickNumber = currentDraftState.current_pick_number;
                 }
             } catch (error) {
                 console.error('Error fetching assistant recommendation:', error);
-                if (trigger === 'manual') {
+                const pickUnchanged = pickAtRequest == null
+                    || (currentDraftState
+                        && currentDraftState.current_pick_number === pickAtRequest);
+                if (trigger === 'manual' && pickUnchanged) {
                     hideAiSliver();
                 }
             } finally {
@@ -2996,27 +3076,27 @@
             loadInitialState();
             if (assistantAutoToggle) {
                 assistantAutoToggle.addEventListener('change', () => {
-                    sessionStorage.setItem('assistantAutoEnabled', String(assistantAutoToggle.checked));
+                    writePreference('autoEnabled', String(assistantAutoToggle.checked));
                 });
             }
             if (assistantScopeSelect) {
                 assistantScopeSelect.addEventListener('change', () => {
-                    sessionStorage.setItem('assistantScope', assistantScopeSelect.value);
+                    writePreference('scope', assistantScopeSelect.value);
                 });
             }
             if (assistantAgentModelSelect) {
                 assistantAgentModelSelect.addEventListener('change', () => {
-                    sessionStorage.setItem('assistantAgentModel', assistantAgentModelSelect.value);
+                    writePreference('agentModel', assistantAgentModelSelect.value);
                 });
             }
             if (assistantOtherModelSelect) {
                 assistantOtherModelSelect.addEventListener('change', () => {
-                    sessionStorage.setItem('assistantOtherTeamsModel', assistantOtherModelSelect.value);
+                    writePreference('otherModel', assistantOtherModelSelect.value);
                 });
             }
             if (simModeSelect) {
                 simModeSelect.addEventListener('change', () => {
-                    sessionStorage.setItem('simEngineMode', simModeSelect.value);
+                    writePreference('simEngine', simModeSelect.value);
                 });
             }
             if (askAssistantBtn) {
@@ -3059,7 +3139,7 @@
                     }
                     if (action === 'draft-recommended' || action === 'draft-alternate') {
                         const id = Number(target.getAttribute('data-player-id'));
-                        if (Number.isFinite(id)) draftPlayer(id);
+                        if (Number.isFinite(id) && id > 0) draftPlayer(id);
                     }
                 });
             }
@@ -3211,8 +3291,11 @@
         }
 
         function renderDraftState(state) {
-            if (previousPickNumber != null && state.current_pick_number < previousPickNumber) {
-                lastAutoAdvisorPickNumber = null;
+            if (previousPickNumber != null && state.current_pick_number !== previousPickNumber) {
+                hideAiSliver();
+                if (state.current_pick_number < previousPickNumber) {
+                    lastAutoAdvisorPickNumber = null;
+                }
             }
             previousPickNumber = state.current_pick_number;
             currentDraftState = state;
