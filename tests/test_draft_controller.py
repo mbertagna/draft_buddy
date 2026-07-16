@@ -313,7 +313,7 @@ def test_draft_controller_simulate_single_pick_rejects_completed_draft(draft_con
 def test_draft_controller_simulate_remaining_advances_until_completion(
     draft_state, player_catalog, rules_engine
 ) -> None:
-    """Verify scheduled simulation keeps drafting until the order is exhausted."""
+    """Verify round-gap auto fill snaps the cursor when the board walk finishes."""
     controller = DraftController(
         state=draft_state,
         player_catalog=player_catalog,
@@ -325,6 +325,108 @@ def test_draft_controller_simulate_remaining_advances_until_completion(
     controller.simulate_remaining(manual_draft_teams=set())
 
     assert controller.current_pick_index == len(controller.draft_order)
+
+
+def test_draft_controller_simulate_remaining_survives_transfer_inflation(
+    draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify Auto completes after a transfer fills a team beyond snake debt."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+    controller.draft_player(1)
+    controller.transfer_player(player_id=1, to_team_id=2)
+    destination_cap = draft_state.total_roster_size_per_team
+
+    controller.simulate_remaining(manual_draft_teams=set())
+
+    assert (
+        controller.current_pick_index == len(controller.draft_order)
+        and draft_state.roster_for_team(2).size <= destination_cap
+    )
+
+
+def test_draft_controller_simulate_remaining_survives_override_inflation(
+    draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify Auto completes after an override gives one team an extra pick."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+    controller.draft_player(2)
+    controller.set_override_team(1)
+    controller.draft_player(6)
+    team_one_cap = draft_state.total_roster_size_per_team
+
+    controller.simulate_remaining(manual_draft_teams=set())
+
+    assert (
+        controller.current_pick_index == len(controller.draft_order)
+        and draft_state.roster_for_team(1).size <= team_one_cap
+    )
+
+
+def test_draft_controller_apply_pick_is_atomic_when_visual_board_is_full(
+    draft_controller, draft_state, player_catalog
+) -> None:
+    """Verify a full visual column rejects apply_pick without mutating state."""
+    roster_size = draft_state.total_roster_size_per_team
+    for round_index in range(roster_size):
+        draft_state.place_player_visual(1, round_index, 1000 + round_index)
+    history_before = len(draft_state.draft_history)
+    available_before = set(draft_state.available_player_ids)
+
+    with pytest.raises(ValueError, match="no empty visual board slots"):
+        draft_controller.apply_pick(team_id=1, player_id=1, is_manual_pick=False)
+
+    assert (
+        draft_state.roster_for_team(1).player_ids == []
+        and len(draft_state.draft_history) == history_before
+        and draft_state.available_player_ids == available_before
+        and 1 in draft_state.available_player_ids
+    )
+
+
+def test_draft_controller_apply_pick_places_into_explicit_visual_round(
+    draft_controller, draft_state
+) -> None:
+    """Verify apply_pick can target a non-lowest empty visual round."""
+    draft_controller.apply_pick(team_id=1, player_id=1, is_manual_pick=False, visual_round=2)
+
+    assert (
+        draft_state.cell_player_id(1, 2) == 1
+        and draft_state.cell_player_id(1, 0) is None
+        and draft_state.roster_for_team(1).player_ids == [1]
+    )
+
+
+def test_draft_controller_simulate_remaining_skips_manual_teams(
+    draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify Auto leaves manual-team cells empty while finishing other teams."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+
+    controller.simulate_remaining(manual_draft_teams={1})
+
+    assert (
+        controller.current_pick_index == len(controller.draft_order)
+        and draft_state.roster_for_team(1).player_ids == []
+        and draft_state.first_empty_round(1) == 0
+    )
 
 
 def test_draft_controller_try_select_player_uses_provided_candidate_ids(draft_controller) -> None:

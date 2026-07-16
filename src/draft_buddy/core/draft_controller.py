@@ -333,27 +333,12 @@ class DraftController:
         self.state.override_team_id = None
         if team_id in manual_draft_teams:
             raise ValueError("It is a manual team's turn. Cannot simulate pick.")
-        if policy_bot is not None:
-            if build_state_fn is None or get_action_mask_fn is None:
-                raise ValueError("Policy simulation requires state builder callbacks.")
-            selected_player = policy_bot.execute_pick(
-                team_id=team_id,
-                available_player_ids=self.available_player_ids,
-                player_catalog=self.player_catalog,
-                team_roster=self.state.roster_for_team(team_id),
-                roster_structure=self.state.roster_structure,
-                bench_maxes=self.state.bench_maxes,
-                can_draft_position_fn=self.can_draft_position,
-                try_select_player_fn=self.try_select_player_for_team,
-                build_state_fn=build_state_fn,
-                get_action_mask_fn=get_action_mask_fn,
-            )
-        else:
-            selected_player = self._select_bot_pick(
-                team_id=team_id,
-                build_state_fn=build_state_fn,
-                get_action_mask_fn=get_action_mask_fn,
-            )
+        selected_player = self._select_simulated_pick(
+            team_id=team_id,
+            build_state_fn=build_state_fn,
+            get_action_mask_fn=get_action_mask_fn,
+            policy_bot=policy_bot,
+        )
         if selected_player is None:
             raise ValueError(f"Team {team_id} could not make a valid pick.")
         self.apply_pick(team_id=team_id, player_id=selected_player.player_id, is_manual_pick=False)
@@ -366,14 +351,45 @@ class DraftController:
         get_action_mask_fn=None,
         policy_bot: BotGM | None = None,
     ) -> None:
-        """Simulate remaining scheduled picks."""
-        while self.current_pick_index < len(self.draft_order):
-            self.simulate_single_pick(
-                manual_draft_teams=manual_draft_teams,
-                build_state_fn=build_state_fn,
-                get_action_mask_fn=get_action_mask_fn,
-                policy_bot=policy_bot,
-            )
+        """Fill empty board cells round-by-round in snake direction.
+
+        Walks each visual round in original snake order and drafts only into
+        empty cells for non-manual teams with roster room. Skips cells when
+        no legal pick exists instead of aborting the run.
+        """
+        self.state.override_team_id = None
+        team_ids = sorted(set(self.draft_order) | set(self.team_rosters.keys()))
+        num_teams = max(team_ids) if team_ids else 0
+        num_rounds = self.state.total_roster_size_per_team
+
+        for round_index in range(num_rounds):
+            walk_order = range(1, num_teams + 1)
+            if round_index % 2 == 1:
+                walk_order = reversed(list(walk_order))
+            for team_id in walk_order:
+                if team_id in manual_draft_teams:
+                    continue
+                if self.state.cell_player_id(team_id, round_index) is not None:
+                    continue
+                if self.state.roster_for_team(team_id).size >= self.state.total_roster_size_per_team:
+                    continue
+                selected_player = self._select_simulated_pick(
+                    team_id=team_id,
+                    build_state_fn=build_state_fn,
+                    get_action_mask_fn=get_action_mask_fn,
+                    policy_bot=policy_bot,
+                )
+                if selected_player is None:
+                    continue
+                self.apply_pick(
+                    team_id=team_id,
+                    player_id=selected_player.player_id,
+                    is_manual_pick=False,
+                    visual_round=round_index,
+                )
+
+        self.state.current_pick_index = len(self.draft_order)
+        self.state.current_pick_number = len(self.draft_order) + 1
 
     def resolve_roster_players(self, team_id: int) -> list[Player]:
         """Return resolved players for one team roster."""
@@ -385,9 +401,37 @@ class DraftController:
         player_id: int,
         is_manual_pick: bool,
         previous_override_team_id: Optional[int] = None,
+        visual_round: Optional[int] = None,
     ) -> None:
-        """Apply a known legal pick for a specific team."""
+        """Apply a known legal pick for a specific team.
+
+        Parameters
+        ----------
+        team_id : int
+            Team receiving the pick.
+        player_id : int
+            Player to draft.
+        is_manual_pick : bool
+            Whether the pick was made manually.
+        previous_override_team_id : int, optional
+            Override team id to restore on undo.
+        visual_round : int, optional
+            Explicit visual-board round. Defaults to the first empty round.
+        """
         player = self.player_catalog.require(player_id)
+        if self.state.roster_for_team(team_id).size >= self.state.total_roster_size_per_team:
+            raise ValueError(f"Team {team_id} roster is full.")
+        if visual_round is not None:
+            target_round = visual_round
+            if not self._is_valid_round(team_id, target_round):
+                raise ValueError(f"Invalid round index: {target_round}.")
+            if self.state.cell_player_id(team_id, target_round) is not None:
+                raise ValueError(f"Team {team_id} round {target_round} is already occupied.")
+        else:
+            target_round = self.state.first_empty_round(team_id)
+            if target_round is None:
+                raise ValueError(f"Team {team_id} has no empty visual board slots.")
+
         self.state.append_pick(
             Pick(
                 pick_number=self.current_pick_number,
@@ -402,10 +446,7 @@ class DraftController:
             DraftAction(action_type="pick", history_index=len(self.state.draft_history) - 1)
         )
         self.state.add_player_to_roster(team_id, player)
-        empty_round = self.state.first_empty_round(team_id)
-        if empty_round is None:
-            raise ValueError(f"Team {team_id} has no empty visual board slots.")
-        self.state.place_player_visual(team_id, empty_round, player_id)
+        self.state.place_player_visual(team_id, target_round, player_id)
         self.state.advance_pick()
         self.state.override_team_id = None
 
@@ -437,6 +478,52 @@ class DraftController:
             after = available[min(len(available) - 1, replacement_index + 1)].projected_points
             baselines[position] = (before + current + after) / 3.0
         return baselines
+
+    def _select_simulated_pick(
+        self,
+        team_id: int,
+        build_state_fn=None,
+        get_action_mask_fn=None,
+        policy_bot: BotGM | None = None,
+    ) -> Optional[Player]:
+        """Return a simulated pick for one team via policy or configured bot.
+
+        Parameters
+        ----------
+        team_id : int
+            Drafting team id.
+        build_state_fn : callable, optional
+            Builds policy state for a team.
+        get_action_mask_fn : callable, optional
+            Builds a valid-action mask for a team.
+        policy_bot : BotGM, optional
+            Explicit policy bot that bypasses per-team strategies.
+
+        Returns
+        -------
+        Player or None
+            Selected player when a legal pick exists.
+        """
+        if policy_bot is not None:
+            if build_state_fn is None or get_action_mask_fn is None:
+                raise ValueError("Policy simulation requires state builder callbacks.")
+            return policy_bot.execute_pick(
+                team_id=team_id,
+                available_player_ids=self.available_player_ids,
+                player_catalog=self.player_catalog,
+                team_roster=self.state.roster_for_team(team_id),
+                roster_structure=self.state.roster_structure,
+                bench_maxes=self.state.bench_maxes,
+                can_draft_position_fn=self.can_draft_position,
+                try_select_player_fn=self.try_select_player_for_team,
+                build_state_fn=build_state_fn,
+                get_action_mask_fn=get_action_mask_fn,
+            )
+        return self._select_bot_pick(
+            team_id=team_id,
+            build_state_fn=build_state_fn,
+            get_action_mask_fn=get_action_mask_fn,
+        )
 
     def _select_bot_pick(self, team_id: int, build_state_fn=None, get_action_mask_fn=None) -> Optional[Player]:
         """Return the simulated pick for a bot team."""
