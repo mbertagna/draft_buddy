@@ -55,7 +55,7 @@ class FakeAdvisorRegistry:
         return list(self._models)
 
     def default_agent_model(self) -> str:
-        return "gemini-2.5-flash"
+        return "gemini-2.5-flash-lite"
 
     def default_other_teams_model(self) -> str:
         return "gemini-2.5-flash-lite"
@@ -214,7 +214,7 @@ def test_draft_advisor_models_endpoint(config, fake_session) -> None:
     assert response.status_code == 200
     body = response.json()
     assert len(body["models"]) == 2
-    assert body["defaults"]["agent_model"] == "gemini-2.5-flash"
+    assert body["defaults"]["agent_model"] == "gemini-2.5-flash-lite"
 
 
 def test_draft_advisor_rejects_unavailable_model(config, player_catalog) -> None:

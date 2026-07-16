@@ -46,25 +46,26 @@ def test_available_models_filters_by_api_keys(monkeypatch) -> None:
     assert all(option.provider == LlmProvider.GEMINI for option in options)
 
 
-def test_default_advisor_models_prefer_openrouter_when_configured(monkeypatch) -> None:
-    """Verify OpenRouter defaults apply when its API key is present."""
+def test_default_advisor_models_prefer_gemini_lite_when_configured(monkeypatch) -> None:
+    """Verify Gemini Flash Lite defaults apply when Gemini is configured."""
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    monkeypatch.delenv("ADVISOR_AGENT_MODEL", raising=False)
+    monkeypatch.delenv("ADVISOR_OTHER_TEAMS_MODEL", raising=False)
+    monkeypatch.delenv("ADVISOR_GEMINI_MODEL", raising=False)
+    assert default_advisor_agent_model() == DEFAULT_GEMINI_LITE_MODEL
+    assert default_advisor_other_teams_model() == DEFAULT_GEMINI_LITE_MODEL
+
+
+def test_default_advisor_models_fall_back_to_openrouter(monkeypatch) -> None:
+    """Verify OpenRouter defaults apply when Gemini is not configured."""
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
     monkeypatch.delenv("ADVISOR_AGENT_MODEL", raising=False)
     monkeypatch.delenv("ADVISOR_OTHER_TEAMS_MODEL", raising=False)
     monkeypatch.delenv("ADVISOR_GEMINI_MODEL", raising=False)
     assert default_advisor_agent_model() == DEFAULT_OPENROUTER_AGENT_MODEL
     assert default_advisor_other_teams_model() == DEFAULT_OPENROUTER_OTHER_TEAMS_MODEL
-
-
-def test_default_advisor_models_fall_back_to_gemini(monkeypatch) -> None:
-    """Verify Gemini defaults apply when OpenRouter is not configured."""
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    monkeypatch.delenv("ADVISOR_AGENT_MODEL", raising=False)
-    monkeypatch.delenv("ADVISOR_OTHER_TEAMS_MODEL", raising=False)
-    monkeypatch.delenv("ADVISOR_GEMINI_MODEL", raising=False)
-    assert default_advisor_agent_model() == DEFAULT_GEMINI_MODEL
-    assert default_advisor_other_teams_model() == DEFAULT_GEMINI_LITE_MODEL
 
 
 def test_default_synthesis_model_honors_env_precedence(monkeypatch) -> None:

@@ -109,9 +109,11 @@ def default_advisor_agent_model() -> str:
     legacy = os.environ.get("ADVISOR_GEMINI_MODEL", "").strip()
     if legacy:
         return legacy
+    if provider_is_configured(LlmProvider.GEMINI):
+        return DEFAULT_GEMINI_LITE_MODEL
     if provider_is_configured(LlmProvider.OPENROUTER):
         return DEFAULT_OPENROUTER_AGENT_MODEL
-    return DEFAULT_GEMINI_MODEL
+    return DEFAULT_GEMINI_LITE_MODEL
 
 
 def default_advisor_other_teams_model() -> str:
@@ -119,11 +121,11 @@ def default_advisor_other_teams_model() -> str:
     explicit = os.environ.get("ADVISOR_OTHER_TEAMS_MODEL", "").strip()
     if explicit:
         return explicit
-    if provider_is_configured(LlmProvider.OPENROUTER):
-        return DEFAULT_OPENROUTER_OTHER_TEAMS_MODEL
     if provider_is_configured(LlmProvider.GEMINI):
         return DEFAULT_GEMINI_LITE_MODEL
-    return DEFAULT_GEMINI_MODEL
+    if provider_is_configured(LlmProvider.OPENROUTER):
+        return DEFAULT_OPENROUTER_OTHER_TEAMS_MODEL
+    return DEFAULT_GEMINI_LITE_MODEL
 
 
 def default_synthesis_model() -> str:
