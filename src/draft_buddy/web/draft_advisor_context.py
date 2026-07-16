@@ -14,9 +14,12 @@ from draft_buddy.data.insights.schemas import PlayerInsight
 from draft_buddy.web.draft_advisor_filter import passes_gp_filter
 
 POSITIONS: Tuple[str, ...] = ("QB", "RB", "WR", "TE")
+FLEX_ELIGIBLE_POSITIONS: Tuple[str, ...] = ("RB", "WR", "TE")
 POSITION_ORDER: Dict[str, int] = {position: index for index, position in enumerate(POSITIONS)}
 DEFAULT_TOP_K = 5
 HIGH_PRIORITY_TOP_K = 7
+OVERALL_TOP_K = 5
+NEED_FILL_TOP_K = 3
 RECENT_PICKS_LIMIT = 12
 LEAGUE_TOP_PLAYERS_LIMIT = 2
 
@@ -117,6 +120,8 @@ def _top_by_adp(rows: Sequence[CandidateRow], position: str, limit: int) -> List
 def collect_candidate_player_ids(
     rows: Sequence[CandidateRow],
     top_k_by_position: Dict[str, int],
+    roster: Optional[Dict[str, Any]] = None,
+    roster_structure: Optional[Dict[str, int]] = None,
 ) -> set[int]:
     """Collect the union of all shortlist player ids.
 
@@ -126,6 +131,10 @@ def collect_candidate_player_ids(
         All candidate rows after GP filtering.
     top_k_by_position : Dict[str, int]
         Per-position shortlist size.
+    roster : dict, optional
+        Advising team roster used for need-fill shortlists.
+    roster_structure : dict, optional
+        Starter slot requirements used for need-fill shortlists.
 
     Returns
     -------
@@ -139,7 +148,90 @@ def collect_candidate_player_ids(
             valid_ids.add(row.player.player_id)
         for row in _top_by_adp(rows, position, limit):
             valid_ids.add(row.player.player_id)
+
+    for row in _top_overall_by_vorp(rows, OVERALL_TOP_K):
+        valid_ids.add(row.player.player_id)
+
+    if roster is not None and roster_structure is not None:
+        for need_rows in _need_fill_candidate_groups(rows, roster, roster_structure).values():
+            for row in need_rows:
+                valid_ids.add(row.player.player_id)
     return valid_ids
+
+
+def format_league_format_blurb(
+    *,
+    scoring_rules: Dict[str, Optional[float]],
+    num_teams: int,
+    roster_structure: Dict[str, int],
+    total_bench_size: int,
+) -> str:
+    """Build a compact league format string for advisor context.
+
+    Parameters
+    ----------
+    scoring_rules : dict
+        Fantasy scoring rules keyed by stat name.
+    num_teams : int
+        Number of teams in the league.
+    roster_structure : dict
+        Starter slot requirements by position.
+    total_bench_size : int
+        Bench size per team.
+
+    Returns
+    -------
+    str
+        Human-readable league format blurb.
+    """
+    receptions = scoring_rules.get("receptions")
+    if receptions == 1.0:
+        ppr_label = "Full PPR"
+    elif receptions == 0.5:
+        ppr_label = "Half PPR"
+    elif receptions is None:
+        ppr_label = "Custom (receptions unset)"
+    else:
+        ppr_label = f"Custom (receptions={receptions})"
+
+    starter_parts = []
+    for position in (*POSITIONS, "FLEX"):
+        count = roster_structure.get(position, 0)
+        if count:
+            starter_parts.append(f"{position}{count}")
+    starters_text = " ".join(starter_parts) if starter_parts else "none"
+    return (
+        f"{ppr_label} · {num_teams} teams · starters {starters_text} · bench {total_bench_size}"
+    )
+
+
+def _top_overall_by_vorp(rows: Sequence[CandidateRow], limit: int) -> List[CandidateRow]:
+    """Return top candidates by VORP across all positions."""
+    return sorted(rows, key=lambda row: (-row.vorp, row.player.player_id))[:limit]
+
+
+def _need_fill_candidate_groups(
+    rows: Sequence[CandidateRow],
+    roster: Dict[str, Any],
+    roster_structure: Dict[str, int],
+) -> Dict[str, List[CandidateRow]]:
+    """Return top VORP candidates for each open starter or FLEX need."""
+    starter_filled, flex_filled = _count_starter_slots_filled(roster)
+    groups: Dict[str, List[CandidateRow]] = {}
+
+    for position in POSITIONS:
+        open_slots = max(0, roster_structure.get(position, 0) - starter_filled.get(position, 0))
+        if open_slots <= 0:
+            continue
+        groups[position] = _top_by_vorp(rows, position, NEED_FILL_TOP_K)
+
+    flex_open = max(0, roster_structure.get("FLEX", 0) - flex_filled)
+    if flex_open > 0:
+        flex_rows = [row for row in rows if row.player.position in FLEX_ELIGIBLE_POSITIONS]
+        groups["FLEX"] = sorted(flex_rows, key=lambda row: (-row.vorp, row.player.player_id))[
+            :NEED_FILL_TOP_K
+        ]
+    return groups
 
 
 def _format_adp(adp: float) -> str:
@@ -169,16 +261,31 @@ def _format_bye_week(bye_week: Optional[int]) -> str:
     return str(int(bye_week))
 
 
+def _sanitize_table_cell(value: str) -> str:
+    """Escape markdown table cell content."""
+    return " ".join(value.replace("|", "/").split())
+
+
 def _insight_cell(insight: Optional[PlayerInsight], field: str) -> str:
     """Return one insight field for a table cell."""
     if insight is None:
         return ""
     value = getattr(insight, field, "")
     if hasattr(value, "value"):
-        return str(value.value)
+        return _sanitize_table_cell(str(value.value))
     if isinstance(value, list):
-        return ", ".join(str(item.value if hasattr(item, "value") else item) for item in value)
-    return str(value)
+        joined = ", ".join(
+            str(item.value if hasattr(item, "value") else item) for item in value
+        )
+        return _sanitize_table_cell(joined)
+    return _sanitize_table_cell(str(value))
+
+
+def _optional_player_field(value: Optional[str]) -> str:
+    """Format an optional player metadata field for markdown tables."""
+    if not value:
+        return ""
+    return _sanitize_table_cell(str(value))
 
 
 def _render_candidate_table(title: str, rows: Sequence[CandidateRow], insights: Dict[int, PlayerInsight]) -> str:
@@ -189,8 +296,8 @@ def _render_candidate_table(title: str, rows: Sequence[CandidateRow], insights: 
     lines = [
         f"### {title}",
         "",
-        "| player_id | name | vorp | adp | gp_frac | proj | bye | outlook | depth_role | playing_time | injury_risk | recovery | tags | confidence | fields_unknown |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| player_id | name | nfl | status | injury | depth | vorp | adp | gp_frac | proj | bye | outlook | summary | depth_role | playing_time | injury_risk | recovery | tags | confidence | fields_unknown |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in rows:
         player = row.player
@@ -200,13 +307,18 @@ def _render_candidate_table(title: str, rows: Sequence[CandidateRow], insights: 
             + " | ".join(
                 [
                     str(player.player_id),
-                    player.name,
+                    _sanitize_table_cell(player.name),
+                    _optional_player_field(player.team),
+                    _optional_player_field(player.sleeper_status),
+                    _optional_player_field(player.sleeper_injury_status),
+                    _optional_player_field(player.sleeper_depth_chart_position),
                     f"{row.vorp:.1f}",
                     _format_adp(player.adp),
                     _format_gp_frac(player.games_played_frac),
                     f"{player.projected_points:.1f}",
                     _format_bye_week(player.bye_week),
                     _insight_cell(insight, "outlook_phrase"),
+                    _insight_cell(insight, "summary"),
                     _insight_cell(insight, "depth_role"),
                     _insight_cell(insight, "playing_time_tier"),
                     _insight_cell(insight, "injury_risk"),
@@ -502,6 +614,7 @@ def build_advisor_context(
     rl_degraded: bool,
     insights: Dict[int, PlayerInsight],
     recent_picks: Sequence[Dict[str, Any]] | None = None,
+    league_format_blurb: str = "",
 ) -> str:
     """Build markdown context for the draft assistant LLM.
 
@@ -535,6 +648,8 @@ def build_advisor_context(
         Offline insights keyed by player id.
     recent_picks : Sequence[Dict[str, Any]], optional
         Recent draft picks for league-flow context.
+    league_format_blurb : str, optional
+        Compact scoring and roster format summary.
 
     Returns
     -------
@@ -557,17 +672,28 @@ def build_advisor_context(
     all_roster_counts = ui_state.get("roster_counts", {})
     all_team_bye_weeks = ui_state.get("team_bye_weeks", {})
     pick_history = list(recent_picks or [])
+    format_blurb = league_format_blurb or format_league_format_blurb(
+        scoring_rules={},
+        num_teams=int(num_teams or 0),
+        roster_structure=roster_structure,
+        total_bench_size=total_bench_size,
+    )
 
     sections = [
         "## Field glossary",
         "- **vorp**: Value Over Replacement Player — projected_points minus positional baseline.",
         "- **adp**: Average draft position; lower = drafted earlier.",
         "- **gp_frac**: Fraction of games played last season; R = rookie (no NFL sample).",
+        "- **nfl / status / injury / depth**: NFL team and Sleeper roster/injury/depth metadata when known.",
         "- **outlook_phrase**: Short research summary (offline, may be missing).",
+        "- **summary**: Longer offline research blurb (up to two sentences; may be missing).",
         "- **depth_role**: starter | co_starter | committee | backup | unknown",
         "- **playing_time_tier**: high | medium | low | unknown",
         "- **injury_risk / recovery_status**: From offline research when available.",
         "- **fields_unknown**: Insight fields with insufficient reporting — do not infer these.",
+        "",
+        "## League format",
+        f"- {format_blurb}",
         "",
         "## Draft clock",
         f"- Pick {pick_number} (round {round_number}, pick {pick_in_round})",
@@ -660,6 +786,33 @@ def build_advisor_context(
             ]
         )
     sections.append(_format_rl_probs(rl_probs, top_k_by_position))
+
+    sections.append("## Best available overall")
+    sections.append("")
+    sections.append(
+        _render_candidate_table(
+            f"Top {OVERALL_TOP_K} by VORP (any position)",
+            _top_overall_by_vorp(candidate_rows, OVERALL_TOP_K),
+            insights,
+        )
+    )
+
+    need_groups = _need_fill_candidate_groups(candidate_rows, roster, roster_structure)
+    sections.append("## Best for open starter needs")
+    sections.append("")
+    if not need_groups:
+        sections.append("No open dedicated starter or FLEX slots.")
+        sections.append("")
+    else:
+        for need_label, need_rows in need_groups.items():
+            sections.append(
+                _render_candidate_table(
+                    f"{need_label} — top {NEED_FILL_TOP_K} by VORP",
+                    need_rows,
+                    insights,
+                )
+            )
+
     sections.append("## Top candidates by position")
     sections.append("")
 
@@ -671,13 +824,16 @@ def build_advisor_context(
     sections.extend(
         [
             "## Instructions",
-            "- Recommend exactly one player from the candidate tables above.",
+            "- The reader knows little about fantasy football or the NFL; use plain English and briefly define jargon.",
+            "- Recommend exactly one player from the candidate or decision-board tables above.",
+            "- Compare best overall vs best need-fill vs ADP value; pick one and say what you are giving up.",
             "- Prefer need-filling picks when VORP is close.",
             "- Use roster targets and league snapshot when weighing positional runs and scarcity.",
             "- Consider bye-week pressure and stack opportunities from the advising team roster.",
-            "- Cite insight outlook/summary when present; use stats only when insight is null.",
-            "- If fields_unknown is non-empty, mention insufficient reporting — do not guess.",
-            "- Do not recommend players not listed in the candidate tables.",
+            "- Cite insight summary/outlook when present; use stats only when insight is null or empty.",
+            "- If fields_unknown is non-empty, mention insufficient reporting — do not guess or invent backstory.",
+            "- Do not recommend players not listed in the candidate or decision-board tables.",
+            "- Populate plain_english_recap (2-3 sentences), rationale_bullets (2-5), risks (up to 3), and alternates.",
             "- Output JSON matching PickRecommendation schema only.",
         ]
     )

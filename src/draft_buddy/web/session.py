@@ -115,6 +115,11 @@ class DraftSession:
         return self._config.draft.TOTAL_BENCH_SIZE
 
     @property
+    def scoring_rules(self) -> Dict[str, Optional[float]]:
+        """Return the active fantasy scoring rules for this league."""
+        return self._config.get_scoring_rules()
+
+    @property
     def snake_team_on_turn(self) -> Optional[int]:
         """Return the team scheduled to pick in snake order."""
         if self.current_pick_index >= len(self.draft_order):

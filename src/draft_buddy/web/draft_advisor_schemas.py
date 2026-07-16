@@ -54,7 +54,9 @@ class PickRecommendation(BaseModel):
     recommended_player_id: int
     recommended_name: str
     confidence: str
+    plain_english_recap: str = ""
     rationale_bullets: list[str] = Field(default_factory=list, max_length=5)
+    risks: list[str] = Field(default_factory=list, max_length=3)
     alternates: list[AlternatePick] = Field(default_factory=list, max_length=3)
     flags: list[str] = Field(default_factory=list)
     unknown_factors: list[str] = Field(default_factory=list)
@@ -75,7 +77,9 @@ class AdvisorResult(BaseModel):
     recommended_player_id: Optional[int] = None
     recommended_name: Optional[str] = None
     confidence: Optional[str] = None
+    plain_english_recap: str = ""
     rationale_bullets: list[str] = Field(default_factory=list, max_length=5)
+    risks: list[str] = Field(default_factory=list, max_length=3)
     alternates: list[AlternatePick] = Field(default_factory=list, max_length=3)
     flags: list[str] = Field(default_factory=list)
     unknown_factors: list[str] = Field(default_factory=list)
@@ -90,7 +94,9 @@ class AdvisorResult(BaseModel):
             recommended_player_id=recommendation.recommended_player_id,
             recommended_name=recommendation.recommended_name,
             confidence=recommendation.confidence,
+            plain_english_recap=recommendation.plain_english_recap,
             rationale_bullets=recommendation.rationale_bullets,
+            risks=recommendation.risks,
             alternates=recommendation.alternates,
             flags=recommendation.flags,
             unknown_factors=recommendation.unknown_factors,
@@ -138,6 +144,18 @@ def sanitize_advisor_payload(payload: dict) -> dict:
     rationale_bullets = sanitized.get("rationale_bullets")
     if isinstance(rationale_bullets, list):
         sanitized["rationale_bullets"] = [str(item) for item in rationale_bullets[:5]]
+
+    recap = sanitized.get("plain_english_recap")
+    if recap is None:
+        sanitized["plain_english_recap"] = ""
+    else:
+        sanitized["plain_english_recap"] = str(recap).strip()
+
+    risks = sanitized.get("risks")
+    if isinstance(risks, list):
+        sanitized["risks"] = [str(item) for item in risks[:3] if str(item).strip()]
+    elif risks is None:
+        sanitized["risks"] = []
 
     return sanitized
 
@@ -210,6 +228,14 @@ def extract_partial_from_payload(payload: dict | None) -> dict[str, object]:
     if isinstance(rationale_bullets, list):
         partial["rationale_bullets"] = [str(item) for item in rationale_bullets[:5]]
 
+    recap = sanitized.get("plain_english_recap")
+    if recap:
+        partial["plain_english_recap"] = str(recap)
+
+    risks = sanitized.get("risks")
+    if isinstance(risks, list):
+        partial["risks"] = [str(item) for item in risks[:3] if str(item).strip()]
+
     alternates = sanitized.get("alternates")
     if isinstance(alternates, list):
         partial["alternates"] = _parse_partial_alternates(alternates)
@@ -280,7 +306,9 @@ def build_degraded_advisor_result(
         recommended_player_id=partial.get("recommended_player_id"),  # type: ignore[arg-type]
         recommended_name=partial.get("recommended_name"),  # type: ignore[arg-type]
         confidence=partial.get("confidence"),  # type: ignore[arg-type]
+        plain_english_recap=str(partial.get("plain_english_recap") or ""),
         rationale_bullets=partial.get("rationale_bullets", []),  # type: ignore[arg-type]
+        risks=partial.get("risks", []),  # type: ignore[arg-type]
         alternates=partial.get("alternates", []),  # type: ignore[arg-type]
         flags=partial.get("flags", []),  # type: ignore[arg-type]
         unknown_factors=partial.get("unknown_factors", []),  # type: ignore[arg-type]

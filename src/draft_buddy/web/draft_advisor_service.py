@@ -14,6 +14,7 @@ from draft_buddy.web.draft_advisor_context import (
     build_candidate_rows,
     collect_candidate_player_ids,
     filter_available_players,
+    format_league_format_blurb,
     position_top_k_map,
 )
 from draft_buddy.web.draft_advisor_schemas import (
@@ -26,11 +27,15 @@ from draft_buddy.web.draft_advisor_resilience import recommend_with_resilience
 from draft_buddy.web.session import DraftSession
 
 SYSTEM_PROMPT = (
-    "You are a fantasy football draft analyst. Recommend exactly one player from the "
-    "candidate tables in the user message. Ground your reasoning in the provided stats "
-    "and offline insights. Never recommend a player who is not listed. "
-    "Always populate rationale_bullets with 2-5 concise, evidence-based bullets. "
-    "Include up to 3 alternates from the candidate tables when useful."
+    "You are a fantasy football draft coach for a beginner. "
+    "Recommend exactly one player from the candidate or decision-board tables in the user message. "
+    "Assume the reader knows little about the NFL or fantasy football: use plain English, "
+    "briefly define jargon, and explain the tradeoff (best overall vs need-fill vs ADP value). "
+    "Ground every claim in the provided stats and offline insights; never invent player backstory. "
+    "Never recommend a player who is not listed. "
+    "Always populate plain_english_recap with 2-3 sentences, rationale_bullets with 2-5 concise "
+    "evidence-based bullets, risks with up to 3 concrete watch-outs, and up to 3 alternates "
+    "from the listed tables when useful."
 )
 
 
@@ -121,10 +126,22 @@ class DraftAdvisorService:
             if rl_degraded
             else position_top_k_map(rl_probs)
         )
-        valid_player_ids = collect_candidate_player_ids(candidate_rows, top_k_by_position)
+        advising_roster = ui_state.get("team_rosters", {}).get(advising_team_id, {})
+        valid_player_ids = collect_candidate_player_ids(
+            candidate_rows,
+            top_k_by_position,
+            roster=advising_roster,
+            roster_structure=session.roster_structure,
+        )
         if not valid_player_ids:
             raise DraftAdvisorValidationError("No candidates remain after building shortlists.")
 
+        league_format_blurb = format_league_format_blurb(
+            scoring_rules=session.scoring_rules,
+            num_teams=session.num_teams,
+            roster_structure=session.roster_structure,
+            total_bench_size=session.total_bench_size,
+        )
         context = build_advisor_context(
             ui_state=ui_state,
             advising_team_id=advising_team_id,
@@ -140,6 +157,7 @@ class DraftAdvisorService:
             rl_degraded=rl_degraded,
             insights=insights,
             recent_picks=self._build_recent_pick_summaries(session),
+            league_format_blurb=league_format_blurb,
         )
 
         model_id = self._resolve_model_id(request, advising_team_id, session.agent_team_id)

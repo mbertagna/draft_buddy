@@ -697,6 +697,13 @@
             padding-left: 18px;
         }
         .ai-sliver-rationale li { margin-bottom: 3px; }
+        .ai-sliver-recap {
+            margin: 0 0 8px;
+            line-height: 1.35;
+        }
+        .ai-sliver-risks {
+            margin: 6px 0 0;
+        }
         .ai-sliver-section-label {
             font-size: 0.75rem;
             font-weight: 700;
@@ -1549,7 +1556,9 @@
                                 </div>
                             </div>
                             <div id="ai-sliver-rationale" class="ai-sliver-rationale">
+                                <p id="ai-sliver-recap" class="ai-sliver-recap" hidden></p>
                                 <ul id="ai-sliver-bullets"></ul>
+                                <div id="ai-sliver-risks" class="ai-sliver-risks"></div>
                                 <div id="ai-sliver-flags"></div>
                                 <div id="ai-sliver-unknowns"></div>
                                 <div id="ai-sliver-degraded" hidden></div>
@@ -1787,6 +1796,8 @@
         const aiSliverConfidence = document.getElementById('ai-sliver-confidence');
         const aiSliverAlternates = document.getElementById('ai-sliver-alternates');
         const aiSliverBullets = document.getElementById('ai-sliver-bullets');
+        const aiSliverRecap = document.getElementById('ai-sliver-recap');
+        const aiSliverRisks = document.getElementById('ai-sliver-risks');
         const aiSliverFlags = document.getElementById('ai-sliver-flags');
         const aiSliverUnknowns = document.getElementById('ai-sliver-unknowns');
         const aiSliverDegraded = document.getElementById('ai-sliver-degraded');
@@ -2069,8 +2080,24 @@
 
         function populateSliverDrawer(data) {
             if (!aiSliverBullets || !aiSliverFlags || !aiSliverUnknowns) return;
+            const recap = (data.plain_english_recap || '').trim();
+            if (aiSliverRecap) {
+                if (recap) {
+                    aiSliverRecap.hidden = false;
+                    aiSliverRecap.textContent = recap;
+                } else {
+                    aiSliverRecap.hidden = true;
+                    aiSliverRecap.textContent = '';
+                }
+            }
             const bullets = (data.rationale_bullets || []).filter(Boolean);
             aiSliverBullets.innerHTML = bullets.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+            const risks = (data.risks || []).filter(Boolean);
+            if (aiSliverRisks) {
+                aiSliverRisks.innerHTML = risks.length
+                    ? `<div class="ai-sliver-section-label">Risks</div><ul>${risks.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+                    : '';
+            }
             const flags = (data.flags || []).filter(item => item && item !== 'none');
             aiSliverFlags.innerHTML = flags.length
                 ? `<div class="ai-sliver-section-label">Flags</div><div>${flags.map(escapeHtml).join(', ')}</div>`
@@ -2180,7 +2207,12 @@
             aiSliverPrimary.className = 'ai-sliver-loading';
             aiSliverPrimary.removeAttribute('data-player-id');
             if (aiSliverAlternates) aiSliverAlternates.innerHTML = '';
+            if (aiSliverRecap) {
+                aiSliverRecap.hidden = true;
+                aiSliverRecap.textContent = '';
+            }
             if (aiSliverBullets) aiSliverBullets.innerHTML = '';
+            if (aiSliverRisks) aiSliverRisks.innerHTML = '';
             if (aiSliverFlags) aiSliverFlags.innerHTML = '';
             if (aiSliverUnknowns) aiSliverUnknowns.innerHTML = '';
             if (aiSliverDegraded) {
