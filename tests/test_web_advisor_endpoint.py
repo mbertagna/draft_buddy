@@ -117,6 +117,30 @@ def test_draft_advisor_returns_recommendation(config, player_catalog) -> None:
     assert body["degraded"] is False
 
 
+def test_draft_advisor_accepts_ignore_player_ids(config, player_catalog) -> None:
+    """Verify the advisor endpoint accepts blinded player ids."""
+    from draft_buddy.web.session import DraftSession
+
+    session = DraftSession(config)
+    ignored_id = next(iter(session.available_player_ids - {2}))
+    client = _build_client(session)
+
+    response = client.post(
+        "/api/draft/advisor",
+        json={
+            "team_id": 1,
+            "trigger": "manual",
+            "scope": "all_teams",
+            "agent_model": "gemini-2.5-flash",
+            "other_teams_model": "gemini-2.5-flash-lite",
+            "ignore_player_ids": [ignored_id],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["recommended_player_id"] == 2
+
+
 def test_draft_advisor_auto_scope_returns_403_for_non_agent_team(config, player_catalog) -> None:
     """Verify auto requests respect agent-only scope on the server."""
     from draft_buddy.web.session import DraftSession

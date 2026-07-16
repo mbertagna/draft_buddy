@@ -1844,7 +1844,7 @@
         let currentSortBy = 'vorp';
         let currentSortDir = 'desc'; // 'asc' or 'desc'
         let lastRenderedPlayers = [];
-        // Track players to ignore for AI suggestion
+        // Track players to ignore for RL chips and LLM assistant
         const blindSet = new Set();
 
         let advisorInFlight = false;
@@ -2317,6 +2317,9 @@
             }
             if (gpMinStr !== '' && !Number.isNaN(parseFloat(gpMinStr))) {
                 payload.gp_min = parseFloat(gpMinStr);
+            }
+            if (blindSet.size > 0) {
+                payload.ignore_player_ids = Array.from(blindSet);
             }
             try {
                 const data = await postJson('/api/draft/advisor', payload);
@@ -2800,7 +2803,7 @@
                 const blindCell = row.insertCell();
                 const blindCheckbox = document.createElement('input');
                 blindCheckbox.type = 'checkbox';
-                blindCheckbox.title = 'Exclude from AI suggestion';
+                blindCheckbox.title = 'Exclude from AI suggestions';
                 blindCheckbox.checked = blindSet.has(player.player_id);
                 blindCheckbox.addEventListener('click', (e) => e.stopPropagation());
                 blindCheckbox.addEventListener('change', (e) => {

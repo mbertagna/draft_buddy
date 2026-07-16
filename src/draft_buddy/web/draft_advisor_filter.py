@@ -1,8 +1,10 @@
-"""Shared GP filter logic for the draft assistant."""
+"""Shared filter logic for the draft assistant."""
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
+
+from draft_buddy.core.entities import Player
 
 
 def passes_gp_filter(games_played_frac: Any, gp_min: Optional[float]) -> bool:
@@ -33,3 +35,27 @@ def passes_gp_filter(games_played_frac: Any, gp_min: Optional[float]) -> bool:
     if numeric != numeric:  # NaN check without importing math
         return False
     return numeric >= gp_min
+
+
+def exclude_ignored_players(
+    players: Sequence[Player],
+    ignore_player_ids: Sequence[int] | None,
+) -> list[Player]:
+    """Remove user-blinded players from an available-player sequence.
+
+    Parameters
+    ----------
+    players : Sequence[Player]
+        Available players before blinding.
+    ignore_player_ids : Sequence[int], optional
+        Player ids to exclude from AI suggestions.
+
+    Returns
+    -------
+    list[Player]
+        Players that are not in the ignore set.
+    """
+    if not ignore_player_ids:
+        return list(players)
+    ignore_set = set(ignore_player_ids)
+    return [player for player in players if player.player_id not in ignore_set]

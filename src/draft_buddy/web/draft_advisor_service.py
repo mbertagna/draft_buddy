@@ -17,6 +17,7 @@ from draft_buddy.web.draft_advisor_context import (
     format_league_format_blurb,
     position_top_k_map,
 )
+from draft_buddy.web.draft_advisor_filter import exclude_ignored_players
 from draft_buddy.web.draft_advisor_schemas import (
     AdvisorRequest,
     AdvisorResult,
@@ -114,13 +115,22 @@ class DraftAdvisorService:
             session.player_catalog.require(player_id)
             for player_id in session.available_player_ids
         ]
+        available_players = exclude_ignored_players(
+            available_players, request.ignore_player_ids
+        )
         filtered_players = filter_available_players(available_players, request.gp_min)
         if not filtered_players:
-            raise DraftAdvisorValidationError("No players pass your GP filter.")
+            raise DraftAdvisorValidationError(
+                "No players remain after GP and ignore filters."
+            )
 
         baselines = session.get_positional_baselines()
         candidate_rows = build_candidate_rows(filtered_players, baselines)
-        rl_probs, rl_degraded = self._resolve_rl_probs(session, advising_team_id)
+        rl_probs, rl_degraded = self._resolve_rl_probs(
+            session,
+            advising_team_id,
+            ignore_player_ids=request.ignore_player_ids,
+        )
         top_k_by_position = (
             {position: DEFAULT_TOP_K for position in POSITIONS}
             if rl_degraded
@@ -241,9 +251,13 @@ class DraftAdvisorService:
         self,
         session: DraftSession,
         advising_team_id: int,
+        ignore_player_ids: list[int] | None = None,
     ) -> tuple[Dict[str, float], bool]:
         """Return RL position probabilities and whether fallback mode was used."""
-        suggestion = session.get_ai_suggestion_for_team(advising_team_id)
+        suggestion = session.get_ai_suggestion_for_team(
+            advising_team_id,
+            ignore_player_ids=list(ignore_player_ids or []),
+        )
         if suggestion.get("error"):
             fallback = {position: 0.25 for position in POSITIONS}
             return fallback, True

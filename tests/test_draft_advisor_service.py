@@ -16,11 +16,13 @@ class RecordingAdvisorGateway(DraftAdvisorGateway):
     def __init__(self, name: str) -> None:
         self.name = name
         self.calls = 0
+        self.last_user_prompt: str | None = None
 
     def fetch_payload(self, system_prompt: str, user_prompt: str) -> tuple[dict, str]:
         """Return a fixed payload and record the call."""
         self.calls += 1
-        _ = (system_prompt, user_prompt)
+        self.last_user_prompt = user_prompt
+        _ = system_prompt
         payload = {
             "advising_team_id": 1,
             "is_agent_team": True,
@@ -125,4 +127,47 @@ def test_recommend_rejects_unavailable_model(config, player_catalog) -> None:
     )
 
     with pytest.raises(DraftAdvisorValidationError, match="unavailable"):
+        service.recommend(session, request, insights={})
+
+
+def test_recommend_excludes_ignored_player_from_context(config, player_catalog) -> None:
+    """Verify blinded players are omitted from assistant candidate context."""
+    from draft_buddy.web.session import DraftSession
+
+    session = DraftSession(config)
+    available_ids = session.available_player_ids
+    ignored_id = next(iter(available_ids - {2})) if len(available_ids) > 1 else next(iter(available_ids))
+    ignored_player = session.player_catalog.require(ignored_id)
+    registry = FakeAdvisorRegistry()
+    service = DraftAdvisorService(registry)
+    request = AdvisorRequest(
+        team_id=session.agent_team_id,
+        agent_model="agent-model",
+        other_teams_model="other-model",
+        ignore_player_ids=[ignored_id],
+    )
+
+    # Recommendation may degrade if fixed id 2 was the ignored player; context is the assert.
+    service.recommend(session, request, insights={})
+
+    prompt = registry.agent_gateway.last_user_prompt
+    assert prompt is not None
+    assert f"| {ignored_id} | {ignored_player.name} |" not in prompt
+
+
+def test_recommend_rejects_when_all_players_ignored(config, player_catalog) -> None:
+    """Verify ignoring the full available pool raises a validation error."""
+    from draft_buddy.web.session import DraftSession
+
+    session = DraftSession(config)
+    registry = FakeAdvisorRegistry()
+    service = DraftAdvisorService(registry)
+    request = AdvisorRequest(
+        team_id=session.agent_team_id,
+        agent_model="agent-model",
+        other_teams_model="other-model",
+        ignore_player_ids=list(session.available_player_ids),
+    )
+
+    with pytest.raises(DraftAdvisorValidationError, match="No players remain"):
         service.recommend(session, request, insights={})

@@ -32,6 +32,7 @@ class AdvisorRequest(BaseModel):
 
     team_id: Optional[int] = None
     gp_min: Optional[float] = None
+    ignore_player_ids: list[int] = Field(default_factory=list)
     scope: AdvisorScope = AdvisorScope.AGENT_ONLY
     trigger: AdvisorTrigger = AdvisorTrigger.MANUAL
     agent_model: str = Field(default_factory=default_advisor_agent_model)
