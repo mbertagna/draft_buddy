@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -106,7 +107,8 @@ def test_load_snippets_deduplicates_urls(tmp_path: Path) -> None:
         "snippet": "text",
         "url": "https://espn.com/a",
         "domain": "espn.com",
-        "published_date": None,
+        "published_date": "2026-06-01",
+        "relevance_score": 0.8,
     }
     store.save_query_result(player, query, {"items": []}, [], provider="google")
     outlook_path = tmp_path / "4034" / "outlook.json"
@@ -114,16 +116,62 @@ def test_load_snippets_deduplicates_urls(tmp_path: Path) -> None:
     payload["snippets"] = [duplicate_snippet, duplicate_snippet]
     outlook_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    snippets = store.load_snippets("4034")
+    snippets = store.load_snippets("4034", draft_year=2026)
 
     assert len(snippets) == 1
+
+
+def test_load_snippets_drops_stale_outlook_dates_and_ranks_by_score(
+    tmp_path: Path,
+) -> None:
+    """Verify stale outlook snippets are dropped and high scores rank first."""
+    store = SearchCacheStore(str(tmp_path))
+    player = _player()
+    query = InsightQuery(kind=QueryKind.OUTLOOK, text="q1")
+    store.save_query_result(player, query, {"items": []}, [], provider="google")
+    outlook_path = tmp_path / "4034" / "outlook.json"
+    payload = json.loads(outlook_path.read_text(encoding="utf-8"))
+    payload["snippets"] = [
+        {
+            "title": "Stale injury blurb",
+            "snippet": "old",
+            "url": "https://espn.com/old",
+            "domain": "espn.com",
+            "published_date": "2025-10-13",
+            "relevance_score": 0.99,
+        },
+        {
+            "title": "Fresh outlook B",
+            "snippet": "newer lower score",
+            "url": "https://espn.com/b",
+            "domain": "espn.com",
+            "published_date": "2026-06-01",
+            "relevance_score": 0.70,
+        },
+        {
+            "title": "Fresh outlook A",
+            "snippet": "higher score",
+            "url": "https://espn.com/a",
+            "domain": "espn.com",
+            "published_date": "2026-05-01",
+            "relevance_score": 0.95,
+        },
+    ]
+    outlook_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    snippets = store.load_snippets("4034", draft_year=2026, today=date(2026, 7, 16))
+
+    assert [snippet.url for snippet in snippets] == [
+        "https://espn.com/a",
+        "https://espn.com/b",
+    ]
 
 
 def test_execute_search_with_cache_raises_on_quota(monkeypatch, tmp_path: Path) -> None:
     """Verify quota errors are surfaced as QuotaExceededError."""
     gateway = GoogleCseGateway(api_key="key", search_engine_id="cx")
 
-    def _raise_quota(_query: str, num_results: int = 8):
+    def _raise_quota(_query: str, num_results: int = 8, **_kwargs):
         raise QuotaExceededError("Google CSE daily quota exceeded.")
 
     monkeypatch.setattr(gateway, "search_raw", _raise_quota)

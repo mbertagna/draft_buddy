@@ -15,7 +15,8 @@ from draft_buddy.data.insights.cse_gateway import (
 )
 
 VALYU_SEARCH_URL = "https://api.valyu.ai/v1/search"
-MAX_SNIPPET_CHARS = 500
+MAX_SNIPPET_CHARS = 1200
+DEFAULT_RELEVANCE_THRESHOLD = 0.7
 
 DEFAULT_INCLUDED_SOURCES = (
     "fantasypros.com",
@@ -36,7 +37,7 @@ class ValyuSearchGateway(SearchGateway):
         api_key: str,
         included_sources: tuple[str, ...] | None = None,
         search_type: str = "web",
-        relevance_threshold: float = 0.5,
+        relevance_threshold: float = DEFAULT_RELEVANCE_THRESHOLD,
         timeout_seconds: float = 60.0,
     ) -> None:
         """
@@ -60,7 +61,13 @@ class ValyuSearchGateway(SearchGateway):
         self._timeout_seconds = timeout_seconds
 
     def search_raw(
-        self, query: str, num_results: int = DEFAULT_RESULT_COUNT
+        self,
+        query: str,
+        num_results: int = DEFAULT_RESULT_COUNT,
+        *,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        instructions: Optional[str] = None,
     ) -> tuple[list[SearchSnippet], dict[str, Any]]:
         """Execute a Valyu search and return snippets plus the raw payload.
 
@@ -70,13 +77,19 @@ class ValyuSearchGateway(SearchGateway):
             Search query text.
         num_results : int, optional
             Maximum number of results (Valyu max 20 per request).
+        start_date : str, optional
+            Inclusive publication start date (``YYYY-MM-DD``).
+        end_date : str, optional
+            Inclusive publication end date (``YYYY-MM-DD``).
+        instructions : str, optional
+            Natural-language ranking instructions for Valyu.
 
         Returns
         -------
         tuple[list[SearchSnippet], dict]
             Parsed snippets and raw API JSON.
         """
-        body = {
+        body: dict[str, Any] = {
             "query": query,
             "search_type": self._search_type,
             "max_num_results": min(num_results, 20),
@@ -84,6 +97,13 @@ class ValyuSearchGateway(SearchGateway):
             "relevance_threshold": self._relevance_threshold,
             "included_sources": list(self._included_sources),
         }
+        if start_date:
+            body["start_date"] = start_date
+        if end_date:
+            body["end_date"] = end_date
+        if instructions:
+            body["instructions"] = instructions
+
         with httpx.Client(timeout=self._timeout_seconds) as client:
             response = client.post(
                 VALYU_SEARCH_URL,
@@ -123,12 +143,10 @@ class ValyuSearchGateway(SearchGateway):
             url = str(item.get("url") or "")
             if not url:
                 continue
-            content = str(item.get("content") or item.get("text") or item.get("snippet") or "")
-            snippet_text = (
-                content[:MAX_SNIPPET_CHARS] if len(content) > MAX_SNIPPET_CHARS else content
-            )
+            snippet_text = ValyuSearchGateway._select_snippet_text(item)
             domain = urlparse(url).netloc or str(item.get("source") or "")
             published_date = ValyuSearchGateway._normalize_date(item.get("publication_date"))
+            relevance_score = ValyuSearchGateway._normalize_relevance(item.get("relevance_score"))
             snippets.append(
                 SearchSnippet(
                     title=str(item.get("title") or ""),
@@ -136,9 +154,34 @@ class ValyuSearchGateway(SearchGateway):
                     url=url,
                     domain=domain,
                     published_date=published_date,
+                    relevance_score=relevance_score,
                 )
             )
         return snippets
+
+    @staticmethod
+    def _select_snippet_text(item: dict[str, Any]) -> str:
+        """Choose description or content, then truncate to the snippet budget.
+
+        Parameters
+        ----------
+        item : dict
+            One Valyu result object.
+
+        Returns
+        -------
+        str
+            Truncated snippet text for synthesis.
+        """
+        content = str(item.get("content") or item.get("text") or item.get("snippet") or "")
+        description = str(item.get("description") or "").strip()
+        if description and (not content or len(description) <= len(content)):
+            selected = description
+        else:
+            selected = content
+        if len(selected) > MAX_SNIPPET_CHARS:
+            return selected[:MAX_SNIPPET_CHARS]
+        return selected
 
     @staticmethod
     def _normalize_date(value: object) -> Optional[str]:
@@ -149,3 +192,13 @@ class ValyuSearchGateway(SearchGateway):
         if not text:
             return None
         return text[:10]
+
+    @staticmethod
+    def _normalize_relevance(value: object) -> Optional[float]:
+        """Normalize a Valyu relevance score to a float when possible."""
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None

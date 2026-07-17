@@ -7,17 +7,24 @@ import os
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 import httpx
 
 from draft_buddy.data.insights.player_context import InsightPlayerContext
 from draft_buddy.data.insights.query_builder import InsightQuery, QueryKind
+from draft_buddy.data.insights.search_windows import (
+    injury_window_start,
+    outlook_window_start,
+    start_date_for_query_kind,
+    valyu_instructions_for_query_kind,
+)
 
 
 CSE_BASE_URL = "https://customsearch.googleapis.com/customsearch/v1"
 DEFAULT_RESULT_COUNT = 8
+RECENCY_BOOST_MAX = 0.15
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +36,7 @@ class SearchSnippet:
     url: str
     domain: str
     published_date: Optional[str] = None
+    relevance_score: Optional[float] = None
 
 
 class SearchGateway(ABC):
@@ -36,7 +44,13 @@ class SearchGateway(ABC):
 
     @abstractmethod
     def search_raw(
-        self, query: str, num_results: int = DEFAULT_RESULT_COUNT
+        self,
+        query: str,
+        num_results: int = DEFAULT_RESULT_COUNT,
+        *,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        instructions: Optional[str] = None,
     ) -> tuple[list[SearchSnippet], dict[str, Any]]:
         """Execute a search query and return snippets plus raw API JSON.
 
@@ -46,6 +60,12 @@ class SearchGateway(ABC):
             Search query text.
         num_results : int, optional
             Maximum number of results to return.
+        start_date : str, optional
+            Inclusive publication start date (``YYYY-MM-DD``). Ignored by CSE.
+        end_date : str, optional
+            Inclusive publication end date (``YYYY-MM-DD``). Ignored by CSE.
+        instructions : str, optional
+            Provider ranking instructions. Ignored by CSE.
 
         Returns
         -------
@@ -113,7 +133,13 @@ class GoogleCseGateway(SearchGateway):
         return super().search(query, num_results=num_results)
 
     def search_raw(
-        self, query: str, num_results: int = DEFAULT_RESULT_COUNT
+        self,
+        query: str,
+        num_results: int = DEFAULT_RESULT_COUNT,
+        *,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        instructions: Optional[str] = None,
     ) -> tuple[list[SearchSnippet], dict[str, Any]]:
         """Execute a CSE query and return snippets plus the raw payload.
 
@@ -123,12 +149,19 @@ class GoogleCseGateway(SearchGateway):
             Search query text.
         num_results : int, optional
             Maximum number of results (CSE max is 10).
+        start_date : str, optional
+            Ignored; CSE has no publication-date filter.
+        end_date : str, optional
+            Ignored; CSE has no publication-date filter.
+        instructions : str, optional
+            Ignored; CSE has no ranking-instructions parameter.
 
         Returns
         -------
         tuple[list[SearchSnippet], dict]
             Parsed snippets and raw API JSON.
         """
+        _ = (start_date, end_date, instructions)
         params = {
             "key": self._api_key,
             "cx": self._search_engine_id,
@@ -313,6 +346,7 @@ class SearchCacheStore:
                     "url": snippet.url,
                     "domain": snippet.domain,
                     "published_date": snippet.published_date,
+                    "relevance_score": snippet.relevance_score,
                 }
                 for snippet in snippets
             ],
@@ -336,8 +370,14 @@ class SearchCacheStore:
             json.dump(manifest.to_dict(), handle, indent=2)
         return manifest
 
-    def load_snippets(self, sleeper_id: str, max_snippets: int = 8) -> list[SearchSnippet]:
-        """Load deduplicated snippets for one player from the search cache.
+    def load_snippets(
+        self,
+        sleeper_id: str,
+        max_snippets: int = 8,
+        draft_year: Optional[int] = None,
+        today: Optional[date] = None,
+    ) -> list[SearchSnippet]:
+        """Load ranked, date-filtered snippets for one player from the search cache.
 
         Parameters
         ----------
@@ -345,40 +385,70 @@ class SearchCacheStore:
             Sleeper player id.
         max_snippets : int, optional
             Maximum snippets to return.
+        draft_year : int, optional
+            Draft year for the outlook window. When omitted, uses the
+            player manifest when available.
+        today : date, optional
+            Reference date for injury lookback; defaults to local today.
 
         Returns
         -------
         list[SearchSnippet]
-            Deduped snippets across all cached queries.
+            Deduped, filtered, and ranked snippets across cached queries.
         """
         player_dir = self.player_cache_dir(sleeper_id)
         if not os.path.isdir(player_dir):
             return []
+
+        resolved_year = draft_year
+        if resolved_year is None and self.has_manifest(sleeper_id):
+            resolved_year = self.load_manifest(sleeper_id).draft_year
+
+        outlook_start = outlook_window_start(resolved_year) if resolved_year else None
+        injury_start = injury_window_start(today)
 
         seen_urls: set[str] = set()
         snippets: list[SearchSnippet] = []
         for filename in sorted(os.listdir(player_dir)):
             if not filename.endswith(".json") or filename == "manifest.json":
                 continue
+            query_kind = _query_kind_from_filename(filename)
             with open(os.path.join(player_dir, filename), encoding="utf-8") as handle:
                 payload = json.load(handle)
             for item in payload.get("snippets", []):
                 url = str(item.get("url", ""))
                 if not url or url in seen_urls:
                     continue
+                published_date = item.get("published_date")
+                if not _snippet_passes_date_filter(
+                    published_date,
+                    query_kind=query_kind,
+                    outlook_start=outlook_start,
+                    injury_start=injury_start,
+                ):
+                    continue
                 seen_urls.add(url)
+                relevance_raw = item.get("relevance_score")
+                try:
+                    relevance_score = float(relevance_raw) if relevance_raw is not None else None
+                except (TypeError, ValueError):
+                    relevance_score = None
                 snippets.append(
                     SearchSnippet(
                         title=str(item.get("title", "")),
                         snippet=str(item.get("snippet", "")),
                         url=url,
                         domain=str(item.get("domain", "")),
-                        published_date=item.get("published_date"),
+                        published_date=published_date,
+                        relevance_score=relevance_score,
                     )
                 )
-                if len(snippets) >= max_snippets:
-                    return snippets
-        return snippets
+
+        snippets.sort(
+            key=lambda snippet: _snippet_rank_score(snippet, today=today or date.today()),
+            reverse=True,
+        )
+        return snippets[:max_snippets]
 
     def _existing_query_kinds(self, sleeper_id: str) -> list[str]:
         """Return query kinds already present in the cache."""
@@ -389,6 +459,50 @@ class SearchCacheStore:
 
 class QuotaExceededError(RuntimeError):
     """Raised when a search provider API quota is exceeded."""
+
+
+def _query_kind_from_filename(filename: str) -> Optional[QueryKind]:
+    """Map a cache filename to a ``QueryKind`` when possible."""
+    stem = filename.removesuffix(".json")
+    try:
+        return QueryKind(stem)
+    except ValueError:
+        return None
+
+
+def _snippet_passes_date_filter(
+    published_date: Optional[str],
+    query_kind: Optional[QueryKind],
+    outlook_start: Optional[str],
+    injury_start: str,
+) -> bool:
+    """Return whether a snippet survives the draft-year / injury date window.
+
+    Snippets without a published date are kept (providers sometimes omit dates).
+    """
+    if not published_date:
+        return True
+    published = str(published_date)[:10]
+    if query_kind == QueryKind.INJURY_RECOVERY:
+        return published >= injury_start
+    if outlook_start is None:
+        return True
+    return published >= outlook_start
+
+
+def _snippet_rank_score(snippet: SearchSnippet, today: date) -> float:
+    """Score a snippet for ranking: relevance plus a mild recency boost."""
+    relevance = snippet.relevance_score if snippet.relevance_score is not None else 0.0
+    recency_boost = 0.0
+    if snippet.published_date:
+        try:
+            published = date.fromisoformat(str(snippet.published_date)[:10])
+            age_days = max(0, (today - published).days)
+            # Full boost at age 0; fades to 0 by ~180 days.
+            recency_boost = RECENCY_BOOST_MAX * max(0.0, 1.0 - (age_days / 180.0))
+        except ValueError:
+            recency_boost = 0.0
+    return relevance + recency_boost
 
 
 def execute_search_with_cache(
@@ -423,8 +537,14 @@ def execute_search_with_cache(
     QuotaExceededError
         When the API returns a quota error.
     """
+    start_date = start_date_for_query_kind(query.kind, player.draft_year)
+    instructions = valyu_instructions_for_query_kind(query.kind)
     try:
-        snippets, raw_payload = gateway.search_raw(query.text)
+        snippets, raw_payload = gateway.search_raw(
+            query.text,
+            start_date=start_date,
+            instructions=instructions,
+        )
     except httpx.HTTPStatusError as error:
         if error.response.status_code == 429:
             raise QuotaExceededError("Search API quota exceeded.") from error

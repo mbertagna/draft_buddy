@@ -54,7 +54,7 @@ def build_search_gateway(provider: str) -> SearchGateway:
         api_key = os.environ.get("VALYU_API_KEY")
         if not api_key:
             raise ValueError("VALYU_API_KEY environment variable is required for Valyu search.")
-        return ValyuSearchGateway(api_key=api_key)
+        return ValyuSearchGateway(api_key=api_key, relevance_threshold=0.7)
 
     api_key = os.environ.get("GOOGLE_CSE_API_KEY")
     search_engine_id = os.environ.get("GOOGLE_CSE_ID")
