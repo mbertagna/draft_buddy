@@ -28,10 +28,13 @@ Rules:
 - Do not include markdown or prose outside JSON.
 - Use unknown enum values and fields_unknown when snippets are insufficient.
 - Every bullet must cite a snippet URL provided in the input.
-- outlook_phrase must be at most 8 words.
+- Prefer draft-year and offseason evidence; ignore stale mid-season injury blurbs when newer outlooks exist.
+- outlook_phrase must be at most 12 words.
 - summary must be at most 2 sentences.
-- tags must use the controlled vocabulary only.
-- Apply injury_recovery only when snippets support a recovery narrative.
+- tags must use the controlled vocabulary only (including off_field_risk and workload_concern).
+- Fill draft_lean (buy/hold/fade/unknown), floor, upside, and handcuff_or_backup when grounded.
+- Set evidence_as_of to the newest cited bullet published_date when available.
+- Apply injury_recovery only when snippets support a recovery narrative for the upcoming season.
 """
 
 
@@ -125,7 +128,11 @@ class InsightSynthesizer:
         if self._synthesis_cache.has_cache(player.sleeper_id) and not force:
             return self._synthesis_cache.load(player.sleeper_id)
 
-        snippets = self._search_cache.load_snippets(player.sleeper_id, max_snippets=8)
+        snippets = self._search_cache.load_snippets(
+            player.sleeper_id,
+            max_snippets=8,
+            draft_year=player.draft_year,
+        )
         queries = self._query_builder.build_queries(player)
         query_texts = [query.text for query in queries]
         allowed_urls = {snippet.url for snippet in snippets if snippet.url}

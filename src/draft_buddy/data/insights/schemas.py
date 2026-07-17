@@ -56,6 +56,15 @@ class RecoveryStatus(str, Enum):
     UNKNOWN = "unknown"
 
 
+class DraftLean(str, Enum):
+    """Draft recommendation lean relative to market/ADP narrative."""
+
+    BUY = "buy"
+    HOLD = "hold"
+    FADE = "fade"
+    UNKNOWN = "unknown"
+
+
 class InsightTag(str, Enum):
     """Controlled vocabulary tags for fantasy-relevant signals."""
 
@@ -71,12 +80,14 @@ class InsightTag(str, Enum):
     AGING_DECLINE = "aging_decline"
     HOLDOUT = "holdout"
     TRADE_RUMOR = "trade_rumor"
+    OFF_FIELD_RISK = "off_field_risk"
+    WORKLOAD_CONCERN = "workload_concern"
 
 
 class EvidenceBullet(BaseModel):
     """Source-grounded evidence bullet for a player insight."""
 
-    text: str = Field(max_length=120)
+    text: str = Field(max_length=160)
     source_domain: str
     source_title: str
     source_url: str
@@ -92,7 +103,11 @@ class PlayerInsight(BaseModel):
     playing_time_tier: PlayingTimeTier
     injury_risk: RiskLevel
     upside: RiskLevel
+    floor: RiskLevel = RiskLevel.UNKNOWN
+    draft_lean: DraftLean = DraftLean.UNKNOWN
     recovery_status: RecoveryStatus
+    handcuff_or_backup: Optional[str] = None
+    evidence_as_of: Optional[str] = None
     tags: list[InsightTag] = Field(default_factory=list, max_length=4)
     overall_confidence: Confidence
     fields_unknown: list[str] = Field(default_factory=list)
@@ -103,13 +118,15 @@ class PlayerInsight(BaseModel):
     @field_validator("outlook_phrase")
     @classmethod
     def validate_outlook_phrase_word_count(cls, value: str) -> str:
-        """Enforce a maximum of eight words in the outlook phrase."""
+        """Enforce a maximum of twelve words in the outlook phrase."""
         stripped = value.strip()
         if not stripped:
             raise ValueError("outlook_phrase must not be empty")
         word_count = len(stripped.split())
-        if word_count > 8:
-            raise ValueError(f"outlook_phrase must be at most 8 words, got {word_count}")
+        if word_count > MAX_OUTLOOK_WORDS:
+            raise ValueError(
+                f"outlook_phrase must be at most {MAX_OUTLOOK_WORDS} words, got {word_count}"
+            )
         return stripped
 
     @field_validator("summary")
@@ -140,11 +157,20 @@ class PlayerInsight(BaseModel):
             raise ValueError(f"bullets must contain at most 4 items, got {len(value)}")
         return value
 
+    @field_validator("handcuff_or_backup")
+    @classmethod
+    def validate_handcuff_or_backup(cls, value: Optional[str]) -> Optional[str]:
+        """Normalize empty handcuff strings to null."""
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
 
 class PlayerInsightsFile(BaseModel):
     """Top-level container for all player insights for one draft year."""
 
-    schema_version: str = "1.0"
+    schema_version: str = "1.1"
     draft_year: int
     generated_at: datetime
     model: str
@@ -156,12 +182,14 @@ JUDGMENT_FIELDS = (
     "playing_time_tier",
     "injury_risk",
     "upside",
+    "floor",
+    "draft_lean",
     "recovery_status",
 )
 
-MAX_OUTLOOK_WORDS = 8
+MAX_OUTLOOK_WORDS = 12
 MAX_SUMMARY_SENTENCES = 2
-MAX_BULLET_TEXT_CHARS = 120
+MAX_BULLET_TEXT_CHARS = 160
 MAX_BULLETS = 4
 MAX_TAGS = 4
 
@@ -238,6 +266,18 @@ def sanitize_synthesis_payload(payload: dict) -> dict:
     return sanitized
 
 
+def _newest_bullet_date(bullets: list[EvidenceBullet]) -> Optional[str]:
+    """Return the newest ISO date among evidence bullets, if any."""
+    dates = [
+        str(bullet.published_date)[:10]
+        for bullet in bullets
+        if bullet.published_date
+    ]
+    if not dates:
+        return None
+    return max(dates)
+
+
 def apply_insight_post_validation(
     insight: PlayerInsight,
     allowed_urls: Optional[set[str]] = None,
@@ -270,6 +310,8 @@ def apply_insight_post_validation(
     playing_time_tier = insight.playing_time_tier
     injury_risk = insight.injury_risk
     upside = insight.upside
+    floor = insight.floor
+    draft_lean = insight.draft_lean
     recovery_status = insight.recovery_status
 
     if depth_role != DepthRole.UNKNOWN and not bullets:
@@ -292,10 +334,24 @@ def apply_insight_post_validation(
         if "upside" not in fields_unknown:
             fields_unknown.append("upside")
 
+    if floor != RiskLevel.UNKNOWN and not bullets:
+        floor = RiskLevel.UNKNOWN
+        if "floor" not in fields_unknown:
+            fields_unknown.append("floor")
+
+    if draft_lean != DraftLean.UNKNOWN and not bullets:
+        draft_lean = DraftLean.UNKNOWN
+        if "draft_lean" not in fields_unknown:
+            fields_unknown.append("draft_lean")
+
     if recovery_status not in (RecoveryStatus.NA, RecoveryStatus.UNKNOWN) and not bullets:
         recovery_status = RecoveryStatus.UNKNOWN
         if "recovery_status" not in fields_unknown:
             fields_unknown.append("recovery_status")
+
+    evidence_as_of = insight.evidence_as_of
+    if not evidence_as_of:
+        evidence_as_of = _newest_bullet_date(bullets)
 
     return insight.model_copy(
         update={
@@ -303,9 +359,13 @@ def apply_insight_post_validation(
             "playing_time_tier": playing_time_tier,
             "injury_risk": injury_risk,
             "upside": upside,
+            "floor": floor,
+            "draft_lean": draft_lean,
             "recovery_status": recovery_status,
             "fields_unknown": fields_unknown,
             "bullets": bullets,
+            "evidence_as_of": evidence_as_of,
+            "handcuff_or_backup": insight.handcuff_or_backup,
         }
     )
 
@@ -330,7 +390,11 @@ def default_unknown_insight(search_queries_used: list[str]) -> PlayerInsight:
         playing_time_tier=PlayingTimeTier.UNKNOWN,
         injury_risk=RiskLevel.UNKNOWN,
         upside=RiskLevel.UNKNOWN,
+        floor=RiskLevel.UNKNOWN,
+        draft_lean=DraftLean.UNKNOWN,
         recovery_status=RecoveryStatus.UNKNOWN,
+        handcuff_or_backup=None,
+        evidence_as_of=None,
         tags=[],
         overall_confidence=Confidence.UNKNOWN,
         fields_unknown=list(JUDGMENT_FIELDS),
