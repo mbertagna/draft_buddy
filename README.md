@@ -147,11 +147,20 @@ Offline player insight enrichment is a **manual, two-step** pipeline that prepar
 # 1. Generate player projections (if not already done)
 docker compose run --rm data
 
-# 2. Fetch and cache search snippets (Valyu by default)
+# 2. Fetch and cache search snippets (Valyu default; date-filtered + relevance >= 0.7)
 docker compose run --rm insights-search
 
 # 3. Synthesize structured insights (Gemini or OpenRouter)
 docker compose run --rm insights-synthesize
+```
+
+Valyu search applies publication date windows (`outlook`/`role`: March 1 of the draft year; `injury_recovery`: last 90 days) and a `0.7` relevance threshold. Synthesis then re-ranks cached snippets by relevance and recency before calling the LLM.
+
+After upgrading the insights pipeline, **re-fetch search caches** so results include relevance scores and date windows:
+
+```bash
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --force
+docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --force
 ```
 
 **Synthesis model selection:**
