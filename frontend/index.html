@@ -1244,6 +1244,7 @@
         }
         #outlook-tooltip .tooltip-phrase { font-weight: 600; color: #86efac; margin-bottom: 6px; }
         #outlook-tooltip .tooltip-role { font-size: 0.75rem; color: #d1d5db; margin-bottom: 6px; text-transform: capitalize; }
+        #outlook-tooltip .tooltip-lean { font-size: 0.75rem; color: #93c5fd; margin-bottom: 6px; }
         #outlook-tooltip .tooltip-summary { color: #e5e7eb; }
 
         /* Insight detail modal */
@@ -1269,7 +1270,16 @@
             padding: 20px 24px;
         }
         .insight-modal-content h3 { margin: 0 0 4px; font-size: 1.1rem; }
-        .insight-modal-phrase { color: var(--accent); font-weight: 600; margin: 0 0 12px; font-size: 0.95rem; }
+        .insight-modal-phrase { color: var(--accent); font-weight: 600; margin: 0 0 8px; font-size: 0.95rem; }
+        .insight-modal-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            margin: 0 0 12px;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+        .insight-modal-meta span { text-transform: capitalize; }
         .insight-modal-summary { margin: 0 0 14px; line-height: 1.5; color: var(--text); }
         .insight-tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
         .insight-tag {
@@ -1285,6 +1295,10 @@
         .insight-bullets a { color: var(--accent-hover); }
         .insight-modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; gap: 8px; flex-wrap: wrap; }
         .insight-confidence { font-size: 0.8rem; color: var(--text-dim); text-transform: capitalize; }
+        .insight-confidence.stale { opacity: 0.65; }
+        #player-list td.outlook-col.lean-buy { box-shadow: inset 3px 0 0 #16a34a; }
+        #player-list td.outlook-col.lean-fade { box-shadow: inset 3px 0 0 #dc2626; }
+        #player-list td.outlook-col.lean-hold { box-shadow: inset 3px 0 0 #ca8a04; }
         .insight-modal-actions { display: flex; gap: 8px; margin-left: auto; }
         .insight-modal-google {
             padding: 6px 14px;
@@ -1747,6 +1761,7 @@
     <div id="outlook-tooltip" aria-hidden="true">
         <div class="tooltip-phrase" id="outlook-tooltip-phrase"></div>
         <div class="tooltip-role" id="outlook-tooltip-role"></div>
+        <div class="tooltip-lean" id="outlook-tooltip-lean"></div>
         <div class="tooltip-summary" id="outlook-tooltip-summary"></div>
     </div>
 
@@ -1754,6 +1769,7 @@
         <div class="insight-modal-content">
             <h3 id="insight-modal-title"></h3>
             <p class="insight-modal-phrase" id="insight-modal-phrase"></p>
+            <div class="insight-modal-meta" id="insight-modal-meta"></div>
             <p class="insight-modal-summary" id="insight-modal-summary"></p>
             <div class="insight-tag-list" id="insight-modal-tags"></div>
             <ul class="insight-bullets" id="insight-modal-bullets"></ul>
@@ -1798,6 +1814,7 @@
         const insightModal = document.getElementById('insight-modal');
         const insightModalTitle = document.getElementById('insight-modal-title');
         const insightModalPhrase = document.getElementById('insight-modal-phrase');
+        const insightModalMeta = document.getElementById('insight-modal-meta');
         const insightModalSummary = document.getElementById('insight-modal-summary');
         const insightModalTags = document.getElementById('insight-modal-tags');
         const insightModalBullets = document.getElementById('insight-modal-bullets');
@@ -1809,6 +1826,7 @@
         const outlookTooltip = document.getElementById('outlook-tooltip');
         const outlookTooltipPhrase = document.getElementById('outlook-tooltip-phrase');
         const outlookTooltipRole = document.getElementById('outlook-tooltip-role');
+        const outlookTooltipLean = document.getElementById('outlook-tooltip-lean');
         const outlookTooltipSummary = document.getElementById('outlook-tooltip-summary');
         const assistantAutoToggle = document.getElementById('assistant-auto-toggle');
         const assistantScopeSelect = document.getElementById('assistant-scope-select');
@@ -2681,6 +2699,37 @@
             return `Playing time: ${tier}`;
         }
 
+        function formatDraftLeanLabel(lean) {
+            if (!lean || lean === 'unknown') return null;
+            return lean;
+        }
+
+        function formatFloorUpsideLabel(floor, upside) {
+            const parts = [];
+            if (floor && floor !== 'unknown') parts.push(`floor ${floor}`);
+            if (upside && upside !== 'unknown') parts.push(`upside ${upside}`);
+            return parts.length ? parts.join(' / ') : null;
+        }
+
+        function formatInsightLeanLine(insight) {
+            const parts = [
+                formatDraftLeanLabel(insight.draft_lean),
+                formatFloorUpsideLabel(insight.floor, insight.upside),
+            ].filter(Boolean);
+            if (insight.evidence_as_of) {
+                parts.push(`as of ${insight.evidence_as_of}`);
+            }
+            return parts.join(' · ');
+        }
+
+        function isEvidenceStale(evidenceAsOf, maxAgeDays = 120) {
+            if (!evidenceAsOf) return true;
+            const parsed = Date.parse(evidenceAsOf);
+            if (Number.isNaN(parsed)) return true;
+            const ageMs = Date.now() - parsed;
+            return ageMs > maxAgeDays * 24 * 60 * 60 * 1000;
+        }
+
         function showOutlookTooltip(player, event) {
             const insight = player.insight;
             if (!insight || !insight.outlook_phrase) return;
@@ -2693,6 +2742,9 @@
                 ? roleParts.join(' · ')
                 : '';
             outlookTooltipRole.style.display = roleParts.length ? 'block' : 'none';
+            const leanLine = formatInsightLeanLine(insight);
+            outlookTooltipLean.textContent = leanLine;
+            outlookTooltipLean.style.display = leanLine ? 'block' : 'none';
             outlookTooltipSummary.textContent = insight.summary || '';
             outlookTooltip.style.display = 'block';
             positionOutlookTooltip(event);
@@ -2728,6 +2780,31 @@
             modalPlayerName = player.name;
             insightModalTitle.textContent = player.name;
             insightModalPhrase.textContent = insight.outlook_phrase || '';
+            insightModalMeta.innerHTML = '';
+            const metaParts = [];
+            if (insight.draft_lean && insight.draft_lean !== 'unknown') {
+                metaParts.push(`Lean: ${insight.draft_lean}`);
+            }
+            if (insight.floor && insight.floor !== 'unknown') {
+                metaParts.push(`Floor: ${insight.floor}`);
+            }
+            if (insight.upside && insight.upside !== 'unknown') {
+                metaParts.push(`Upside: ${insight.upside}`);
+            }
+            if (insight.recovery_status && insight.recovery_status !== 'unknown' && insight.recovery_status !== 'na') {
+                metaParts.push(`Recovery: ${formatInsightTagLabel(insight.recovery_status)}`);
+            }
+            if (insight.handcuff_or_backup) {
+                metaParts.push(`Handcuff: ${insight.handcuff_or_backup}`);
+            }
+            if (insight.evidence_as_of) {
+                metaParts.push(`Evidence as of ${insight.evidence_as_of}`);
+            }
+            metaParts.forEach(part => {
+                const span = document.createElement('span');
+                span.textContent = part;
+                insightModalMeta.appendChild(span);
+            });
             insightModalSummary.textContent = insight.summary || '';
             insightModalTags.innerHTML = '';
             const tagValues = [
@@ -2759,9 +2836,17 @@
                 }
                 insightModalBullets.appendChild(li);
             });
-            insightModalConfidence.textContent = insight.overall_confidence
-                ? `Confidence: ${insight.overall_confidence}`
-                : '';
+            const confidenceParts = [];
+            if (insight.overall_confidence) {
+                confidenceParts.push(`Confidence: ${insight.overall_confidence}`);
+            }
+            if (insight.evidence_as_of) {
+                confidenceParts.push(`Evidence as of ${insight.evidence_as_of}`);
+            } else {
+                confidenceParts.push('Evidence date unknown');
+            }
+            insightModalConfidence.textContent = confidenceParts.join(' · ');
+            insightModalConfidence.classList.toggle('stale', isEvidenceStale(insight.evidence_as_of));
             insightModal.classList.add('open');
         }
 
@@ -2921,8 +3006,11 @@
                 outlookCell.classList.add('outlook-col');
                 if (player.insight && player.insight.outlook_phrase) {
                     outlookCell.innerText = player.insight.outlook_phrase;
-                    outlookCell.title = player.insight.outlook_phrase;
                     outlookCell.classList.add('has-insight');
+                    const lean = player.insight.draft_lean;
+                    if (lean === 'buy' || lean === 'fade' || lean === 'hold') {
+                        outlookCell.classList.add(`lean-${lean}`);
+                    }
                     outlookCell.addEventListener('mouseenter', (e) => {
                         showOutlookTooltip(player, e);
                     });
@@ -2933,7 +3021,6 @@
                 } else {
                     outlookCell.innerText = '—';
                     outlookCell.classList.add('missing');
-                    outlookCell.title = 'No offline insight for this player';
                 }
                 // Position
                 const posCell = row.insertCell();

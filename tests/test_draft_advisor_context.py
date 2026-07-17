@@ -166,6 +166,9 @@ def test_build_advisor_context_includes_glossary_and_roster(config) -> None:
     assert "KC" in context
     assert "Questionable" in context
     assert "Expected to lead the team in targets this season." in context
+    assert "draft_lean" in context
+    assert "handcuff" in context
+    assert "evidence_as_of" in context
     assert "plain_english_recap" in context
     assert "Compare best overall vs best need-fill vs ADP value" in context
 

@@ -271,6 +271,8 @@ def _insight_cell(insight: Optional[PlayerInsight], field: str) -> str:
     if insight is None:
         return ""
     value = getattr(insight, field, "")
+    if value is None:
+        return ""
     if hasattr(value, "value"):
         return _sanitize_table_cell(str(value.value))
     if isinstance(value, list):
@@ -296,8 +298,8 @@ def _render_candidate_table(title: str, rows: Sequence[CandidateRow], insights: 
     lines = [
         f"### {title}",
         "",
-        "| player_id | name | nfl | status | injury | depth | vorp | adp | gp_frac | proj | bye | outlook | summary | depth_role | playing_time | injury_risk | recovery | tags | confidence | fields_unknown |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| player_id | name | nfl | status | injury | depth | vorp | adp | gp_frac | proj | bye | outlook | summary | depth_role | playing_time | injury_risk | floor | upside | draft_lean | handcuff | recovery | evidence_as_of | tags | confidence | fields_unknown |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in rows:
         player = row.player
@@ -322,7 +324,12 @@ def _render_candidate_table(title: str, rows: Sequence[CandidateRow], insights: 
                     _insight_cell(insight, "depth_role"),
                     _insight_cell(insight, "playing_time_tier"),
                     _insight_cell(insight, "injury_risk"),
+                    _insight_cell(insight, "floor"),
+                    _insight_cell(insight, "upside"),
+                    _insight_cell(insight, "draft_lean"),
+                    _insight_cell(insight, "handcuff_or_backup"),
                     _insight_cell(insight, "recovery_status"),
+                    _insight_cell(insight, "evidence_as_of"),
                     _insight_cell(insight, "tags"),
                     _insight_cell(insight, "overall_confidence"),
                     _insight_cell(insight, "fields_unknown"),
@@ -689,7 +696,10 @@ def build_advisor_context(
         "- **summary**: Longer offline research blurb (up to two sentences; may be missing).",
         "- **depth_role**: starter | co_starter | committee | backup | unknown",
         "- **playing_time_tier**: high | medium | low | unknown",
-        "- **injury_risk / recovery_status**: From offline research when available.",
+        "- **injury_risk / floor / upside / recovery_status**: From offline research when available.",
+        "- **draft_lean**: buy | hold | fade | unknown relative to ADP/market narrative.",
+        "- **handcuff_or_backup**: Named backup when sources identify one.",
+        "- **evidence_as_of**: Newest cited research date (ISO); prefer fresher evidence.",
         "- **fields_unknown**: Insight fields with insufficient reporting — do not infer these.",
         "",
         "## League format",
