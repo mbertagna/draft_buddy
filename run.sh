@@ -12,7 +12,7 @@ echo "Your current directory is mounted at /app"
 docker run \
     -it \
     --rm \
-    -p 8000:8000 \
+    -p 5001:5001 \
     -v "$(pwd):/app" \
     "${IMAGE_NAME}:${TAG}" \
     /bin/bash

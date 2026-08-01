@@ -1,0 +1,64 @@
+{
+  "league": {
+    "display_name": "Redraft NBFL"
+  },
+  "draft": {
+    "NUM_TEAMS": 12,
+    "ROSTER_STRUCTURE": {
+      "QB": 1,
+      "RB": 2,
+      "WR": 2,
+      "TE": 1,
+      "FLEX": 2
+    },
+    "BENCH_MAXES": {
+      "QB": 1,
+      "RB": 3,
+      "WR": 3,
+      "TE": 2
+    },
+    "TOTAL_BENCH_SIZE": 6,
+    "TEAM_MANAGER_MAPPING": {
+      "1": "Joey",
+      "2": "Noah",
+      "3": "Trevor",
+      "4": "Erol",
+      "5": "Michael",
+      "6": "Jake",
+      "7": "Stu",
+      "8": "Nick",
+      "9": "Justin",
+      "10": "Bryce",
+      "11": "Dia",
+      "12": "Frank"
+    }
+  },
+  "reward": {
+    "NUM_REGULAR_SEASON_WEEKS": 14,
+    "REGULAR_SEASON_REWARD": {
+      "NUM_PLAYOFF_TEAMS": 6
+    }
+  },
+  "scoring": {
+    "rules": {
+      "passing_yards": 0.04,
+      "passing_tds": 4,
+      "interceptions": -1,
+      "passing_2pt_conversions": 2,
+      "rushing_yards": 0.1,
+      "rushing_tds": 6,
+      "rushing_2pt_conversions": 2,
+      "receptions": 0.5,
+      "receiving_yards": 0.1,
+      "receiving_tds": 6,
+      "receiving_2pt_conversions": 2,
+      "fg_made_yards": 0.1,
+      "xp_made": 1,
+      "xp_missed": -1,
+      "total_fumbles_lost": -2
+    }
+  },
+  "paths": {
+    "player_data_template": "data/leagues/redraft_nbfl_12/generated/{year}/generated_player_data.csv"
+  }
+}

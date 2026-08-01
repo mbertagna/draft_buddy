@@ -1,0 +1,52 @@
+x-app-base: &app-base
+  build: .
+  working_dir: /app
+  volumes:
+    - .:/app
+  env_file: .env
+  environment:
+    PYTHONPATH: /app/src
+
+services:
+  webapp:
+    <<: *app-base
+    ports:
+      - "5001:5001"
+    command: python scripts/run_webapp.py
+    environment:
+      PYTHONPATH: /app/src
+      ADVISOR_GEMINI_MODEL: gemini-2.5-flash
+
+  train:
+    <<: *app-base
+    command: python scripts/train.py
+
+  test:
+    <<: *app-base
+    command: python -m pytest tests/
+
+  test-cov:
+    <<: *app-base
+    command: >
+      python -m pytest tests/
+      --cov=src/draft_buddy
+      --cov-branch
+      --cov-report=term-missing
+      --cov-report=xml:/app/coverage.xml
+      --cov-report=html:/app/htmlcov
+
+  data:
+    <<: *app-base
+    command: python scripts/generate_projections.py --year 2026
+
+  insights-search:
+    <<: *app-base
+    command: python scripts/fetch_player_insight_search.py --year 2026 --top-n 10 --search-provider valyu
+
+  insights-synthesize:
+    <<: *app-base
+    command: python scripts/synthesize_player_insights.py --year 2026 --top-n 10
+
+  position-guide:
+    <<: *app-base
+    command: python scripts/generate_position_guide.py --simulations 5000

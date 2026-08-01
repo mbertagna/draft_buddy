@@ -1,155 +1,305 @@
-# Draft Buddy 🏈 - An AI-Powered Fantasy Football Draft Assistant
+# Draft Buddy
 
-Draft Buddy is a complete system for simulating, training, and running a fantasy football draft assistant. It leverages reinforcement learning to train an AI agent to draft an optimal team by understanding player value, positional scarcity, and opponent behavior.
+Draft Buddy uses Docker Compose as the primary local workflow for the refactored runtime boundaries:
 
-This project is more than just a draft simulator; it's a powerful tool for aspiring GMs to test strategies, train a personalized AI advisor, and get real-time suggestions during a live draft.
+- `web`: FastAPI app and session management
+- `rl`: Gym environment, feature extraction, rewards, models, and training
+- `data`: player loading and projection generation
+- `simulator`: stateless season evaluation
+- `core`: shared draft state, controller, rules, bots, and entities
 
-![ui](images/ui.png)
-![loss](images/loss.png)
-![reward](images/reward.png)
-
------
-
-## ✨ Key Features
-
-  * **Customizable Draft Environment**: A custom OpenAI Gym environment models a multi-team snake draft with realistic roster rules, including a FLEX position.
-  * **Intelligent Opponent Strategies**: Pit your AI against a range of opponent "personalities" from rule-based strategies (`ADP`, `HEURISTIC`, `RANDOM`) to other trained AI models. These can be randomized on the fly for robust training.
-  * **Rich State Representation**: The agent's decision-making is powered by a comprehensive observation space that includes player value (`VORP`), positional scarcity, and opponent roster composition.
-  * **Advanced Reward Functions**: Train your agent with flexible reward configurations, including per-pick shaping and a unique end-of-episode reward based on a full-season simulation. This rewards the agent for building a team that actually wins games, not just one with the highest projected points.
-  * **Interactive Web UI**: A simple Flask backend and lightweight frontend allow you to run mock drafts, manually make picks, get real-time AI suggestions, and view detailed roster breakdowns.
-  * **Extensive Analytics**: Simulate entire seasons to evaluate team performance, analyze draft results with CSV exports, and visualize training progress with intuitive plots.
-  * **Docker-Ready**: The entire system is containerized, ensuring a consistent and isolated environment for all dependencies and making it easy to run anywhere.
-
------
-
-## 🚀 Getting Started
-
-The easiest way to get started is by using Docker.
+## Docker Compose Usage
 
 ### Prerequisites
 
-  * [Docker](https://www.docker.com/get-started) installed on your system.
+- Docker
+- Docker Compose
 
-### Installation & Setup
+### First-Time Setup
 
-1.  **Clone the repository**:
+Copy environment variables and set your active league:
 
-    ```bash
-    git clone https://github.com/your-username/draft-buddy.git
-    cd draft-buddy
-    ```
-
-2.  **Build the Docker image**:
-    This command builds the Docker image and installs all necessary Python and system dependencies.
-
-    ```bash
-    ./build.sh
-    ```
-
-3.  **Run the container**:
-    This command starts a container, mounts your local project directory inside, and drops you into a shell. Any changes you make locally will be immediately reflected in the container.
-
-    ```bash
-    ./run.sh
-    ```
-
------
-
-## 🕹️ Running the Web App (UI)
-
-Once inside the Docker container, you can start the Flask web server.
-
-1.  **Start the server**:
-
-    ```bash
-    python app.py
-    ```
-
-2.  **Open the web UI**:
-    Open your browser and navigate to `http://localhost:8000`.
-
-The UI provides real-time controls and visualizations:
-
-  * `Start New Draft`: Clears the current state and begins a new draft.
-  * `Sim Pick`: Has the current team on the clock make an automatic selection.
-  * `Undo`: Reverts the last pick.
-  * `CSV`: Exports the entire draft history to a CSV file.
-  * **Player List**: Filter, search, and sort through the available player pool.
-  * **Team Rosters**: See a live breakdown of each team's roster, including starters, bench, and bye week conflicts.
-  * **AI Suggestions**: Get real-time AI recommendations for the team on the clock.
-  * **Sim Season**: Run a full season simulation based on current rosters to test the effectiveness of your draft.
-
------
-
-## 📈 Training the AI Agent
-
-The core of Draft Buddy is the reinforcement learning agent trained with the REINFORCE algorithm.
-
-1.  **Prepare your configuration**:
-    Open `config.py` and adjust parameters such as `TOTAL_EPISODES`, `LEARNING_RATE`, and `ENABLED_STATE_FEATURES`. Pay special attention to the `ENABLE_SEASON_SIM_REWARD` flag if you want to train the agent to win a simulated season.
-
-2.  **Start training**:
-    From the Docker shell, run the `train.py` script.
-
-    ```bash
-    python train.py
-    ```
-
-    Training progress, including rewards and losses, will be logged to the `logs/` directory.
-
-3.  **Resume training**:
-    Set `RESUME_TRAINING = True` in `config.py` and the script will automatically find and load the latest checkpoint to continue training.
-
-4.  **Plotting results**:
-    To visualize your training metrics without starting a new training run, use the `-p` flag.
-
-    ```bash
-    python train.py -p
-    ```
-
-    This generates an interactive HTML dashboard in the `logs/` directory.
-
------
-
-## 🧪 Simulation & Evaluation
-
-Use a trained model to run multiple mock drafts and evaluate its performance.
-
-1.  **Update the model path**:
-    In `config.py`, ensure `MODEL_PATH_TO_LOAD` points to the `.pth` file of the trained agent you want to evaluate.
-
-2.  **Run the simulation**:
-
-    ```bash
-    python simulate.py
-    ```
-
-    The script will output a detailed log of each pick and a summary of final team scores across all simulation runs, allowing you to see how your agent stacks up against its opponents.
-
------
-
-## 🛠️ Project Structure
-
+```bash
+cp .env.example .env
 ```
+
+League profiles live under `config/leagues/` with per-season overlays in `config/seasons/`. Set these in `.env`:
+
+```bash
+DRAFT_BUDDY_LEAGUE=red_league_10      # ESPN Red League (10-team, full PPR)
+DRAFT_BUDDY_SEASON=2026
+```
+
+To switch to Redraft NBFL (12-team Sleeper, half PPR) later:
+
+```bash
+DRAFT_BUDDY_LEAGUE=redraft_nbfl_12
+```
+
+Each league uses its own generated player CSV under `data/leagues/{league_id}/generated/{year}/`. Run `docker compose run --rm data` after switching leagues so projections match that league's scoring.
+
+Build the image used by every service:
+
+```bash
+docker compose build
+```
+
+Each service bind-mounts the repository into `/app` and runs with `PYTHONPATH=/app/src`, so generated files are written back to your host checkout.
+
+Common output locations on the host:
+
+- `data/`: generated player data and draft state files
+- `data/leagues/{league_id}/generated/{year}/pipeline_report.html`: data-pipeline diagnostics report
+- `logs/`: training metrics, dashboards, and run logs
+- `models/`: checkpoints and trained model artifacts
+- `coverage.xml`: XML coverage report from `test-cov`
+- `htmlcov/`: HTML coverage report from `test-cov`
+
+### Services
+
+| Service | Purpose | Default command |
+| --- | --- | --- |
+| `webapp` | Run the FastAPI web application | `python scripts/run_webapp.py` |
+| `train` | Run RL training | `python scripts/train.py` |
+| `test` | Run the test suite | `python -m pytest tests/` |
+| `test-cov` | Run tests with coverage outputs | `python -m pytest tests/ --cov=src/draft_buddy ...` |
+| `data` | Generate player projections and merged draft data | `python scripts/generate_projections.py --year 2026` |
+| `insights-search` | Fetch web search snippets for top 150 ADP players (Valyu default) | `python scripts/fetch_player_insight_search.py --year 2026 --top-n 150 --search-provider valyu` |
+| `insights-synthesize` | Synthesize Gemini Flash player insights from cached search | `python scripts/synthesize_player_insights.py --year 2026 --top-n 150` |
+| `position-guide` | Generate static RL position probability cheat sheet | `python scripts/generate_position_guide.py --simulations 5000` |
+
+### Common Commands
+
+Start the web application:
+
+```bash
+docker compose up webapp
+```
+
+In the header, use **Sim → Bot | Policy** to choose the engine for **Sim Pick** and **Auto Draft**. Bot uses configured heuristic/ADP strategies; Policy uses the loaded RL checkpoint (`MODEL_PATH_TO_LOAD`).
+
+Run training:
+
+```bash
+docker compose run --rm train
+```
+
+Generate training plots from the latest CSV metrics without training:
+
+```bash
+docker compose run --rm train python scripts/train.py -p
+```
+
+Run the test suite:
+
+```bash
+docker compose run --rm test
+```
+
+Run tests with coverage:
+
+```bash
+docker compose run --rm test-cov
+```
+
+Generate player projections with the default compose command:
+
+```bash
+docker compose run --rm data
+```
+
+Veteran weekly stats are downloaded from nflverse's current `stats_player` release as per-season files (`stats_player_week_{year}.csv`) into `data/cache/nflverse/`. The lookback window defaults to two completed seasons (`Config.data.LEGACY_STATS_LOOKBACK_SEASONS`); override with `--lookback-seasons`.
+
+Override the data-generation command:
+
+```bash
+docker compose run --rm data python scripts/generate_projections.py --year 2024
+```
+
+Rookie points are estimated by ADP neighbor interpolation among same-position veterans, with NFL draft-slot scaling as a fallback when ADP matching leaves gaps.
+
+### FantasyPros ADP (manual HTML snapshot)
+
+Projection generation merges FantasyPros consensus ADP from a saved HTML table (not the CSV export).
+
+1. Open [FantasyPros PPR Overall ADP](https://www.fantasypros.com/nfl/adp/ppr-overall.php)
+2. In DevTools inspector, select the ADP results **`<table>`** whose classes include `mcu-table` / `reports__table-inner` (caption text starts with `Average Draft Position (ADP)`)
+3. Copy that table element's **outer HTML** only (not the full page, and not an ECR rankings table)
+4. Save it as `data/cache/adp/fantasypros-{year}-overall-adp-rankings.html` (example: `fantasypros-2026-overall-adp-rankings.html`)
+5. Run `docker compose run --rm data`
+
+Do **not** use the ECR / rankings page table. The ADP table must include an `AVG` column.
+
+### Player Insights (manual pre-draft enrichment)
+
+Offline player insight enrichment is a **manual, two-step** pipeline that prepares research-backed outlook data for the draft UI (see [PLAYER_INSIGHTS_PART2_PLAN.md](docs/PLAYER_INSIGHTS_PART2_PLAN.md)).
+
+**Prerequisites:**
+
+1. Copy `.env.example` to `.env` and set:
+   - `VALYU_API_KEY` from [Valyu](https://platform.valyu.ai/) (default search provider)
+   - `GEMINI_API_KEY` from [Google AI Studio](https://ai.google.dev/) and/or `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/)
+2. Optional: for Google CSE instead, set `INSIGHTS_SEARCH_PROVIDER=google`, `GOOGLE_CSE_API_KEY`, and `GOOGLE_CSE_ID` (note: CSE is closed to new customers and sunsets Jan 2027).
+
+**Run order:**
+
+```bash
+# 1. Generate player projections (if not already done)
+docker compose run --rm data
+
+# 2. Fetch and cache search snippets (Valyu default; date-filtered + relevance >= 0.7)
+docker compose run --rm insights-search
+
+# 3. Synthesize structured insights (Gemini or OpenRouter)
+docker compose run --rm insights-synthesize
+```
+
+Valyu search applies publication date windows (`outlook`/`role`: March 1 of the draft year; `injury_recovery`: last 90 days) and a `0.7` relevance threshold. Synthesis then re-ranks cached snippets by relevance and recency before calling the LLM.
+
+After upgrading the insights pipeline, **re-fetch search caches** so results include relevance scores and date windows:
+
+```bash
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --force
+docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --force
+```
+
+**Synthesis model selection:**
+
+Defaults come from `.env` (`INSIGHTS_LLM_PROVIDER`, `INSIGHTS_LLM_MODEL`). Override per run:
+
+```bash
+docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py \
+  --provider openrouter --model deepseek/deepseek-v4-flash
+```
+
+**Outputs:**
+
+- Search cache: `data/cache/insights/search/{sleeper_id}/`
+- Synthesis cache: `data/cache/insights/synthesis/{sleeper_id}.json`
+- Merged insights export: `data/insights/exports/player_insights_{year}_{timestamp}.json`
+
+Each synthesis run writes a new timestamped export file. The webapp loads the newest export by filename timestamp at startup. Legacy undated `data/player_insights_{year}.json` files are used as a fallback when no exports exist yet.
+
+**Partial re-runs:**
+
+```bash
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --max-players 20 --start-index 0
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --force
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --search-provider google --force
+docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --force
+```
+
+### Live Draft Assistant
+
+The web UI includes an on-demand **LLM draft assistant** alongside the fast RL position chips. Set `GEMINI_API_KEY` and/or `OPENROUTER_API_KEY` in `.env`.
+
+**Supported models:** Gemini 2.5 Flash, Gemini 2.5 Flash Lite, DeepSeek V4 Pro, DeepSeek V4 Flash (via OpenRouter).
+
+**In the header:**
+
+- **Auto assistant** — when on, fires once per snake turn when scope allows (skipped during clock overrides)
+- **Scope** — *My picks only* (agent team from league config) or *Every team* (auto only)
+- **My model / Others** — separate model pickers for your team vs other teams (defaults from `ADVISOR_AGENT_MODEL` / `ADVISOR_OTHER_TEAMS_MODEL`)
+- **Ask Assistant** — always available during an active draft; uses the selected/on-clock team (including overrides)
+
+The assistant builds per-position shortlists (top 7 by VORP/ADP for the RL model's top two positions, top 5 for the others) and returns a structured pick recommendation. Min GP Frac from the player table is sent with each request.
+
+See [PLAYER_INSIGHTS_PART2_PLAN.md](docs/PLAYER_INSIGHTS_PART2_PLAN.md) for architecture details.
+
+### Position Guide (pre-draft cheat sheet)
+
+Offline Monte Carlo simulation produces a **static position probability guide** for your draft slot — useful as a fallback when the live dashboard is unavailable. Defaults (`num-teams`, `slot`, `checkpoint-dir`) come from the active league profile in `.env`.
+
+**Prerequisites:**
+
+1. Generate player projections for the active league: `docker compose run --rm data`
+2. A trained policy checkpoint for that league size (paths are set in `config/seasons/{league}_{year}.json`)
+
+**Run (uses active league from `.env`):**
+
+```bash
+docker compose run --rm position-guide
+open data/guides/exports/position_guide_*teams_slot*_*_*.html
+```
+
+**Override league temporarily:**
+
+```bash
+DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 docker compose run --rm position-guide
+```
+
+**Outputs:**
+
+- JSON: `data/guides/exports/position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.json`
+- HTML: same basename with `.html` (printable cheat sheet)
+
+Each run writes a new timestamped export. Filenames include league size so 10-team and 12-team guides do not collide.
+
+### League profiles and season rollover
+
+| League | Profile ID | Platform | Scoring | 2026 draft slot |
+| --- | --- | --- | --- | --- |
+| Red League | `red_league_10` | ESPN | Full PPR | 2 |
+| Redraft NBFL | `redraft_nbfl_12` | Sleeper | Half PPR | 5 |
+
+**Season rollover checklist** (each August):
+
+1. Copy `config/seasons/{league}_2026.json` to `{league}_2027.json`
+2. Update `season`, `bye_weeks`, `draft.AGENT_START_POSITION`, and checkpoint paths
+3. Run `docker compose run --rm data` for each league you use
+4. Train or point `training.MODEL_PATH_TO_LOAD` at the correct `models/{N}_teams_*` checkpoint
+
+Player projections only include nflverse-trackable scoring rules. Bonuses without reliable stat columns (50+ yard TDs, D/ST details, IR slots) are omitted per league JSON.
+
+### `up` vs `run --rm`
+
+Use `docker compose up` for long-running services that should stay attached to a port, such as `webapp`.
+
+Use `docker compose run --rm` for one-off tasks such as training, tests, coverage, and data generation. The `--rm` flag removes the container when the command exits.
+
+Because every service uses `working_dir: /app`, command overrides run from the repository root inside the container. That means overrides like:
+
+```bash
+docker compose run --rm test python -m pytest tests/test_config.py
+```
+
+behave consistently across services.
+
+### Accessing Outputs
+
+- Web UI: [http://localhost:5001](http://localhost:5001)
+- Coverage HTML report: [htmlcov/index.html](htmlcov/index.html)
+- Training logs and dashboards: `logs/`
+- Model checkpoints: `models/`
+
+## Package Structure
+
+```text
 .
-├── app.py                      # Flask API and web UI backend
-├── config.py                   # Central configuration for all components
-├── data/                       # Stores player data, draft states, and matchup files
-├── data_driver.py              # Script to process raw data and generate a player pool
-├── fantasy_draft_env.py        # The core OpenAI Gym environment
-├── policy_network.py           # The neural network architecture for the agent
-├── reinforce_agent.py          # The REINFORCE training algorithm implementation
-├── requirements.txt            # Python dependencies
-├── run.sh, build.sh            # Scripts for managing the Docker environment
-├── simulate.py                 # Script to evaluate a trained model on mock drafts
-├── train.py                    # Script to train the reinforcement learning agent
-└── utils/                      # Helper scripts for data processing, simulation, etc.
+├── data/
+├── frontend/
+├── logs/
+├── models/
+├── scripts/
+├── src/draft_buddy/
+│   ├── core/
+│   ├── data/
+│   ├── rl/
+│   ├── simulator/
+│   └── web/
+├── config/
+│   ├── leagues/
+│   └── seasons/
+├── docker-compose.yml
+├── Dockerfile
+└── pyproject.toml
 ```
 
------
+## Entry Scripts
 
-## 📄 License & Acknowledgments
-
-This project is open-sourced under the **MIT License**.
-
-A special thanks to the open-source community behind Python, Gym, PyTorch, Pandas, Flask, and the various data sources used in this project. All player projections and logic should be adapted to your specific league's rules and data sources.
+- `scripts/run_webapp.py`
+- `scripts/train.py`
+- `scripts/generate_projections.py`
+- `scripts/fetch_player_insight_search.py`
+- `scripts/synthesize_player_insights.py`
+- `scripts/generate_position_guide.py`

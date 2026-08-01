@@ -3,10 +3,14 @@ numpy
 torch
 gym
 matplotlib
-Flask
+fastapi
+uvicorn
 requests
 tqdm
 fuzzywuzzy 
 python-Levenshtein
 beautifulsoup4
 bokeh
+httpx
+google-genai
+pydantic>=2.0

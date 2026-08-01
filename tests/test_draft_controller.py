@@ -1,0 +1,678 @@
+"""Tests for shared draft orchestration."""
+
+from __future__ import annotations
+
+import json
+
+import numpy as np
+import pytest
+
+from draft_buddy.core import BotGM, DraftController
+
+
+class StubBot(BotGM):
+    """Minimal deterministic bot used for controller tests."""
+
+    def execute_pick(
+        self,
+        team_id: int,
+        available_player_ids: set,
+        player_catalog,
+        team_roster,
+        roster_structure: dict,
+        bench_maxes: dict,
+        can_draft_position_fn,
+        try_select_player_fn,
+        **kwargs,
+    ):
+        """Return the best available RB when possible."""
+        _ = (team_id, team_roster, roster_structure, bench_maxes, kwargs)
+        is_valid, player = try_select_player_fn(team_id, "RB", available_player_ids)
+        return player if is_valid else None
+
+
+class NullBot(BotGM):
+    """Bot that declines to make a selection."""
+
+    def execute_pick(
+        self,
+        team_id: int,
+        available_player_ids: set,
+        player_catalog,
+        team_roster,
+        roster_structure: dict,
+        bench_maxes: dict,
+        can_draft_position_fn,
+        try_select_player_fn,
+        **kwargs,
+    ):
+        """Always return no pick."""
+        _ = (
+            team_id,
+            available_player_ids,
+            player_catalog,
+            team_roster,
+            roster_structure,
+            bench_maxes,
+            can_draft_position_fn,
+            try_select_player_fn,
+            kwargs,
+        )
+        return None
+
+
+def test_draft_controller_drafts_and_undos_one_pick(config, draft_state, player_catalog, rules_engine) -> None:
+    """Verify the controller applies and undoes typed picks."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+    controller.draft_player(1)
+    controller.undo_last_pick()
+
+    assert draft_state.current_pick_index == 0 and draft_state.roster_for_team(1).player_ids == [] and 1 in draft_state.available_player_ids
+
+
+def test_draft_controller_transfers_player_between_teams(draft_controller, draft_state) -> None:
+    """Verify transferring a drafted player moves ownership without changing the pick."""
+    draft_controller.draft_player(1)
+
+    transfer = draft_controller.transfer_player(player_id=1, to_team_id=2)
+
+    assert transfer.from_team_id == 1
+    assert draft_state.roster_for_team(1).player_ids == []
+    assert draft_state.roster_for_team(2).player_ids == [1]
+    assert 1 not in draft_state.available_player_ids
+    assert draft_state.draft_history[0].team_id == 1
+
+
+def test_draft_controller_unified_undo_reverses_transfer_before_pick(draft_controller, draft_state) -> None:
+    """Verify undo uses chronological order across picks and transfers."""
+    draft_controller.draft_player(1)
+    draft_controller.transfer_player(player_id=1, to_team_id=2)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.roster_for_team(1).player_ids == [1]
+    assert draft_state.roster_for_team(2).player_ids == []
+    assert draft_state.current_pick_number == 2
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.roster_for_team(1).player_ids == []
+    assert 1 in draft_state.available_player_ids
+    assert draft_state.current_pick_number == 1
+
+
+def test_draft_controller_transfer_requires_drafted_player(draft_controller) -> None:
+    """Verify only rostered players can be transferred."""
+    with pytest.raises(ValueError, match="currently rostered"):
+        draft_controller.transfer_player(player_id=1, to_team_id=2)
+
+
+def test_draft_controller_transfer_rejects_same_slot(draft_controller) -> None:
+    """Verify transferring a player onto their current slot is rejected."""
+    draft_controller.draft_player(1)
+
+    with pytest.raises(ValueError, match="already in the destination slot"):
+        draft_controller.transfer_player(player_id=1, to_team_id=1, to_round=0)
+
+
+def test_draft_controller_simulates_bot_pick(config, draft_state, player_catalog, rules_engine) -> None:
+    """Verify bot-driven simulation delegates pick application to shared workflow."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+    drafted_player = controller.simulate_single_pick(manual_draft_teams=set())
+
+    assert drafted_player.position == "RB" and draft_state.draft_history[0].player_id == drafted_player.player_id
+
+
+def test_draft_controller_simulates_policy_bot_pick(config, draft_state, player_catalog, rules_engine) -> None:
+    """Verify explicit policy bot simulation bypasses configured team bots."""
+
+    class PolicyBot(BotGM):
+        """Pick QB to distinguish from the heuristic stub bot."""
+
+        def execute_pick(
+            self,
+            team_id: int,
+            available_player_ids: set,
+            player_catalog,
+            team_roster,
+            roster_structure: dict,
+            bench_maxes: dict,
+            can_draft_position_fn,
+            try_select_player_fn,
+            build_state_fn=None,
+            get_action_mask_fn=None,
+            **kwargs,
+        ):
+            """Return the best available QB."""
+            _ = (team_roster, roster_structure, bench_maxes, kwargs, build_state_fn, get_action_mask_fn)
+            _valid, player = try_select_player_fn(team_id, "QB", available_player_ids)
+            return player
+
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+    drafted_player = controller.simulate_single_pick(
+        manual_draft_teams=set(),
+        build_state_fn=lambda _team_id: np.array([1.0], dtype=np.float32),
+        get_action_mask_fn=controller.get_action_mask_for_team,
+        policy_bot=PolicyBot(),
+    )
+
+    assert drafted_player.position == "QB"
+
+
+def test_draft_controller_action_mask_is_boolean_vector(draft_controller) -> None:
+    """Verify action masks are typed and aligned with the action space."""
+    mask = draft_controller.get_action_mask_for_team(1)
+
+    assert isinstance(mask, np.ndarray) and mask.dtype == bool and mask.shape == (4,)
+
+
+def test_draft_controller_rejects_unknown_player_and_clears_override(draft_controller) -> None:
+    """Verify invalid player ids raise and clear any override team."""
+    draft_controller.set_override_team(3)
+
+    with pytest.raises(ValueError, match="is not available"):
+        draft_controller.draft_player(9999)
+
+    assert draft_controller.state.override_team_id is None
+
+
+def test_draft_controller_rejects_already_drafted_player_and_clears_override(draft_controller) -> None:
+    """Verify drafting an unavailable player restores normal turn order."""
+    draft_controller.draft_player(1)
+    draft_controller.set_override_team(3)
+
+    with pytest.raises(ValueError, match="is not available"):
+        draft_controller.draft_player(1)
+
+    assert draft_controller.state.override_team_id is None
+
+
+def test_draft_controller_rejects_illegal_position_and_clears_override(
+    draft_controller, draft_state, player_catalog
+) -> None:
+    """Verify illegal position picks raise and clear overrides."""
+    for player_id in [1, 2, 3, 4, 6, 7, 8]:
+        draft_state.add_player_to_roster(1, player_catalog.require(player_id))
+    draft_controller.set_override_team(1)
+
+    with pytest.raises(ValueError, match="cannot draft a QB"):
+        draft_controller.draft_player(5)
+
+    assert draft_controller.state.override_team_id is None
+
+
+def test_draft_controller_rejects_pick_after_draft_concludes(draft_controller) -> None:
+    """Verify manual picks stop once the draft cursor passes the order."""
+    draft_controller.state.current_pick_index = len(draft_controller.draft_order)
+
+    with pytest.raises(ValueError, match="draft has already concluded"):
+        draft_controller.draft_player(1)
+
+
+def test_draft_controller_undo_requires_existing_history(draft_controller) -> None:
+    """Verify undo fails when no prior pick exists."""
+    with pytest.raises(ValueError, match="No actions to undo"):
+        draft_controller.undo_last_pick()
+
+
+def test_draft_controller_save_and_load_round_trips_state(
+    tmp_path, config, draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify persisted state restores picks, rosters, and counts."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+    controller.draft_player(1)
+    controller.draft_player(6)
+    file_path = tmp_path / "draft_state.json"
+    controller.save_state(str(file_path))
+    restored_state = draft_state.__class__(
+        all_player_ids=set(player_catalog.player_ids),
+        draft_order=[1, 2, 3, 4],
+        roster_structure=config.draft.ROSTER_STRUCTURE,
+        bench_maxes=config.draft.BENCH_MAXES,
+        total_roster_size_per_team=sum(config.draft.ROSTER_STRUCTURE.values()) + config.draft.TOTAL_BENCH_SIZE,
+        agent_team_id=config.draft.AGENT_START_POSITION,
+    )
+    restored_controller = DraftController(
+        state=restored_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+
+    restored_controller.load_state(str(file_path))
+
+    assert json.dumps(restored_controller.state.to_dict(), sort_keys=True) == json.dumps(
+        controller.state.to_dict(), sort_keys=True
+    )
+
+
+def test_draft_controller_load_state_ignores_missing_file(draft_controller, tmp_path) -> None:
+    """Verify loading a missing file leaves the draft untouched."""
+    missing_path = tmp_path / "missing.json"
+    original_state = draft_controller.state.to_dict()
+
+    draft_controller.load_state(str(missing_path))
+
+    assert draft_controller.state.to_dict() == original_state
+
+
+def test_draft_controller_reset_clears_cached_bots(draft_state, player_catalog, rules_engine) -> None:
+    """Verify reset drops cached bots and refreshes the player pool."""
+    call_log: list[int] = []
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda team_id: call_log.append(team_id) or StubBot(),
+    )
+    controller._get_bot(2)
+
+    controller.reset([4, 3, 2, 1], agent_team_id=4)
+    controller._get_bot(2)
+
+    assert call_log == [2, 2]
+
+
+def test_draft_controller_simulate_single_pick_rejects_manual_team(draft_controller) -> None:
+    """Verify simulation stops when the active team is manual."""
+    with pytest.raises(ValueError, match="manual team's turn"):
+        draft_controller.simulate_single_pick(manual_draft_teams={1})
+
+
+def test_draft_controller_simulate_single_pick_rejects_completed_draft(draft_controller) -> None:
+    """Verify simulation rejects picks after the draft ends."""
+    draft_controller.state.current_pick_index = len(draft_controller.draft_order)
+
+    with pytest.raises(ValueError, match="draft has already concluded"):
+        draft_controller.simulate_single_pick(manual_draft_teams=set())
+
+
+def test_draft_controller_simulate_remaining_advances_until_completion(
+    draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify round-gap auto fill snaps the cursor when the board walk finishes."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+
+    controller.simulate_remaining(manual_draft_teams=set())
+
+    assert controller.current_pick_index == len(controller.draft_order)
+
+
+def test_draft_controller_simulate_remaining_survives_transfer_inflation(
+    draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify Auto completes after a transfer fills a team beyond snake debt."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+    controller.draft_player(1)
+    controller.transfer_player(player_id=1, to_team_id=2)
+    destination_cap = draft_state.total_roster_size_per_team
+
+    controller.simulate_remaining(manual_draft_teams=set())
+
+    assert (
+        controller.current_pick_index == len(controller.draft_order)
+        and draft_state.roster_for_team(2).size <= destination_cap
+    )
+
+
+def test_draft_controller_simulate_remaining_survives_override_inflation(
+    draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify Auto completes after an override gives one team an extra pick."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+    controller.draft_player(2)
+    controller.set_override_team(1)
+    controller.draft_player(6)
+    team_one_cap = draft_state.total_roster_size_per_team
+
+    controller.simulate_remaining(manual_draft_teams=set())
+
+    assert (
+        controller.current_pick_index == len(controller.draft_order)
+        and draft_state.roster_for_team(1).size <= team_one_cap
+    )
+
+
+def test_draft_controller_apply_pick_is_atomic_when_visual_board_is_full(
+    draft_controller, draft_state, player_catalog
+) -> None:
+    """Verify a full visual column rejects apply_pick without mutating state."""
+    roster_size = draft_state.total_roster_size_per_team
+    for round_index in range(roster_size):
+        draft_state.place_player_visual(1, round_index, 1000 + round_index)
+    history_before = len(draft_state.draft_history)
+    available_before = set(draft_state.available_player_ids)
+
+    with pytest.raises(ValueError, match="no empty visual board slots"):
+        draft_controller.apply_pick(team_id=1, player_id=1, is_manual_pick=False)
+
+    assert (
+        draft_state.roster_for_team(1).player_ids == []
+        and len(draft_state.draft_history) == history_before
+        and draft_state.available_player_ids == available_before
+        and 1 in draft_state.available_player_ids
+    )
+
+
+def test_draft_controller_apply_pick_places_into_explicit_visual_round(
+    draft_controller, draft_state
+) -> None:
+    """Verify apply_pick can target a non-lowest empty visual round."""
+    draft_controller.apply_pick(team_id=1, player_id=1, is_manual_pick=False, visual_round=2)
+
+    assert (
+        draft_state.cell_player_id(1, 2) == 1
+        and draft_state.cell_player_id(1, 0) is None
+        and draft_state.roster_for_team(1).player_ids == [1]
+    )
+
+
+def test_draft_controller_simulate_remaining_skips_manual_teams(
+    draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify Auto leaves manual-team cells empty while finishing other teams."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: StubBot(),
+    )
+
+    controller.simulate_remaining(manual_draft_teams={1})
+
+    assert (
+        controller.current_pick_index == len(controller.draft_order)
+        and draft_state.roster_for_team(1).player_ids == []
+        and draft_state.first_empty_round(1) == 0
+    )
+
+
+def test_draft_controller_try_select_player_uses_provided_candidate_ids(draft_controller) -> None:
+    """Verify player selection honors an explicit candidate pool."""
+    is_valid, player = draft_controller.try_select_player_for_team(1, "QB", {5, 13})
+
+    assert is_valid and player.player_id == 5
+
+
+def test_draft_controller_try_select_player_rejects_disallowed_position(
+    draft_controller, draft_state, player_catalog
+) -> None:
+    """Verify selection fails when the team cannot legally take the position."""
+    for player_id in [1, 5, 9, 13, 2, 3, 4]:
+        draft_state.add_player_to_roster(1, player_catalog.require(player_id))
+    is_valid, player = draft_controller.try_select_player_for_team(1, "QB")
+
+    assert is_valid is False and player is None
+
+
+def test_draft_controller_uses_override_team_for_manual_pick(draft_controller) -> None:
+    """Verify override team picks are applied to the selected team."""
+    draft_controller.set_override_team(3)
+
+    draft_controller.draft_player(1)
+
+    assert draft_controller.state.draft_history[-1].team_id == 3
+
+
+def test_draft_controller_set_override_team_clears_when_selecting_snake_team(draft_controller) -> None:
+    """Verify selecting the natural snake team removes an active override."""
+    snake_team_id = draft_controller.draft_order[draft_controller.current_pick_index]
+
+    draft_controller.set_override_team(3)
+    assert draft_controller.state.override_team_id == 3
+
+    draft_controller.set_override_team(snake_team_id)
+    assert draft_controller.state.override_team_id is None
+    assert draft_controller.team_on_clock == snake_team_id
+
+
+def test_draft_controller_computes_zero_baseline_when_position_is_empty(
+    draft_controller, draft_state, player_catalog
+) -> None:
+    """Verify empty positional pools produce zero-valued baselines."""
+    for player_id in [1, 5, 9, 13]:
+        draft_state.available_player_ids.remove(player_id)
+    baselines = draft_controller.get_positional_baselines()
+
+    assert baselines["QB"] == 0.0
+
+
+def test_draft_controller_smooths_positional_baseline_from_nearby_players(draft_controller) -> None:
+    """Verify baselines use the neighboring replacement-level players."""
+    baselines = draft_controller.get_positional_baselines()
+
+    assert baselines["RB"] == pytest.approx((205.0 + 190.0 + 190.0) / 3.0)
+
+
+def test_draft_controller_falls_back_to_random_pick_when_bot_returns_none(
+    monkeypatch, draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify controller uses the random fallback when a bot declines to pick."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+        bot_factory=lambda _team_id: NullBot(),
+    )
+    monkeypatch.setattr("random.choice", lambda players: players[0])
+
+    drafted_player = controller.simulate_single_pick(manual_draft_teams=set())
+
+    assert drafted_player.player_id == 1
+
+
+def test_draft_controller_pick_fills_first_empty_visual_slot(draft_controller, draft_state) -> None:
+    """Verify picks place players into the first empty visual board cell."""
+    draft_controller.draft_player(1)
+
+    assert draft_state.visual_board[1][0] == 1
+
+
+def test_draft_controller_transfer_to_round_leaves_visual_gap(draft_controller, draft_state) -> None:
+    """Verify targeted transfers can leave empty visual rounds behind."""
+    draft_controller.draft_player(1)
+
+    draft_controller.transfer_player(player_id=1, to_team_id=2, to_round=2)
+
+    assert draft_state.visual_board[1][0] is None
+    assert draft_state.visual_board[2][2] == 1
+    assert draft_state.roster_for_team(2).player_ids == [1]
+
+
+def test_draft_controller_same_team_visual_reposition(draft_controller, draft_state) -> None:
+    """Verify same-team moves update only visual placement."""
+    draft_controller.draft_player(1)
+
+    draft_controller.transfer_player(player_id=1, to_team_id=1, to_round=3)
+
+    assert draft_state.roster_for_team(1).player_ids == [1]
+    assert draft_state.visual_board[1][0] is None
+    assert draft_state.visual_board[1][3] == 1
+
+
+def test_draft_controller_transfer_rejects_occupied_destination(draft_controller) -> None:
+    """Verify transfers never overwrite an occupied visual cell."""
+    draft_controller.draft_player(1)
+    draft_controller.draft_player(2)
+
+    with pytest.raises(ValueError, match="occupied"):
+        draft_controller.transfer_player(player_id=1, to_team_id=2, to_round=0)
+
+
+def test_draft_controller_swap_players_across_teams(draft_controller, draft_state) -> None:
+    """Verify swaps exchange roster membership and visual coordinates."""
+    draft_controller.draft_player(1)
+    draft_controller.draft_player(2)
+
+    draft_controller.swap_players(1, 2)
+
+    assert draft_state.roster_for_team(1).player_ids == [2]
+    assert draft_state.roster_for_team(2).player_ids == [1]
+    assert draft_state.visual_board[1][0] == 2
+    assert draft_state.visual_board[2][0] == 1
+
+
+def test_draft_controller_swap_players_same_team(draft_controller, draft_state) -> None:
+    """Verify same-team swaps only exchange visual slots."""
+    draft_controller.draft_player(1)
+    draft_controller.set_override_team(1)
+    draft_controller.draft_player(2)
+
+    draft_controller.transfer_player(player_id=2, to_team_id=1, to_round=2)
+    draft_controller.swap_players(1, 2)
+
+    assert set(draft_state.roster_for_team(1).player_ids) == {1, 2}
+    assert draft_state.visual_board[1][0] == 2
+    assert draft_state.visual_board[1][2] == 1
+
+
+def test_draft_controller_undo_restores_transfer_visual_cell(draft_controller, draft_state) -> None:
+    """Verify undo restores transfer visual coordinates and ownership."""
+    draft_controller.draft_player(1)
+    draft_controller.transfer_player(player_id=1, to_team_id=2, to_round=1)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.roster_for_team(1).player_ids == [1]
+    assert draft_state.visual_board[1][0] == 1
+    assert draft_state.visual_board[2][1] is None
+
+
+def test_draft_controller_undo_restores_swap(draft_controller, draft_state) -> None:
+    """Verify undo reverses an atomic player swap."""
+    draft_controller.draft_player(1)
+    draft_controller.draft_player(2)
+    draft_controller.swap_players(1, 2)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.roster_for_team(1).player_ids == [1]
+    assert draft_state.roster_for_team(2).player_ids == [2]
+    assert draft_state.visual_board[1][0] == 1
+    assert draft_state.visual_board[2][0] == 2
+
+
+def test_draft_controller_load_recovers_from_prev_when_primary_corrupt(
+    tmp_path, config, draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify load recovers from the rolling previous file and sets a warning."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+    controller.draft_player(1)
+    primary = tmp_path / "draft_state.json"
+    prev = tmp_path / "draft_state.prev.json"
+    controller.save_state(str(primary), prev_path=str(prev))
+    controller.save_state(str(primary), prev_path=str(prev))
+    primary.write_text("{corrupt", encoding="utf-8")
+
+    restored_state = draft_state.__class__(
+        all_player_ids=set(player_catalog.player_ids),
+        draft_order=[1, 2, 3, 4],
+        roster_structure=config.draft.ROSTER_STRUCTURE,
+        bench_maxes=config.draft.BENCH_MAXES,
+        total_roster_size_per_team=sum(config.draft.ROSTER_STRUCTURE.values())
+        + config.draft.TOTAL_BENCH_SIZE,
+        agent_team_id=config.draft.AGENT_START_POSITION,
+    )
+    restored = DraftController(
+        state=restored_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+
+    restored.load_state(str(primary), prev_path=str(prev))
+
+    assert restored.state.draft_history[0].player_id == 1
+    assert restored.load_warning is not None and "recovered from" in restored.load_warning
+
+
+def test_draft_controller_save_writes_prev_copy(
+    tmp_path, draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify durable save leaves a previous copy before overwrite."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+    primary = tmp_path / "draft_state.json"
+    prev = tmp_path / "draft_state.prev.json"
+    controller.draft_player(1)
+    controller.save_state(str(primary), prev_path=str(prev))
+    controller.draft_player(2)
+    controller.save_state(str(primary), prev_path=str(prev))
+
+    assert prev.is_file() and primary.is_file()
+    assert not (tmp_path / "draft_state.json.tmp").exists()
+
+
+def test_draft_controller_undo_transfer_restores_override(draft_controller, draft_state) -> None:
+    """Verify undoing a transfer restores the prior override team id."""
+    draft_controller.draft_player(1)
+    draft_controller.set_override_team(3)
+    draft_controller.transfer_player(player_id=1, to_team_id=2, to_round=1)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.override_team_id == 3
+
+
+def test_draft_controller_undo_swap_restores_override(draft_controller, draft_state) -> None:
+    """Verify undoing a swap restores the prior override team id."""
+    draft_controller.draft_player(1)
+    draft_controller.draft_player(2)
+    draft_controller.set_override_team(4)
+    draft_controller.swap_players(1, 2)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.override_team_id == 4
