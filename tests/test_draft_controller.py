@@ -593,3 +593,86 @@ def test_draft_controller_undo_restores_swap(draft_controller, draft_state) -> N
     assert draft_state.roster_for_team(2).player_ids == [2]
     assert draft_state.visual_board[1][0] == 1
     assert draft_state.visual_board[2][0] == 2
+
+
+def test_draft_controller_load_recovers_from_prev_when_primary_corrupt(
+    tmp_path, config, draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify load recovers from the rolling previous file and sets a warning."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+    controller.draft_player(1)
+    primary = tmp_path / "draft_state.json"
+    prev = tmp_path / "draft_state.prev.json"
+    controller.save_state(str(primary), prev_path=str(prev))
+    controller.save_state(str(primary), prev_path=str(prev))
+    primary.write_text("{corrupt", encoding="utf-8")
+
+    restored_state = draft_state.__class__(
+        all_player_ids=set(player_catalog.player_ids),
+        draft_order=[1, 2, 3, 4],
+        roster_structure=config.draft.ROSTER_STRUCTURE,
+        bench_maxes=config.draft.BENCH_MAXES,
+        total_roster_size_per_team=sum(config.draft.ROSTER_STRUCTURE.values())
+        + config.draft.TOTAL_BENCH_SIZE,
+        agent_team_id=config.draft.AGENT_START_POSITION,
+    )
+    restored = DraftController(
+        state=restored_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+
+    restored.load_state(str(primary), prev_path=str(prev))
+
+    assert restored.state.draft_history[0].player_id == 1
+    assert restored.load_warning is not None and "recovered from" in restored.load_warning
+
+
+def test_draft_controller_save_writes_prev_copy(
+    tmp_path, draft_state, player_catalog, rules_engine
+) -> None:
+    """Verify durable save leaves a previous copy before overwrite."""
+    controller = DraftController(
+        state=draft_state,
+        player_catalog=player_catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "QB", 1: "RB", 2: "WR", 3: "TE"},
+    )
+    primary = tmp_path / "draft_state.json"
+    prev = tmp_path / "draft_state.prev.json"
+    controller.draft_player(1)
+    controller.save_state(str(primary), prev_path=str(prev))
+    controller.draft_player(2)
+    controller.save_state(str(primary), prev_path=str(prev))
+
+    assert prev.is_file() and primary.is_file()
+    assert not (tmp_path / "draft_state.json.tmp").exists()
+
+
+def test_draft_controller_undo_transfer_restores_override(draft_controller, draft_state) -> None:
+    """Verify undoing a transfer restores the prior override team id."""
+    draft_controller.draft_player(1)
+    draft_controller.set_override_team(3)
+    draft_controller.transfer_player(player_id=1, to_team_id=2, to_round=1)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.override_team_id == 3
+
+
+def test_draft_controller_undo_swap_restores_override(draft_controller, draft_state) -> None:
+    """Verify undoing a swap restores the prior override team id."""
+    draft_controller.draft_player(1)
+    draft_controller.draft_player(2)
+    draft_controller.set_override_team(4)
+    draft_controller.swap_players(1, 2)
+
+    draft_controller.undo_last_pick()
+
+    assert draft_state.override_team_id == 4

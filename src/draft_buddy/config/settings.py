@@ -55,6 +55,8 @@ class PathsConfig:
     PLAYER_DATA_CSV: str = field(init=False)
     PLAYER_DATA_TEMPLATE: str = ""
     DRAFT_STATE_FILE: str = field(init=False)
+    DRAFT_STATE_PREV_FILE: str = field(init=False)
+    SAVED_STATES_DIR: str = field(init=False)
 
     def __post_init__(self) -> None:
         """Derive standard paths from the repository base directory."""
@@ -64,10 +66,13 @@ class PathsConfig:
         if not self.PLAYER_DATA_TEMPLATE:
             self.PLAYER_DATA_CSV = os.path.join(self.DATA_DIR, "generated_player_data.csv")
         self.DRAFT_STATE_FILE = os.path.join(self.DATA_DIR, "draft_state.json")
+        self.DRAFT_STATE_PREV_FILE = os.path.join(self.DATA_DIR, "draft_state.prev.json")
+        self.SAVED_STATES_DIR = os.path.join(self.BASE_DIR, "saved_states")
 
         os.makedirs(self.DATA_DIR, exist_ok=True)
         os.makedirs(self.MODELS_DIR, exist_ok=True)
         os.makedirs(self.LOGS_DIR, exist_ok=True)
+        os.makedirs(self.SAVED_STATES_DIR, exist_ok=True)
 
 
 @dataclass

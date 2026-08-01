@@ -165,6 +165,7 @@ repomix-output.xml
 
 **/.DS_Store
 data/draft_state.json
+data/draft_state.prev.json
 data/cache/
 data/generated/
 data/leagues/

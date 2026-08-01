@@ -48,6 +48,9 @@ def config(tmp_path: Path) -> Config:
     config.paths.LOGS_DIR = str(logs_dir)
     config.paths.PLAYER_DATA_CSV = str(data_dir / "generated_player_data.csv")
     config.paths.DRAFT_STATE_FILE = str(data_dir / "draft_state.json")
+    config.paths.DRAFT_STATE_PREV_FILE = str(data_dir / "draft_state.prev.json")
+    config.paths.SAVED_STATES_DIR = str(tmp_path / "saved_states")
+    Path(config.paths.SAVED_STATES_DIR).mkdir(exist_ok=True)
 
     config.draft.NUM_TEAMS = 4
     config.draft.AGENT_START_POSITION = 1
@@ -251,7 +254,7 @@ def fake_session(player_catalog: PlayerCatalog):
             "team_id": team_id,
             "ignore": ignore_player_ids or [],
         },
-        save_state=lambda file_path: None,
+        save_state=lambda file_path=None: None,
         get_positional_baselines=lambda: {"QB": 250.0, "RB": 200.0, "WR": 180.0, "TE": 120.0},
     )
     return session

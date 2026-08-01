@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import random
 from typing import Callable, Optional
@@ -10,7 +9,13 @@ from typing import Callable, Optional
 import numpy as np
 
 from draft_buddy.core.bot_gm import BotGM
+from draft_buddy.core.draft_invariants import assert_invariants
 from draft_buddy.core.draft_state import DraftState
+from draft_buddy.core.draft_state_store import (
+    iter_load_candidates,
+    read_json_dict,
+    save_draft_state,
+)
 from draft_buddy.core.entities import DraftAction, Pick, Player, PlayerCatalog, Swap, Transfer
 from draft_buddy.core.rules_engine import RulesEngine
 
@@ -46,6 +51,24 @@ class DraftController:
         self.action_to_position = dict(action_to_position)
         self._bot_factory = bot_factory
         self._bots: dict[int, BotGM] = {}
+        self._load_warning: Optional[str] = None
+
+    @property
+    def load_warning(self) -> Optional[str]:
+        """Return the most recent load-recovery warning, if any."""
+        return self._load_warning
+
+    def consume_load_warning(self) -> Optional[str]:
+        """Return and clear the most recent load-recovery warning.
+
+        Returns
+        -------
+        str or None
+            Warning text when recovery was used on the last load.
+        """
+        warning = self._load_warning
+        self._load_warning = None
+        return warning
 
     @property
     def available_player_ids(self) -> set[int]:
@@ -86,22 +109,74 @@ class DraftController:
         self.state.reset(set(self.player_catalog.player_ids), draft_order, agent_team_id)
         self._bots = {}
 
-    def save_state(self, file_path: str) -> None:
-        """Persist state atomically to disk."""
-        payload = self.state.to_dict()
-        temp_file_path = f"{file_path}.tmp"
-        with open(temp_file_path, "w", encoding="utf-8") as file_obj:
-            json.dump(payload, file_obj, indent=2)
-        os.replace(temp_file_path, file_path)
+    def save_state(self, file_path: str, prev_path: Optional[str] = None) -> None:
+        """Persist state atomically to disk with an optional rolling previous copy.
 
-    def load_state(self, file_path: str) -> None:
-        """Load state from disk when a saved state exists."""
-        if not os.path.exists(file_path):
+        Parameters
+        ----------
+        file_path : str
+            Primary draft state path.
+        prev_path : str, optional
+            Rolling previous-file path updated before overwrite.
+        """
+        save_draft_state(file_path, self.state.to_dict(), prev_path=prev_path)
+
+    def load_state(
+        self,
+        file_path: str,
+        prev_path: Optional[str] = None,
+        saved_states_dir: Optional[str] = None,
+    ) -> None:
+        """Load state from disk with primary → prev → archive recovery.
+
+        Parameters
+        ----------
+        file_path : str
+            Primary draft state path.
+        prev_path : str, optional
+            Rolling previous-file path.
+        saved_states_dir : str, optional
+            Timestamped archive directory.
+
+        Raises
+        ------
+        ValueError
+            When candidate files exist but none load with valid invariants.
+        """
+        self._load_warning = None
+        candidates = [
+            (path, is_primary)
+            for path, is_primary in iter_load_candidates(file_path, prev_path, saved_states_dir)
+            if os.path.isfile(path)
+        ]
+        if not candidates:
             return
-        with open(file_path, "r", encoding="utf-8") as file_obj:
-            self.state.load_from_dict(json.load(file_obj))
-        for team_id in list(self.team_rosters.keys()):
-            self.state.recalculate_roster_counts(team_id, self.player_catalog.require)
+
+        errors: list[str] = []
+        for path, is_primary in candidates:
+            try:
+                payload = read_json_dict(path)
+                self.state.load_from_dict(payload)
+                for team_id in list(self.team_rosters.keys()):
+                    self.state.recalculate_roster_counts(team_id, self.player_catalog.require)
+                assert_invariants(self.state)
+                if not is_primary:
+                    warning = (
+                        "Draft state primary unreadable or invalid; "
+                        f"recovered from {os.path.basename(path)}."
+                    )
+                    print(f"WARNING: {warning}")
+                    self._load_warning = warning
+                return
+            except (ValueError, OSError, TypeError, KeyError) as error:
+                errors.append(f"{path}: {error}")
+                continue
+
+        detail = "; ".join(errors) if errors else "no readable candidates"
+        message = f"Could not load draft state from any candidate ({detail})."
+        print(f"WARNING: {message}")
+        self._load_warning = message
+        raise ValueError(message)
 
     def can_draft_position(self, team_id: int, position: str, is_manual: bool = False) -> bool:
         """Return whether a team can draft a position."""
@@ -601,6 +676,7 @@ class DraftController:
         self.state.place_player_visual(
             transfer.from_team_id, transfer.from_round, transfer.player_id
         )
+        self.state.override_team_id = transfer.previous_override_team_id
         self.state.pop_transfer()
         self.state.pop_action()
 
@@ -626,6 +702,7 @@ class DraftController:
             self.state.recalculate_roster_counts(swap.team_id_2, self.player_catalog.require)
         self.state.place_player_visual(swap.team_id_1, swap.round_1, swap.player_id_1)
         self.state.place_player_visual(swap.team_id_2, swap.round_2, swap.player_id_2)
+        self.state.override_team_id = swap.previous_override_team_id
         self.state.pop_swap()
         self.state.pop_action()
 

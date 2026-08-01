@@ -40,6 +40,8 @@ def test_paths_config_defaults_to_repository_root() -> None:
     assert paths.MODELS_DIR == os.path.join(paths.BASE_DIR, "models")
     assert paths.LOGS_DIR == os.path.join(paths.BASE_DIR, "logs")
     assert paths.DATA_DIR == os.path.join(paths.BASE_DIR, "data")
+    assert paths.DRAFT_STATE_PREV_FILE == os.path.join(paths.DATA_DIR, "draft_state.prev.json")
+    assert paths.SAVED_STATES_DIR == os.path.join(paths.BASE_DIR, "saved_states")
 
 
 def test_paths_config_post_init_creates_directories(tmp_path: Path) -> None:
@@ -49,3 +51,4 @@ def test_paths_config_post_init_creates_directories(tmp_path: Path) -> None:
     paths.__post_init__()
 
     assert Path(paths.DATA_DIR).is_dir() and Path(paths.MODELS_DIR).is_dir() and Path(paths.LOGS_DIR).is_dir()
+    assert Path(paths.SAVED_STATES_DIR).is_dir()
