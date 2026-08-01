@@ -1,7 +1,7 @@
 {
   "draft": {
     "AGENT_START_POSITION": 5,
-    "RANDOMIZE_AGENT_START_POSITION": true
+    "RANDOMIZE_AGENT_START_POSITION": false
   },
   "season": {
     "season": 2026,

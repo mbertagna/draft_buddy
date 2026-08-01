@@ -82,6 +82,15 @@ def test_team_manager_mapping_uses_integer_keys() -> None:
     assert config.draft.TEAM_MANAGER_MAPPING[10] == "Team Sully LLC"
 
 
+def test_redraft_nbfl_team_manager_mapping_uses_lottery_order() -> None:
+    """Verify Redraft NBFL draft order matches the 2026 lottery."""
+    config = load_runtime_config(league_id="redraft_nbfl_12", season=2026)
+
+    assert config.draft.TEAM_MANAGER_MAPPING[1] == "Joey"
+    assert config.draft.TEAM_MANAGER_MAPPING[5] == "Michael"
+    assert config.draft.TEAM_MANAGER_MAPPING[12] == "Frank"
+
+
 def test_missing_league_profile_raises_file_not_found() -> None:
     """Verify unknown league ids fail fast."""
     with pytest.raises(FileNotFoundError):
