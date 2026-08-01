@@ -156,6 +156,21 @@ docker compose run --rm insights-synthesize
 
 Valyu search applies publication date windows (`outlook`/`role`: March 1 of the draft year; `injury_recovery`: last 90 days) and a `0.7` relevance threshold. Synthesis then re-ranks cached snippets by relevance and recency before calling the LLM.
 
+**Team outlooks (optional):**
+
+Both scripts also support enriching **team-level** outlooks (offense/defense ability, schedule hardness, high-level narrative) for all 32 NFL teams, using the same search/synthesis architecture. Pass `--scope teams` (team data only) or `--scope both` (players and teams in one run); the default `--scope players` preserves existing behavior:
+
+```bash
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --scope both
+docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --scope both
+```
+
+Team data is cached and exported to entirely separate directories from player data, so running `--scope teams` (or `both`) never interferes with player insight loading.
+
+Search providers sometimes omit a structured publish date for otherwise-current content. When a snippet has no date, it is only kept if its title/text mentions the draft year (e.g. `2026`); this fallback applies to both player and team pipelines and replaces the previous behavior of always keeping undated snippets.
+
+**League-wide roundup fetch:** `--scope teams`/`both` also runs four broad, non-team-specific queries once per run (not once per team) covering outlook/offense/defense/schedule for all 32 teams. This captures the same "best/worst case for all 32 teams"-style roundup articles that otherwise get redundantly re-fetched — and crowd out team-specific sources — in every individual team's query. At synthesis time, each team pulls in any league-wide snippet that mentions it by name (full name, nickname, or abbreviation), tagged `[multi-team roundup]` in the prompt so the LLM extracts only that team's portion. This cache lives at `data/cache/insights/league_search/` and is skipped automatically on subsequent runs unless `--force` is passed.
+
 After upgrading the insights pipeline, **re-fetch search caches** so results include relevance scores and date windows:
 
 ```bash
@@ -174,11 +189,20 @@ docker compose run --rm insights-synthesize python scripts/synthesize_player_ins
 
 **Outputs:**
 
+Player data (unchanged):
+
 - Search cache: `data/cache/insights/search/{sleeper_id}/`
 - Synthesis cache: `data/cache/insights/synthesis/{sleeper_id}.json`
 - Merged insights export: `data/insights/exports/player_insights_{year}_{timestamp}.json`
 
-Each synthesis run writes a new timestamped export file. The webapp loads the newest export by filename timestamp at startup. Legacy undated `data/player_insights_{year}.json` files are used as a fallback when no exports exist yet.
+Team data (fully separate directories, `--scope teams`/`both`):
+
+- Search cache: `data/cache/insights/team_search/{team_abbr}/`
+- League-wide roundup cache (shared across all teams): `data/cache/insights/league_search/`
+- Synthesis cache: `data/cache/insights/team_synthesis/{team_abbr}.json`
+- Merged outlooks export: `data/insights/team_exports/team_insights_{year}_{timestamp}.json`
+
+Each synthesis run writes a new timestamped export file. The webapp loads the newest player export by filename timestamp at startup. Legacy undated `data/player_insights_{year}.json` files are used as a fallback when no exports exist yet. Team outlooks are not yet wired into the live advisor.
 
 **Partial re-runs:**
 
@@ -187,6 +211,10 @@ docker compose run --rm insights-search python scripts/fetch_player_insight_sear
 docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --force
 docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --search-provider google --force
 docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --force
+
+# Team outlooks only, re-fetch/re-synthesize
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --scope teams --force
+docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --scope teams --force
 ```
 
 ### Live Draft Assistant

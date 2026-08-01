@@ -8,13 +8,19 @@ from pathlib import Path
 
 from draft_buddy.data.cache_paths import (
     adp_cache_dir,
+    insights_league_search_cache_dir,
     insights_search_cache_dir,
     insights_synthesis_cache_dir,
+    insights_team_search_cache_dir,
+    insights_team_synthesis_cache_dir,
     nflverse_cache_dir,
     player_insights_exports_dir,
     player_insights_output_path,
     resolve_latest_player_insights_path,
+    resolve_latest_team_insights_path,
     sleeper_cache_dir,
+    team_insights_exports_dir,
+    team_insights_output_path,
 )
 from draft_buddy.data.insights.schemas import (
     Confidence,
@@ -111,3 +117,54 @@ def test_resolve_latest_player_insights_path_falls_back_to_legacy_export(
     resolved = resolve_latest_player_insights_path(str(tmp_path))
 
     assert resolved == str(legacy)
+
+
+def test_insights_league_search_cache_dir_is_separate_from_team_search() -> None:
+    """Verify the league-wide search cache path is under cache/insights/league_search."""
+    assert insights_league_search_cache_dir("./data") == "./data/cache/insights/league_search"
+
+
+def test_insights_team_search_cache_dir_is_separate_from_player_search() -> None:
+    """Verify the team search cache path is under cache/insights/team_search."""
+    assert insights_team_search_cache_dir("./data") == "./data/cache/insights/team_search"
+
+
+def test_insights_team_synthesis_cache_dir_is_separate_from_player_synthesis() -> None:
+    """Verify the team synthesis cache path is under cache/insights/team_synthesis."""
+    assert insights_team_synthesis_cache_dir("./data") == "./data/cache/insights/team_synthesis"
+
+
+def test_team_insights_exports_dir_is_separate_from_player_exports() -> None:
+    """Verify team insights exports live under data/insights/team_exports."""
+    assert team_insights_exports_dir("./data") == "./data/insights/team_exports"
+
+
+def test_team_insights_output_path_includes_year_and_timestamp() -> None:
+    """Verify merged team insights output path includes year and UTC timestamp."""
+    generated_at = datetime(2026, 7, 4, 17, 7, 47, tzinfo=timezone.utc)
+    path = team_insights_output_path("./data", 2026, generated_at)
+
+    assert path == "./data/insights/team_exports/team_insights_2026_20260704T170747Z.json"
+
+
+def test_resolve_latest_team_insights_path_picks_newest_timestamped_export(
+    tmp_path: Path,
+) -> None:
+    """Verify resolve_latest_team_insights_path selects the newest export by filename."""
+    exports_dir = tmp_path / "insights" / "team_exports"
+    exports_dir.mkdir(parents=True)
+    older = exports_dir / "team_insights_2026_20260704T120000Z.json"
+    newer = exports_dir / "team_insights_2026_20260704T170747Z.json"
+    older.write_text("{}", encoding="utf-8")
+    newer.write_text("{}", encoding="utf-8")
+
+    resolved = resolve_latest_team_insights_path(str(tmp_path))
+
+    assert resolved == str(newer)
+
+
+def test_resolve_latest_team_insights_path_returns_none_when_missing(tmp_path: Path) -> None:
+    """Verify resolve_latest_team_insights_path returns None when no exports exist."""
+    resolved = resolve_latest_team_insights_path(str(tmp_path))
+
+    assert resolved is None

@@ -16,6 +16,10 @@ PLAYER_INSIGHTS_EXPORT_PATTERN = re.compile(
     r"^player_insights_(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.json$"
 )
 
+TEAM_INSIGHTS_EXPORT_PATTERN = re.compile(
+    r"^team_insights_(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.json$"
+)
+
 POSITION_GUIDE_EXPORT_PATTERN = re.compile(
     r"^position_guide_(?P<num_teams>\d+)teams_slot(?P<slot>\d+)_"
     r"(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.(?P<ext>json|html)$"
@@ -167,13 +171,15 @@ def player_insights_output_path(
     return os.path.join(player_insights_exports_dir(data_root), filename)
 
 
-def _resolve_latest_timestamped_export(exports_dir: str) -> str | None:
-    """Return the newest timestamped insights export in ``exports_dir``.
+def _resolve_latest_timestamped_export(exports_dir: str, pattern: re.Pattern[str]) -> str | None:
+    """Return the newest timestamped export in ``exports_dir`` matching ``pattern``.
 
     Parameters
     ----------
     exports_dir : str
         Directory containing timestamped export files.
+    pattern : re.Pattern[str]
+        Compiled filename pattern with a ``timestamp`` capture group.
 
     Returns
     -------
@@ -186,7 +192,7 @@ def _resolve_latest_timestamped_export(exports_dir: str) -> str | None:
     newest_path: str | None = None
     newest_timestamp: str | None = None
     for filename in os.listdir(exports_dir):
-        match = PLAYER_INSIGHTS_EXPORT_PATTERN.match(filename)
+        match = pattern.match(filename)
         if match is None:
             continue
         timestamp = match.group("timestamp")
@@ -343,7 +349,128 @@ def resolve_latest_player_insights_path(data_root: str) -> str | None:
     str | None
         Full path to the newest insights file, or ``None`` when none exist.
     """
-    latest_export = _resolve_latest_timestamped_export(player_insights_exports_dir(data_root))
+    latest_export = _resolve_latest_timestamped_export(
+        player_insights_exports_dir(data_root), PLAYER_INSIGHTS_EXPORT_PATTERN
+    )
     if latest_export is not None:
         return latest_export
     return _resolve_latest_legacy_export(data_root)
+
+
+def insights_league_search_cache_dir(data_root: str) -> str:
+    """Return the search cache directory for league-wide (all-32-teams) queries.
+
+    League-wide roundup articles (best/worst-case previews, division
+    rankings, strength-of-schedule breakdowns) are fetched once per run
+    here instead of once per team, then matched against each team by name
+    at synthesis time.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+
+    Returns
+    -------
+    str
+        Path to the league-wide search cache directory.
+    """
+    return os.path.join(data_root, "cache", "insights", "league_search")
+
+
+def insights_team_search_cache_dir(data_root: str) -> str:
+    """Return the search cache directory for team insight enrichment.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+
+    Returns
+    -------
+    str
+        Path to the team search cache directory, kept separate from the
+        player search cache so team data never interferes with player
+        loading.
+    """
+    return os.path.join(data_root, "cache", "insights", "team_search")
+
+
+def insights_team_synthesis_cache_dir(data_root: str) -> str:
+    """Return the synthesis cache directory for team insight enrichment.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+
+    Returns
+    -------
+    str
+        Path to the team synthesis cache directory, kept separate from the
+        player synthesis cache.
+    """
+    return os.path.join(data_root, "cache", "insights", "team_synthesis")
+
+
+def team_insights_exports_dir(data_root: str) -> str:
+    """Return the directory for timestamped merged team insights exports.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+
+    Returns
+    -------
+    str
+        Path to the team insights exports directory, kept separate from
+        ``data/insights/exports`` so team files never interfere with
+        ``resolve_latest_player_insights_path``.
+    """
+    return os.path.join(data_root, "insights", "team_exports")
+
+
+def team_insights_output_path(
+    data_root: str,
+    year: int,
+    generated_at: datetime,
+) -> str:
+    """Return the path for a new timestamped merged team insights export.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+    year : int
+        Draft year (e.g. ``2026``).
+    generated_at : datetime
+        UTC generation timestamp embedded in the filename.
+
+    Returns
+    -------
+    str
+        Path to ``team_insights_{year}_{timestamp}.json`` under team exports.
+    """
+    timestamp = _format_insights_timestamp(generated_at)
+    filename = f"team_insights_{year}_{timestamp}.json"
+    return os.path.join(team_insights_exports_dir(data_root), filename)
+
+
+def resolve_latest_team_insights_path(data_root: str) -> str | None:
+    """Return the path to the newest team insights export file.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+
+    Returns
+    -------
+    str | None
+        Full path to the newest team insights file, or ``None`` when none
+        exist.
+    """
+    return _resolve_latest_timestamped_export(
+        team_insights_exports_dir(data_root), TEAM_INSIGHTS_EXPORT_PATTERN
+    )
