@@ -79,6 +79,14 @@ class FakeSessionManager:
         _ = session_id
         return self.session
 
+    def run_locked(self, session_id: str, mutation):
+        """Run a mutation against the fake session and persist."""
+        _ = session_id
+        mutation(self.session)
+        if hasattr(self.session, "save_state"):
+            self.session.save_state()
+        return self.session
+
 
 def _build_client(session) -> TestClient:
     registry = FakeAdvisorRegistry()

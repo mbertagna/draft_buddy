@@ -238,12 +238,12 @@ def test_draft_session_manager_get_or_create_loads_and_resets_empty_state(config
     loaded = {"called": False}
     saved = {"called": False}
 
-    def fake_load(self, file_path: str) -> None:
+    def fake_load(self, file_path=None) -> None:
         _ = file_path
         loaded["called"] = True
         self._state.draft_order = []
 
-    def fake_save(self, file_path: str) -> None:
+    def fake_save(self, file_path=None) -> None:
         _ = file_path
         saved["called"] = True
 
@@ -256,14 +256,57 @@ def test_draft_session_manager_get_or_create_loads_and_resets_empty_state(config
     assert loaded["called"] is True and saved["called"] is True and session.draft_order
 
 
+def test_draft_session_manager_shares_session_across_ids(config) -> None:
+    """Verify all cookie session ids map to one shared draft session."""
+    manager = DraftSessionManager(config)
+
+    first = manager.get_or_create("a")
+    second = manager.get_or_create("b")
+
+    assert first is second
+
+
 def test_draft_session_manager_create_new_replaces_existing_session(config) -> None:
-    """Verify create_new stores a fresh session under the session id."""
+    """Verify create_new stores a fresh shared session."""
     manager = DraftSessionManager(config)
 
     first = manager.create_new("abc")
     second = manager.create_new("abc")
 
     assert first is not second and manager.get_or_create("abc") is second
+
+
+def test_draft_session_create_new_archives_current_state(config, player_catalog) -> None:
+    """Verify New Draft archives the prior primary into saved_states."""
+    manager = DraftSessionManager(config)
+    manager.run_locked("abc", lambda active: active.draft_player(1))
+
+    manager.create_new("abc")
+
+    archives = list(Path(config.paths.SAVED_STATES_DIR).glob("draft_state_*.json"))
+    assert len(archives) == 1
+
+
+def test_draft_session_manager_run_locked_persists_mutation(config, player_catalog) -> None:
+    """Verify locked mutations save the shared draft state."""
+    manager = DraftSessionManager(config)
+
+    session = manager.run_locked("abc", lambda active: active.draft_player(1))
+
+    assert session.draft_history[0].player_id == 1
+    assert Path(config.paths.DRAFT_STATE_FILE).is_file()
+
+
+def test_draft_session_state_load_warning_clears_after_one_ui_read(config) -> None:
+    """Verify one-shot load warnings appear once in UI state."""
+    session = DraftSession(config)
+    session.set_state_load_warning("recovered from draft_state.prev.json")
+
+    first = session.get_ui_state()
+    second = session.get_ui_state()
+
+    assert first["state_load_warning"] == "recovered from draft_state.prev.json"
+    assert "state_load_warning" not in second
 
 
 def test_get_ui_state_exposes_snake_team_and_override_flag(config, player_catalog) -> None:

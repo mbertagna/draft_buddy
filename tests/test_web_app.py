@@ -39,6 +39,13 @@ class FakeSessionManager:
         self.created = True
         return self.session
 
+    def run_locked(self, session_id: str, mutation):
+        """Run a mutation against the fake session and persist."""
+        _ = session_id
+        mutation(self.session)
+        self.session.save_state()
+        return self.session
+
 
 def test_create_new_draft_sets_session_cookie(config, fake_session) -> None:
     """Verify creating a draft sets the session cookie."""

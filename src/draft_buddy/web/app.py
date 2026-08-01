@@ -123,14 +123,16 @@ def create_app(
     @app.post("/api/draft/pick")
     async def draft_pick(request: Request, response: Response) -> dict:
         """Apply a manual pick for current session."""
-        session = runtime_session_manager.get_or_create(_session_id(request, response))
         payload = await request.json()
         player_id = payload.get("player_id")
         if player_id is None:
             raise HTTPException(status_code=400, detail="Player ID is required")
+        session_id = _session_id(request, response)
         try:
-            session.draft_player(int(player_id))
-            session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
+            session = runtime_session_manager.run_locked(
+                session_id,
+                lambda active: active.draft_player(int(player_id)),
+            )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return session.get_ui_state()
@@ -139,10 +141,12 @@ def create_app(
     @app.post("/api/draft/undo")
     def undo_pick(request: Request, response: Response) -> dict:
         """Undo most recent draft action."""
-        session = runtime_session_manager.get_or_create(_session_id(request, response))
+        session_id = _session_id(request, response)
         try:
-            session.undo_last_pick()
-            session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
+            session = runtime_session_manager.run_locked(
+                session_id,
+                lambda active: active.undo_last_pick(),
+            )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return session.get_ui_state()
@@ -151,7 +155,6 @@ def create_app(
     @app.post("/api/draft/transfer")
     async def transfer_player(request: Request, response: Response) -> dict:
         """Transfer one drafted player to another team or visual slot."""
-        session = runtime_session_manager.get_or_create(_session_id(request, response))
         payload = await request.json()
         player_id = payload.get("player_id")
         to_team_id = payload.get("to_team_id")
@@ -160,10 +163,15 @@ def create_app(
             raise HTTPException(status_code=400, detail="Player ID is required")
         if to_team_id is None:
             raise HTTPException(status_code=400, detail="Destination team ID is required")
+        resolved_round = int(to_round) if to_round is not None else None
+        session_id = _session_id(request, response)
         try:
-            resolved_round = int(to_round) if to_round is not None else None
-            session.transfer_player(int(player_id), int(to_team_id), to_round=resolved_round)
-            session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
+            session = runtime_session_manager.run_locked(
+                session_id,
+                lambda active: active.transfer_player(
+                    int(player_id), int(to_team_id), to_round=resolved_round
+                ),
+            )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return session.get_ui_state()
@@ -172,7 +180,6 @@ def create_app(
     @app.post("/api/draft/swap")
     async def swap_players(request: Request, response: Response) -> dict:
         """Swap two drafted players' teams and visual slots."""
-        session = runtime_session_manager.get_or_create(_session_id(request, response))
         payload = await request.json()
         player_id_1 = payload.get("player_id_1")
         player_id_2 = payload.get("player_id_2")
@@ -180,9 +187,12 @@ def create_app(
             raise HTTPException(
                 status_code=400, detail="Both player_id_1 and player_id_2 are required"
             )
+        session_id = _session_id(request, response)
         try:
-            session.swap_players(int(player_id_1), int(player_id_2))
-            session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
+            session = runtime_session_manager.run_locked(
+                session_id,
+                lambda active: active.swap_players(int(player_id_1), int(player_id_2)),
+            )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return session.get_ui_state()
@@ -191,14 +201,16 @@ def create_app(
     @app.post("/api/draft/override_team")
     async def override_team(request: Request, response: Response) -> dict:
         """Override the next drafting team."""
-        session = runtime_session_manager.get_or_create(_session_id(request, response))
         payload = await request.json()
         team_id = payload.get("team_id")
         if team_id is None:
             raise HTTPException(status_code=400, detail="Team ID is required")
+        session_id = _session_id(request, response)
         try:
-            session.set_current_team_picking(int(team_id))
-            session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
+            session = runtime_session_manager.run_locked(
+                session_id,
+                lambda active: active.set_current_team_picking(int(team_id)),
+            )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return session.get_ui_state()
@@ -207,7 +219,6 @@ def create_app(
     @app.post("/api/draft/simulate_pick")
     async def simulate_pick(request: Request, response: Response) -> dict:
         """Simulate one pick."""
-        session = runtime_session_manager.get_or_create(_session_id(request, response))
         use_policy = False
         try:
             payload = await request.json()
@@ -215,9 +226,12 @@ def create_app(
                 use_policy = bool(payload.get("use_policy", False))
         except Exception:
             pass
+        session_id = _session_id(request, response)
         try:
-            session.simulate_single_pick(use_policy=use_policy)
-            session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
+            session = runtime_session_manager.run_locked(
+                session_id,
+                lambda active: active.simulate_single_pick(use_policy=use_policy),
+            )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return session.get_ui_state()
@@ -226,7 +240,6 @@ def create_app(
     @app.post("/api/draft/simulate_rest")
     async def simulate_rest(request: Request, response: Response) -> dict:
         """Simulate all remaining picks."""
-        session = runtime_session_manager.get_or_create(_session_id(request, response))
         use_policy = False
         try:
             payload = await request.json()
@@ -234,9 +247,14 @@ def create_app(
                 use_policy = bool(payload.get("use_policy", False))
         except Exception:
             pass
+        session_id = _session_id(request, response)
         try:
-            session.simulate_scheduled_picks_remaining(use_policy=use_policy)
-            session.save_state(runtime_config.paths.DRAFT_STATE_FILE)
+            session = runtime_session_manager.run_locked(
+                session_id,
+                lambda active: active.simulate_scheduled_picks_remaining(
+                    use_policy=use_policy
+                ),
+            )
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return session.get_ui_state()

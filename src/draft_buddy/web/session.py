@@ -17,6 +17,7 @@ from draft_buddy.core import (
     InferenceProvider,
     create_bot_gm,
 )
+from draft_buddy.core.draft_state_store import archive_draft_state
 from draft_buddy.data import load_player_catalog
 
 
@@ -63,6 +64,7 @@ class DraftSession:
             bot_factory=self._create_bot_strategy,
         )
         self.weekly_projections = self.player_catalog.to_weekly_projections()
+        self._pending_state_load_warning: Optional[str] = None
 
     @property
     def draft_order(self) -> List[int]:
@@ -193,7 +195,7 @@ class DraftSession:
             for team_id, rounds in self._state.visual_board.items()
         }
 
-        return {
+        payload = {
             "draft_order": self.draft_order,
             "current_pick_index": self.current_pick_index,
             "current_pick_number": self.current_pick_number,
@@ -235,14 +237,63 @@ class DraftSession:
                 pick.player_id: pick.pick_number for pick in self.draft_history
             },
         }
+        warning = self.consume_state_load_warning()
+        if warning:
+            payload["state_load_warning"] = warning
+        return payload
 
-    def save_state(self, file_path: str) -> None:
-        """Persist session state to JSON file."""
-        self._controller.save_state(file_path)
+    def consume_state_load_warning(self) -> Optional[str]:
+        """Return and clear a one-shot draft-state load warning.
 
-    def load_state(self, file_path: str) -> None:
-        """Load session state if file exists."""
-        self._controller.load_state(file_path)
+        Returns
+        -------
+        str or None
+            Warning text when the last load used recovery or failed over.
+        """
+        warning = self._pending_state_load_warning
+        self._pending_state_load_warning = None
+        if warning is not None:
+            return warning
+        return self._controller.consume_load_warning()
+
+    def set_state_load_warning(self, warning: str) -> None:
+        """Store a one-shot warning for the next UI state response.
+
+        Parameters
+        ----------
+        warning : str
+            Human-readable load or recovery message.
+        """
+        self._pending_state_load_warning = warning
+
+    def save_state(self, file_path: Optional[str] = None) -> None:
+        """Persist session state to the configured durable draft files.
+
+        Parameters
+        ----------
+        file_path : str, optional
+            Primary path override. Defaults to configured ``DRAFT_STATE_FILE``.
+        """
+        primary = file_path or self._config.paths.DRAFT_STATE_FILE
+        self._controller.save_state(
+            primary,
+            prev_path=self._config.paths.DRAFT_STATE_PREV_FILE,
+        )
+
+    def load_state(self, file_path: Optional[str] = None) -> None:
+        """Load session state with durable recovery paths.
+
+        Parameters
+        ----------
+        file_path : str, optional
+            Primary path override. Defaults to configured ``DRAFT_STATE_FILE``.
+        """
+        primary = file_path or self._config.paths.DRAFT_STATE_FILE
+        self._controller.load_state(
+            primary,
+            prev_path=self._config.paths.DRAFT_STATE_PREV_FILE,
+            saved_states_dir=self._config.paths.SAVED_STATES_DIR,
+        )
 
     def reset(self) -> None:
         """Reset session to a fresh draft."""
@@ -442,33 +493,98 @@ class DraftSession:
 
 
 class DraftSessionManager:
-    """Thread-safe mapping from session IDs to draft sessions."""
+    """Thread-safe shared draft session for the active draft state file."""
 
     def __init__(
         self, config: Config, inference_provider: Optional[InferenceProvider] = None
     ) -> None:
         self._config = config
         self._inference_provider = inference_provider
-        self._sessions: Dict[str, DraftSession] = {}
+        self._shared_session: Optional[DraftSession] = None
         self._lock = threading.Lock()
 
     def get_or_create(self, session_id: str) -> DraftSession:
-        """Return existing session or create a new one."""
+        """Return the shared draft session, creating it on first use.
+
+        Parameters
+        ----------
+        session_id : str
+            Cookie session id retained for API compatibility.
+
+        Returns
+        -------
+        DraftSession
+            Shared in-memory draft session.
+        """
+        _ = session_id
         with self._lock:
-            if session_id not in self._sessions:
-                session = DraftSession(self._config, inference_provider=self._inference_provider)
-                session.load_state(self._config.paths.DRAFT_STATE_FILE)
-                if not session.draft_order:
-                    session.reset()
-                    session.save_state(self._config.paths.DRAFT_STATE_FILE)
-                self._sessions[session_id] = session
-            return self._sessions[session_id]
+            return self._get_or_create_unlocked()
 
     def create_new(self, session_id: str) -> DraftSession:
-        """Create and persist a fresh draft session."""
+        """Archive the current draft, then create and persist a fresh session.
+
+        Parameters
+        ----------
+        session_id : str
+            Cookie session id retained for API compatibility.
+
+        Returns
+        -------
+        DraftSession
+            Shared session reset to a new draft.
+        """
+        _ = session_id
         with self._lock:
+            archive_draft_state(
+                self._config.paths.DRAFT_STATE_FILE,
+                self._config.paths.SAVED_STATES_DIR,
+            )
             session = DraftSession(self._config, inference_provider=self._inference_provider)
             session.reset()
-            session.save_state(self._config.paths.DRAFT_STATE_FILE)
-            self._sessions[session_id] = session
+            session.save_state()
+            self._shared_session = session
             return session
+
+    def run_locked(self, session_id: str, mutation: Callable[[DraftSession], None]) -> DraftSession:
+        """Run a mutation against the shared session under the manager lock.
+
+        Parameters
+        ----------
+        session_id : str
+            Cookie session id retained for API compatibility.
+        mutation : callable
+            Callback that receives the shared session and mutates it.
+
+        Returns
+        -------
+        DraftSession
+            Shared session after mutation and durable save.
+        """
+        with self._lock:
+            session = self._get_or_create_unlocked()
+            mutation(session)
+            session.save_state()
+            return session
+
+    def _get_or_create_unlocked(self) -> DraftSession:
+        """Return or build the shared session. Caller must hold ``_lock``."""
+        if self._shared_session is not None:
+            return self._shared_session
+
+        session = DraftSession(self._config, inference_provider=self._inference_provider)
+        try:
+            session.load_state()
+        except ValueError as error:
+            warning = session._controller.consume_load_warning() or str(error)
+            print(f"WARNING: {warning}")
+            session.set_state_load_warning(warning)
+            session.reset()
+            session.save_state()
+        else:
+            if session._controller.load_warning:
+                session.save_state()
+        if not session.draft_order:
+            session.reset()
+            session.save_state()
+        self._shared_session = session
+        return session
