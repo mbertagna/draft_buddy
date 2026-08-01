@@ -420,11 +420,15 @@ class SearchCacheStore:
                 if not url or url in seen_urls:
                     continue
                 published_date = item.get("published_date")
+                title = str(item.get("title", ""))
+                snippet_text = str(item.get("snippet", ""))
                 if not _snippet_passes_date_filter(
                     published_date,
                     query_kind=query_kind,
                     outlook_start=outlook_start,
                     injury_start=injury_start,
+                    draft_year=resolved_year,
+                    fallback_text=f"{title} {snippet_text}",
                 ):
                     continue
                 seen_urls.add(url)
@@ -435,8 +439,8 @@ class SearchCacheStore:
                     relevance_score = None
                 snippets.append(
                     SearchSnippet(
-                        title=str(item.get("title", "")),
-                        snippet=str(item.get("snippet", "")),
+                        title=title,
+                        snippet=snippet_text,
                         url=url,
                         domain=str(item.get("domain", "")),
                         published_date=published_date,
@@ -445,7 +449,7 @@ class SearchCacheStore:
                 )
 
         snippets.sort(
-            key=lambda snippet: _snippet_rank_score(snippet, today=today or date.today()),
+            key=lambda snippet: snippet_rank_score(snippet, today=today or date.today()),
             reverse=True,
         )
         return snippets[:max_snippets]
@@ -475,23 +479,70 @@ def _snippet_passes_date_filter(
     query_kind: Optional[QueryKind],
     outlook_start: Optional[str],
     injury_start: str,
+    draft_year: Optional[int],
+    fallback_text: str,
 ) -> bool:
     """Return whether a snippet survives the draft-year / injury date window.
 
-    Snippets without a published date are kept (providers sometimes omit dates).
+    Injury-recovery snippets without a published date are kept, since
+    injury blurbs rarely restate the year in their text. Outlook/role
+    snippets without a published date are only kept when the draft year
+    appears in their title or snippet text, since search providers
+    sometimes omit structured dates even for current-season content.
     """
-    if not published_date:
-        return True
-    published = str(published_date)[:10]
     if query_kind == QueryKind.INJURY_RECOVERY:
-        return published >= injury_start
+        if not published_date:
+            return True
+        return str(published_date)[:10] >= injury_start
+    if not published_date:
+        return snippet_mentions_year(fallback_text, draft_year)
     if outlook_start is None:
         return True
-    return published >= outlook_start
+    return str(published_date)[:10] >= outlook_start
 
 
-def _snippet_rank_score(snippet: SearchSnippet, today: date) -> float:
-    """Score a snippet for ranking: relevance plus a mild recency boost."""
+def snippet_mentions_year(text: str, year: Optional[int]) -> bool:
+    """Return whether text mentions a given year.
+
+    Used as a fallback recency signal for snippets missing a structured
+    published date, shared by player and team search caches.
+
+    Parameters
+    ----------
+    text : str
+        Combined title and snippet text to search.
+    year : int, optional
+        Year to look for. When omitted, there is no year to check against,
+        so this returns True.
+
+    Returns
+    -------
+    bool
+        True when the year appears in text, or no year was provided.
+    """
+    if year is None:
+        return True
+    return str(year) in text
+
+
+def snippet_rank_score(snippet: SearchSnippet, today: date) -> float:
+    """Score a snippet for ranking: relevance plus a mild recency boost.
+
+    Shared by player and team search caches so both rank cached snippets
+    with the same relevance/recency weighting.
+
+    Parameters
+    ----------
+    snippet : SearchSnippet
+        Snippet to score.
+    today : date
+        Reference date for the recency boost.
+
+    Returns
+    -------
+    float
+        Combined relevance and recency score.
+    """
     relevance = snippet.relevance_score if snippet.relevance_score is not None else 0.0
     recency_boost = 0.0
     if snippet.published_date:

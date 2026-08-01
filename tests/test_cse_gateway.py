@@ -167,6 +167,81 @@ def test_load_snippets_drops_stale_outlook_dates_and_ranks_by_score(
     ]
 
 
+def test_load_snippets_keeps_undated_snippet_mentioning_draft_year(tmp_path: Path) -> None:
+    """Verify an undated outlook snippet is kept when its text mentions the draft year."""
+    store = SearchCacheStore(str(tmp_path))
+    player = _player()
+    query = InsightQuery(kind=QueryKind.OUTLOOK, text="q1")
+    store.save_query_result(player, query, {"items": []}, [], provider="valyu")
+    outlook_path = tmp_path / "4034" / "outlook.json"
+    payload = json.loads(outlook_path.read_text(encoding="utf-8"))
+    payload["snippets"] = [
+        {
+            "title": "2026 Outlook: Christian McCaffrey",
+            "snippet": "Bellcow role expected.",
+            "url": "https://espn.com/undated",
+            "domain": "espn.com",
+            "published_date": None,
+            "relevance_score": 0.8,
+        }
+    ]
+    outlook_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    snippets = store.load_snippets("4034", draft_year=2026)
+
+    assert [snippet.url for snippet in snippets] == ["https://espn.com/undated"]
+
+
+def test_load_snippets_drops_undated_snippet_without_draft_year_mention(tmp_path: Path) -> None:
+    """Verify an undated outlook snippet is dropped when it never mentions the draft year."""
+    store = SearchCacheStore(str(tmp_path))
+    player = _player()
+    query = InsightQuery(kind=QueryKind.OUTLOOK, text="q1")
+    store.save_query_result(player, query, {"items": []}, [], provider="valyu")
+    outlook_path = tmp_path / "4034" / "outlook.json"
+    payload = json.loads(outlook_path.read_text(encoding="utf-8"))
+    payload["snippets"] = [
+        {
+            "title": "McCaffrey career highlights",
+            "snippet": "A look back at his career.",
+            "url": "https://espn.com/undated",
+            "domain": "espn.com",
+            "published_date": None,
+            "relevance_score": 0.8,
+        }
+    ]
+    outlook_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    snippets = store.load_snippets("4034", draft_year=2026)
+
+    assert snippets == []
+
+
+def test_load_snippets_keeps_undated_injury_recovery_snippet(tmp_path: Path) -> None:
+    """Verify undated injury-recovery snippets are kept regardless of year mentions."""
+    store = SearchCacheStore(str(tmp_path))
+    player = _player()
+    query = InsightQuery(kind=QueryKind.INJURY_RECOVERY, text="q1")
+    store.save_query_result(player, query, {"items": []}, [], provider="valyu")
+    injury_path = tmp_path / "4034" / "injury_recovery.json"
+    payload = json.loads(injury_path.read_text(encoding="utf-8"))
+    payload["snippets"] = [
+        {
+            "title": "McCaffrey cleared for full practice",
+            "snippet": "Expected to play Sunday.",
+            "url": "https://espn.com/injury",
+            "domain": "espn.com",
+            "published_date": None,
+            "relevance_score": 0.8,
+        }
+    ]
+    injury_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    snippets = store.load_snippets("4034", draft_year=2026)
+
+    assert [snippet.url for snippet in snippets] == ["https://espn.com/injury"]
+
+
 def test_execute_search_with_cache_raises_on_quota(monkeypatch, tmp_path: Path) -> None:
     """Verify quota errors are surfaced as QuotaExceededError."""
     gateway = GoogleCseGateway(api_key="key", search_engine_id="cx")
