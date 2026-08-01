@@ -1884,6 +1884,7 @@
 
         let currentDraftState = null;
         let selectedPlayerForMove = null;
+        let draftMutationInFlight = false;
 
         let currentSortBy = 'vorp';
         let currentSortDir = 'desc'; // 'asc' or 'desc'
@@ -3328,6 +3329,19 @@
             return data;
         }
 
+        async function postDraftMutation(url, body) {
+            if (draftMutationInFlight) {
+                showNotification('Draft update already in progress.', 'info');
+                throw new Error('Draft update already in progress.');
+            }
+            draftMutationInFlight = true;
+            try {
+                return await postJson(url, body);
+            } finally {
+                draftMutationInFlight = false;
+            }
+        }
+
         // Two themes only: 'hud' (default, no attribute) and 'clean'
         // (data-theme="clean"). Both are light; only fonts/accent colors move.
         function applyTheme(theme) {
@@ -3360,7 +3374,7 @@
         async function startNewDraft() {
             const confirmed = await showConfirm({
                 title: 'Start new draft?',
-                message: 'This will archive the current draft state. You cannot undo this.',
+                message: 'Archives current draft to saved_states, then starts fresh. You cannot undo this.',
                 confirmLabel: 'Start New Draft',
                 destructive: true,
             });
@@ -3369,7 +3383,7 @@
             }
             try {
                 selectedPlayerForMove = null;
-                const data = await postJson('/api/draft/new');
+                const data = await postDraftMutation('/api/draft/new');
                 renderDraftState(data);
                 fetchPlayers(); // Refresh player list
             } catch (error) {
@@ -3377,7 +3391,19 @@
             }
         }
 
+        function surfaceStateLoadWarning(state) {
+            if (!state || !state.state_load_warning) {
+                return;
+            }
+            const message = state.state_load_warning;
+            console.warn(message);
+            const isHardFailure = message.indexOf('Could not load draft state') === 0;
+            showNotification(message, isHardFailure ? 'error' : 'info');
+            delete state.state_load_warning;
+        }
+
         function renderDraftState(state) {
+            surfaceStateLoadWarning(state);
             if (previousPickNumber != null && state.current_pick_number !== previousPickNumber) {
                 hideAiSliver();
                 if (state.current_pick_number < previousPickNumber) {
@@ -3615,7 +3641,7 @@
                 return;
             }
             try {
-                const data = await postJson('/api/draft/pick', { player_id: playerId });
+                const data = await postDraftMutation('/api/draft/pick', { player_id: playerId });
                 renderDraftState(data);
                 fetchPlayers();
             } catch (error) {
@@ -3630,7 +3656,7 @@
             }
             try {
                 selectedPlayerForMove = null;
-                const data = await postJson('/api/draft/undo');
+                const data = await postDraftMutation('/api/draft/undo');
                 renderDraftState(data);
                 fetchPlayers();
             } catch (error) {
@@ -3644,7 +3670,7 @@
                 return;
             }
             try {
-                const data = await postJson('/api/draft/override_team', { team_id: teamId });
+                const data = await postDraftMutation('/api/draft/override_team', { team_id: teamId });
                 renderDraftState(data);
             } catch (error) {
                 console.error('Error overriding team:', error);
@@ -3687,7 +3713,7 @@
 
             if (!player) {
                 try {
-                    const data = await postJson('/api/draft/transfer', {
+                    const data = await postDraftMutation('/api/draft/transfer', {
                         player_id: selectedPlayerForMove.playerId,
                         to_team_id: teamId,
                         to_round: roundIndex,
@@ -3702,7 +3728,7 @@
             }
 
             try {
-                const data = await postJson('/api/draft/swap', {
+                const data = await postDraftMutation('/api/draft/swap', {
                     player_id_1: selectedPlayerForMove.playerId,
                     player_id_2: player.player_id,
                 });
@@ -3726,7 +3752,7 @@
                 return;
             }
             try {
-                const data = await postJson('/api/draft/simulate_pick', buildSimRequestBody());
+                const data = await postDraftMutation('/api/draft/simulate_pick', buildSimRequestBody());
                 renderDraftState(data);
                 fetchPlayers();
             } catch (error) {
@@ -3751,7 +3777,7 @@
             autoDraftBtn.textContent = "Drafting...";
 
             try {
-                const data = await postJson('/api/draft/simulate_rest', buildSimRequestBody());
+                const data = await postDraftMutation('/api/draft/simulate_rest', buildSimRequestBody());
                 renderDraftState(data);
                 fetchPlayers();
             } catch (error) {
