@@ -1,9 +1,12 @@
-"""OpenRouter implementation for structured player insight synthesis."""
+"""OpenRouter implementation for structured LLM synthesis."""
 
 from __future__ import annotations
 
+from typing import Any, Type
+
+from pydantic import BaseModel
+
 from draft_buddy.data.insights.gemini_gateway import InsightSynthesisGateway
-from draft_buddy.data.insights.schemas import PlayerInsight, sanitize_synthesis_payload
 from draft_buddy.llm.openrouter_client import SYNTHESIS_MAX_TOKENS, OpenRouterClient
 
 
@@ -26,27 +29,36 @@ class OpenRouterSynthesisGateway(InsightSynthesisGateway):
         """Return the configured OpenRouter model slug."""
         return self._client.model
 
-    def synthesize(self, system_prompt: str, user_prompt: str) -> PlayerInsight:
-        """Call OpenRouter and parse a structured PlayerInsight response.
+    def generate_structured(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_model: Type[BaseModel],
+        schema_name: str,
+    ) -> dict[str, Any]:
+        """Call OpenRouter and return the raw structured JSON payload.
 
         Parameters
         ----------
         system_prompt : str
             System instructions.
         user_prompt : str
-            User content with player context and snippets.
+            User content with entity context and snippets.
+        response_model : Type[BaseModel]
+            Pydantic model defining the expected response shape.
+        schema_name : str
+            Schema name for OpenRouter's ``json_schema`` response format.
 
         Returns
         -------
-        PlayerInsight
-            Parsed structured insight.
+        dict[str, Any]
+            Parsed JSON payload, not yet sanitized or validated.
         """
-        payload = self._client.generate_structured(
+        return self._client.generate_structured(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            response_model=PlayerInsight,
-            schema_name="player_insight",
+            response_model=response_model,
+            schema_name=schema_name,
             max_tokens=SYNTHESIS_MAX_TOKENS,
             reasoning_effort="none",
         )
-        return PlayerInsight.model_validate(sanitize_synthesis_payload(payload))

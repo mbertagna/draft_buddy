@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Type
+
+from pydantic import BaseModel
 
 from draft_buddy.data.insights.cse_gateway import SearchCacheStore, SearchSnippet
 from draft_buddy.data.insights.gemini_gateway import GeminiGateway
@@ -31,10 +34,16 @@ class StubGeminiGateway(GeminiGateway):
         self._insight = insight
         self.calls = 0
 
-    def synthesize(self, system_prompt: str, user_prompt: str) -> PlayerInsight:
-        """Return a fixed insight and record the call."""
+    def generate_structured(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_model: Type[BaseModel],
+        schema_name: str,
+    ) -> dict[str, Any]:
+        """Return a fixed insight payload and record the call."""
         self.calls += 1
-        return self._insight
+        return self._insight.model_dump(mode="json")
 
 
 def _player() -> InsightPlayerContext:
@@ -120,7 +129,7 @@ def test_synthesizer_filters_bullets_to_allowed_urls(tmp_path: Path) -> None:
     synthesis_store = SynthesisCacheStore(str(synthesis_root))
     player = _player()
     snippet = SearchSnippet(
-        title="Outlook",
+        title="2026 Outlook",
         snippet="Workhorse role expected.",
         url="https://espn.com/allowed",
         domain="espn.com",

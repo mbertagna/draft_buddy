@@ -17,6 +17,7 @@ from draft_buddy.data.insights.schemas import (
     PlayerInsightsFile,
     apply_insight_post_validation,
     default_unknown_insight,
+    sanitize_synthesis_payload,
 )
 
 logger = logging.getLogger(__name__)
@@ -144,7 +145,10 @@ class InsightSynthesizer:
 
         user_prompt = build_user_prompt(player, snippets, query_texts)
         try:
-            raw_insight = self._gemini.synthesize(SYSTEM_PROMPT, user_prompt)
+            payload = self._gemini.generate_structured(
+                SYSTEM_PROMPT, user_prompt, PlayerInsight, "player_insight"
+            )
+            raw_insight = PlayerInsight.model_validate(sanitize_synthesis_payload(payload))
             insight = apply_insight_post_validation(raw_insight, allowed_urls=allowed_urls)
             insight = insight.model_copy(
                 update={
