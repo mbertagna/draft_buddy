@@ -77,7 +77,8 @@ def test_team_manager_mapping_uses_integer_keys() -> None:
     """Verify JSON string keys are coerced to integer team ids."""
     config = load_runtime_config(league_id="red_league_10", season=2026)
 
-    assert config.draft.TEAM_MANAGER_MAPPING[1] == "Club 33"
+    assert config.draft.TEAM_MANAGER_MAPPING[1] == "SKOL!"
+    assert config.draft.TEAM_MANAGER_MAPPING[2] == "California Fourskin"
     assert config.draft.TEAM_MANAGER_MAPPING[10] == "Team Sully LLC"
 
 
