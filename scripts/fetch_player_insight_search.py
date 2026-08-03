@@ -19,6 +19,7 @@ from draft_buddy.data.insights.cse_gateway import (
 )
 from draft_buddy.data.insights.player_selector import InsightPlayerSelector
 from draft_buddy.data.insights.query_builder import InsightQueryBuilder
+from draft_buddy.data.insights.run_store import resolve_or_create_run_root
 from draft_buddy.data.insights.search_factory import (
     SUPPORTED_SEARCH_PROVIDERS,
     build_search_gateway,
@@ -45,7 +46,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--delay-ms", type=int, default=200, help="Delay between player batches.")
     parser.add_argument("--start-index", type=int, default=0, help="Start index into ADP list.")
     parser.add_argument("--max-players", type=int, default=None, help="Optional player cap.")
-    parser.add_argument("--force", action="store_true", help="Re-fetch even when cache exists.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Create a new empty cache run and re-fetch selected players.",
+    )
     return parser.parse_args()
 
 
@@ -91,7 +96,9 @@ def main() -> int:
         max_players=args.max_players,
     )
 
-    cache_store = SearchCacheStore(insights_search_cache_dir(args.data_root))
+    cache_root = insights_search_cache_dir(args.data_root)
+    run_root = resolve_or_create_run_root(cache_root, force=args.force, kind="search")
+    cache_store = SearchCacheStore(run_root.path)
     query_builder = InsightQueryBuilder()
 
     counts = {"fetched": 0, "skipped": 0, "failed": 0, "quota": 0}
@@ -123,9 +130,10 @@ def main() -> int:
                 print(f"\nFailed for {player.name} ({player.sleeper_id}): {error}", file=sys.stderr)
             sleep_between_batches(args.delay_ms)
 
+    run_label = run_root.run_id if run_root.run_id is not None else "legacy"
     print(
-        f"Done. provider={provider} fetched={counts['fetched']} skipped={counts['skipped']} "
-        f"failed={counts['failed']} quota_errors={counts['quota']}"
+        f"Done. provider={provider} run_id={run_label} fetched={counts['fetched']} "
+        f"skipped={counts['skipped']} failed={counts['failed']} quota_errors={counts['quota']}"
     )
     return 0 if counts["failed"] == 0 and counts["quota"] == 0 else 1
 

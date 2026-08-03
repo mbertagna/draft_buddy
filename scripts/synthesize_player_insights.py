@@ -20,6 +20,7 @@ from draft_buddy.data.cache_paths import (
 )
 from draft_buddy.data.insights.cse_gateway import SearchCacheStore
 from draft_buddy.data.insights.player_selector import InsightPlayerSelector
+from draft_buddy.data.insights.run_store import resolve_or_create_run_root
 from draft_buddy.data.insights.schemas import PlayerInsight
 from draft_buddy.data.insights.synthesis_factory import build_synthesis_gateway, resolve_synthesis_model
 from draft_buddy.data.insights.synthesizer import InsightSynthesizer, SynthesisCacheStore, merge_insights_file
@@ -37,7 +38,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--concurrency", type=int, default=10, help="Parallel synthesis workers.")
     parser.add_argument("--start-index", type=int, default=0, help="Start index into ADP list.")
     parser.add_argument("--max-players", type=int, default=None, help="Optional player cap.")
-    parser.add_argument("--force", action="store_true", help="Re-synthesize even when cache exists.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Create a new empty synthesis run and re-synthesize selected players.",
+    )
     parser.add_argument(
         "--provider",
         type=str,
@@ -75,8 +80,19 @@ def main() -> int:
         max_players=args.max_players,
     )
 
-    search_cache = SearchCacheStore(insights_search_cache_dir(args.data_root))
-    synthesis_cache = SynthesisCacheStore(insights_synthesis_cache_dir(args.data_root))
+    search_root = resolve_or_create_run_root(
+        insights_search_cache_dir(args.data_root),
+        force=False,
+        kind="search",
+        create_if_missing=False,
+    )
+    synthesis_root = resolve_or_create_run_root(
+        insights_synthesis_cache_dir(args.data_root),
+        force=args.force,
+        kind="synthesis",
+    )
+    search_cache = SearchCacheStore(search_root.path)
+    synthesis_cache = SynthesisCacheStore(synthesis_root.path)
     synthesizer = InsightSynthesizer(gateway, search_cache, synthesis_cache)
 
     missing_search: list[str] = [
@@ -127,9 +143,10 @@ def main() -> int:
     with open(output_path, "w", encoding="utf-8") as handle:
         json.dump(insights_file.model_dump(mode="json"), handle, indent=2)
 
+    run_label = synthesis_root.run_id if synthesis_root.run_id is not None else "legacy"
     print(
-        f"Done. synthesized={counts['synthesized']} cached={counts['cached']} "
-        f"failed={counts['failed']} output={output_path}"
+        f"Done. run_id={run_label} synthesized={counts['synthesized']} "
+        f"cached={counts['cached']} failed={counts['failed']} output={output_path}"
     )
     return 0 if counts["failed"] == 0 else 1
 

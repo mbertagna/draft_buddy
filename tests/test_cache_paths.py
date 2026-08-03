@@ -8,8 +8,13 @@ from pathlib import Path
 
 from draft_buddy.data.cache_paths import (
     adp_cache_dir,
+    insights_run_current_path,
+    insights_runs_dir,
     insights_search_cache_dir,
+    insights_search_runs_dir,
     insights_synthesis_cache_dir,
+    insights_synthesis_runs_dir,
+    new_insights_run_id,
     nflverse_cache_dir,
     player_insights_exports_dir,
     player_insights_output_path,
@@ -64,6 +69,39 @@ def test_insights_search_cache_dir_is_nested_under_data_root() -> None:
 def test_insights_synthesis_cache_dir_is_nested_under_data_root() -> None:
     """Verify the insights synthesis cache path is under cache/insights/synthesis."""
     assert insights_synthesis_cache_dir("./data") == "./data/cache/insights/synthesis"
+
+
+def test_insights_search_runs_dir_is_nested_under_search_cache() -> None:
+    """Verify search runs live under cache/insights/search/runs."""
+    assert insights_search_runs_dir("./data") == "./data/cache/insights/search/runs"
+
+
+def test_insights_synthesis_runs_dir_is_nested_under_synthesis_cache() -> None:
+    """Verify synthesis runs live under cache/insights/synthesis/runs."""
+    assert (
+        insights_synthesis_runs_dir("./data") == "./data/cache/insights/synthesis/runs"
+    )
+
+
+def test_insights_runs_dir_appends_runs_segment() -> None:
+    """Verify insights_runs_dir appends runs under a cache root."""
+    assert insights_runs_dir("./data/cache/insights/search") == (
+        "./data/cache/insights/search/runs"
+    )
+
+
+def test_insights_run_current_path_points_at_current_json() -> None:
+    """Verify the current pointer path is cache_root/current.json."""
+    assert insights_run_current_path("./data/cache/insights/search") == (
+        "./data/cache/insights/search/current.json"
+    )
+
+
+def test_new_insights_run_id_uses_utc_timestamp_format() -> None:
+    """Verify run ids match the export timestamp format."""
+    generated_at = datetime(2026, 8, 2, 3, 45, 0, tzinfo=timezone.utc)
+
+    assert new_insights_run_id(generated_at) == "20260802T034500Z"
 
 
 def test_player_insights_exports_dir_is_nested_under_data_root() -> None:

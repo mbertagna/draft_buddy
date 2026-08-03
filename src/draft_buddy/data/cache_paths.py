@@ -8,6 +8,7 @@ re-downloadable inputs separate from generated outputs and from each other.
 from __future__ import annotations
 
 import glob
+import json
 import os
 import re
 from datetime import datetime, timezone
@@ -103,6 +104,131 @@ def insights_synthesis_cache_dir(data_root: str) -> str:
         Path to the insights synthesis cache directory.
     """
     return os.path.join(data_root, "cache", "insights", "synthesis")
+
+
+def insights_search_runs_dir(data_root: str) -> str:
+    """Return the timestamped search-run directory under a data root.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+
+    Returns
+    -------
+    str
+        Path to ``cache/insights/search/runs``.
+    """
+    return os.path.join(insights_search_cache_dir(data_root), "runs")
+
+
+def insights_synthesis_runs_dir(data_root: str) -> str:
+    """Return the timestamped synthesis-run directory under a data root.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+
+    Returns
+    -------
+    str
+        Path to ``cache/insights/synthesis/runs``.
+    """
+    return os.path.join(insights_synthesis_cache_dir(data_root), "runs")
+
+
+def insights_runs_dir(cache_root: str) -> str:
+    """Return the ``runs`` subdirectory under an insights cache root.
+
+    Parameters
+    ----------
+    cache_root : str
+        Search or synthesis cache root (e.g. ``data/cache/insights/search``).
+
+    Returns
+    -------
+    str
+        Path to ``{cache_root}/runs``.
+    """
+    return os.path.join(cache_root, "runs")
+
+
+def insights_run_current_path(cache_root: str) -> str:
+    """Return the path to the insights run pointer file.
+
+    Parameters
+    ----------
+    cache_root : str
+        Search or synthesis cache root.
+
+    Returns
+    -------
+    str
+        Path to ``{cache_root}/current.json``.
+    """
+    return os.path.join(cache_root, "current.json")
+
+
+def new_insights_run_id(now: datetime | None = None) -> str:
+    """Return a new UTC insights run id suitable for a directory name.
+
+    Parameters
+    ----------
+    now : datetime, optional
+        Timestamp to format; defaults to UTC now.
+
+    Returns
+    -------
+    str
+        Run id such as ``20260802T034500Z``.
+    """
+    reference = now if now is not None else datetime.now(timezone.utc)
+    return _format_insights_timestamp(reference)
+
+
+def read_insights_run_current(cache_root: str) -> str | None:
+    """Read the active insights run id from ``current.json``.
+
+    Parameters
+    ----------
+    cache_root : str
+        Search or synthesis cache root.
+
+    Returns
+    -------
+    str or None
+        Active ``run_id``, or ``None`` when the pointer is missing or invalid.
+    """
+    path = insights_run_current_path(cache_root)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return None
+    run_id = payload.get("run_id") if isinstance(payload, dict) else None
+    if not isinstance(run_id, str) or not run_id.strip():
+        return None
+    return run_id.strip()
+
+
+def write_insights_run_current(cache_root: str, run_id: str) -> None:
+    """Write the active insights run pointer.
+
+    Parameters
+    ----------
+    cache_root : str
+        Search or synthesis cache root.
+    run_id : str
+        Timestamped run directory name.
+    """
+    os.makedirs(cache_root, exist_ok=True)
+    path = insights_run_current_path(cache_root)
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump({"run_id": run_id}, handle, indent=2)
+        handle.write("\n")
 
 
 def player_insights_exports_dir(data_root: str) -> str:

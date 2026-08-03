@@ -174,11 +174,18 @@ docker compose run --rm insights-synthesize python scripts/synthesize_player_ins
 
 **Outputs:**
 
-- Search cache: `data/cache/insights/search/{sleeper_id}/`
-- Synthesis cache: `data/cache/insights/synthesis/{sleeper_id}.json`
+- Search cache runs: `data/cache/insights/search/runs/{timestamp}/` with per-player dirs
+- Synthesis cache runs: `data/cache/insights/synthesis/runs/{timestamp}/{sleeper_id}.json`
+- Active run pointer: `current.json` (`{"run_id": "..."}`) under each of those cache roots
 - Merged insights export: `data/insights/exports/player_insights_{year}_{timestamp}.json`
 
-Each synthesis run writes a new timestamped export file. The webapp loads the newest export by filename timestamp at startup. Legacy undated `data/player_insights_{year}.json` files are used as a fallback when no exports exist yet.
+Legacy flat layouts (`search/{sleeper_id}/…`, `synthesis/{sleeper_id}.json`) are still read when `current.json` is missing.
+
+Without `--force`, new players are written into the **current** run (or the legacy flat root). With `--force`, a **new empty** timestamped run is created and becomes current; prior runs are left untouched. A partial `--force` (for example `--max-players 20`) makes that incomplete run the new current set.
+
+Each synthesis run also writes a new timestamped export file. The webapp loads the newest export by filename timestamp at startup. Legacy undated `data/player_insights_{year}.json` files are used as a fallback when no exports exist yet.
+
+To restore an older UI insights snapshot, keep or restore the desired file as the newest under `data/insights/exports/` (rename/move aside newer exports), then restart the webapp.
 
 **Partial re-runs:**
 
@@ -189,6 +196,7 @@ docker compose run --rm insights-search python scripts/fetch_player_insight_sear
 docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --force
 ```
 
+`--force` starts a fresh empty run; prefer a full top-N force refresh unless you intentionally want a smaller current set.
 ### Live Draft Assistant
 
 The web UI includes an on-demand **LLM draft assistant** alongside the fast RL position chips. Set `GEMINI_API_KEY` and/or `OPENROUTER_API_KEY` in `.env`.
