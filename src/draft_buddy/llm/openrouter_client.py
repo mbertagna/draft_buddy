@@ -12,8 +12,6 @@ from draft_buddy.llm.json_schema import pydantic_model_to_strict_json_schema
 
 OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_TEMPERATURE = 0.2
-DEFAULT_MAX_TOKENS = 2048
-ADVISOR_MAX_TOKENS = 2048
 SYNTHESIS_MAX_TOKENS = 2048
 
 
@@ -44,7 +42,7 @@ class OpenRouterClient:
         response_model: Type[BaseModel],
         schema_name: str,
         temperature: float = DEFAULT_TEMPERATURE,
-        max_tokens: int = DEFAULT_MAX_TOKENS,
+        max_tokens: int | None = None,
         reasoning_effort: str | None = None,
         use_response_healing: bool = True,
     ) -> dict[str, Any]:
@@ -63,7 +61,8 @@ class OpenRouterClient:
         temperature : float, optional
             Sampling temperature.
         max_tokens : int, optional
-            Upper bound on generated tokens (lower values reduce OpenRouter credit holds).
+            Upper bound on generated tokens. When ``None``, no cap is sent and
+            the provider's own default applies, avoiding truncated responses.
         reasoning_effort : str, optional
             OpenRouter reasoning effort (``none`` disables thinking on DeepSeek V4).
         use_response_healing : bool, optional
@@ -98,7 +97,7 @@ class OpenRouterClient:
         response_model: Type[BaseModel],
         schema_name: str,
         temperature: float = DEFAULT_TEMPERATURE,
-        max_tokens: int = DEFAULT_MAX_TOKENS,
+        max_tokens: int | None = None,
         reasoning_effort: str | None = None,
         use_response_healing: bool = True,
     ) -> tuple[dict[str, Any], str]:
@@ -117,7 +116,8 @@ class OpenRouterClient:
         temperature : float, optional
             Sampling temperature.
         max_tokens : int, optional
-            Upper bound on generated tokens.
+            Upper bound on generated tokens. When ``None``, no cap is sent and
+            the provider's own default applies, avoiding truncated responses.
         reasoning_effort : str, optional
             OpenRouter reasoning effort.
         use_response_healing : bool, optional
@@ -140,7 +140,6 @@ class OpenRouterClient:
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": temperature,
-            "max_tokens": max_tokens,
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {
@@ -151,6 +150,8 @@ class OpenRouterClient:
             },
             "provider": {"require_parameters": True},
         }
+        if max_tokens is not None:
+            payload["max_tokens"] = max_tokens
         if reasoning_effort is not None:
             payload["reasoning"] = {"effort": reasoning_effort}
         if use_response_healing:

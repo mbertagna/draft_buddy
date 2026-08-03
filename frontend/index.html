@@ -723,9 +723,42 @@
             padding-left: 18px;
         }
         .ai-sliver-rationale li { margin-bottom: 3px; }
-        .ai-sliver-recap {
-            margin: 0 0 8px;
+        .ai-sliver-quick-take {
+            margin: 0 0 4px;
             line-height: 1.35;
+            font-weight: 600;
+        }
+        .ai-sliver-pros,
+        .ai-sliver-cons {
+            margin: 0 0 2px;
+            line-height: 1.35;
+        }
+        .ai-sliver-pros::before,
+        .ai-sliver-cons::before {
+            font-weight: 700;
+            margin-right: 4px;
+        }
+        .ai-sliver-pros::before { content: '+'; color: #6fdc8c; }
+        .ai-sliver-cons::before { content: '\2212'; color: #ff9a8a; }
+        .ai-sliver-details {
+            margin-top: 6px;
+        }
+        .ai-sliver-details summary {
+            cursor: pointer;
+            list-style: none;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            opacity: 0.7;
+        }
+        .ai-sliver-details summary::-webkit-details-marker { display: none; }
+        .ai-sliver-details summary::before { content: '▸ '; display: inline-block; }
+        .ai-sliver-details[open] summary::before { content: '▾ '; }
+        .ai-sliver-details-body { padding-top: 6px; }
+        .ai-sliver-reasoning {
+            margin: 0 0 6px;
+            opacity: 0.9;
         }
         .ai-sliver-risks {
             margin: 6px 0 0;
@@ -1596,11 +1629,19 @@
                                 </div>
                             </div>
                             <div id="ai-sliver-rationale" class="ai-sliver-rationale">
-                                <p id="ai-sliver-recap" class="ai-sliver-recap" hidden></p>
-                                <ul id="ai-sliver-bullets"></ul>
-                                <div id="ai-sliver-risks" class="ai-sliver-risks"></div>
-                                <div id="ai-sliver-flags"></div>
-                                <div id="ai-sliver-unknowns"></div>
+                                <p id="ai-sliver-quick-take" class="ai-sliver-quick-take" hidden></p>
+                                <p id="ai-sliver-pros" class="ai-sliver-pros" hidden></p>
+                                <p id="ai-sliver-cons" class="ai-sliver-cons" hidden></p>
+                                <details id="ai-sliver-details" class="ai-sliver-details" hidden>
+                                    <summary>Why?</summary>
+                                    <div class="ai-sliver-details-body">
+                                        <p id="ai-sliver-reasoning" class="ai-sliver-reasoning"></p>
+                                        <ul id="ai-sliver-evidence"></ul>
+                                        <div id="ai-sliver-risks" class="ai-sliver-risks"></div>
+                                        <div id="ai-sliver-flags"></div>
+                                        <div id="ai-sliver-unknowns"></div>
+                                    </div>
+                                </details>
                                 <div id="ai-sliver-degraded" hidden></div>
                             </div>
                         </div>
@@ -1839,8 +1880,12 @@
         const aiSliverPrimary = document.getElementById('ai-sliver-primary');
         const aiSliverConfidence = document.getElementById('ai-sliver-confidence');
         const aiSliverAlternates = document.getElementById('ai-sliver-alternates');
-        const aiSliverBullets = document.getElementById('ai-sliver-bullets');
-        const aiSliverRecap = document.getElementById('ai-sliver-recap');
+        const aiSliverQuickTake = document.getElementById('ai-sliver-quick-take');
+        const aiSliverPros = document.getElementById('ai-sliver-pros');
+        const aiSliverCons = document.getElementById('ai-sliver-cons');
+        const aiSliverDetails = document.getElementById('ai-sliver-details');
+        const aiSliverReasoning = document.getElementById('ai-sliver-reasoning');
+        const aiSliverEvidence = document.getElementById('ai-sliver-evidence');
         const aiSliverRisks = document.getElementById('ai-sliver-risks');
         const aiSliverFlags = document.getElementById('ai-sliver-flags');
         const aiSliverUnknowns = document.getElementById('ai-sliver-unknowns');
@@ -2161,34 +2206,55 @@
             applyAdvisorHighlightsToTable();
         }
 
-        function populateSliverDrawer(data) {
-            if (!aiSliverBullets || !aiSliverFlags || !aiSliverUnknowns) return;
-            const recap = (data.plain_english_recap || '').trim();
-            if (aiSliverRecap) {
-                if (recap) {
-                    aiSliverRecap.hidden = false;
-                    aiSliverRecap.textContent = recap;
-                } else {
-                    aiSliverRecap.hidden = true;
-                    aiSliverRecap.textContent = '';
-                }
+        function setOptionalSliverLine(element, text) {
+            if (!element) return;
+            const trimmed = (text || '').trim();
+            if (trimmed) {
+                element.hidden = false;
+                element.textContent = trimmed;
+            } else {
+                element.hidden = true;
+                element.textContent = '';
             }
-            const bullets = (data.rationale_bullets || []).filter(Boolean);
-            aiSliverBullets.innerHTML = bullets.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+        }
+
+        function populateSliverDrawer(data) {
+            if (!aiSliverFlags || !aiSliverUnknowns) return;
+
+            // Always-visible glance line: quick_take, then pros/cons only when the
+            // model found a genuine one (e.g. an early best-player-available pick
+            // may have no real con, and a reach for need may have no real pro).
+            setOptionalSliverLine(aiSliverQuickTake, data.quick_take);
+            setOptionalSliverLine(aiSliverPros, data.pros);
+            setOptionalSliverLine(aiSliverCons, data.cons);
+
+            const reasoning = (data.reasoning || '').trim();
+            const evidence = (data.evidence || []).filter(Boolean);
             const risks = (data.risks || []).filter(Boolean);
+            const flags = (data.flags || []).filter(item => item && item !== 'none');
+            const unknowns = (data.unknown_factors || []).filter(Boolean);
+
+            if (aiSliverReasoning) aiSliverReasoning.textContent = reasoning;
+            if (aiSliverEvidence) {
+                aiSliverEvidence.innerHTML = evidence.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+            }
             if (aiSliverRisks) {
                 aiSliverRisks.innerHTML = risks.length
                     ? `<div class="ai-sliver-section-label">Risks</div><ul>${risks.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
                     : '';
             }
-            const flags = (data.flags || []).filter(item => item && item !== 'none');
             aiSliverFlags.innerHTML = flags.length
                 ? `<div class="ai-sliver-section-label">Flags</div><div>${flags.map(escapeHtml).join(', ')}</div>`
                 : '';
-            const unknowns = (data.unknown_factors || []).filter(Boolean);
             aiSliverUnknowns.innerHTML = unknowns.length
                 ? `<div class="ai-sliver-section-label">Unknown factors</div><div>${unknowns.map(escapeHtml).join(', ')}</div>`
                 : '';
+
+            if (aiSliverDetails) {
+                const hasDetail = Boolean(reasoning) || evidence.length > 0 || risks.length > 0
+                    || flags.length > 0 || unknowns.length > 0;
+                aiSliverDetails.hidden = !hasDetail;
+            }
         }
 
         function renderAlternateChips(alternates) {
@@ -2291,11 +2357,21 @@
             aiSliverPrimary.removeAttribute('data-player-id');
             aiSliverPrimary.disabled = true;
             if (aiSliverAlternates) aiSliverAlternates.innerHTML = '';
-            if (aiSliverRecap) {
-                aiSliverRecap.hidden = true;
-                aiSliverRecap.textContent = '';
+            if (aiSliverQuickTake) {
+                aiSliverQuickTake.hidden = true;
+                aiSliverQuickTake.textContent = '';
             }
-            if (aiSliverBullets) aiSliverBullets.innerHTML = '';
+            if (aiSliverPros) {
+                aiSliverPros.hidden = true;
+                aiSliverPros.textContent = '';
+            }
+            if (aiSliverCons) {
+                aiSliverCons.hidden = true;
+                aiSliverCons.textContent = '';
+            }
+            if (aiSliverDetails) aiSliverDetails.hidden = true;
+            if (aiSliverReasoning) aiSliverReasoning.textContent = '';
+            if (aiSliverEvidence) aiSliverEvidence.innerHTML = '';
             if (aiSliverRisks) aiSliverRisks.innerHTML = '';
             if (aiSliverFlags) aiSliverFlags.innerHTML = '';
             if (aiSliverUnknowns) aiSliverUnknowns.innerHTML = '';

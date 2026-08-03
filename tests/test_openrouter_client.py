@@ -53,11 +53,45 @@ def test_openrouter_client_posts_structured_request(monkeypatch) -> None:
     assert captured["headers"]["Authorization"] == "Bearer test-key"
     request_json = captured["json"]
     assert request_json["model"] == "deepseek/deepseek-v4-flash"
-    assert request_json["max_tokens"] == 2048
+    assert "max_tokens" not in request_json
     assert request_json["response_format"]["type"] == "json_schema"
     assert "plugins" in request_json
     assert request_json["response_format"]["json_schema"]["strict"] is True
     assert request_json["provider"] == {"require_parameters": True}
+
+
+def test_openrouter_client_includes_max_tokens_when_provided(monkeypatch) -> None:
+    """Verify an explicit max_tokens is still sent when callers opt in (e.g. synthesis)."""
+    captured: dict = {}
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "choices": [
+                    {"message": {"content": json.dumps({"answer": "yes"})}},
+                ]
+            }
+
+    def fake_post(self, url: str, *, headers: dict, json: dict) -> FakeResponse:
+        _ = (self, url, headers)
+        captured["json"] = json
+        return FakeResponse()
+
+    monkeypatch.setattr(httpx.Client, "post", fake_post)
+
+    client = OpenRouterClient(api_key="test-key", model="deepseek/deepseek-v4-flash")
+    client.generate_structured(
+        system_prompt="system",
+        user_prompt="user",
+        response_model=SampleResponse,
+        schema_name="sample_response",
+        max_tokens=2048,
+    )
+
+    assert captured["json"]["max_tokens"] == 2048
 
 
 def test_openrouter_client_raises_on_invalid_json(monkeypatch) -> None:

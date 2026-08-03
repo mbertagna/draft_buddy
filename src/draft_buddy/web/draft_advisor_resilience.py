@@ -19,10 +19,12 @@ ADVISOR_MAX_ATTEMPTS = 2
 REPAIR_SUFFIX = (
     "\n\n---\nYour previous response failed validation: {error}\n"
     "Return ONLY valid JSON matching PickRecommendation. "
-    "Required fields: advising_team_id, is_agent_team, recommended_player_id (int), "
-    "recommended_name, confidence, plain_english_recap (string), "
-    "rationale_bullets (array of strings), risks (array of strings, up to 3), "
-    "alternates (array of objects with player_id, name, reason), flags, unknown_factors."
+    "Required fields, in this order: reasoning (string), evidence (array of strings, up to 4), "
+    "recommended_player_id (int), recommended_name (string), confidence (string), "
+    "quick_take (one short sentence), pros (string, optional — blank if none), "
+    "cons (string, optional — blank if none), risks (array of strings, up to 3), "
+    "alternates (array of objects with player_id, name, reason), flags, unknown_factors, "
+    "advising_team_id, is_agent_team."
 )
 
 

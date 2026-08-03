@@ -48,19 +48,30 @@ class AlternatePick(BaseModel):
 
 
 class PickRecommendation(BaseModel):
-    """Structured assistant recommendation returned to the client."""
+    """Structured assistant recommendation returned to the client.
 
-    advising_team_id: int
-    is_agent_team: bool
+    Field order matters: ``reasoning`` and ``evidence`` are declared before the
+    pick fields so structured-output providers (which emit JSON keys in
+    schema-declared order) generate the model's rationale before it commits to
+    a player. ``advising_team_id``/``is_agent_team`` are declared last because
+    the service always overwrites them after parsing, so the model should not
+    spend its first generated tokens on fields it does not actually control.
+    """
+
+    reasoning: str
+    evidence: list[str] = Field(default_factory=list, max_length=4)
     recommended_player_id: int
     recommended_name: str
     confidence: str
-    plain_english_recap: str = ""
-    rationale_bullets: list[str] = Field(default_factory=list, max_length=5)
+    quick_take: str
+    pros: str = ""
+    cons: str = ""
     risks: list[str] = Field(default_factory=list, max_length=3)
     alternates: list[AlternatePick] = Field(default_factory=list, max_length=3)
     flags: list[str] = Field(default_factory=list)
     unknown_factors: list[str] = Field(default_factory=list)
+    advising_team_id: int
+    is_agent_team: bool
 
 
 class AdvisorShortlistError(Exception):
@@ -75,11 +86,14 @@ class AdvisorResult(BaseModel):
     raw_content: Optional[str] = None
     advising_team_id: int
     is_agent_team: bool
+    reasoning: str = ""
+    evidence: list[str] = Field(default_factory=list, max_length=4)
     recommended_player_id: Optional[int] = None
     recommended_name: Optional[str] = None
     confidence: Optional[str] = None
-    plain_english_recap: str = ""
-    rationale_bullets: list[str] = Field(default_factory=list, max_length=5)
+    quick_take: str = ""
+    pros: str = ""
+    cons: str = ""
     risks: list[str] = Field(default_factory=list, max_length=3)
     alternates: list[AlternatePick] = Field(default_factory=list, max_length=3)
     flags: list[str] = Field(default_factory=list)
@@ -92,11 +106,14 @@ class AdvisorResult(BaseModel):
             degraded=False,
             advising_team_id=recommendation.advising_team_id,
             is_agent_team=recommendation.is_agent_team,
+            reasoning=recommendation.reasoning,
+            evidence=recommendation.evidence,
             recommended_player_id=recommendation.recommended_player_id,
             recommended_name=recommendation.recommended_name,
             confidence=recommendation.confidence,
-            plain_english_recap=recommendation.plain_english_recap,
-            rationale_bullets=recommendation.rationale_bullets,
+            quick_take=recommendation.quick_take,
+            pros=recommendation.pros,
+            cons=recommendation.cons,
             risks=recommendation.risks,
             alternates=recommendation.alternates,
             flags=recommendation.flags,
@@ -142,15 +159,24 @@ def sanitize_advisor_payload(payload: dict) -> dict:
                 cleaned_alternates.append(normalized)
         sanitized["alternates"] = cleaned_alternates
 
-    rationale_bullets = sanitized.get("rationale_bullets")
-    if isinstance(rationale_bullets, list):
-        sanitized["rationale_bullets"] = [str(item) for item in rationale_bullets[:5]]
+    reasoning = sanitized.get("reasoning")
+    sanitized["reasoning"] = str(reasoning).strip() if reasoning else ""
 
-    recap = sanitized.get("plain_english_recap")
-    if recap is None:
-        sanitized["plain_english_recap"] = ""
-    else:
-        sanitized["plain_english_recap"] = str(recap).strip()
+    evidence = sanitized.get("evidence")
+    if isinstance(evidence, list):
+        sanitized["evidence"] = [str(item).strip() for item in evidence[:4] if str(item).strip()]
+    elif evidence is None:
+        sanitized["evidence"] = []
+
+    quick_take = sanitized.get("quick_take")
+    sanitized["quick_take"] = str(quick_take).strip() if quick_take else ""
+
+    # pros/cons are intentionally optional: a clear best-player-available pick
+    # early in a draft may have no genuine downside, and vice versa. Blank is
+    # valid and preferable to the model inventing generic filler.
+    for field_name in ("pros", "cons"):
+        value = sanitized.get(field_name)
+        sanitized[field_name] = str(value).strip() if value else ""
 
     risks = sanitized.get("risks")
     if isinstance(risks, list):
@@ -225,13 +251,25 @@ def extract_partial_from_payload(payload: dict | None) -> dict[str, object]:
     if confidence:
         partial["confidence"] = str(confidence)
 
-    rationale_bullets = sanitized.get("rationale_bullets")
-    if isinstance(rationale_bullets, list):
-        partial["rationale_bullets"] = [str(item) for item in rationale_bullets[:5]]
+    reasoning = sanitized.get("reasoning")
+    if reasoning:
+        partial["reasoning"] = str(reasoning)
 
-    recap = sanitized.get("plain_english_recap")
-    if recap:
-        partial["plain_english_recap"] = str(recap)
+    evidence = sanitized.get("evidence")
+    if isinstance(evidence, list):
+        partial["evidence"] = [str(item) for item in evidence[:4]]
+
+    quick_take = sanitized.get("quick_take")
+    if quick_take:
+        partial["quick_take"] = str(quick_take)
+
+    pros = sanitized.get("pros")
+    if pros:
+        partial["pros"] = str(pros)
+
+    cons = sanitized.get("cons")
+    if cons:
+        partial["cons"] = str(cons)
 
     risks = sanitized.get("risks")
     if isinstance(risks, list):
@@ -304,11 +342,14 @@ def build_degraded_advisor_result(
         raw_content=raw_content or None,
         advising_team_id=advising_team_id,
         is_agent_team=is_agent_team,
+        reasoning=str(partial.get("reasoning") or ""),
+        evidence=partial.get("evidence", []),  # type: ignore[arg-type]
         recommended_player_id=partial.get("recommended_player_id"),  # type: ignore[arg-type]
         recommended_name=partial.get("recommended_name"),  # type: ignore[arg-type]
         confidence=partial.get("confidence"),  # type: ignore[arg-type]
-        plain_english_recap=str(partial.get("plain_english_recap") or ""),
-        rationale_bullets=partial.get("rationale_bullets", []),  # type: ignore[arg-type]
+        quick_take=str(partial.get("quick_take") or ""),
+        pros=str(partial.get("pros") or ""),
+        cons=str(partial.get("cons") or ""),
         risks=partial.get("risks", []),  # type: ignore[arg-type]
         alternates=partial.get("alternates", []),  # type: ignore[arg-type]
         flags=partial.get("flags", []),  # type: ignore[arg-type]

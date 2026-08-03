@@ -843,7 +843,17 @@ def build_advisor_context(
             "- Cite insight summary/outlook when present; use stats only when insight is null or empty.",
             "- If fields_unknown is non-empty, mention insufficient reporting — do not guess or invent backstory.",
             "- Do not recommend players not listed in the candidate or decision-board tables.",
-            "- Populate plain_english_recap (2-3 sentences), rationale_bullets (2-5), risks (up to 3), and alternates.",
+            "- Fill fields in schema order: reasoning first (1-2 sentences, your internal tradeoff "
+            "analysis), then evidence (2-4 bullets grounded in the tables above), then the pick fields.",
+            "- quick_take must be one short sentence — the pick plus its single biggest tradeoff — "
+            "written to be read at a glance during a live draft.",
+            "- pros and cons are each optional and independent: fill one only when there is a genuine, "
+            "specific point grounded in the context, as a few short phrases separated by ';' "
+            "(not full sentences). Leave it blank rather than inventing generic filler — a clear "
+            "best-player-available pick may have no real con, and a reach for need may have no real "
+            "pro beyond filling the need.",
+            "- risks (up to 3) and alternates are supporting detail shown on demand, not at a glance; "
+            "they can be more thorough than quick_take/pros/cons.",
             "- Output JSON matching PickRecommendation schema only.",
         ]
     )

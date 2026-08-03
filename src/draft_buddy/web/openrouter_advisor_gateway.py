@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from draft_buddy.llm.openrouter_client import ADVISOR_MAX_TOKENS, OpenRouterClient
+from draft_buddy.llm.openrouter_client import OpenRouterClient
 from draft_buddy.web.draft_advisor_gateway import DraftAdvisorGateway
 from draft_buddy.web.draft_advisor_schemas import PickRecommendation, parse_pick_recommendation
 
@@ -48,8 +48,7 @@ class OpenRouterAdvisorGateway(DraftAdvisorGateway):
             user_prompt=user_prompt,
             response_model=PickRecommendation,
             schema_name="pick_recommendation",
-            max_tokens=ADVISOR_MAX_TOKENS,
-            reasoning_effort="none",
+            reasoning_effort="low",
             use_response_healing=False,
         )
 

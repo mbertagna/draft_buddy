@@ -9,6 +9,14 @@ from draft_buddy.web.draft_advisor_schemas import PickRecommendation, parse_pick
 
 DEFAULT_ADVISOR_MODEL = "gemini-2.5-flash"
 
+# Low-to-medium thinking budget: well above Gemini 2.5 Flash-Lite's minimum
+# (512) to enable thinking, but far below either model's max (24576) so a
+# fast-paced live draft still gets a quick response. Thinking tokens count
+# against the same output-token limit as the visible JSON response, so
+# max_output_tokens is left unset (provider default) rather than capped, to
+# avoid the response being cut off mid-thought before any content is emitted.
+ADVISOR_THINKING_BUDGET = 2048
+
 
 class DraftAdvisorGateway(ABC):
     """Abstract interface for structured draft assistant recommendations."""
@@ -102,6 +110,9 @@ class GeminiFlashAdvisorGateway(DraftAdvisorGateway):
                 response_mime_type="application/json",
                 response_schema=PickRecommendation,
                 temperature=0.2,
+                thinking_config=types.ThinkingConfig(
+                    thinking_budget=ADVISOR_THINKING_BUDGET
+                ),
             ),
         )
         text = response.text or "{}"

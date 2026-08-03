@@ -51,7 +51,7 @@ def test_sanitize_advisor_payload_drops_invalid_alternates() -> None:
 
 
 def test_sanitize_advisor_payload_defaults_missing_teaching_fields() -> None:
-    """Verify missing recap and risks sanitize to safe defaults."""
+    """Verify missing reasoning/quick_take/pros/cons/risks sanitize to safe defaults."""
     payload = {
         "advising_team_id": 2,
         "is_agent_team": True,
@@ -62,26 +62,60 @@ def test_sanitize_advisor_payload_defaults_missing_teaching_fields() -> None:
 
     recommendation = parse_pick_recommendation(payload)
 
-    assert recommendation.plain_english_recap == ""
+    assert recommendation.reasoning == ""
+    assert recommendation.quick_take == ""
+    assert recommendation.pros == ""
+    assert recommendation.cons == ""
+    assert recommendation.evidence == []
     assert recommendation.risks == []
 
 
-def test_sanitize_advisor_payload_truncates_risks_and_keeps_recap() -> None:
-    """Verify teaching fields round-trip through sanitization."""
+def test_sanitize_advisor_payload_allows_pros_without_cons() -> None:
+    """Verify pros and cons are independently optional, not forced in pairs.
+
+    A clear best-player-available pick may have a pro with no genuine con.
+    """
     payload = {
         "advising_team_id": 2,
         "is_agent_team": True,
         "recommended_player_id": 123,
         "recommended_name": "RB One",
         "confidence": "high",
-        "plain_english_recap": "  Take the top remaining RB.  ",
-        "risks": ["Injury concern", "Bye week pile-up", "Committee risk", "Extra"],
-        "rationale_bullets": ["Highest VORP among need fills."],
+        "quick_take": "Best remaining RB by a wide VORP margin.",
+        "pros": "highest VORP on the board; fills your RB2 need",
     }
 
     recommendation = parse_pick_recommendation(payload)
 
-    assert recommendation.plain_english_recap == "Take the top remaining RB."
+    assert recommendation.pros == "highest VORP on the board; fills your RB2 need"
+    assert recommendation.cons == ""
+
+
+def test_sanitize_advisor_payload_keeps_teaching_fields_untruncated() -> None:
+    """Verify reasoning-first teaching fields round-trip without length truncation."""
+    long_quick_take = "word " * 60
+    payload = {
+        "advising_team_id": 2,
+        "is_agent_team": True,
+        "recommended_player_id": 123,
+        "recommended_name": "RB One",
+        "confidence": "high",
+        "reasoning": "Best overall value beats a shallow need-fill at this pick.",
+        "evidence": ["Highest VORP among need fills.", "Top-3 ADP value at position."],
+        "quick_take": long_quick_take,
+        "cons": "  tough Week 7 bye cluster  ",
+        "risks": ["Injury concern", "Bye week pile-up", "Committee risk", "Extra"],
+    }
+
+    recommendation = parse_pick_recommendation(payload)
+
+    assert recommendation.reasoning == "Best overall value beats a shallow need-fill at this pick."
+    assert recommendation.evidence == [
+        "Highest VORP among need fills.",
+        "Top-3 ADP value at position.",
+    ]
+    assert recommendation.quick_take == long_quick_take.strip()
+    assert recommendation.cons == "tough Week 7 bye cluster"
     assert recommendation.risks == [
         "Injury concern",
         "Bye week pile-up",
@@ -90,13 +124,13 @@ def test_sanitize_advisor_payload_truncates_risks_and_keeps_recap() -> None:
 
 
 def test_build_degraded_advisor_result_extracts_teaching_fields() -> None:
-    """Verify degraded responses preserve recap and risks when present."""
+    """Verify degraded responses preserve quick_take and risks when present."""
     result = build_degraded_advisor_result(
         parse_error="missing field",
         raw_content="{}",
         payload={
             "recommended_name": "QB One",
-            "plain_english_recap": "Safe QB floor.",
+            "quick_take": "Safe QB floor with a clean bye week.",
             "risks": ["Late-round QB run"],
         },
         advising_team_id=2,
@@ -104,5 +138,5 @@ def test_build_degraded_advisor_result_extracts_teaching_fields() -> None:
     )
 
     assert result.degraded is True
-    assert result.plain_english_recap == "Safe QB floor."
+    assert result.quick_take == "Safe QB floor with a clean bye week."
     assert result.risks == ["Late-round QB run"]

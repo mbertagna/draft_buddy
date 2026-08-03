@@ -48,7 +48,8 @@ def test_recommend_with_resilience_retries_then_succeeds() -> None:
             "recommended_player_id": 123,
             "recommended_name": "RB One",
             "confidence": "high",
-            "rationale_bullets": ["Strong value."],
+            "quick_take": "Strong value at a position of need.",
+            "evidence": ["Strong value."],
             "alternates": [],
             "flags": [],
             "unknown_factors": [],
@@ -76,7 +77,7 @@ def test_recommend_with_resilience_returns_degraded_after_exhausted_retries() ->
         "recommended_player_id": "999",
         "recommended_name": "WR One",
         "confidence": "medium",
-        "rationale_bullets": ["Good fit."],
+        "evidence": ["Good fit."],
         "alternates": [{"player_id": "9493", "player_name": "Alt WR", "reason": "Fallback"}],
     }
 
@@ -94,7 +95,7 @@ def test_recommend_with_resilience_returns_degraded_after_exhausted_retries() ->
 
     assert result.degraded is True
     assert result.recommended_name == "WR One"
-    assert result.rationale_bullets == ["Good fit."]
+    assert result.evidence == ["Good fit."]
     assert result.parse_error
     assert result.raw_content
 
