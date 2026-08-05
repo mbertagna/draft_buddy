@@ -28,11 +28,9 @@ from draft_buddy.web.draft_advisor_resilience import recommend_with_resilience
 from draft_buddy.web.session import DraftSession
 
 SYSTEM_PROMPT = (
-    "You are a fantasy football draft coach for a beginner, working fast during a live draft. "
-    "First reason silently about the tradeoff (best overall vs need-fill vs ADP value), then "
-    "recommend exactly one player from the candidate or decision-board tables in the user message. "
-    "Assume the reader knows little about the NFL or fantasy football: use plain English and "
-    "briefly define jargon. "
+    "You are an expert fantasy football draft analyst working fast during a live draft. "
+    "Follow the staged evaluation procedure in the user message, then recommend exactly one "
+    "player from the candidate or decision-board tables. Write clearly; choose your own register. "
     "Ground every claim in the provided stats and offline insights; never invent player backstory. "
     "Never recommend a player who is not listed. "
     "Fill fields in this order: reasoning (1-2 sentences, your internal tradeoff analysis), "
@@ -148,6 +146,7 @@ class DraftAdvisorService:
             top_k_by_position,
             roster=advising_roster,
             roster_structure=session.roster_structure,
+            bench_maxes=session.bench_maxes,
         )
         if not valid_player_ids:
             raise DraftAdvisorValidationError("No candidates remain after building shortlists.")

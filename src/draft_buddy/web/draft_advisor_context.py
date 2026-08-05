@@ -122,6 +122,7 @@ def collect_candidate_player_ids(
     top_k_by_position: Dict[str, int],
     roster: Optional[Dict[str, Any]] = None,
     roster_structure: Optional[Dict[str, int]] = None,
+    bench_maxes: Optional[Dict[str, int]] = None,
 ) -> set[int]:
     """Collect the union of all shortlist player ids.
 
@@ -135,12 +136,15 @@ def collect_candidate_player_ids(
         Advising team roster used for need-fill shortlists.
     roster_structure : dict, optional
         Starter slot requirements used for need-fill shortlists.
+    bench_maxes : dict, optional
+        Unused; retained for call-site compatibility.
 
     Returns
     -------
     set[int]
         Valid recommendation player ids.
     """
+    _ = bench_maxes
     valid_ids: set[int] = set()
     for position in POSITIONS:
         limit = top_k_by_position[position]
@@ -157,7 +161,6 @@ def collect_candidate_player_ids(
             for row in need_rows:
                 valid_ids.add(row.player.player_id)
     return valid_ids
-
 
 def format_league_format_blurb(
     *,
@@ -290,35 +293,91 @@ def _optional_player_field(value: Optional[str]) -> str:
     return _sanitize_table_cell(str(value))
 
 
-def _render_candidate_table(title: str, rows: Sequence[CandidateRow], insights: Dict[int, PlayerInsight]) -> str:
-    """Render one candidate markdown table."""
+INSIGHT_TABLE_FIELDS: Tuple[str, ...] = (
+    "outlook_phrase",
+    "summary",
+    "depth_role",
+    "playing_time_tier",
+    "injury_risk",
+    "floor",
+    "upside",
+    "draft_lean",
+    "handcuff_or_backup",
+    "recovery_status",
+    "evidence_as_of",
+    "tags",
+    "overall_confidence",
+    "fields_unknown",
+)
+
+
+def _table_has_insight_data(
+    rows: Sequence[CandidateRow],
+    insights: Dict[int, PlayerInsight],
+) -> bool:
+    """Return True when any candidate row has offline insight coverage."""
+    for row in rows:
+        insight = insights.get(row.player.player_id)
+        if insight is None:
+            continue
+        for field in INSIGHT_TABLE_FIELDS:
+            if _insight_cell(insight, field):
+                return True
+    return False
+
+
+def _render_candidate_table(
+    title: str,
+    rows: Sequence[CandidateRow],
+    insights: Dict[int, PlayerInsight],
+) -> str:
+    """Render one candidate markdown table.
+
+    When no row has insight coverage, omit the insight columns to keep late-draft
+    prompts compact.
+    """
     if not rows:
         return f"### {title}\n\nNo candidates.\n"
 
-    lines = [
-        f"### {title}",
-        "",
-        "| player_id | name | nfl | status | injury | depth | vorp | adp | gp_frac | proj | bye | outlook | summary | depth_role | playing_time | injury_risk | floor | upside | draft_lean | handcuff | recovery | evidence_as_of | tags | confidence | fields_unknown |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
-    ]
+    include_insights = _table_has_insight_data(rows, insights)
+    if include_insights:
+        header = (
+            "| player_id | name | nfl | status | injury | depth | vorp | adp | gp_frac | "
+            "proj | bye | outlook | summary | depth_role | playing_time | injury_risk | "
+            "floor | upside | draft_lean | handcuff | recovery | evidence_as_of | tags | "
+            "confidence | fields_unknown |"
+        )
+        divider = (
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
+            "--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+        )
+    else:
+        header = (
+            "| player_id | name | nfl | status | injury | depth | vorp | adp | "
+            "gp_frac | proj | bye |"
+        )
+        divider = "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+
+    lines = [f"### {title}", "", header, divider]
     for row in rows:
         player = row.player
         insight = insights.get(player.player_id)
-        lines.append(
-            "| "
-            + " | ".join(
+        cells = [
+            str(player.player_id),
+            _sanitize_table_cell(player.name),
+            _optional_player_field(player.team),
+            _optional_player_field(player.sleeper_status),
+            _optional_player_field(player.sleeper_injury_status),
+            _optional_player_field(player.sleeper_depth_chart_position),
+            f"{row.vorp:.1f}",
+            _format_adp(player.adp),
+            _format_gp_frac(player.games_played_frac),
+            f"{player.projected_points:.1f}",
+            _format_bye_week(player.bye_week),
+        ]
+        if include_insights:
+            cells.extend(
                 [
-                    str(player.player_id),
-                    _sanitize_table_cell(player.name),
-                    _optional_player_field(player.team),
-                    _optional_player_field(player.sleeper_status),
-                    _optional_player_field(player.sleeper_injury_status),
-                    _optional_player_field(player.sleeper_depth_chart_position),
-                    f"{row.vorp:.1f}",
-                    _format_adp(player.adp),
-                    _format_gp_frac(player.games_played_frac),
-                    f"{player.projected_points:.1f}",
-                    _format_bye_week(player.bye_week),
                     _insight_cell(insight, "outlook_phrase"),
                     _insight_cell(insight, "summary"),
                     _insight_cell(insight, "depth_role"),
@@ -335,8 +394,7 @@ def _render_candidate_table(title: str, rows: Sequence[CandidateRow], insights: 
                     _insight_cell(insight, "fields_unknown"),
                 ]
             )
-            + " |"
-        )
+        lines.append("| " + " | ".join(cells) + " |")
     lines.append("")
     return "\n".join(lines)
 
@@ -444,8 +502,10 @@ def _format_position_targets_table(
             f"| total | {roster_size} | {total_roster_size} | {max(0, total_roster_size - roster_size)} | — | — |",
             "",
             "- **starters_req**: dedicated starter slots still to fill at this position.",
-            "- **pos_cap**: max players draftable at this position (starters + bench max).",
-            "- **room_at_pos**: pos_cap minus current players at that position.",
+            "- **pos_cap**: soft max players at this position (starters + bench max) for bots; "
+            "manual drafting may exceed it when total roster slots remain.",
+            "- **room_at_pos**: pos_cap minus current players at that position. Zero does not "
+            "block manual picks if the roster still has open total slots (late trade-hoarding).",
             "- RB/WR/TE can also fill FLEX before counting toward bench.",
             "",
         ]
@@ -605,6 +665,120 @@ def _format_rl_probs(rl_probs: Dict[str, float], top_k_by_position: Dict[str, in
     return "\n".join(lines)
 
 
+def _picks_until_next_turn(
+    draft_order: Sequence[int],
+    current_pick_index: int,
+    advising_team_id: int,
+) -> Optional[int]:
+    """Return picks from the current index until the advising team's next selection.
+
+    Parameters
+    ----------
+    draft_order : Sequence[int]
+        Snake draft order of team ids.
+    current_pick_index : int
+        Zero-based index of the current pick in ``draft_order``.
+    advising_team_id : int
+        Team receiving advice.
+
+    Returns
+    -------
+    int or None
+        Positive distance to the next advising-team pick after the current index,
+        or ``None`` when no later pick remains for that team.
+    """
+    if current_pick_index < 0:
+        return None
+    for offset, team_id in enumerate(draft_order[current_pick_index + 1 :], start=1):
+        if team_id == advising_team_id:
+            return offset
+    return None
+
+
+def _format_decision_instructions() -> str:
+    """Return the staged pick-evaluation instructions for the user message."""
+    return "\n".join(
+        [
+            "## Instructions",
+            "",
+            "### Table semantics",
+            "- \"by ADP\" tables are market order (lower ADP drafted earlier), not quality order.",
+            "- When insight fields are blank for a player, use stats only; do not invent backstory.",
+            "",
+            "### Stage A — Eligibility (apply first)",
+            "- room_at_pos = 0 is a soft cap, not a hard block for manual drafting: if total roster "
+            "slots remain, you may still draft that position (useful late to hoard sought-after "
+            "players for trade value). Prefer positions with room early/mid; consider over-cap "
+            "picks mainly late when open needs are filled and the player has clear trade appeal.",
+            "- Viability screen per candidate, in order:",
+            "  1. status/injury: IR, Out, Suspended, or non-Active → rule out early/mid draft; "
+            "late stashes only if insights support recovery.",
+            "  2. gp_frac with insights — never alone. Low gp_frac plus recovered/recovering, "
+            "healthy depth_role, or buy draft_lean can be a discount; low gp_frac with no "
+            "insight coverage and distant ADP is a red flag.",
+            "  3. adp as market sanity: ADP far beyond the current pick with no insight backing "
+            "is likely not rosterable.",
+            "",
+            "### Stage B — Position choice",
+            "- Default to the RL model's top-probability position.",
+            "- Override when the RL-favored board fails Stage A, or an urgent open starter "
+            "elsewhere is getting expensive and that alternate still has non-trivial RL support.",
+            "- Tier cliff only when ALL hold: (1) meaningful starter/FLEX still open at that "
+            "position, (2) RL probability is top or near-top, (3) another team is likely to take "
+            "the player before your next pick. Do not chase cliffs for positions you are set at "
+            "or that RL clearly deprioritizes. Infer tiers from proj/VORP dropoffs and "
+            "available-above-baseline counts.",
+            "",
+            "### Stage C — Player choice within the position",
+            "- Read proj and vorp in parallel (league PPR projection vs positional scarcity).",
+            "- Use adp for reach vs value context only.",
+            "- When stats and insights conflict, prefer insight-confirmed roles with fresher "
+            "evidence_as_of.",
+            "",
+            "### Stage D — Roster-fit tiebreakers (when close)",
+            "- Bye weeks are about reliable bench cover for any position you actually start or "
+            "rotate — especially thin positions (~2 QBs, ~2 TEs). Avoid stacking multiple of "
+            "the same thin position on one bye; also avoid overloading an already-heavy bye week "
+            "at RB/WR. QBs get extra weight as high scorers, but the principle is position-agnostic.",
+            "- Small bonus for completing a QB-WR/TE same-NFL-team stack.",
+            "- Prefer need-fill when VORP is close.",
+            "",
+            "### Stage E — Draft-stage weighting",
+            "- Early (roughly rounds 1–5): best viable player; activity/role matter most; "
+            "do not chase needs; Stage A rule-outs are nearly absolute.",
+            "- Mid: balance value vs need; chase a tier cliff only if Stage B's gate is met.",
+            "- Late: fill open slots first, then upside darts or over-cap hoarding of scarce "
+            "players for trade value when room_at_pos = 0 but total roster space remains; "
+            "viability loosens for insight-backed bench stashes; bye coverage matters most.",
+            "",
+            "### League awareness",
+            "- Use Recent picks, League snapshot, and picks-until-next-turn to detect runs and "
+            "who disappears before your next selection.",
+            "",
+            "### Output rules",
+            "- Recommend exactly one player from the candidate or decision-board tables above.",
+            "- Cite insight summary/outlook when present; use stats only when insight is null "
+            "or empty.",
+            "- If fields_unknown is non-empty, mention insufficient reporting — do not guess "
+            "or invent backstory.",
+            "- Do not recommend players not listed in the candidate or decision-board tables.",
+            "- Fill fields in schema order: reasoning first (1-2 sentences, your internal "
+            "tradeoff analysis), then evidence (2-4 bullets grounded in the tables above), "
+            "then the pick fields.",
+            "- quick_take must be one short sentence — the pick plus its single biggest "
+            "tradeoff — written to be read at a glance during a live draft.",
+            "- pros and cons are each optional and independent: fill one only when there is a "
+            "genuine, specific point grounded in the context, as a few short phrases separated "
+            "by ';' (not full sentences). Leave it blank rather than inventing generic filler — "
+            "a clear best-player-available pick may have no real con, and a reach for need may "
+            "have no real pro beyond filling the need.",
+            "- risks (up to 3) and alternates are supporting detail shown on demand, not at a "
+            "glance; they can be more thorough than quick_take/pros/cons.",
+            "- Output JSON matching PickRecommendation schema only.",
+        ]
+    )
+
+
 def build_advisor_context(
     *,
     ui_state: Dict[str, Any],
@@ -690,7 +864,9 @@ def build_advisor_context(
         "## Field glossary",
         "- **vorp**: Value Over Replacement Player — projected_points minus positional baseline.",
         "- **adp**: Average draft position; lower = drafted earlier.",
-        "- **gp_frac**: Fraction of games played last season; R = rookie (no NFL sample).",
+        "- **gp_frac**: Fraction of games played last season; R = rookie (no NFL sample). "
+        "Low gp_frac may reflect a past injury or free-agency transition — check status and "
+        "insights before ruling the player out.",
         "- **nfl / status / injury / depth**: NFL team and Sleeper roster/injury/depth metadata when known.",
         "- **outlook_phrase**: Short research summary (offline, may be missing).",
         "- **summary**: Longer offline research blurb (up to two sentences; may be missing).",
@@ -710,9 +886,28 @@ def build_advisor_context(
         f"- Advising team: {display_name} (team {advising_team_id})",
         f"- Agent team: {agent_team_id} | Snake turn team: {snake_team}",
         f"- Override active: {'yes' if override_active else 'no'}",
-        "",
-        "## Advising team roster",
     ]
+
+    draft_order = ui_state.get("draft_order") or []
+    current_pick_index = int(ui_state.get("current_pick_index") or 0)
+    picks_until_next = _picks_until_next_turn(
+        draft_order,
+        current_pick_index,
+        advising_team_id,
+    )
+    if picks_until_next is None:
+        sections.append("- Picks until advising team's next selection: none remaining")
+    else:
+        sections.append(
+            f"- Picks until advising team's next selection (after this pick): {picks_until_next}"
+        )
+    sections.append("")
+
+    sections.extend(
+        [
+            "## Advising team roster",
+        ]
+    )
 
     starter_lines = ["| slot | player | nfl | pos | proj | bye |", "| --- | --- | --- | --- | --- | --- |"]
     for slot, players in (roster.get("starters") or {}).items():
@@ -780,7 +975,9 @@ def build_advisor_context(
         )
     )
 
-    sections.extend(["## Positional baselines", "", "| pos | baseline | available above baseline |", "| --- | --- | --- |"])
+    sections.extend(
+        ["## Positional baselines", "", "| pos | baseline | available above baseline |", "| --- | --- | --- |"]
+    )
     for position in POSITIONS:
         baseline = baselines.get(position, 0.0)
         above = sum(1 for row in candidate_rows if row.player.position == position and row.vorp > 0)
@@ -825,36 +1022,28 @@ def build_advisor_context(
 
     sections.append("## Top candidates by position")
     sections.append("")
+    sections.append(
+        "Positions with room_at_pos = 0 are still listed: manual drafting may pick them when "
+        "total roster slots remain (late-draft trade hoarding)."
+    )
+    sections.append("")
 
     for position in POSITIONS:
         limit = top_k_by_position[position]
-        sections.append(_render_candidate_table(f"{position} — by VORP", _top_by_vorp(candidate_rows, position, limit), insights))
-        sections.append(_render_candidate_table(f"{position} — by ADP", _top_by_adp(candidate_rows, position, limit), insights))
+        sections.append(
+            _render_candidate_table(
+                f"{position} — by VORP",
+                _top_by_vorp(candidate_rows, position, limit),
+                insights,
+            )
+        )
+        sections.append(
+            _render_candidate_table(
+                f"{position} — by ADP",
+                _top_by_adp(candidate_rows, position, limit),
+                insights,
+            )
+        )
 
-    sections.extend(
-        [
-            "## Instructions",
-            "- The reader knows little about fantasy football or the NFL; use plain English and briefly define jargon.",
-            "- Recommend exactly one player from the candidate or decision-board tables above.",
-            "- Compare best overall vs best need-fill vs ADP value; pick one and say what you are giving up.",
-            "- Prefer need-filling picks when VORP is close.",
-            "- Use roster targets and league snapshot when weighing positional runs and scarcity.",
-            "- Consider bye-week pressure and stack opportunities from the advising team roster.",
-            "- Cite insight summary/outlook when present; use stats only when insight is null or empty.",
-            "- If fields_unknown is non-empty, mention insufficient reporting — do not guess or invent backstory.",
-            "- Do not recommend players not listed in the candidate or decision-board tables.",
-            "- Fill fields in schema order: reasoning first (1-2 sentences, your internal tradeoff "
-            "analysis), then evidence (2-4 bullets grounded in the tables above), then the pick fields.",
-            "- quick_take must be one short sentence — the pick plus its single biggest tradeoff — "
-            "written to be read at a glance during a live draft.",
-            "- pros and cons are each optional and independent: fill one only when there is a genuine, "
-            "specific point grounded in the context, as a few short phrases separated by ';' "
-            "(not full sentences). Leave it blank rather than inventing generic filler — a clear "
-            "best-player-available pick may have no real con, and a reach for need may have no real "
-            "pro beyond filling the need.",
-            "- risks (up to 3) and alternates are supporting detail shown on demand, not at a glance; "
-            "they can be more thorough than quick_take/pros/cons.",
-            "- Output JSON matching PickRecommendation schema only.",
-        ]
-    )
+    sections.append(_format_decision_instructions())
     return "\n".join(sections)
