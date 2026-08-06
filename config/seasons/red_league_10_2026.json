@@ -20,9 +20,9 @@
   "training": {
     "RESUME_TRAINING": false,
     "TOTAL_EPISODES": 500000,
-    "MODEL_PATH_TO_LOAD": "models/10_teams_random_start/v1/checkpoint_episode_10296.pth"
+    "MODEL_PATH_TO_LOAD": "models/10_teams_random_start/v3/checkpoint_episode_237855.pth"
   },
   "position_guide": {
-    "checkpoint_dir": "models/10_teams_random_start/v1"
+    "checkpoint_dir": "models/10_teams_random_start/v3"
   }
 }

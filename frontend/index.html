@@ -1128,43 +1128,140 @@
         }
         .board-team-stats {
             display: flex;
-            flex-wrap: wrap;
-            gap: 2px;
-            font-size: var(--text-xs);
+            flex-wrap: nowrap;
+            align-items: baseline;
+            gap: 0;
+            font-size: 0.58rem;
+            line-height: 1.1;
             color: var(--text-dim);
             font-family: var(--font-mono);
             font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            overflow: hidden;
         }
         .board-team-stats .stat {
+            padding: 0;
+            background: none;
+            border: none;
+        }
+        .board-team-stats .stat-sep {
+            margin: 0 3px;
+            opacity: 0.45;
+            user-select: none;
+        }
+        .board-pos-fill {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: 1px;
+        }
+        .board-pos-row {
+            display: grid;
+            grid-template-columns: 18px 1fr 28px;
+            align-items: center;
+            gap: 3px;
+            font-family: var(--font-mono);
+            font-size: 0.58rem;
+            line-height: 1;
+            color: var(--text-dim);
+            font-variant-numeric: tabular-nums;
+        }
+        .board-pos-label {
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: var(--text);
+        }
+        .board-pos-track {
+            position: relative;
+            height: 7px;
             background: var(--panel-alt);
             border: 1px solid var(--border);
-            padding: 1px 4px;
-            border-radius: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .board-pos-bar {
+            height: 100%;
+            width: 0;
+            border-radius: 1px;
+            transition: width 0.15s ease;
+        }
+        .board-pos-row.over-cap .board-pos-bar {
+            background-image: repeating-linear-gradient(
+                -45deg,
+                rgba(196, 54, 43, 0.35) 0 3px,
+                transparent 3px 6px
+            );
+        }
+        .board-pos-row.over-cap .board-pos-count {
+            color: var(--danger);
+            font-weight: 700;
+        }
+        .board-pos-row.at-cap .board-pos-count {
+            color: var(--success);
+            font-weight: 600;
+        }
+        .board-pos-ticks {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .board-pos-tick {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(11, 18, 21, 0.22);
+            transform: translateX(-50%);
+        }
+        .board-pos-tick.starter-boundary {
+            width: 2px;
+            background: rgba(11, 18, 21, 0.55);
+        }
+        .board-pos-count {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .board-team-header-btn.picking-now .board-pos-track {
+            background: rgba(255, 255, 255, 0.45);
+            border-color: rgba(26, 18, 0, 0.25);
+        }
+        .board-team-header-btn.picking-now .board-pos-tick {
+            background: rgba(26, 18, 0, 0.28);
+        }
+        .board-team-header-btn.picking-now .board-pos-tick.starter-boundary {
+            background: rgba(26, 18, 0, 0.6);
         }
         .board-bye-week-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 3px;
-            font-size: 0.65rem;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+            font-size: 0.55rem;
         }
         .board-bye-week-cell {
-            padding: 3px 4px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            justify-content: center;
+            gap: 2px;
+            padding: 1px 2px;
             text-align: center;
-            border-radius: 3px;
+            border-radius: 2px;
             border: 1px solid var(--border);
             min-width: 0;
-            line-height: 1.2;
+            line-height: 1.1;
             font-family: var(--font-mono);
             color: var(--text);
         }
         .board-bye-week-cell .bye-week-num {
             font-weight: 700;
-            display: block;
+            flex-shrink: 0;
         }
         .board-bye-week-cell .bye-week-pos {
-            font-size: 0.6rem;
-            display: block;
-            margin-top: 1px;
+            font-size: inherit;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .board-cell {
             min-height: 48px;
@@ -2608,6 +2705,66 @@
             'WR': '#e2f7cf',  // light green
             'TE': '#ffe8cc',  // light orange
         };
+        const BOARD_POS_ORDER = ['QB', 'RB', 'WR', 'TE'];
+
+        function countPlayersByPosition(roster) {
+            const counts = { QB: 0, RB: 0, WR: 0, TE: 0 };
+            const flat = (roster && roster.players_flat) || [];
+            for (const player of flat) {
+                const position = player && player.position;
+                if (position && Object.prototype.hasOwnProperty.call(counts, position)) {
+                    counts[position] += 1;
+                }
+            }
+            return counts;
+        }
+
+        function buildPositionFillHtml(state, roster) {
+            const structure = state.roster_structure || {};
+            const benchMaxes = state.bench_maxes || {};
+            const counts = countPlayersByPosition(roster);
+            const rows = BOARD_POS_ORDER.map((position) => {
+                const startersRequired = Number(structure[position]) || 0;
+                const cap = startersRequired + (Number(benchMaxes[position]) || 0);
+                const count = counts[position] || 0;
+                if (cap <= 0) return '';
+
+                const fillRatio = Math.min(count / cap, 1);
+                const fillPct = (fillRatio * 100).toFixed(1);
+                const overCap = count > cap;
+                const atCap = count === cap;
+                const rowClass = [
+                    'board-pos-row',
+                    overCap ? 'over-cap' : '',
+                    atCap ? 'at-cap' : '',
+                ].filter(Boolean).join(' ');
+
+                let ticksHtml = '';
+                for (let slot = 1; slot < cap; slot++) {
+                    const leftPct = ((slot / cap) * 100).toFixed(2);
+                    const isStarterBoundary = slot === startersRequired && startersRequired > 0;
+                    ticksHtml += `<span class="board-pos-tick${isStarterBoundary ? ' starter-boundary' : ''}" style="left:${leftPct}%"></span>`;
+                }
+
+                const title = overCap
+                    ? `${position}: ${count} drafted (sim cap ${cap}; overflow allowed for manual picks)`
+                    : `${position}: ${count}/${cap} vs sim cap (${startersRequired} starters + ${Number(benchMaxes[position]) || 0} bench max)`;
+
+                return `
+                    <div class="${rowClass}" title="${title}">
+                        <span class="board-pos-label">${position}</span>
+                        <div class="board-pos-track">
+                            <div class="board-pos-bar" style="width:${fillPct}%;background:${POS_COLORS[position] || 'var(--neutral-bg)'}"></div>
+                            <div class="board-pos-ticks">${ticksHtml}</div>
+                        </div>
+                        <span class="board-pos-count">${count}/${cap}</span>
+                    </div>
+                `;
+            }).filter(Boolean).join('');
+
+            if (!rows) return '';
+            return `<div class="board-pos-fill" title="Players drafted vs simulation position caps (manual picks may overflow)">${rows}</div>`;
+        }
 
         // *** NEW: Store official team colors ***
         const TEAM_COLORS = {
@@ -3536,8 +3693,7 @@
                     const intensity = Math.min(totalOnBye / 3, 1);
                     const bgColor = totalOnBye > 1 ? `rgba(255, 100, 100, ${intensity})` : '#efefef';
                     byeWeekCellsHTML += `<div class="board-bye-week-cell" style="background-color: ${bgColor};" title="Week ${week}${posContent ? ': ' + posParts.join(', ') : ''}">
-                        <span class="bye-week-num">${week}</span>
-                        ${posContent ? `<span class="bye-week-pos">${posContent}</span>` : ''}
+                        <span class="bye-week-num">${week}</span>${posContent ? `<span class="bye-week-pos">${posContent}</span>` : ''}
                     </div>`;
                 }
 
@@ -3559,11 +3715,9 @@
                         <span class="board-team-name">${formatTeamLabel(teamId)}</span>
                     </span>
                     <div class="board-team-stats">
-                        <span class="stat" title="Total players drafted">P: ${totalPlayers}</span>
-                        <span class="stat" title="Total projected points">${totalProjectedPoints.toFixed(0)} pts</span>
-                        <span class="stat" title="Starters points">S: ${pointsSummary.starters_total.toFixed(0)}</span>
-                        <span class="stat" title="Bench points">B: ${pointsSummary.bench_total.toFixed(0)}</span>
+                        <span class="stat" title="Total players drafted">P ${totalPlayers}</span><span class="stat-sep" aria-hidden="true">·</span><span class="stat" title="Total projected points">${totalProjectedPoints.toFixed(0)}</span><span class="stat-sep" aria-hidden="true">·</span><span class="stat" title="Starters points">S ${pointsSummary.starters_total.toFixed(0)}</span><span class="stat-sep" aria-hidden="true">·</span><span class="stat" title="Bench points">B ${pointsSummary.bench_total.toFixed(0)}</span>
                     </div>
+                    ${buildPositionFillHtml(state, roster)}
                     <div class="board-bye-week-grid" title="Bye week distribution (weeks 4-14)">
                         ${byeWeekCellsHTML}
                     </div>

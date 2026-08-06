@@ -223,6 +223,7 @@ class DraftSession:
             },
             "manual_draft_teams": list(self.manual_draft_teams),
             "roster_structure": self.roster_structure,
+            "bench_maxes": self.bench_maxes,
             "team_is_full": team_is_full,
             "team_points_summary": team_points_summary,
             "num_teams": self.num_teams,
