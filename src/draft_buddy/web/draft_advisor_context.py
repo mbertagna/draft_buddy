@@ -722,7 +722,9 @@ def _format_decision_instructions() -> str:
             "",
             "### Table semantics",
             "- \"by ADP\" tables are market order (lower ADP drafted earlier), not quality order.",
-            "- When insight fields are blank for a player, use stats only; do not invent backstory.",
+            "- Blank insight cells or unknown/fields_unknown mean insufficient information, not a "
+            "negative signal. Do not downgrade a player solely for missing insights; use stats "
+            "instead and do not invent backstory.",
             "",
             "### Stage A — Eligibility (apply first)",
             "- room_at_pos = 0 is a soft cap, not a hard block for manual drafting: if total roster "
@@ -778,8 +780,8 @@ def _format_decision_instructions() -> str:
             "- Recommend exactly one player from the candidate or decision-board tables above.",
             "- Cite insight summary/outlook when present; use stats only when insight is null "
             "or empty.",
-            "- If fields_unknown is non-empty, mention insufficient reporting — do not guess "
-            "or invent backstory.",
+            "- If fields_unknown is non-empty, treat those fields as unknown — not a negative — "
+            "and do not guess or invent backstory.",
             "- Do not recommend players not listed in the candidate or decision-board tables.",
             "- Fill fields in schema order: reasoning first (1-2 sentences, your internal "
             "tradeoff analysis), then evidence (2-4 bullets grounded in the tables above), "
@@ -903,7 +905,8 @@ def build_advisor_context(
         "- **draft_lean**: buy | hold | fade | unknown relative to ADP/market narrative.",
         "- **handcuff_or_backup**: Named backup when sources identify one.",
         "- **evidence_as_of**: Newest cited research date (ISO); prefer fresher evidence.",
-        "- **fields_unknown**: Insight fields with insufficient reporting — do not infer these.",
+        "- **fields_unknown**: Insight fields with insufficient reporting — unknown info, not a "
+        "negative; do not infer these.",
         "",
         "## League format",
         f"- {format_blurb}",

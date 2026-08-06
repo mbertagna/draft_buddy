@@ -153,7 +153,7 @@ def test_build_advisor_context_includes_glossary_and_roster(config) -> None:
 
     assert "## Field glossary" in context
     assert "Low gp_frac may reflect a past injury" in context
-    assert "When insight fields are blank for a player, use stats only" in context
+    assert "insufficient information, not a negative signal" in context
     assert "## League format" in context
     assert "Full PPR · 10 teams" in context
     assert "Picks until advising team's next selection" in context
