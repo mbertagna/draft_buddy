@@ -1,7 +1,7 @@
 {
   "draft": {
     "AGENT_START_POSITION": 2,
-    "RANDOMIZE_AGENT_START_POSITION": false
+    "RANDOMIZE_AGENT_START_POSITION": true
   },
   "season": {
     "season": 2026,
@@ -18,6 +18,8 @@
     }
   },
   "training": {
+    "RESUME_TRAINING": false,
+    "TOTAL_EPISODES": 500000,
     "MODEL_PATH_TO_LOAD": "models/10_teams_random_start/v1/checkpoint_episode_10296.pth"
   },
   "position_guide": {

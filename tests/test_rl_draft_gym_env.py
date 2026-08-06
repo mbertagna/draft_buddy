@@ -7,7 +7,11 @@ import pandas as pd
 import pytest
 from pathlib import Path
 
-from draft_buddy.rl.draft_gym_env import DraftGymEnv
+from draft_buddy.rl.draft_gym_env import (
+    DraftGymEnv,
+    choose_opponent_strategy_template,
+    sample_opponent_strategy,
+)
 
 
 def test_draft_gym_env_reset_returns_observation_and_action_mask(config, player_catalog) -> None:
@@ -233,3 +237,136 @@ def test_draft_gym_env_bye_week_conflict_counts_matching_roster_players(config, 
     env._invalidate_sorted_available_cache()
 
     assert env._get_bye_week_conflict_count_for_team(1, "QB") == 1
+
+
+def test_choose_opponent_strategy_template_prefers_higher_weights() -> None:
+    """Verify weighted template selection favors higher-weight logics over many draws."""
+    templates = [
+        {"logic": "HEURISTIC", "weight": 0.45},
+        {"logic": "ADP", "weight": 0.45},
+        {"logic": "RANDOM", "weight": 0.10},
+    ]
+    draws = [choose_opponent_strategy_template(templates)["logic"] for _ in range(3000)]
+    random_fraction = draws.count("RANDOM") / len(draws)
+
+    assert 0.05 <= random_fraction <= 0.18
+
+
+def test_sample_opponent_strategy_keeps_randomness_in_template_range() -> None:
+    """Verify sampled strategies keep randomness_factor inside the template range."""
+    template = {
+        "logic": "ADP",
+        "randomness_factor_range": (0.2, 0.4),
+        "suboptimal_strategy_choices": ["NEXT_BEST_ADP"],
+        "positional_priority_choices": [["WR", "RB", "QB", "TE"]],
+    }
+    strategy = sample_opponent_strategy(template)
+
+    assert 0.2 <= strategy["randomness_factor"] <= 0.4
+
+
+def test_sample_opponent_strategy_uses_template_logic() -> None:
+    """Verify sampled strategies preserve the template logic label."""
+    template = {
+        "logic": "HEURISTIC",
+        "randomness_factor_range": (0.1, 0.2),
+        "suboptimal_strategy_choices": ["NEXT_BEST_HEURISTIC"],
+        "positional_priority_choices": [["RB", "WR", "QB", "TE"]],
+    }
+
+    assert sample_opponent_strategy(template)["logic"] == "HEURISTIC"
+
+
+def test_draft_gym_env_training_reset_randomizes_non_agent_opponent_logics(
+    config, player_catalog
+) -> None:
+    """Verify training resets assign allowed opponent logics to non-agent teams."""
+    config.opponent.RANDOMIZE_OPPONENT_STRATEGIES = True
+    config.opponent.RANDOMIZE_ONLY_DURING_TRAINING = True
+    config.draft.RANDOMIZE_AGENT_START_POSITION = False
+    config.draft.AGENT_START_POSITION = 1
+    env = DraftGymEnv(config, training=True, player_catalog=player_catalog)
+    env.reset()
+    non_agent_logics = {
+        config.opponent.OPPONENT_TEAM_STRATEGIES[team_id]["logic"]
+        for team_id in range(2, config.draft.NUM_TEAMS + 1)
+    }
+
+    assert non_agent_logics.issubset({"HEURISTIC", "ADP", "RANDOM"})
+
+
+def test_draft_gym_env_training_reset_leaves_agent_team_strategy_unchanged(
+    config, player_catalog
+) -> None:
+    """Verify the episode agent team's strategy entry is not overwritten."""
+    agent_strategy = {
+        "logic": "HEURISTIC",
+        "randomness_factor": 0.11,
+        "suboptimal_strategy": "NEXT_BEST_HEURISTIC",
+        "positional_priority": ["RB", "WR", "QB", "TE"],
+        "marker": "agent-seat",
+    }
+    config.opponent.RANDOMIZE_OPPONENT_STRATEGIES = True
+    config.opponent.RANDOMIZE_ONLY_DURING_TRAINING = True
+    config.draft.RANDOMIZE_AGENT_START_POSITION = False
+    config.draft.AGENT_START_POSITION = 1
+    config.opponent.OPPONENT_TEAM_STRATEGIES[1] = dict(agent_strategy)
+    env = DraftGymEnv(config, training=True, player_catalog=player_catalog)
+    env.reset()
+
+    assert config.opponent.OPPONENT_TEAM_STRATEGIES[1] == agent_strategy
+
+
+def test_draft_gym_env_non_training_reset_skips_opponent_randomization(
+    config, player_catalog
+) -> None:
+    """Verify inference resets leave opponent strategies unchanged when training-only."""
+    original = {
+        team_id: {
+            "logic": "ADP",
+            "randomness_factor": 0.25,
+            "suboptimal_strategy": "NEXT_BEST_ADP",
+            "positional_priority": ["WR", "RB", "QB", "TE"],
+            "marker": team_id,
+        }
+        for team_id in range(1, config.draft.NUM_TEAMS + 1)
+    }
+    config.opponent.RANDOMIZE_OPPONENT_STRATEGIES = True
+    config.opponent.RANDOMIZE_ONLY_DURING_TRAINING = True
+    config.opponent.OPPONENT_TEAM_STRATEGIES = {
+        team_id: dict(strategy) for team_id, strategy in original.items()
+    }
+    env = DraftGymEnv(config, training=False, player_catalog=player_catalog)
+    env.reset()
+
+    assert config.opponent.OPPONENT_TEAM_STRATEGIES == original
+
+
+def test_draft_gym_env_training_reset_can_change_opponent_strategies(
+    config, player_catalog
+) -> None:
+    """Verify repeated training resets can produce different opponent strategy maps."""
+    config.opponent.RANDOMIZE_OPPONENT_STRATEGIES = True
+    config.opponent.RANDOMIZE_ONLY_DURING_TRAINING = True
+    config.draft.RANDOMIZE_AGENT_START_POSITION = False
+    config.draft.AGENT_START_POSITION = 1
+    env = DraftGymEnv(config, training=True, player_catalog=player_catalog)
+    env.reset()
+    first_map = {
+        team_id: dict(strategy)
+        for team_id, strategy in config.opponent.OPPONENT_TEAM_STRATEGIES.items()
+        if team_id != 1
+    }
+    changed = False
+    for _ in range(40):
+        env.reset()
+        next_map = {
+            team_id: dict(strategy)
+            for team_id, strategy in config.opponent.OPPONENT_TEAM_STRATEGIES.items()
+            if team_id != 1
+        }
+        if next_map != first_map:
+            changed = True
+            break
+
+    assert changed is True

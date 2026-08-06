@@ -434,10 +434,15 @@ def _default_opponent_team_strategies() -> Dict[int, Dict[str, Any]]:
 
 
 def _default_opponent_strategy_templates() -> List[Dict[str, Any]]:
-    """Return default opponent randomization templates."""
+    """Return default opponent randomization templates.
+
+    Weights bias sampling toward HEURISTIC and ADP; RANDOM appears less often
+    so chaotic boards remain useful without dominating training.
+    """
     return [
         {
             "logic": "HEURISTIC",
+            "weight": 0.45,
             "randomness_factor_range": (0.05, 0.45),
             "suboptimal_strategy_choices": ["NEXT_BEST_HEURISTIC", "NEXT_BEST_ADP"],
             "positional_priority_choices": [
@@ -448,12 +453,14 @@ def _default_opponent_strategy_templates() -> List[Dict[str, Any]]:
         },
         {
             "logic": "ADP",
+            "weight": 0.45,
             "randomness_factor_range": (0.1, 0.6),
             "suboptimal_strategy_choices": ["NEXT_BEST_ADP", "RANDOM_ELIGIBLE"],
             "positional_priority_choices": [["RB", "WR", "QB", "TE"], ["WR", "RB", "QB", "TE"]],
         },
         {
             "logic": "RANDOM",
+            "weight": 0.10,
             "randomness_factor_range": (0.0, 1.0),
             "suboptimal_strategy_choices": ["RANDOM_ELIGIBLE"],
             "positional_priority_choices": [["RB", "WR", "QB", "TE"]],

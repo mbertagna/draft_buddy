@@ -7,7 +7,7 @@ import math
 import os
 import random
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import gym
 import numpy as np
@@ -24,6 +24,73 @@ from draft_buddy.rl.feature_extractor import FeatureExtractor
 from draft_buddy.rl.policy_network import PolicyNetwork
 from draft_buddy.rl.state_normalizer import StateNormalizer
 from draft_buddy.simulator.service import SeasonSimulationService
+
+_ALLOWED_OPPONENT_LOGICS = frozenset({"HEURISTIC", "ADP", "RANDOM"})
+
+
+def choose_opponent_strategy_template(
+    templates: Sequence[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Choose one opponent strategy template using optional sample weights.
+
+    Parameters
+    ----------
+    templates : Sequence[Dict[str, Any]]
+        Candidate templates. Missing ``weight`` defaults to ``1.0``.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Selected template.
+
+    Raises
+    ------
+    ValueError
+        If ``templates`` is empty or all weights are non-positive.
+    """
+    if not templates:
+        raise ValueError("At least one opponent strategy template is required.")
+    weights = [max(float(template.get("weight", 1.0)), 0.0) for template in templates]
+    total_weight = sum(weights)
+    if total_weight <= 0.0:
+        raise ValueError("Opponent strategy template weights must sum to a positive value.")
+    return random.choices(list(templates), weights=weights, k=1)[0]
+
+
+def sample_opponent_strategy(template: Dict[str, Any]) -> Dict[str, Any]:
+    """Instantiate a concrete opponent strategy from a template.
+
+    Parameters
+    ----------
+    template : Dict[str, Any]
+        Template with ``logic``, ranges, and choice lists.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Strategy dict suitable for ``OPPONENT_TEAM_STRATEGIES``.
+
+    Raises
+    ------
+    ValueError
+        If the template logic is unsupported or required fields are missing.
+    """
+    logic = str(template.get("logic", "")).upper()
+    if logic not in _ALLOWED_OPPONENT_LOGICS:
+        raise ValueError(f"Unsupported opponent strategy logic: {logic}")
+
+    low, high = template["randomness_factor_range"]
+    suboptimal_choices = template["suboptimal_strategy_choices"]
+    priority_choices = template["positional_priority_choices"]
+    if not suboptimal_choices or not priority_choices:
+        raise ValueError("Opponent strategy template must provide non-empty choice lists.")
+
+    return {
+        "logic": logic,
+        "randomness_factor": random.uniform(float(low), float(high)),
+        "suboptimal_strategy": random.choice(list(suboptimal_choices)),
+        "positional_priority": list(random.choice(list(priority_choices))),
+    }
 
 
 class DraftGymEnv(gym.Env):
@@ -190,6 +257,11 @@ class DraftGymEnv(gym.Env):
             agent_team_id = random.randint(1, self.config.draft.NUM_TEAMS)
         else:
             agent_team_id = self.config.draft.AGENT_START_POSITION
+        should_randomize_opponents = self.config.opponent.RANDOMIZE_OPPONENT_STRATEGIES and (
+            not self.config.opponent.RANDOMIZE_ONLY_DURING_TRAINING or self.training
+        )
+        if should_randomize_opponents:
+            self._randomize_opponent_strategies(agent_team_id)
         self._controller.reset(
             draft_order=self._generate_snake_draft_order(
                 self.config.draft.NUM_TEAMS, self.total_roster_size_per_team
@@ -475,6 +547,34 @@ class DraftGymEnv(gym.Env):
             team_id=team_id,
             action_to_position=self.action_to_position,
         )
+
+    def _randomize_opponent_strategies(self, agent_team_id: int) -> None:
+        """Sample HEURISTIC/ADP/RANDOM strategies for each non-agent team.
+
+        Parameters
+        ----------
+        agent_team_id : int
+            Team controlled by the RL agent for this episode; left unchanged.
+        """
+        templates = self.config.opponent.OPPONENT_STRATEGY_TEMPLATES
+        if not templates:
+            return
+
+        for team_id in range(1, self.config.draft.NUM_TEAMS + 1):
+            if team_id == agent_team_id:
+                continue
+            current = self.config.opponent.OPPONENT_TEAM_STRATEGIES.get(
+                team_id, self.config.opponent.DEFAULT_OPPONENT_STRATEGY
+            )
+            if (
+                current.get("logic") == "AGENT_MODEL"
+                and not self.config.opponent.RANDOMIZE_INCLUDE_AGENT_MODELS
+            ):
+                continue
+            template = choose_opponent_strategy_template(templates)
+            self.config.opponent.OPPONENT_TEAM_STRATEGIES[team_id] = sample_opponent_strategy(
+                template
+            )
 
     def _load_matchups(self) -> pd.DataFrame:
         """Load a team-id-keyed matchup schedule for season-sim rewards.
