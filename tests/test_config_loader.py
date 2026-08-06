@@ -17,6 +17,8 @@ def test_red_league_profile_matches_espn_settings(monkeypatch: pytest.MonkeyPatc
     assert config.draft.NUM_TEAMS == 10
     assert config.draft.ROSTER_STRUCTURE["FLEX"] == 3
     assert config.draft.TOTAL_BENCH_SIZE == 7
+    assert config.draft.BENCH_MAXES == {"QB": 1, "RB": 3, "WR": 3, "TE": 2}
+    assert config.draft.PLATFORM_BENCH_MAXES == {"QB": 3, "RB": 8, "WR": 8, "TE": 4}
     assert config.draft.AGENT_START_POSITION == 2
     assert config.get_scoring_rules()["receptions"] == 1.0
     assert config.get_scoring_rules()["passing_tds"] == 6

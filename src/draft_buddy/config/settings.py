@@ -77,7 +77,22 @@ class PathsConfig:
 
 @dataclass
 class DraftConfig:
-    """Configuration for the draft environment and league rules."""
+    """Configuration for the draft environment and league rules.
+
+    Attributes
+    ----------
+    ROSTER_STRUCTURE : Dict[str, int]
+        Dedicated starter slots by position (including FLEX).
+    BENCH_MAXES : Dict[str, int]
+        Per-position bench limits for simulated drafting (RL, bots, UI
+        targets). Effective sim cap is starters + bench max.
+    PLATFORM_BENCH_MAXES : Dict[str, int]
+        Per-position bench limits from the host platform (ESPN/Sleeper).
+        Absolute ceiling for manual picks and transfers. Effective hard
+        cap is starters + platform bench max.
+    TOTAL_BENCH_SIZE : int
+        Total bench slots per team; with starters this sets roster size.
+    """
 
     NUM_TEAMS: int = 12
     ACTION_SPACE_SIZE: int = 4
@@ -88,6 +103,9 @@ class DraftConfig:
         default_factory=lambda: {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 2}
     )
     BENCH_MAXES: Dict[str, int] = field(
+        default_factory=lambda: {"QB": 1, "RB": 3, "WR": 3, "TE": 2}
+    )
+    PLATFORM_BENCH_MAXES: Dict[str, int] = field(
         default_factory=lambda: {"QB": 1, "RB": 3, "WR": 3, "TE": 2}
     )
     TOTAL_BENCH_SIZE: int = 6

@@ -58,6 +58,7 @@ def config(tmp_path: Path) -> Config:
     config.draft.MANUAL_DRAFT_TEAMS = []
     config.draft.ROSTER_STRUCTURE = {"QB": 1, "RB": 1, "WR": 1, "TE": 1, "FLEX": 1}
     config.draft.BENCH_MAXES = {"QB": 0, "RB": 1, "WR": 1, "TE": 0}
+    config.draft.PLATFORM_BENCH_MAXES = {"QB": 2, "RB": 3, "WR": 3, "TE": 2}
     config.draft.TOTAL_BENCH_SIZE = 2
     config.draft.TEAM_MANAGER_MAPPING = {1: "Team 1", 2: "Team 2", 3: "Team 3", 4: "Team 4"}
     config.training.MODEL_PATH_TO_LOAD = ""
@@ -138,6 +139,7 @@ def rules_engine(config: Config) -> FantasyRulesEngine:
         roster_structure=config.draft.ROSTER_STRUCTURE,
         bench_maxes=config.draft.BENCH_MAXES,
         total_roster_size_per_team=total_roster_size,
+        platform_bench_maxes=config.draft.PLATFORM_BENCH_MAXES,
     )
 
 

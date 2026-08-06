@@ -181,11 +181,12 @@ def test_get_ui_state_includes_visual_board(config, player_catalog) -> None:
 
 
 def test_get_ui_state_includes_bench_maxes(config, player_catalog) -> None:
-    """Verify UI state exposes simulation bench maxes for position-fill widgets."""
+    """Verify UI state exposes simulation and platform bench maxes."""
     session = DraftSession(config)
     ui_state = session.get_ui_state()
 
     assert ui_state["bench_maxes"] == config.draft.BENCH_MAXES
+    assert ui_state["platform_bench_maxes"] == config.draft.PLATFORM_BENCH_MAXES
     assert ui_state["roster_structure"] == config.draft.ROSTER_STRUCTURE
 
 

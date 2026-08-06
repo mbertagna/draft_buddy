@@ -158,6 +158,7 @@ class DraftGymEnv(gym.Env):
             roster_structure=self.config.draft.ROSTER_STRUCTURE,
             bench_maxes=self.config.draft.BENCH_MAXES,
             total_roster_size_per_team=self.total_roster_size_per_team,
+            platform_bench_maxes=self.config.draft.PLATFORM_BENCH_MAXES,
         )
         self.opponent_models: Dict[int, PolicyNetwork] = {}
         self._controller = DraftController(

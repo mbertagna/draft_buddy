@@ -259,7 +259,7 @@ def test_picks_until_next_turn_counts_from_current_index() -> None:
 
 
 def test_format_position_targets_table_shows_remaining_room(config) -> None:
-    """Verify roster target table includes per-position caps and open starter slots."""
+    """Verify roster target table includes sim and platform caps."""
     from draft_buddy.web.draft_advisor_context import _format_position_targets_table
 
     player = _player(1, "RB", 240.0, 2.0)
@@ -267,14 +267,16 @@ def test_format_position_targets_table_shows_remaining_room(config) -> None:
     table = _format_position_targets_table(
         roster=roster,
         roster_structure={"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 3},
-        bench_maxes={"QB": 3, "RB": 8, "WR": 8, "TE": 4},
+        bench_maxes={"QB": 1, "RB": 3, "WR": 3, "TE": 2},
         total_bench_size=7,
         total_roster_size=16,
+        platform_bench_maxes={"QB": 3, "RB": 8, "WR": 8, "TE": 4},
     )
 
-    assert "| RB | 1 | 2 | 1 |" in table
-    assert "room_at_pos" in table
-    assert "does not block manual picks" in table
+    assert "| RB | 1 | 2 | 1 | 5 | 4 | 10 | 9 |" in table
+    assert "sim_cap" in table
+    assert "platform_cap" in table
+    assert "manual picks may exceed sim_cap" in table
 
 
 def test_collect_candidate_player_ids_unions_vorp_adp_and_overall() -> None:
@@ -337,7 +339,7 @@ def test_collect_candidate_player_ids_includes_need_fill_players() -> None:
         top_k,
         roster=roster,
         roster_structure=roster_structure,
-        bench_maxes={"QB": 3, "RB": 8, "WR": 8, "TE": 4},
+        bench_maxes={"QB": 1, "RB": 3, "WR": 3, "TE": 2},
     )
 
     assert 10 in valid_ids

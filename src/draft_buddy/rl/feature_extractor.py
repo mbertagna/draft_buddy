@@ -206,34 +206,38 @@ class FeatureExtractor:
     def _add_available_slot_features(
         self, feature_map: Dict[str, float], team_roster: TeamRoster, enabled: set
     ) -> None:
-        """Add available-slot features for team."""
+        """Add available-slot features for team.
+
+        Each position's remaining room is the minimum of the sim position cap
+        and total remaining roster slots so features cannot advertise more
+        picks than the roster can hold.
+        """
+        total_roster_size = (
+            sum(self._config.draft.ROSTER_STRUCTURE.values())
+            + self._config.draft.TOTAL_BENCH_SIZE
+        )
+        total_room = max(0, total_roster_size - team_roster.size)
+
+        def _clamped_slots(position: str, count: int) -> float:
+            pos_room = (
+                self._config.draft.ROSTER_STRUCTURE[position]
+                + self._config.draft.BENCH_MAXES[position]
+                - count
+            )
+            return max(0.0, float(min(pos_room, total_room)))
+
         if "available_roster_slots_qb" in enabled:
-            feature_map["available_roster_slots_qb"] = float(
-                self._config.draft.ROSTER_STRUCTURE["QB"]
-                + self._config.draft.BENCH_MAXES["QB"]
-                - team_roster.qb_count
-            )
+            feature_map["available_roster_slots_qb"] = _clamped_slots("QB", team_roster.qb_count)
         if "available_roster_slots_rb" in enabled:
-            feature_map["available_roster_slots_rb"] = float(
-                self._config.draft.ROSTER_STRUCTURE["RB"]
-                + self._config.draft.BENCH_MAXES["RB"]
-                - team_roster.rb_count
-            )
+            feature_map["available_roster_slots_rb"] = _clamped_slots("RB", team_roster.rb_count)
         if "available_roster_slots_wr" in enabled:
-            feature_map["available_roster_slots_wr"] = float(
-                self._config.draft.ROSTER_STRUCTURE["WR"]
-                + self._config.draft.BENCH_MAXES["WR"]
-                - team_roster.wr_count
-            )
+            feature_map["available_roster_slots_wr"] = _clamped_slots("WR", team_roster.wr_count)
         if "available_roster_slots_te" in enabled:
-            feature_map["available_roster_slots_te"] = float(
-                self._config.draft.ROSTER_STRUCTURE["TE"]
-                + self._config.draft.BENCH_MAXES["TE"]
-                - team_roster.te_count
-            )
+            feature_map["available_roster_slots_te"] = _clamped_slots("TE", team_roster.te_count)
         if "available_roster_slots_flex" in enabled:
-            feature_map["available_roster_slots_flex"] = float(
-                self._config.draft.ROSTER_STRUCTURE["FLEX"] - team_roster.flex_count
+            flex_room = self._config.draft.ROSTER_STRUCTURE["FLEX"] - team_roster.flex_count
+            feature_map["available_roster_slots_flex"] = max(
+                0.0, float(min(flex_room, total_room))
             )
 
     def _add_draft_context_features(

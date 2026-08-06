@@ -18,7 +18,7 @@
     }
   },
   "training": {
-    "RESUME_TRAINING": false,
+    "RESUME_TRAINING": true,
     "TOTAL_EPISODES": 500000,
     "MODEL_PATH_TO_LOAD": "models/10_teams_random_start/v3/checkpoint_episode_237855.pth"
   },

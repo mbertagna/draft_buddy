@@ -1,6 +1,9 @@
 """Core draft rules abstractions and implementations."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from draft_buddy.core.draft_state import DraftState
 from draft_buddy.core.entities import PlayerCatalog
@@ -27,16 +30,33 @@ class RulesEngine(ABC):
 
 
 class FantasyRulesEngine(RulesEngine):
-    """Fantasy football roster and availability validation rules."""
+    """Fantasy football roster and availability validation rules.
+
+    Parameters
+    ----------
+    roster_structure : dict
+        Dedicated starter slots by position (including FLEX).
+    bench_maxes : dict
+        Per-position sim bench limits for RL and bots.
+    total_roster_size_per_team : int
+        Maximum players per team roster.
+    platform_bench_maxes : dict, optional
+        Per-position platform hard bench limits for manual picks and
+        transfers. Defaults to ``bench_maxes`` when omitted.
+    """
 
     def __init__(
         self,
         roster_structure: dict,
         bench_maxes: dict,
         total_roster_size_per_team: int,
+        platform_bench_maxes: Optional[dict] = None,
     ) -> None:
         self._roster_structure = roster_structure
         self._bench_maxes = bench_maxes
+        self._platform_bench_maxes = (
+            dict(platform_bench_maxes) if platform_bench_maxes is not None else dict(bench_maxes)
+        )
         self._total_roster_size = total_roster_size_per_team
 
     def _has_position_available(
@@ -48,14 +68,25 @@ class FantasyRulesEngine(RulesEngine):
             for player_id in available_ids
         )
 
+    def _position_cap(self, position: str, bench_maxes: dict) -> int:
+        """Return total players allowed at a position for the given bench map."""
+        return self._roster_structure.get(position, 0) + bench_maxes.get(position, 0)
+
     def _validate_manual_constraints(self, team_roster, position: str, current_bench: int, total_starters: int) -> bool:
-        """Validate manual constraints for a position."""
+        """Validate manual constraints for a position.
+
+        Manual picks may exceed sim targets but must stay under the platform
+        hard cap and within total roster capacity.
+        """
         if team_roster.position_count(position) < self._roster_structure.get(position, 0):
             return True
         if position in ["RB", "WR", "TE"] and team_roster.position_count("FLEX") < self._roster_structure.get(
             "FLEX", 0
         ):
             return True
+        platform_cap = self._position_cap(position, self._platform_bench_maxes)
+        if team_roster.position_count(position) >= platform_cap:
+            return False
         return current_bench < (self._total_roster_size - total_starters)
 
     def _validate_simulated_constraints(
@@ -68,7 +99,7 @@ class FantasyRulesEngine(RulesEngine):
             "FLEX", 0
         ):
             return True
-        pos_max = self._roster_structure.get(position, 0) + self._bench_maxes.get(position, 0)
+        pos_max = self._position_cap(position, self._bench_maxes)
         bench_max = self._total_roster_size - total_starters
         return team_roster.position_count(position) < pos_max and current_bench < bench_max
 

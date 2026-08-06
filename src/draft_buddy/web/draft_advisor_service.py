@@ -173,6 +173,7 @@ class DraftAdvisorService:
             insights=insights,
             recent_picks=self._build_recent_pick_summaries(session),
             league_format_blurb=league_format_blurb,
+            platform_bench_maxes=session.platform_bench_maxes,
         )
 
         model_id = self._resolve_model_id(request, advising_team_id, session.agent_team_id)

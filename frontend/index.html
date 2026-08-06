@@ -1200,6 +1200,10 @@
             color: var(--success);
             font-weight: 600;
         }
+        .board-pos-row.at-platform-cap .board-pos-count {
+            color: var(--danger);
+            font-weight: 700;
+        }
         .board-pos-ticks {
             position: absolute;
             inset: 0;
@@ -2722,33 +2726,42 @@
         function buildPositionFillHtml(state, roster) {
             const structure = state.roster_structure || {};
             const benchMaxes = state.bench_maxes || {};
+            const platformBenchMaxes = state.platform_bench_maxes || benchMaxes;
             const counts = countPlayersByPosition(roster);
             const rows = BOARD_POS_ORDER.map((position) => {
                 const startersRequired = Number(structure[position]) || 0;
-                const cap = startersRequired + (Number(benchMaxes[position]) || 0);
+                const simCap = startersRequired + (Number(benchMaxes[position]) || 0);
+                const platformCap = startersRequired + (Number(platformBenchMaxes[position]) || 0);
                 const count = counts[position] || 0;
-                if (cap <= 0) return '';
+                if (simCap <= 0 && platformCap <= 0) return '';
 
-                const fillRatio = Math.min(count / cap, 1);
+                const fillRatio = Math.min(count / Math.max(simCap, 1), 1);
                 const fillPct = (fillRatio * 100).toFixed(1);
-                const overCap = count > cap;
-                const atCap = count === cap;
+                const overSimCap = count > simCap;
+                const atSimCap = count === simCap;
+                const atPlatformCap = count >= platformCap;
                 const rowClass = [
                     'board-pos-row',
-                    overCap ? 'over-cap' : '',
-                    atCap ? 'at-cap' : '',
+                    overSimCap ? 'over-cap' : '',
+                    atSimCap && !overSimCap ? 'at-cap' : '',
+                    atPlatformCap ? 'at-platform-cap' : '',
                 ].filter(Boolean).join(' ');
 
                 let ticksHtml = '';
-                for (let slot = 1; slot < cap; slot++) {
-                    const leftPct = ((slot / cap) * 100).toFixed(2);
+                for (let slot = 1; slot < simCap; slot++) {
+                    const leftPct = ((slot / simCap) * 100).toFixed(2);
                     const isStarterBoundary = slot === startersRequired && startersRequired > 0;
                     ticksHtml += `<span class="board-pos-tick${isStarterBoundary ? ' starter-boundary' : ''}" style="left:${leftPct}%"></span>`;
                 }
 
-                const title = overCap
-                    ? `${position}: ${count} drafted (sim cap ${cap}; overflow allowed for manual picks)`
-                    : `${position}: ${count}/${cap} vs sim cap (${startersRequired} starters + ${Number(benchMaxes[position]) || 0} bench max)`;
+                let title;
+                if (atPlatformCap) {
+                    title = `${position}: ${count} drafted (at platform hard max ${platformCap}; sim target ${simCap})`;
+                } else if (overSimCap) {
+                    title = `${position}: ${count} drafted (over sim target ${simCap}; platform max ${platformCap})`;
+                } else {
+                    title = `${position}: ${count}/${simCap} sim target (${startersRequired} starters + ${Number(benchMaxes[position]) || 0} bench); platform max ${platformCap}`;
+                }
 
                 return `
                     <div class="${rowClass}" title="${title}">
@@ -2757,13 +2770,13 @@
                             <div class="board-pos-bar" style="width:${fillPct}%;background:${POS_COLORS[position] || 'var(--neutral-bg)'}"></div>
                             <div class="board-pos-ticks">${ticksHtml}</div>
                         </div>
-                        <span class="board-pos-count">${count}/${cap}</span>
+                        <span class="board-pos-count">${count}/${simCap}</span>
                     </div>
                 `;
             }).filter(Boolean).join('');
 
             if (!rows) return '';
-            return `<div class="board-pos-fill" title="Players drafted vs simulation position caps (manual picks may overflow)">${rows}</div>`;
+            return `<div class="board-pos-fill" title="Sim draft targets (manual picks may exceed up to platform hard max)">${rows}</div>`;
         }
 
         // *** NEW: Store official team colors ***

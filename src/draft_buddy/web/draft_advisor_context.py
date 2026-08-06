@@ -468,44 +468,63 @@ def _format_position_targets_table(
     bench_maxes: Dict[str, int],
     total_bench_size: int,
     total_roster_size: int,
+    platform_bench_maxes: Optional[Dict[str, int]] = None,
 ) -> str:
-    """Render current-vs-target counts for each roster slot type."""
+    """Render current-vs-target counts for each roster slot type.
+
+    Parameters
+    ----------
+    roster : Dict[str, Any]
+        Advising team roster payload from UI state.
+    roster_structure : Dict[str, int]
+        Dedicated starter requirements.
+    bench_maxes : Dict[str, int]
+        Simulated draft bench limits (bot/RL targets).
+    total_bench_size : int
+        Total bench slots per team.
+    total_roster_size : int
+        Maximum roster size per team.
+    platform_bench_maxes : Optional[Dict[str, int]], optional
+        Platform hard bench limits. Defaults to ``bench_maxes``.
+    """
     on_roster = _count_players_by_position(roster)
     starter_filled, flex_filled = _count_starter_slots_filled(roster)
     roster_size = len(_roster_players_flat(roster))
     bench_count = len(roster.get("bench") or [])
+    hard_bench_maxes = platform_bench_maxes if platform_bench_maxes is not None else bench_maxes
 
     lines = [
         "## Roster targets",
         "",
-        "How many players the advising team has vs starter requirements and per-position caps.",
+        "How many players the advising team has vs sim targets and platform hard caps.",
         "",
-        "| pos | on_roster | starters_req | starters_open | pos_cap | room_at_pos |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| pos | on_roster | starters_req | starters_open | sim_cap | room_sim | platform_cap | room_platform |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for position in POSITIONS:
         starters_required = roster_structure.get(position, 0)
         starters_open = max(0, starters_required - starter_filled.get(position, 0))
-        position_cap = starters_required + bench_maxes.get(position, 0)
-        room_at_position = max(0, position_cap - on_roster.get(position, 0))
+        sim_cap = starters_required + bench_maxes.get(position, 0)
+        platform_cap = starters_required + hard_bench_maxes.get(position, 0)
+        on_count = on_roster.get(position, 0)
+        room_sim = max(0, sim_cap - on_count)
+        room_platform = max(0, platform_cap - on_count)
         lines.append(
-            f"| {position} | {on_roster.get(position, 0)} | {starters_required} | "
-            f"{starters_open} | {position_cap} | {room_at_position} |"
+            f"| {position} | {on_count} | {starters_required} | "
+            f"{starters_open} | {sim_cap} | {room_sim} | {platform_cap} | {room_platform} |"
         )
 
     flex_required = roster_structure.get("FLEX", 0)
     flex_open = max(0, flex_required - flex_filled)
     lines.extend(
         [
-            f"| FLEX | {flex_filled} filled | {flex_required} | {flex_open} | — | — |",
-            f"| bench | {bench_count} | {total_bench_size} | {max(0, total_bench_size - bench_count)} | — | — |",
-            f"| total | {roster_size} | {total_roster_size} | {max(0, total_roster_size - roster_size)} | — | — |",
+            f"| FLEX | {flex_filled} filled | {flex_required} | {flex_open} | — | — | — | — |",
+            f"| bench | {bench_count} | {total_bench_size} | {max(0, total_bench_size - bench_count)} | — | — | — | — |",
+            f"| total | {roster_size} | {total_roster_size} | {max(0, total_roster_size - roster_size)} | — | — | — | — |",
             "",
-            "- **starters_req**: dedicated starter slots still to fill at this position.",
-            "- **pos_cap**: soft max players at this position (starters + bench max) for bots; "
-            "manual drafting may exceed it when total roster slots remain.",
-            "- **room_at_pos**: pos_cap minus current players at that position. Zero does not "
-            "block manual picks if the roster still has open total slots (late trade-hoarding).",
+            "- **sim_cap**: bot/RL target max at this position (starters + sim bench max).",
+            "- **platform_cap**: host-league hard max; manual picks may exceed sim_cap up to this.",
+            "- **room_sim** / **room_platform**: remaining room vs those caps.",
             "- RB/WR/TE can also fill FLEX before counting toward bench.",
             "",
         ]
@@ -796,6 +815,7 @@ def build_advisor_context(
     insights: Dict[int, PlayerInsight],
     recent_picks: Sequence[Dict[str, Any]] | None = None,
     league_format_blurb: str = "",
+    platform_bench_maxes: Optional[Dict[str, int]] = None,
 ) -> str:
     """Build markdown context for the draft assistant LLM.
 
@@ -810,7 +830,7 @@ def build_advisor_context(
     roster_structure : Dict[str, int]
         Starter slot requirements.
     bench_maxes : Dict[str, int]
-        Maximum bench players allowed per position.
+        Simulated draft bench limits (bot/RL targets).
     total_bench_size : int
         Bench size per team.
     team_manager_mapping : Dict[int, str]
@@ -831,6 +851,8 @@ def build_advisor_context(
         Recent draft picks for league-flow context.
     league_format_blurb : str, optional
         Compact scoring and roster format summary.
+    platform_bench_maxes : Optional[Dict[str, int]], optional
+        Platform hard bench limits. Defaults to ``bench_maxes``.
 
     Returns
     -------
@@ -858,6 +880,11 @@ def build_advisor_context(
         num_teams=int(num_teams or 0),
         roster_structure=roster_structure,
         total_bench_size=total_bench_size,
+    )
+    resolved_platform_maxes = (
+        platform_bench_maxes
+        if platform_bench_maxes is not None
+        else ui_state.get("platform_bench_maxes") or bench_maxes
     )
 
     sections = [
@@ -933,6 +960,7 @@ def build_advisor_context(
             bench_maxes=bench_maxes,
             total_bench_size=total_bench_size,
             total_roster_size=total_roster_size,
+            platform_bench_maxes=resolved_platform_maxes,
         )
     )
     sections.append(_format_stack_summary(roster))

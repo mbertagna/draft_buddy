@@ -55,6 +55,7 @@ class DraftSession:
             roster_structure=config.draft.ROSTER_STRUCTURE,
             bench_maxes=config.draft.BENCH_MAXES,
             total_roster_size_per_team=self.total_roster_size_per_team,
+            platform_bench_maxes=config.draft.PLATFORM_BENCH_MAXES,
         )
         self._controller = DraftController(
             state=self._state,
@@ -98,8 +99,13 @@ class DraftSession:
 
     @property
     def bench_maxes(self) -> Dict[str, int]:
-        """Return bench maximums."""
+        """Return simulation bench maximums."""
         return self._config.draft.BENCH_MAXES
+
+    @property
+    def platform_bench_maxes(self) -> Dict[str, int]:
+        """Return platform hard bench maximums."""
+        return self._config.draft.PLATFORM_BENCH_MAXES
 
     @property
     def num_teams(self) -> int:
@@ -224,6 +230,7 @@ class DraftSession:
             "manual_draft_teams": list(self.manual_draft_teams),
             "roster_structure": self.roster_structure,
             "bench_maxes": self.bench_maxes,
+            "platform_bench_maxes": self.platform_bench_maxes,
             "team_is_full": team_is_full,
             "team_points_summary": team_points_summary,
             "num_teams": self.num_teams,

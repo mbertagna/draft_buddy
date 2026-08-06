@@ -17,6 +17,12 @@
       "WR": 3,
       "TE": 2
     },
+    "PLATFORM_BENCH_MAXES": {
+      "QB": 1,
+      "RB": 3,
+      "WR": 3,
+      "TE": 2
+    },
     "TOTAL_BENCH_SIZE": 6,
     "TEAM_MANAGER_MAPPING": {
       "1": "Joey",
