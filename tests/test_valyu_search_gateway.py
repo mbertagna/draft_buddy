@@ -36,15 +36,34 @@ def test_parse_response_extracts_snippets_from_results() -> None:
     assert "workhorse" in snippets[0].snippet
 
 
-def test_parse_response_prefers_shorter_description() -> None:
-    """Verify description is preferred when shorter than content."""
+def test_parse_response_prefers_content_over_description() -> None:
+    """Verify article body is preferred when both content and description exist."""
+    payload = {
+        "results": [
+            {
+                "title": "Outlook",
+                "url": "https://fantasypros.com/article",
+                "description": "Cloudy outlook after offseason moves.",
+                "content": "Robinson is our RB2 and is worth a top-two pick in a one-QB league.",
+            }
+        ]
+    }
+
+    snippets = ValyuSearchGateway._parse_response(payload)
+
+    assert "RB2" in snippets[0].snippet
+    assert "Cloudy" not in snippets[0].snippet
+
+
+def test_parse_response_falls_back_to_description_when_content_empty() -> None:
+    """Verify description is used when article body is missing."""
     payload = {
         "results": [
             {
                 "title": "Outlook",
                 "url": "https://fantasypros.com/article",
                 "description": "Clean outlook summary.",
-                "content": "Much longer noisy page content that includes sidebars and related links.",
+                "content": "",
             }
         ]
     }

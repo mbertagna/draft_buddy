@@ -450,6 +450,53 @@ class SearchCacheStore:
         )
         return snippets[:max_snippets]
 
+    def rebuild_snippets_from_raw(self, sleeper_id: str) -> int:
+        """Rewrite stored snippets from Valyu ``raw_response`` using current parsing.
+
+        Parameters
+        ----------
+        sleeper_id : str
+            Sleeper player id.
+
+        Returns
+        -------
+        int
+            Number of query cache files whose snippets were rewritten.
+        """
+        # Lazy import avoids a circular dependency with valyu_search_gateway.
+        from draft_buddy.data.insights.valyu_search_gateway import ValyuSearchGateway
+
+        player_dir = self.player_cache_dir(sleeper_id)
+        if not os.path.isdir(player_dir):
+            return 0
+
+        rewritten = 0
+        for filename in sorted(os.listdir(player_dir)):
+            if not filename.endswith(".json") or filename == "manifest.json":
+                continue
+            query_path = os.path.join(player_dir, filename)
+            with open(query_path, encoding="utf-8") as handle:
+                payload = json.load(handle)
+            raw_response = payload.get("raw_response")
+            if not _raw_response_looks_like_valyu(raw_response):
+                continue
+            snippets = ValyuSearchGateway._parse_response(raw_response)
+            payload["snippets"] = [
+                {
+                    "title": snippet.title,
+                    "snippet": snippet.snippet,
+                    "url": snippet.url,
+                    "domain": snippet.domain,
+                    "published_date": snippet.published_date,
+                    "relevance_score": snippet.relevance_score,
+                }
+                for snippet in snippets
+            ]
+            with open(query_path, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, indent=2)
+            rewritten += 1
+        return rewritten
+
     def _existing_query_kinds(self, sleeper_id: str) -> list[str]:
         """Return query kinds already present in the cache."""
         if not self.has_manifest(sleeper_id):
@@ -468,6 +515,32 @@ def _query_kind_from_filename(filename: str) -> Optional[QueryKind]:
         return QueryKind(stem)
     except ValueError:
         return None
+
+
+def _raw_response_looks_like_valyu(raw_response: object) -> bool:
+    """Return whether ``raw_response`` is a Valyu-style search payload.
+
+    Parameters
+    ----------
+    raw_response : object
+        Cached provider response.
+
+    Returns
+    -------
+    bool
+        True when the payload has a ``results`` list suitable for Valyu parsing.
+    """
+    if not isinstance(raw_response, dict):
+        return False
+    results = raw_response.get("results")
+    if results is None and isinstance(raw_response.get("data"), dict):
+        results = raw_response["data"].get("results")
+    if not isinstance(results, list) or not results:
+        return False
+    first = results[0]
+    if not isinstance(first, dict):
+        return False
+    return any(key in first for key in ("content", "description", "text", "snippet"))
 
 
 def _snippet_passes_date_filter(

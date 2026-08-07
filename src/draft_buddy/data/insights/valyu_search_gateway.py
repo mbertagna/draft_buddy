@@ -161,7 +161,7 @@ class ValyuSearchGateway(SearchGateway):
 
     @staticmethod
     def _select_snippet_text(item: dict[str, Any]) -> str:
-        """Choose description or content, then truncate to the snippet budget.
+        """Prefer article body over meta description, then truncate.
 
         Parameters
         ----------
@@ -173,12 +173,9 @@ class ValyuSearchGateway(SearchGateway):
         str
             Truncated snippet text for synthesis.
         """
-        content = str(item.get("content") or item.get("text") or item.get("snippet") or "")
+        content = str(item.get("content") or item.get("text") or item.get("snippet") or "").strip()
         description = str(item.get("description") or "").strip()
-        if description and (not content or len(description) <= len(content)):
-            selected = description
-        else:
-            selected = content
+        selected = content if content else description
         if len(selected) > MAX_SNIPPET_CHARS:
             return selected[:MAX_SNIPPET_CHARS]
         return selected

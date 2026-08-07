@@ -167,6 +167,69 @@ def test_load_snippets_drops_stale_outlook_dates_and_ranks_by_score(
     ]
 
 
+def test_rebuild_snippets_from_raw_prefers_valyu_content(tmp_path: Path) -> None:
+    """Verify rebuild rewrites meta snippets from Valyu raw article content."""
+    store = SearchCacheStore(str(tmp_path))
+    player = _player()
+    player_dir = Path(store.player_cache_dir(player.sleeper_id))
+    player_dir.mkdir(parents=True)
+    outlook_path = player_dir / "outlook.json"
+    outlook_path.write_text(
+        json.dumps(
+            {
+                "query": "outlook",
+                "kind": "outlook",
+                "fetched_at": "2026-08-06T00:00:00+00:00",
+                "raw_response": {
+                    "results": [
+                        {
+                            "title": "Bijan outlook just got complicated",
+                            "url": "https://www.cbssports.com/bijan",
+                            "description": "Cloudy 2026 Fantasy Football outlook after Falcons moves.",
+                            "content": (
+                                "Robinson is our RB2 in 2026 and is worth a top-two pick "
+                                "in a one-QB league."
+                            ),
+                            "relevance_score": 0.9,
+                        }
+                    ]
+                },
+                "snippets": [
+                    {
+                        "title": "Bijan outlook just got complicated",
+                        "snippet": "Cloudy 2026 Fantasy Football outlook after Falcons moves.",
+                        "url": "https://www.cbssports.com/bijan",
+                        "domain": "www.cbssports.com",
+                        "published_date": None,
+                        "relevance_score": 0.9,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (player_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "sleeper_id": player.sleeper_id,
+                "name": player.name,
+                "draft_year": 2026,
+                "queries": ["outlook"],
+                "fetched_at": "2026-08-06T00:00:00+00:00",
+                "provider": "valyu",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rewritten = store.rebuild_snippets_from_raw(player.sleeper_id)
+    payload = json.loads(outlook_path.read_text(encoding="utf-8"))
+
+    assert rewritten == 1
+    assert "RB2" in payload["snippets"][0]["snippet"]
+    assert "Cloudy" not in payload["snippets"][0]["snippet"]
+
+
 def test_execute_search_with_cache_raises_on_quota(monkeypatch, tmp_path: Path) -> None:
     """Verify quota errors are surfaced as QuotaExceededError."""
     gateway = GoogleCseGateway(api_key="key", search_engine_id="cx")

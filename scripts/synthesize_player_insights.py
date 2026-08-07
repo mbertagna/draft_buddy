@@ -44,6 +44,14 @@ def parse_args() -> argparse.Namespace:
         help="Create a new empty synthesis run and re-synthesize selected players.",
     )
     parser.add_argument(
+        "--rebuild-search-snippets",
+        action="store_true",
+        help=(
+            "Rebuild cached Valyu snippets from raw_response using current extraction "
+            "before synthesizing selected players."
+        ),
+    )
+    parser.add_argument(
         "--provider",
         type=str,
         default=os.environ.get("INSIGHTS_LLM_PROVIDER"),
@@ -109,6 +117,15 @@ def main() -> int:
         )
         print("Run fetch_player_insight_search.py first.", file=sys.stderr)
         return 1
+
+    if args.rebuild_search_snippets:
+        rebuild_files = 0
+        for player in players:
+            rebuild_files += search_cache.rebuild_snippets_from_raw(player.sleeper_id)
+        print(
+            f"Rebuilt search snippets from raw_response for {len(players)} players "
+            f"({rebuild_files} query files)."
+        )
 
     counts = {"synthesized": 0, "cached": 0, "failed": 0}
     merged: dict[str, PlayerInsight] = {}
