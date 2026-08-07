@@ -25,10 +25,6 @@ def _deep_merge(base: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str, Any]
     """Recursively merge ``overlay`` into a copy of ``base``."""
     merged = deepcopy(base)
     for key, value in overlay.items():
-        if key == "position_guide" and isinstance(value, dict):
-            if "checkpoint_dir" in value:
-                merged.setdefault("season", {})["position_guide_checkpoint_dir"] = value["checkpoint_dir"]
-            continue
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = _deep_merge(merged[key], value)
         else:

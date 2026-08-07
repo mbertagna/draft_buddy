@@ -16,8 +16,10 @@ from draft_buddy.rl.metrics_logger import MetricsLogger
 from draft_buddy.rl.policy_network import PolicyNetwork
 from draft_buddy.rl.run_utils import (
     find_latest_checkpoint,
+    find_latest_checkpoint_in_dir,
     get_next_version,
     get_run_name,
+    resolve_checkpoint_path,
     save_run_metadata,
     setup_run_directories,
 )
@@ -197,6 +199,59 @@ def test_policy_network_sample_action_returns_valid_choice() -> None:
     assert action == 0 and log_prob.ndim == 1 and entropy.ndim == 1
 
 
+def test_policy_network_temperature_one_matches_default_probabilities() -> None:
+    """Verify temperature=1.0 reproduces the model's raw output."""
+    network = PolicyNetwork(3, 2, hidden_dim=4)
+    state = torch.randn(1, 3)
+
+    default_probs = network.get_action_probabilities(state)
+    explicit_probs = network.get_action_probabilities(state, temperature=1.0)
+
+    assert torch.allclose(default_probs, explicit_probs)
+
+
+def test_policy_network_high_temperature_flattens_distribution() -> None:
+    """Verify temperature above 1.0 pulls probabilities toward uniform."""
+    network = PolicyNetwork(3, 4, hidden_dim=4)
+    state = torch.randn(1, 3)
+
+    sharp_probs = network.get_action_probabilities(state, temperature=1.0)
+    flat_probs = network.get_action_probabilities(state, temperature=10.0)
+
+    assert flat_probs.std() < sharp_probs.std()
+
+
+def test_policy_network_temperature_preserves_ranking() -> None:
+    """Verify temperature scaling keeps the highest-probability action ranked first."""
+    network = PolicyNetwork(3, 4, hidden_dim=4)
+    state = torch.randn(1, 3)
+
+    sharp_probs = network.get_action_probabilities(state, temperature=1.0)
+    flat_probs = network.get_action_probabilities(state, temperature=5.0)
+
+    assert torch.argmax(sharp_probs) == torch.argmax(flat_probs)
+
+
+def test_policy_network_rejects_non_positive_temperature() -> None:
+    """Verify a non-positive temperature raises a validation error."""
+    network = PolicyNetwork(3, 2, hidden_dim=4)
+
+    with pytest.raises(ValueError, match="temperature"):
+        network.get_action_probabilities(torch.zeros(1, 3), temperature=0.0)
+
+
+def test_policy_network_masked_actions_stay_near_zero_at_high_temperature() -> None:
+    """Verify masked-out actions keep ~0 probability regardless of temperature."""
+    network = PolicyNetwork(3, 2, hidden_dim=4)
+    state = torch.randn(1, 3)
+
+    probabilities = network.get_action_probabilities(
+        state, action_mask=np.array([True, False]), temperature=10.0
+    )
+
+    assert float(probabilities[0, 1]) == pytest.approx(0.0, abs=1e-6)
+
+
 def test_state_normalizer_z_score_returns_centered_vector(config) -> None:
     """Verify z-score normalization returns centered output."""
     config.training.STATE_NORMALIZATION_METHOD = "z_score"
@@ -324,6 +379,39 @@ def test_find_latest_checkpoint_returns_highest_episode_number(
     latest = find_latest_checkpoint(tiny_training_config)
 
     assert latest == str(checkpoint_b) and "episode 12" in capsys.readouterr().out
+
+
+def test_find_latest_checkpoint_in_dir_returns_highest_episode(tmp_path: Path) -> None:
+    """Checkpoint resolver picks the file with the largest episode number."""
+    (tmp_path / "checkpoint_episode_10.pth").write_text("a", encoding="utf-8")
+    (tmp_path / "checkpoint_episode_200.pth").write_text("b", encoding="utf-8")
+
+    resolved = find_latest_checkpoint_in_dir(str(tmp_path))
+
+    assert resolved is not None and resolved.endswith("checkpoint_episode_200.pth")
+
+
+def test_resolve_checkpoint_path_returns_file_unchanged(tmp_path: Path) -> None:
+    """Verify a direct checkpoint file path is returned as-is."""
+    checkpoint_file = tmp_path / "checkpoint_episode_7.pth"
+    checkpoint_file.write_text("x", encoding="utf-8")
+
+    assert resolve_checkpoint_path(str(checkpoint_file)) == str(checkpoint_file)
+
+
+def test_resolve_checkpoint_path_resolves_latest_in_directory(tmp_path: Path) -> None:
+    """Verify a directory path resolves to its highest-episode checkpoint."""
+    (tmp_path / "checkpoint_episode_1.pth").write_text("a", encoding="utf-8")
+    checkpoint_b = tmp_path / "checkpoint_episode_9.pth"
+    checkpoint_b.write_text("b", encoding="utf-8")
+
+    assert resolve_checkpoint_path(str(tmp_path)) == str(checkpoint_b)
+
+
+def test_resolve_checkpoint_path_returns_none_for_empty_or_missing_path() -> None:
+    """Verify empty or nonexistent paths resolve to None."""
+    assert resolve_checkpoint_path("") is None
+    assert resolve_checkpoint_path("/nonexistent/path") is None
 
 
 def test_find_latest_checkpoint_ignores_malformed_checkpoint_names(tiny_training_config) -> None:

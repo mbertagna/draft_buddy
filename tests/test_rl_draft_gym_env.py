@@ -80,6 +80,50 @@ def test_draft_gym_env_ai_suggestion_restores_available_players_after_ignore_lis
     assert suggestion["TE"] == pytest.approx(0.4) and env.available_player_ids == original_available
 
 
+def test_draft_gym_env_ai_suggestion_forwards_temperature_to_model(
+    config, player_catalog
+) -> None:
+    """Verify the temperature argument is passed through to the policy model."""
+    env = DraftGymEnv(config, training=False, player_catalog=player_catalog)
+
+    class RecordingModel:
+        def __init__(self) -> None:
+            self.received_temperature = None
+
+        def get_action_probabilities(self, *_args, temperature=1.0, **_kwargs):
+            import torch
+
+            self.received_temperature = temperature
+            return torch.tensor([[0.25, 0.25, 0.25, 0.25]], dtype=torch.float32)
+
+    model = RecordingModel()
+    env.agent_model = model
+    env.get_ai_suggestion_for_team(1, temperature=2.5)
+
+    assert model.received_temperature == 2.5
+
+
+def test_draft_gym_env_prunes_inactive_players_when_enabled(config, player_dataframe) -> None:
+    """Verify inactive players are excluded from the catalog when configured."""
+    player_dataframe.loc[player_dataframe["player_id"] == 2, "sleeper_status"] = "Inactive"
+    player_dataframe.to_csv(config.paths.PLAYER_DATA_CSV, index=False)
+    config.data.EXCLUDE_INACTIVE_PLAYERS = True
+
+    env = DraftGymEnv(config, training=False)
+
+    assert 2 not in env.player_catalog.player_ids
+
+
+def test_draft_gym_env_keeps_all_players_when_pruning_disabled(config, player_dataframe) -> None:
+    """Verify pruning is a no-op by default."""
+    player_dataframe.loc[player_dataframe["player_id"] == 2, "sleeper_status"] = "Inactive"
+    player_dataframe.to_csv(config.paths.PLAYER_DATA_CSV, index=False)
+
+    env = DraftGymEnv(config, training=False)
+
+    assert 2 in env.player_catalog.player_ids
+
+
 def test_draft_gym_env_get_ai_suggestions_all_returns_error_without_model(
     config, player_catalog
 ) -> None:

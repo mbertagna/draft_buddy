@@ -1,4 +1,4 @@
-"""Generate a static Monte Carlo position guide cheat sheet."""
+"""Generate static Monte Carlo position guide cheat sheets for every draft slot."""
 
 from __future__ import annotations
 
@@ -7,27 +7,24 @@ import os
 import sys
 
 from draft_buddy.config import load_runtime_config
-from draft_buddy.rl.position_guide.exporter import export_position_guide
+from draft_buddy.rl.position_guide.exporter import export_model_adp, export_position_guide
 from draft_buddy.rl.position_guide.simulator import PositionGuideSimulator
-from draft_buddy.rl.run_utils import find_latest_checkpoint_in_dir
+from draft_buddy.rl.run_utils import resolve_checkpoint_path
 
 
 def parse_args(runtime_defaults: argparse.Namespace) -> argparse.Namespace:
     """Parse CLI arguments for position guide generation."""
     parser = argparse.ArgumentParser(
-        description="Generate a static position probability cheat sheet via Monte Carlo simulation."
+        description=(
+            "Generate static position probability cheat sheets for every draft slot via "
+            "all-slots self-play Monte Carlo simulation."
+        )
     )
     parser.add_argument(
         "--num-teams",
         type=int,
         default=runtime_defaults.num_teams,
         help="League size.",
-    )
-    parser.add_argument(
-        "--slot",
-        type=int,
-        default=runtime_defaults.slot,
-        help="Your draft slot (1-based).",
     )
     parser.add_argument(
         "--year",
@@ -37,16 +34,24 @@ def parse_args(runtime_defaults: argparse.Namespace) -> argparse.Namespace:
     )
     parser.add_argument("--simulations", type=int, default=5000, help="Monte Carlo rollouts.")
     parser.add_argument(
-        "--checkpoint-dir",
-        type=str,
-        default=runtime_defaults.checkpoint_dir,
-        help="Directory containing checkpoint_episode_*.pth files.",
-    )
-    parser.add_argument(
         "--checkpoint",
         type=str,
         default=None,
-        help="Explicit checkpoint path (overrides --checkpoint-dir).",
+        help="Checkpoint file or directory (overrides config.training.MODEL_PATH_TO_LOAD).",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=1.5,
+        help=(
+            "Softmax temperature applied to every self-play suggestion. Values above 1.0 "
+            "soften an overconfident policy while preserving its ranking."
+        ),
+    )
+    parser.add_argument(
+        "--prune-inactive",
+        action="store_true",
+        help="Exclude inactive/injured players from the draftable pool for this run.",
     )
     parser.add_argument(
         "--player-csv",
@@ -64,32 +69,12 @@ def parse_args(runtime_defaults: argparse.Namespace) -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_checkpoint_path(args: argparse.Namespace) -> str | None:
-    """Resolve checkpoint path from CLI arguments.
-
-    Parameters
-    ----------
-    args : argparse.Namespace
-        Parsed CLI arguments.
-
-    Returns
-    -------
-    str | None
-        Resolved checkpoint path, or ``None`` when not found.
-    """
-    if args.checkpoint:
-        return args.checkpoint
-    return find_latest_checkpoint_in_dir(args.checkpoint_dir)
-
-
 def main() -> int:
-    """Run position guide generation."""
+    """Run all-slots position guide generation."""
     config = load_runtime_config()
     runtime_defaults = argparse.Namespace(
         num_teams=config.draft.NUM_TEAMS,
-        slot=config.draft.AGENT_START_POSITION,
         year=config.season.season,
-        checkpoint_dir=config.season.position_guide_checkpoint_dir,
     )
     args = parse_args(runtime_defaults)
     player_csv = args.player_csv or config.paths.PLAYER_DATA_CSV
@@ -99,40 +84,41 @@ def main() -> int:
         print("Run generate_projections.py or docker compose run --rm data first.", file=sys.stderr)
         return 1
 
-    checkpoint_path = resolve_checkpoint_path(args)
-    if not checkpoint_path or not os.path.isfile(checkpoint_path):
+    checkpoint_path = resolve_checkpoint_path(args.checkpoint or config.training.MODEL_PATH_TO_LOAD)
+    if not checkpoint_path:
         print("Checkpoint not found.", file=sys.stderr)
         return 1
 
-    if not (1 <= args.slot <= args.num_teams):
-        print(f"Invalid slot {args.slot} for {args.num_teams}-team league.", file=sys.stderr)
-        return 1
+    if args.prune_inactive:
+        config.data.EXCLUDE_INACTIVE_PLAYERS = True
 
     print(
-        f"Generating position guide: {args.num_teams} teams, slot {args.slot}, "
-        f"{args.simulations} simulations..."
+        f"Generating position guides for all {args.num_teams} slots "
+        f"({args.simulations} self-play simulations, temperature={args.temperature:g})..."
     )
     simulator = PositionGuideSimulator(
         config=config,
-        draft_slot=args.slot,
         num_teams=args.num_teams,
         checkpoint_path=checkpoint_path,
         draft_year=args.year,
         simulations=args.simulations,
         seed=args.seed,
+        temperature=args.temperature,
         player_data_csv=player_csv,
         show_progress=not args.no_progress,
     )
     try:
-        guide = simulator.run()
+        guides, model_adp = simulator.run()
     except RuntimeError as error:
         print(str(error), file=sys.stderr)
         return 1
 
-    json_path, html_path = export_position_guide(guide, args.data_root)
-    print(f"JSON guide saved to: {json_path}")
-    print(f"HTML guide saved to: {html_path}")
-    print(f"Total user picks: {guide.total_user_picks}")
+    for slot in sorted(guides):
+        json_path, html_path = export_position_guide(guides[slot], args.data_root)
+        print(f"Slot {slot}: JSON={json_path} HTML={html_path}")
+
+    adp_json_path, adp_html_path = export_model_adp(model_adp, args.data_root)
+    print(f"Model ADP: JSON={adp_json_path} HTML={adp_html_path}")
     return 0
 
 

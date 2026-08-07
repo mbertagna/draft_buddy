@@ -216,18 +216,19 @@ See [PLAYER_INSIGHTS_PART2_PLAN.md](docs/PLAYER_INSIGHTS_PART2_PLAN.md) for arch
 
 ### Position Guide (pre-draft cheat sheet)
 
-Offline Monte Carlo simulation produces a **static position probability guide** for your draft slot — useful as a fallback when the live dashboard is unavailable. Defaults (`num-teams`, `slot`, `checkpoint-dir`) come from the active league profile in `.env`.
+Offline Monte Carlo simulation produces **static position probability guides for every draft slot in one run** — useful as a fallback when the live dashboard is unavailable. Every team samples its own temperature-scaled policy suggestion each pick ("all-slots self-play"), so one batch of simulations yields self-consistent guides for all slots simultaneously, plus a league-wide model-derived ADP ranking. Defaults (`num-teams`, checkpoint) come from the active league profile in `.env`.
 
 **Prerequisites:**
 
 1. Generate player projections for the active league: `docker compose run --rm data`
-2. A trained policy checkpoint for that league size (paths are set in `config/seasons/{league}_{year}.json`)
+2. A trained policy checkpoint for that league size, pointed at by `training.MODEL_PATH_TO_LOAD` in `config/seasons/{league}_{year}.json` (a checkpoint file or a directory containing `checkpoint_episode_*.pth` files — the latest episode is used)
 
 **Run (uses active league from `.env`):**
 
 ```bash
 docker compose run --rm position-guide
 open data/guides/exports/position_guide_*teams_slot*_*_*.html
+open data/guides/exports/model_adp_*teams_*_*.html
 ```
 
 **Override league temporarily:**
@@ -236,12 +237,20 @@ open data/guides/exports/position_guide_*teams_slot*_*_*.html
 DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 docker compose run --rm position-guide
 ```
 
+**Useful flags:**
+
+- `--temperature` (default `1.5`) — softmax temperature applied to every self-play suggestion; values above `1.0` soften an overconfident policy (e.g. ~99%/1% QB/RB splits) while preserving its ranking
+- `--prune-inactive` — exclude inactive/injured players (per `data.INACTIVE_ROSTER_STATUSES` / `data.INACTIVE_INJURY_STATUSES`) from this run's draftable pool
+- `--checkpoint` — override the configured checkpoint file or directory
+
 **Outputs:**
 
-- JSON: `data/guides/exports/position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.json`
-- HTML: same basename with `.html` (printable cheat sheet)
+- Per-slot guide JSON: `data/guides/exports/position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.json`
+- Per-slot guide HTML: same basename with `.html` (printable cheat sheet, with top-5 actually-drafted players shown under each position bar)
+- Model ADP JSON: `data/guides/exports/model_adp_{num_teams}teams_{year}_{timestamp}.json`
+- Model ADP HTML: same basename with `.html` (players ranked by mean simulated overall pick number, alongside market ADP)
 
-Each run writes a new timestamped export. Filenames include league size so 10-team and 12-team guides do not collide.
+Each run writes new timestamped exports for every slot plus one model-ADP export. Filenames include league size so 10-team and 12-team guides do not collide.
 
 ### League profiles and season rollover
 
@@ -253,9 +262,9 @@ Each run writes a new timestamped export. Filenames include league size so 10-te
 **Season rollover checklist** (each August):
 
 1. Copy `config/seasons/{league}_2026.json` to `{league}_2027.json`
-2. Update `season`, `bye_weeks`, `draft.AGENT_START_POSITION`, and checkpoint paths
+2. Update `season`, `bye_weeks`, and `draft.AGENT_START_POSITION`
 3. Run `docker compose run --rm data` for each league you use
-4. Train or point `training.MODEL_PATH_TO_LOAD` at the correct `models/{N}_teams_*` checkpoint
+4. Train or point `training.MODEL_PATH_TO_LOAD` at the correct `models/{N}_teams_*` checkpoint (file or directory) — this is the single source of truth for both the webapp and the position guide
 
 Player projections only include nflverse-trackable scoring rules. Bonuses without reliable stat columns (50+ yard TDs, D/ST details, IR slots) are omitted per league JSON.
 

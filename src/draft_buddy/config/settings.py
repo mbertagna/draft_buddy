@@ -41,7 +41,6 @@ class SeasonRuntimeConfig:
 
     season: int = 2026
     bye_weeks: Dict[int, List[str]] = field(default_factory=dict)
-    position_guide_checkpoint_dir: str = ""
 
 
 @dataclass
@@ -285,11 +284,27 @@ class OpponentConfig:
 
 @dataclass
 class DataConfig:
-    """Configuration for player data generation and nflverse stat loading."""
+    """Configuration for player data generation and nflverse stat loading.
+
+    Attributes
+    ----------
+    EXCLUDE_INACTIVE_PLAYERS : bool
+        When ``True``, players matching ``INACTIVE_ROSTER_STATUSES`` or
+        ``INACTIVE_INJURY_STATUSES`` are removed from the draftable pool
+        before training or guide-generation rollouts. Off by default so
+        existing training and webapp behavior is unaffected.
+    INACTIVE_ROSTER_STATUSES : List[str]
+        Sleeper roster statuses treated as unavailable (e.g. ``"Inactive"``).
+    INACTIVE_INJURY_STATUSES : List[str]
+        Sleeper injury designations treated as unavailable (e.g. ``"IR"``).
+    """
 
     LEGACY_STATS_LOOKBACK_SEASONS: int = 2
     NFLVERSE_STATS_RELEASE: str = "stats_player"
     NFLVERSE_WEEK_STATS_TEMPLATE: str = "stats_player_week_{season}.csv"
+    EXCLUDE_INACTIVE_PLAYERS: bool = False
+    INACTIVE_ROSTER_STATUSES: List[str] = field(default_factory=lambda: ["Inactive"])
+    INACTIVE_INJURY_STATUSES: List[str] = field(default_factory=lambda: ["IR", "PUP", "DNR"])
 
     def legacy_stats_start_year(self, draft_year: int) -> int:
         """Return the first nflverse season to load for a draft year.

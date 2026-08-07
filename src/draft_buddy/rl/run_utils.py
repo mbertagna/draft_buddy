@@ -115,6 +115,31 @@ def find_latest_checkpoint_in_dir(version_dir: str) -> str | None:
     return latest_checkpoint
 
 
+def resolve_checkpoint_path(path: str | None) -> str | None:
+    """Resolve a configured checkpoint path to a concrete checkpoint file.
+
+    Parameters
+    ----------
+    path : str | None
+        Either a direct checkpoint file path or a directory containing
+        ``checkpoint_episode_*.pth`` files.
+
+    Returns
+    -------
+    str | None
+        The path itself when it is an existing file, the latest checkpoint
+        in the directory when it is a directory, or ``None`` when ``path``
+        is empty or resolves to nothing.
+    """
+    if not path:
+        return None
+    if os.path.isfile(path):
+        return path
+    if os.path.isdir(path):
+        return find_latest_checkpoint_in_dir(path)
+    return None
+
+
 def find_latest_checkpoint(config):
     """
     Find latest checkpoint path for current run name using highest episode number.

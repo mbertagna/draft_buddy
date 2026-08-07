@@ -17,11 +17,12 @@ from gym import spaces
 
 from draft_buddy.config import Config
 from draft_buddy.core import DraftController, DraftState, FantasyRulesEngine, create_bot_gm
-from draft_buddy.data import load_player_catalog
+from draft_buddy.data import exclude_inactive_players, load_player_catalog
 from draft_buddy.rl.agent_bot import AgentModelBotGM
 from draft_buddy.rl.checkpoint_manager import CheckpointManager
 from draft_buddy.rl.feature_extractor import FeatureExtractor
 from draft_buddy.rl.policy_network import PolicyNetwork
+from draft_buddy.rl.run_utils import resolve_checkpoint_path
 from draft_buddy.rl.state_normalizer import StateNormalizer
 from draft_buddy.simulator.service import SeasonSimulationService
 
@@ -131,6 +132,12 @@ class DraftGymEnv(gym.Env):
         self.player_catalog = player_catalog or load_player_catalog(
             config.paths.PLAYER_DATA_CSV, config.draft.MOCK_ADP_CONFIG
         )
+        if config.data.EXCLUDE_INACTIVE_PLAYERS:
+            self.player_catalog = exclude_inactive_players(
+                self.player_catalog,
+                config.data.INACTIVE_ROSTER_STATUSES,
+                config.data.INACTIVE_INJURY_STATUSES,
+            )
         self.action_to_position = {0: "QB", 1: "RB", 2: "WR", 3: "TE"}
         self.position_to_action = {"QB": 0, "RB": 1, "WR": 2, "TE": 3}
         self.action_space = spaces.Discrete(len(self.action_to_position))
@@ -438,8 +445,30 @@ class DraftGymEnv(gym.Env):
             return {"error": "Draft is over."}
         return self.get_ai_suggestion_for_team(team_on_clock)
 
-    def get_ai_suggestion_for_team(self, team_id: int, ignore_player_ids: Optional[List[int]] = None):
-        """Return AI suggestion for a specific team."""
+    def get_ai_suggestion_for_team(
+        self,
+        team_id: int,
+        ignore_player_ids: Optional[List[int]] = None,
+        temperature: float = 1.0,
+    ):
+        """Return AI suggestion for a specific team.
+
+        Parameters
+        ----------
+        team_id : int
+            Team to compute the suggestion for.
+        ignore_player_ids : Optional[List[int]], optional
+            Player ids to temporarily exclude from availability.
+        temperature : float, optional
+            Softmax temperature applied to the policy's logits. Values above
+            ``1.0`` flatten an overconfident distribution while preserving
+            relative ranking; ``1.0`` (default) is the model's raw output.
+
+        Returns
+        -------
+        dict
+            Position probabilities keyed by position code, or an ``error``.
+        """
         if not (1 <= team_id <= self.num_teams):
             return {"error": f"Invalid team id {team_id}"}
         if not self.agent_model:
@@ -468,7 +497,7 @@ class DraftGymEnv(gym.Env):
         state_tensor = torch.from_numpy(state).float().unsqueeze(0)
         with torch.no_grad():
             action_probs_tensor = self.agent_model.get_action_probabilities(
-                state_tensor, action_mask=action_mask
+                state_tensor, action_mask=action_mask, temperature=temperature
             )
         action_probs = action_probs_tensor.squeeze().tolist()
         return {self.action_to_position[i]: prob for i, prob in enumerate(action_probs)}
@@ -496,8 +525,8 @@ class DraftGymEnv(gym.Env):
 
     def _load_agent_model(self) -> None:
         """Load the primary agent model for AI suggestions."""
-        model_path = self.config.training.MODEL_PATH_TO_LOAD
-        if not model_path or not os.path.exists(model_path):
+        model_path = resolve_checkpoint_path(self.config.training.MODEL_PATH_TO_LOAD)
+        if not model_path:
             self.agent_model = None
             return
         input_dim = len(self.config.training.ENABLED_STATE_FEATURES)

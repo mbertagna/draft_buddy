@@ -68,11 +68,11 @@ def test_season_overlay_sets_bye_weeks(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.season.bye_weeks[14] == ["ARI", "DAL"]
 
 
-def test_position_guide_checkpoint_dir_from_season_overlay() -> None:
-    """Verify position guide checkpoint directory is season-scoped."""
+def test_model_path_to_load_from_season_overlay() -> None:
+    """Verify the checkpoint path is season-scoped via training config."""
     config = load_runtime_config(league_id="redraft_nbfl_12", season=2026)
 
-    assert config.season.position_guide_checkpoint_dir == "models/12_teams_random_start/v3"
+    assert config.training.MODEL_PATH_TO_LOAD == "models/12_teams_random_start/v3"
 
 
 def test_team_manager_mapping_uses_integer_keys() -> None:

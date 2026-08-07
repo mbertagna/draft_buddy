@@ -22,6 +22,11 @@ POSITION_GUIDE_EXPORT_PATTERN = re.compile(
     r"(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.(?P<ext>json|html)$"
 )
 
+MODEL_ADP_EXPORT_PATTERN = re.compile(
+    r"^model_adp_(?P<num_teams>\d+)teams_"
+    r"(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.(?P<ext>json|html)$"
+)
+
 
 def nflverse_cache_dir(data_root: str) -> str:
     """Return the nflverse raw-data cache directory under a data root.
@@ -450,6 +455,40 @@ def resolve_latest_position_guide_path(
             newest_path = os.path.join(exports_dir, filename)
 
     return newest_path
+
+
+def model_adp_output_path(
+    data_root: str,
+    num_teams: int,
+    year: int,
+    generated_at: datetime,
+    ext: str = "json",
+) -> str:
+    """Return the path for a new timestamped model-ADP export.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+    num_teams : int
+        League size (e.g. ``12``).
+    year : int
+        Draft year (e.g. ``2026``).
+    generated_at : datetime
+        UTC generation timestamp embedded in the filename.
+    ext : str, optional
+        File extension without dot (``json`` or ``html``).
+
+    Returns
+    -------
+    str
+        Path to ``model_adp_{num_teams}teams_{year}_{timestamp}.{ext}``.
+    """
+    timestamp = _format_insights_timestamp(generated_at)
+    filename = f"model_adp_{num_teams}teams_{year}_{timestamp}.{ext}"
+    exports_dir = position_guide_exports_dir(data_root)
+    os.makedirs(exports_dir, exist_ok=True)
+    return os.path.join(exports_dir, filename)
 
 
 def resolve_latest_player_insights_path(data_root: str) -> str | None:

@@ -19,8 +19,5 @@
   },
   "training": {
     "MODEL_PATH_TO_LOAD": "models/12_teams_random_start/v3"
-  },
-  "position_guide": {
-    "checkpoint_dir": "models/12_teams_random_start/v3"
   }
 }
