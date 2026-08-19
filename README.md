@@ -212,6 +212,28 @@ The web UI includes an on-demand **LLM draft assistant** alongside the fast RL p
 
 The assistant builds per-position shortlists (top 7 by VORP/ADP for the RL model's top two positions, top 5 for the others) and returns a structured pick recommendation. Min GP Frac from the player table is sent with each request.
 
+### Shelved players
+
+Players can be removed from the draftable pool without drafting them onto a team:
+
+- Per-row **−** control in the player table, **Hide ADP above**, or **Shelve inactive** (Inactive/IR/PUP/DNR) in the header **Shelved** panel
+- Open **Shelved** in the banner (same pattern as Settings/Stats) for ADP-sorted chips; click a chip or **Restore all** to unshelve
+- They are excluded from VORP, bots, Sim/Auto Draft, RL chips, and the LLM assistant
+- Persisted in draft state JSON as `shelved_player_ids` (not on the visual board or pick history)
+- New Draft does **not** auto-shelve by default (`data.AUTO_SHELVE_INACTIVE_ON_NEW_DRAFT`); use **Shelve inactive** when you want that filter
+### Training draft pool regimes
+
+When `training.RANDOMIZE_DRAFT_POOL_DURING_TRAINING` is true, each training episode samples a weighted regime from `training.DRAFT_POOL_REGIMES`:
+
+| Regime id | Behavior |
+| --- | --- |
+| `full` | Entire catalog |
+| `inactive_only` | Drop Inactive/IR/PUP/DNR |
+| `adp_only` | Top ADP pool of size `num_teams * roster_slots + U(EXTRA_MIN, EXTRA_MAX)` |
+| `inactive_and_adp` | Inactive prune then ADP top-N |
+
+Defaults use `ADP_POOL_EXTRA_MIN=40` / `MAX=80` so tight ADP boards keep slack beyond a full draft. ADP-limited pools also top up by position so RB/WR/TE supply covers worst-case flex absorption (bench caps can otherwise exhaust a position while a team still has roster room). Season overlays live under `config/seasons/`. With randomization on, the gym keeps the full catalog so full-pool episodes remain possible. If an opponent still cannot pick, training ends that episode early and prints a detailed `WARNING` (regime, pool size, roster counts, available positions) instead of crashing.
+
 See [PLAYER_INSIGHTS_PART2_PLAN.md](docs/PLAYER_INSIGHTS_PART2_PLAN.md) for architecture details.
 
 ### Position Guide (pre-draft cheat sheet)
@@ -240,8 +262,15 @@ DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 docker compose run --rm position-guide
 **Useful flags:**
 
 - `--temperature` (default `1.5`) — softmax temperature applied to every self-play suggestion; values above `1.0` soften an overconfident policy (e.g. ~99%/1% QB/RB splits) while preserving its ranking
-- `--prune-inactive` — exclude inactive/injured players (per `data.INACTIVE_ROSTER_STATUSES` / `data.INACTIVE_INJURY_STATUSES`) from this run's draftable pool
+- `--prune-inactive` — exclude Inactive/IR/PUP/DNR players from this run's draftable pool (same statuses as UI **Shelve inactive**)
+- `--limit-adp N` — keep the top `N` players by ascending FantasyPros ADP, then top up to worst-case position floors (final pool may exceed `N`); omit for the full catalog
 - `--checkpoint` — override the configured checkpoint file or directory
+
+Example with both pool filters:
+
+```bash
+docker compose run --rm position-guide python scripts/generate_position_guide.py --simulations 5000 --prune-inactive --limit-adp 200
+```
 
 **Outputs:**
 
