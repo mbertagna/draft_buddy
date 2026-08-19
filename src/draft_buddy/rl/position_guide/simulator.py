@@ -15,6 +15,7 @@ from tqdm import tqdm
 from draft_buddy.config import Config
 from draft_buddy.core.entities import Player, PlayerCatalog
 from draft_buddy.data import load_player_catalog
+from draft_buddy.data.adp_pool import build_episode_pool_ids
 from draft_buddy.rl.draft_gym_env import DraftGymEnv
 from draft_buddy.rl.position_guide.pick_numbers import pick_placement
 from draft_buddy.rl.position_guide.schemas import (
@@ -164,6 +165,8 @@ class PositionGuideSimulator:
         temperature: float = 1.5,
         player_data_csv: str | None = None,
         show_progress: bool = True,
+        prune_inactive: bool = False,
+        limit_adp: int | None = None,
     ) -> None:
         """Initialize the simulator with draft and model settings.
 
@@ -189,6 +192,12 @@ class PositionGuideSimulator:
             Player CSV path override.
         show_progress : bool, optional
             When ``True``, display a tqdm progress bar during rollouts.
+        prune_inactive : bool, optional
+            When ``True``, drop Inactive/IR/PUP/DNR players from the
+            draftable pool.
+        limit_adp : int or None, optional
+            When set, keep the top ``limit_adp`` players by ascending ADP,
+            then top up to worst-case position floors.
         """
         self._base_config = config
         self._num_teams = num_teams
@@ -199,6 +208,10 @@ class PositionGuideSimulator:
         self._temperature = temperature
         self._player_data_csv = player_data_csv or config.paths.PLAYER_DATA_CSV
         self._show_progress = show_progress
+        self._prune_inactive = prune_inactive
+        self._limit_adp = limit_adp
+        self._draft_pool_ids: set[int] | None = None
+        self._draft_pool_size: int | None = None
 
     def run(self) -> tuple[Dict[int, PositionGuideFile], ModelAdpFile]:
         """Execute self-play simulations and build guide and ADP exports.
@@ -217,6 +230,12 @@ class PositionGuideSimulator:
         runtime_config = self._build_runtime_config()
         player_catalog = load_player_catalog(
             self._player_data_csv, runtime_config.draft.MOCK_ADP_CONFIG
+        )
+        # Keep the full catalog loaded; restrict draftability via available ids.
+        runtime_config.data.EXCLUDE_INACTIVE_PLAYERS = False
+        self._draft_pool_ids = self._build_draft_pool_ids(runtime_config, player_catalog)
+        self._draft_pool_size = (
+            len(self._draft_pool_ids) if self._draft_pool_ids is not None else None
         )
         env = DraftGymEnv(runtime_config, training=False, player_catalog=player_catalog)
         if env.agent_model is None:
@@ -275,7 +294,10 @@ class PositionGuideSimulator:
         model_adp_tally : Dict[int, _ModelAdpAccumulator]
             Accumulator: player id -> overall pick number statistics.
         """
-        env.reset(seed=seed)
+        reset_options = None
+        if self._draft_pool_ids is not None:
+            reset_options = {"available_player_ids": self._draft_pool_ids}
+        env.reset(seed=seed, options=reset_options)
         rng = random.Random(seed)
         pick_ordinal_by_team: Dict[int, int] = defaultdict(int)
 
@@ -338,6 +360,44 @@ class PositionGuideSimulator:
         ]
         return min(eligible, key=lambda player: player.adp) if eligible else None
 
+    def _build_draft_pool_ids(
+        self, runtime_config: Config, player_catalog: PlayerCatalog
+    ) -> set[int] | None:
+        """Return restricted available ids, or ``None`` for the full catalog.
+
+        Parameters
+        ----------
+        runtime_config : Config
+            Guide runtime config (roster structure and inactive statuses).
+        player_catalog : PlayerCatalog
+            Full player catalog for this run.
+
+        Returns
+        -------
+        set of int or None
+            Draftable player ids when prune and/or ADP limiting is enabled;
+            ``None`` when neither pool restriction applies.
+        """
+        if not self._prune_inactive and self._limit_adp is None:
+            return None
+        regime = {
+            "prune_inactive": self._prune_inactive,
+            "limit_adp": self._limit_adp is not None,
+        }
+        min_n = int(self._limit_adp) if self._limit_adp is not None else 0
+        return build_episode_pool_ids(
+            player_catalog,
+            regime,
+            min_n=min_n,
+            default_extra_min=0,
+            default_extra_max=0,
+            roster_statuses=runtime_config.data.INACTIVE_ROSTER_STATUSES,
+            injury_statuses=runtime_config.data.INACTIVE_INJURY_STATUSES,
+            num_teams=self._num_teams,
+            roster_structure=runtime_config.draft.ROSTER_STRUCTURE,
+            bench_maxes=runtime_config.draft.BENCH_MAXES,
+        )
+
     def _build_runtime_config(self) -> Config:
         """Return a config copy with guide-specific overrides applied."""
         runtime_config = Config.from_dict(self._base_config.to_dict())
@@ -376,6 +436,9 @@ class PositionGuideSimulator:
                 roster_structure=dict(runtime_config.draft.ROSTER_STRUCTURE),
                 total_user_picks=len(picks),
                 temperature=self._temperature,
+                prune_inactive=self._prune_inactive,
+                limit_adp=self._limit_adp,
+                draft_pool_size=self._draft_pool_size,
                 picks=picks,
             )
         return guides
@@ -510,5 +573,8 @@ class PositionGuideSimulator:
             checkpoint_episode=extract_checkpoint_episode(self._checkpoint_path),
             player_data_csv=self._player_data_csv,
             temperature=self._temperature,
+            prune_inactive=self._prune_inactive,
+            limit_adp=self._limit_adp,
+            draft_pool_size=self._draft_pool_size,
             players=entries,
         )

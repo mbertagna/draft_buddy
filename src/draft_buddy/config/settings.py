@@ -187,18 +187,25 @@ class TrainingConfig:
     LOG_SAVE_INTERVAL_EPISODES: int = 128
     HIDDEN_DIM: int = 64
     MODEL_PATH_TO_LOAD: str = os.path.join("models/12_teams_pos_5/v1/checkpoint_episode_498.pth")
+    POLICY_SUGGESTION_TEMPERATURE: float = 1.5
     NUM_SIMULATION_RUNS: int = 10
     STATE_NORMALIZATION_METHOD: str = "min_max"
     ENABLE_ACTION_MASKING: bool = True
     ALL_STATE_FEATURES: List[str] = field(default_factory=list)
     ENABLED_STATE_FEATURES: List[str] = field(default_factory=list)
+    RANDOMIZE_DRAFT_POOL_DURING_TRAINING: bool = True
+    ADP_POOL_EXTRA_MIN: int = 40
+    ADP_POOL_EXTRA_MAX: int = 80
+    DRAFT_POOL_REGIMES: List[Dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        """Populate default feature lists when not provided."""
+        """Populate default feature lists and pool regimes when not provided."""
         if not self.ALL_STATE_FEATURES:
             self.ALL_STATE_FEATURES = _default_state_features()
         if not self.ENABLED_STATE_FEATURES:
             self.ENABLED_STATE_FEATURES = _default_enabled_state_features()
+        if not self.DRAFT_POOL_REGIMES:
+            self.DRAFT_POOL_REGIMES = _default_draft_pool_regimes()
 
 
 @dataclass
@@ -297,6 +304,10 @@ class DataConfig:
         Sleeper roster statuses treated as unavailable (e.g. ``"Inactive"``).
     INACTIVE_INJURY_STATUSES : List[str]
         Sleeper injury designations treated as unavailable (e.g. ``"IR"``).
+    AUTO_SHELVE_INACTIVE_ON_NEW_DRAFT : bool
+        When ``True``, new web draft resets automatically shelve inactive
+        players into the durable shelved sink. Defaults to ``False`` so
+        IR/PUP/DNR players stay draftable until shelved on demand.
     """
 
     LEGACY_STATS_LOOKBACK_SEASONS: int = 2
@@ -305,6 +316,7 @@ class DataConfig:
     EXCLUDE_INACTIVE_PLAYERS: bool = False
     INACTIVE_ROSTER_STATUSES: List[str] = field(default_factory=lambda: ["Inactive"])
     INACTIVE_INJURY_STATUSES: List[str] = field(default_factory=lambda: ["IR", "PUP", "DNR"])
+    AUTO_SHELVE_INACTIVE_ON_NEW_DRAFT: bool = False
 
     def legacy_stats_start_year(self, draft_year: int) -> int:
         """Return the first nflverse season to load for a draft year.
@@ -321,6 +333,26 @@ class DataConfig:
             projections (``draft_year - LEGACY_STATS_LOOKBACK_SEASONS``).
         """
         return draft_year - self.LEGACY_STATS_LOOKBACK_SEASONS
+
+
+def _default_draft_pool_regimes() -> List[Dict[str, Any]]:
+    """Return the default equal-weight draft pool regime mix for training."""
+    return [
+        {"id": "full", "weight": 0.25, "prune_inactive": False, "limit_adp": False},
+        {
+            "id": "inactive_only",
+            "weight": 0.25,
+            "prune_inactive": True,
+            "limit_adp": False,
+        },
+        {"id": "adp_only", "weight": 0.25, "prune_inactive": False, "limit_adp": True},
+        {
+            "id": "inactive_and_adp",
+            "weight": 0.25,
+            "prune_inactive": True,
+            "limit_adp": True,
+        },
+    ]
 
 
 def _default_state_features() -> List[str]:

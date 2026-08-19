@@ -436,6 +436,7 @@
         .draft-banner-actions > button,
         #banner-settings-toggle,
         #banner-stats-toggle,
+        #banner-shelved-toggle,
         #simulate-season-btn {
             padding: var(--space-2) var(--space-3);
             border: 1px solid transparent;
@@ -449,14 +450,16 @@
         }
         #undo-pick-btn,
         #banner-settings-toggle,
-        #banner-stats-toggle {
+        #banner-stats-toggle,
+        #banner-shelved-toggle {
             background: var(--panel-alt);
             color: var(--text);
             border-color: var(--border-strong);
         }
         #undo-pick-btn:hover,
         #banner-settings-toggle:hover,
-        #banner-stats-toggle:hover {
+        #banner-stats-toggle:hover,
+        #banner-shelved-toggle:hover {
             background: var(--border);
             color: var(--text-strong);
         }
@@ -499,11 +502,13 @@
             margin-top: var(--space-3);
         }
         .banner-settings,
-        .banner-stats {
+        .banner-stats,
+        .banner-shelved {
             position: relative;
         }
         #banner-settings-panel,
-        #banner-stats-panel {
+        #banner-stats-panel,
+        #banner-shelved-panel {
             position: absolute;
             right: 0;
             top: calc(100% + 6px);
@@ -518,8 +523,14 @@
             flex-direction: column;
             gap: var(--space-2);
         }
+        #banner-shelved-panel {
+            min-width: 300px;
+            max-width: min(440px, 92vw);
+            max-height: min(70vh, 540px);
+        }
         #banner-settings-panel[hidden],
-        #banner-stats-panel[hidden] { display: none; }
+        #banner-stats-panel[hidden],
+        #banner-shelved-panel[hidden] { display: none; }
         #banner-settings-panel .settings-row {
             display: flex;
             align-items: center;
@@ -546,6 +557,151 @@
             border-bottom: 1px solid var(--border);
             padding-bottom: var(--space-2);
             margin-bottom: var(--space-1);
+        }
+        #banner-shelved-toggle .shelved-count-badge {
+            display: inline-block;
+            min-width: 1.25rem;
+            margin-left: 4px;
+            padding: 0 5px;
+            border-radius: var(--radius-pill);
+            background: var(--accent-soft);
+            color: var(--accent-hover);
+            font-size: 0.75rem;
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+        }
+        #banner-shelved-toggle.has-shelved .shelved-count-badge {
+            background: var(--accent);
+            color: var(--text-on-accent);
+        }
+        .shelved-panel-hint {
+            margin: 0;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            line-height: 1.35;
+        }
+        .shelved-adp-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .shelved-adp-row label {
+            font-size: var(--text-sm);
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+        .shelved-adp-row input[type="number"] {
+            width: 4.5rem;
+            padding: 4px 6px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--panel-alt);
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: var(--text-sm);
+        }
+        .shelved-adp-row button {
+            padding: 4px 10px;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            background: var(--panel-alt);
+            color: var(--text);
+            cursor: pointer;
+            font-family: var(--font-display);
+            font-size: var(--text-sm);
+            font-weight: 600;
+        }
+        .shelved-adp-row button:hover {
+            border-color: var(--accent);
+            color: var(--accent-hover);
+        }
+        .shelved-adp-row button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+        .shelved-adp-row button:disabled:hover {
+            border-color: var(--border-strong);
+            color: var(--text);
+        }
+        .shelved-chip-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 360px;
+        }
+        .shelved-chip {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 2px 8px;
+            align-items: center;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            border-left-width: 3px;
+            border-left-color: var(--accent-mark, var(--border-strong));
+            border-radius: var(--radius-sm);
+            background: var(--panel-alt);
+            cursor: pointer;
+            text-align: left;
+            color: var(--text);
+            font-family: inherit;
+            width: 100%;
+        }
+        .shelved-chip:hover {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+        .shelved-chip .pos {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: var(--text-dim);
+        }
+        .shelved-chip .name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-strong);
+            grid-column: 2;
+        }
+        .shelved-chip .adp {
+            font-size: 0.7rem;
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+            color: var(--text-dim);
+            grid-column: 3;
+            grid-row: 1 / span 2;
+            align-self: center;
+        }
+        .shelved-chip .meta {
+            grid-column: 2;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+        .shelved-empty {
+            margin: 0;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+        button.shelve-btn {
+            padding: 2px 6px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--panel);
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: var(--text-sm);
+            line-height: 1;
+            font-family: var(--font-display);
+            font-weight: 600;
+        }
+        button.shelve-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent-hover);
+            background: var(--accent-soft);
         }
         #ai-assistant-sliver[hidden] { display: none; }
         .ai-sliver-main {
@@ -1784,6 +1940,25 @@
                 <button id="simulate-pick-btn">Sim</button>
                 <button type="button" id="auto-draft-btn">Auto</button>
                 <button type="button" id="new-draft-btn" title="Start new draft">New</button>
+                <div class="banner-shelved">
+                    <button type="button" id="banner-shelved-toggle"
+                            data-action="toggle-shelved"
+                            aria-expanded="false"
+                            aria-controls="banner-shelved-panel"
+                            title="Shelved players (tucked away from the draftable pool)">Shelved<span class="shelved-count-badge" id="shelved-count-badge">0</span></button>
+                    <div id="banner-shelved-panel" hidden>
+                        <p class="shelved-panel-hint">Tucked out of VORP, AI, and bots. Click a chip to restore. Sorted by ADP.</p>
+                        <div class="shelved-adp-row">
+                            <label for="shelve-adp-max">Hide ADP above</label>
+                            <input type="number" id="shelve-adp-max" step="1" min="1" placeholder="150" aria-label="Shelve players with ADP above this value">
+                            <button type="button" id="shelve-adp-apply-btn">Apply</button>
+                            <button type="button" id="shelve-inactive-btn" title="Shelve Inactive / IR / PUP / DNR players from the draftable pool">Shelve inactive</button>
+                            <button type="button" id="unshelve-all-btn" disabled title="Move every shelved player back into the draftable pool">Restore all</button>
+                        </div>
+                        <p id="shelved-empty" class="shelved-empty">No shelved players yet.</p>
+                        <ul id="shelved-list" class="shelved-chip-list" hidden></ul>
+                    </div>
+                </div>
                 <div class="banner-settings">
                     <button type="button" id="banner-settings-toggle"
                             data-action="toggle-settings"
@@ -1856,7 +2031,7 @@
                 <table id="player-list">
                     <thead>
                         <tr>
-                            <th style="width:28px;">Blind</th>
+                            <th style="width:40px;" title="Tuck away from draftable pool"></th>
                             <th data-sort-key="adp">ADP</th>
                             <th data-sort-key="name">Name</th>
                             <th class="role-col" title="Projected depth role from offline insights">Role</th>
@@ -1945,6 +2120,9 @@
         const bannerSettingsPanel = document.getElementById('banner-settings-panel');
         const bannerStatsToggle = document.getElementById('banner-stats-toggle');
         const bannerStatsPanel = document.getElementById('banner-stats-panel');
+        const bannerShelvedToggle = document.getElementById('banner-shelved-toggle');
+        const bannerShelvedPanel = document.getElementById('banner-shelved-panel');
+        const shelvedCountBadge = document.getElementById('shelved-count-badge');
         const totalPicksDisplay = document.getElementById('total-picks-display');
         const qbDraftedDisplay = document.getElementById('qb-drafted-display');
         const rbDraftedDisplay = document.getElementById('rb-drafted-display');
@@ -2035,8 +2213,6 @@
         let currentSortBy = 'vorp';
         let currentSortDir = 'desc'; // 'asc' or 'desc'
         let lastRenderedPlayers = [];
-        // Track players to ignore for RL chips and LLM assistant
-        const blindSet = new Set();
 
         let advisorInFlight = false;
         let lastAutoAdvisorPickNumber = null;
@@ -2429,6 +2605,12 @@
             bannerStatsToggle.setAttribute('aria-expanded', String(open));
         }
 
+        function setBannerShelvedOpen(open) {
+            if (!bannerShelvedPanel || !bannerShelvedToggle) return;
+            bannerShelvedPanel.hidden = !open;
+            bannerShelvedToggle.setAttribute('aria-expanded', String(open));
+        }
+
         async function fetchDraftSummary() {
             if (!totalPicksDisplay) return;
             try {
@@ -2584,9 +2766,6 @@
             }
             if (gpMinStr !== '' && !Number.isNaN(parseFloat(gpMinStr))) {
                 payload.gp_min = parseFloat(gpMinStr);
-            }
-            if (blindSet.size > 0) {
-                payload.ignore_player_ids = Array.from(blindSet);
             }
             try {
                 const data = await postJson('/api/draft/advisor', payload);
@@ -3211,18 +3390,27 @@
             players.forEach(player => {
                 const row = playerTbody.insertRow();
                 row.dataset.playerId = player.player_id;
-                // Blind toggle cell
-                const blindCell = row.insertCell();
-                const blindCheckbox = document.createElement('input');
-                blindCheckbox.type = 'checkbox';
-                blindCheckbox.title = 'Exclude from AI suggestions';
-                blindCheckbox.checked = blindSet.has(player.player_id);
-                blindCheckbox.addEventListener('click', (e) => e.stopPropagation());
-                blindCheckbox.addEventListener('change', (e) => {
-                    if (e.target.checked) blindSet.add(player.player_id); else blindSet.delete(player.player_id);
-                    if (currentDraftState) updateHeaderSuggestion(currentDraftState);
+                // Shelve control
+                const shelveCell = row.insertCell();
+                const shelveBtn = document.createElement('button');
+                shelveBtn.type = 'button';
+                shelveBtn.className = 'shelve-btn';
+                shelveBtn.title = 'Shelve — remove from draftable pool (VORP, AI, bots)';
+                shelveBtn.setAttribute('aria-label', `Shelve ${player.name}`);
+                shelveBtn.textContent = '−';
+                shelveBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    try {
+                        const data = await postDraftMutation('/api/draft/shelve', {
+                            player_ids: [player.player_id],
+                        });
+                        renderDraftState(data);
+                        fetchPlayers();
+                    } catch (error) {
+                        console.error('Error shelving player:', error);
+                    }
                 });
-                blindCell.appendChild(blindCheckbox);
+                shelveCell.appendChild(shelveBtn);
                 // ADP
                 const adpCell = row.insertCell();
                 const adpValNum = (player.adp !== null && player.adp !== undefined) ? Number(player.adp) : null;
@@ -3396,6 +3584,59 @@
         });
         positionCheckboxes.forEach(checkbox => checkbox.addEventListener('change', fetchPlayers));
         gpFracMinInput.addEventListener('input', fetchPlayers);
+        const shelveAdpApplyBtn = document.getElementById('shelve-adp-apply-btn');
+        const shelveAdpMaxInput = document.getElementById('shelve-adp-max');
+        const shelveInactiveBtn = document.getElementById('shelve-inactive-btn');
+        const unshelveAllBtn = document.getElementById('unshelve-all-btn');
+        if (shelveAdpApplyBtn && shelveAdpMaxInput) {
+            shelveAdpApplyBtn.addEventListener('click', async () => {
+                const maxAdp = parseFloat(shelveAdpMaxInput.value);
+                if (Number.isNaN(maxAdp)) {
+                    showNotification('Enter an ADP cutoff number.', 'error');
+                    return;
+                }
+                try {
+                    const data = await postDraftMutation('/api/draft/shelve_by_adp', {
+                        max_adp: maxAdp,
+                    });
+                    renderDraftState(data);
+                    fetchPlayers();
+                } catch (error) {
+                    console.error('Error shelving by ADP:', error);
+                }
+            });
+        }
+        if (shelveInactiveBtn) {
+            shelveInactiveBtn.addEventListener('click', async () => {
+                try {
+                    const data = await postDraftMutation('/api/draft/shelve_inactive', {});
+                    renderDraftState(data);
+                    fetchPlayers();
+                } catch (error) {
+                    console.error('Error shelving inactive players:', error);
+                }
+            });
+        }
+        if (unshelveAllBtn) {
+            unshelveAllBtn.addEventListener('click', async () => {
+                const shelvedPlayers = (currentDraftState && currentDraftState.shelved_players) || [];
+                const playerIds = shelvedPlayers
+                    .map((player) => player.player_id)
+                    .filter((playerId) => Number.isFinite(playerId));
+                if (!playerIds.length) {
+                    return;
+                }
+                try {
+                    const data = await postDraftMutation('/api/draft/unshelve', {
+                        player_ids: playerIds,
+                    });
+                    renderDraftState(data);
+                    fetchPlayers();
+                } catch (error) {
+                    console.error('Error restoring shelved players:', error);
+                }
+            });
+        }
         newDraftBtn.addEventListener('click', startNewDraft);
         undoPickBtn.addEventListener('click', undoLastPick);
         simulatePickBtn.addEventListener('click', simulateNextPick);
@@ -3436,23 +3677,14 @@
             if (askAssistantBtn) {
                 askAssistantBtn.addEventListener('click', () => fetchAdvisor({ trigger: 'manual' }));
             }
-            if (bannerSettingsToggle && bannerSettingsPanel) {
-                bannerSettingsToggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    setBannerSettingsOpen(bannerSettingsPanel.hidden);
-                });
-                document.addEventListener('click', (e) => {
-                    if (bannerSettingsPanel.hidden) return;
-                    if (bannerSettingsPanel.contains(e.target) || bannerSettingsToggle.contains(e.target)) {
-                        return;
-                    }
-                    setBannerSettingsOpen(false);
-                });
-            }
             if (bannerStatsToggle && bannerStatsPanel) {
                 bannerStatsToggle.addEventListener('click', (e) => {
                     e.stopPropagation();
                     setBannerStatsOpen(bannerStatsPanel.hidden);
+                    if (!bannerStatsPanel.hidden) {
+                        setBannerSettingsOpen(false);
+                        setBannerShelvedOpen(false);
+                    }
                 });
                 document.addEventListener('click', (e) => {
                     if (bannerStatsPanel.hidden) return;
@@ -3460,6 +3692,40 @@
                         return;
                     }
                     setBannerStatsOpen(false);
+                });
+            }
+            if (bannerShelvedToggle && bannerShelvedPanel) {
+                bannerShelvedToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setBannerShelvedOpen(bannerShelvedPanel.hidden);
+                    if (!bannerShelvedPanel.hidden) {
+                        setBannerSettingsOpen(false);
+                        setBannerStatsOpen(false);
+                    }
+                });
+                document.addEventListener('click', (e) => {
+                    if (bannerShelvedPanel.hidden) return;
+                    if (bannerShelvedPanel.contains(e.target) || bannerShelvedToggle.contains(e.target)) {
+                        return;
+                    }
+                    setBannerShelvedOpen(false);
+                });
+            }
+            if (bannerSettingsToggle && bannerSettingsPanel) {
+                bannerSettingsToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setBannerSettingsOpen(bannerSettingsPanel.hidden);
+                    if (!bannerSettingsPanel.hidden) {
+                        setBannerStatsOpen(false);
+                        setBannerShelvedOpen(false);
+                    }
+                });
+                document.addEventListener('click', (e) => {
+                    if (bannerSettingsPanel.hidden) return;
+                    if (bannerSettingsPanel.contains(e.target) || bannerSettingsToggle.contains(e.target)) {
+                        return;
+                    }
+                    setBannerSettingsOpen(false);
                 });
             }
             if (draftIntelligence) {
@@ -3492,6 +3758,67 @@
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 220);
             }, 4000);
+        }
+
+        function renderShelvedPanel(state) {
+            const emptyEl = document.getElementById('shelved-empty');
+            const listEl = document.getElementById('shelved-list');
+            if (!emptyEl || !listEl) {
+                return;
+            }
+            const shelvedPlayers = (state && state.shelved_players) || [];
+            const count = shelvedPlayers.length;
+            if (shelvedCountBadge) {
+                shelvedCountBadge.textContent = String(count);
+            }
+            if (bannerShelvedToggle) {
+                bannerShelvedToggle.classList.toggle('has-shelved', count > 0);
+            }
+            if (unshelveAllBtn) {
+                unshelveAllBtn.disabled = count === 0;
+            }
+            listEl.innerHTML = '';
+            if (count === 0) {
+                emptyEl.hidden = false;
+                listEl.hidden = true;
+                return;
+            }
+            emptyEl.hidden = true;
+            listEl.hidden = false;
+            shelvedPlayers.forEach((player) => {
+                const item = document.createElement('li');
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'shelved-chip';
+                chip.title = 'Click to unshelve';
+                const accent = (typeof POS_COLORS !== 'undefined' && POS_COLORS[player.position])
+                    || 'var(--border-strong)';
+                chip.style.setProperty('--accent-mark', accent);
+                const adpLabel = (player.adp !== null && player.adp !== undefined)
+                    ? Number(player.adp).toFixed(1)
+                    : 'N/A';
+                const teamLabel = player.team || 'FA';
+                const byeLabel = formatByeWeek(player.bye_week);
+                chip.innerHTML = `
+                    <span class="pos">${player.position}</span>
+                    <span class="name">${escapeHtml(player.name)}</span>
+                    <span class="adp" title="ADP">ADP ${adpLabel}</span>
+                    <span class="meta">${escapeHtml(teamLabel)} · B:${byeLabel}</span>
+                `;
+                chip.addEventListener('click', async () => {
+                    try {
+                        const data = await postDraftMutation('/api/draft/unshelve', {
+                            player_ids: [player.player_id],
+                        });
+                        renderDraftState(data);
+                        fetchPlayers();
+                    } catch (error) {
+                        console.error('Error unshelving player:', error);
+                    }
+                });
+                item.appendChild(chip);
+                listEl.appendChild(item);
+            });
         }
 
         function showConfirm(options = {}) {
@@ -3661,6 +3988,7 @@
             updateDraftClock(state);
 
             updateHeaderSuggestion(state);
+            renderShelvedPanel(state);
             fetchDraftSummary();
 
             const numTeams = Number(state.num_teams) || 10;
@@ -3839,9 +4167,8 @@
             maybeAutoAdvisor(state);
         }
 
-        async function fetchAiSuggestionForTeam(teamId, ignoreIds) {
+        async function fetchAiSuggestionForTeam(teamId) {
             const params = new URLSearchParams({ team_id: String(teamId) });
-            if (ignoreIds && ignoreIds.size > 0) params.append('ignore', Array.from(ignoreIds).join(','));
             const response = await fetch(`/api/draft/ai_suggestion_for_team?${params.toString()}`);
             return await response.json();
         }
@@ -3853,7 +4180,7 @@
                 return;
             }
             try {
-                const data = await fetchAiSuggestionForTeam(teamOnClock, blindSet);
+                const data = await fetchAiSuggestionForTeam(teamOnClock);
                 if (data && !data.error) {
                     const POS_ORDER = ['QB', 'RB', 'WR', 'TE'];
                     const suggestionHTML = POS_ORDER.map(pos => {

@@ -27,6 +27,7 @@ class RlInferenceProvider(InferenceProvider):
     def __init__(self, config: Config, action_space_size: int = 4) -> None:
         self._config = config
         self._action_space_size = action_space_size
+        self._suggestion_temperature = config.training.POLICY_SUGGESTION_TEMPERATURE
         self._feature_extractor = FeatureExtractor(config, StateNormalizer(config))
         self._suggestion_model = self._load_policy_model(config.training.MODEL_PATH_TO_LOAD)
         self._opponent_models = self._load_opponent_models()
@@ -130,7 +131,9 @@ class RlInferenceProvider(InferenceProvider):
         state_tensor = torch.from_numpy(state).float().unsqueeze(0)
         with torch.no_grad():
             action_probs_tensor = self._suggestion_model.get_action_probabilities(
-                state_tensor, action_mask=action_mask
+                state_tensor,
+                action_mask=action_mask,
+                temperature=self._suggestion_temperature,
             )
             action_probs = action_probs_tensor.squeeze().tolist()
         return {action_to_position[index]: float(prob) for index, prob in enumerate(action_probs)}

@@ -57,6 +57,16 @@ class DraftState:
         self._available_player_ids = set(player_ids)
 
     @property
+    def shelved_player_ids(self) -> set[int]:
+        """Return player ids tucked away from the draftable pool."""
+        return self._shelved_player_ids
+
+    @shelved_player_ids.setter
+    def shelved_player_ids(self, player_ids: set[int]) -> None:
+        """Replace the set of shelved player ids."""
+        self._shelved_player_ids = set(player_ids)
+
+    @property
     def draft_order(self) -> list[int]:
         """Return the global draft order."""
         return self._draft_order
@@ -326,6 +336,7 @@ class DraftState:
     def reset(self, all_player_ids: set[int], draft_order: list[int], agent_team_id: int) -> None:
         """Reset state to a fresh draft."""
         self._available_player_ids = set(all_player_ids)
+        self._shelved_player_ids: set[int] = set()
         self._team_rosters = defaultdict(TeamRoster)
         self._draft_order = list(draft_order)
         self._current_pick_index = 0
@@ -343,6 +354,7 @@ class DraftState:
         """Serialize state to a JSON-friendly dictionary."""
         return {
             "available_player_ids": sorted(self.available_player_ids),
+            "shelved_player_ids": sorted(self.shelved_player_ids),
             "team_rosters": {
                 str(team_id): roster.to_dict() for team_id, roster in self.team_rosters.items()
             },
@@ -367,6 +379,9 @@ class DraftState:
         """Load state from serialized data."""
         self.available_player_ids = {
             int(player_id) for player_id in payload.get("available_player_ids", [])
+        }
+        self.shelved_player_ids = {
+            int(player_id) for player_id in payload.get("shelved_player_ids", [])
         }
         self._team_rosters = defaultdict(TeamRoster)
         for team_id_str, roster_payload in payload.get("team_rosters", {}).items():

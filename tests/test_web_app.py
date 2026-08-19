@@ -92,6 +92,38 @@ def test_undo_pick_maps_value_error_to_400(config, fake_session) -> None:
     assert response.status_code == 400 and response.json()["message"] == "cannot undo"
 
 
+def test_shelve_players_requires_player_ids(config, fake_session) -> None:
+    """Verify shelve rejects payloads without player_ids."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.post("/api/draft/shelve", json={})
+
+    assert response.status_code == 400
+
+
+def test_shelve_by_adp_requires_max_adp(config, fake_session) -> None:
+    """Verify shelve_by_adp rejects payloads without max_adp."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.post("/api/draft/shelve_by_adp", json={})
+
+    assert response.status_code == 400
+
+
+def test_shelve_inactive_returns_ui_state(config, fake_session) -> None:
+    """Verify shelve_inactive mutation returns the session UI state."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.post("/api/draft/shelve_inactive", json={})
+
+    assert response.status_code == 200 and response.json() == {"ok": True}
+
+
+def test_shelve_players_returns_ui_state(config, fake_session) -> None:
+    """Verify shelve mutation returns the session UI state."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.post("/api/draft/shelve", json={"player_ids": [3]})
+
+    assert response.status_code == 200 and response.json() == {"ok": True}
+
+
 def test_transfer_requires_player_id(config, fake_session) -> None:
     """Verify transfer rejects payloads without player_id."""
     client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Iterable, Iterator
 
 from draft_buddy.core import Player, PlayerCatalog
 
@@ -38,6 +38,35 @@ def exclude_inactive_players(
         for player in catalog
         if not _is_excluded(player, excluded_roster_statuses, excluded_injury_statuses)
     )
+
+
+def iter_inactive_player_ids(
+    catalog: PlayerCatalog,
+    roster_statuses: Iterable[str],
+    injury_statuses: Iterable[str],
+) -> Iterator[int]:
+    """Yield player ids that match inactive roster or injury statuses.
+
+    Parameters
+    ----------
+    catalog : PlayerCatalog
+        Source player catalog.
+    roster_statuses : Iterable[str]
+        ``Player.sleeper_status`` values treated as unavailable.
+    injury_statuses : Iterable[str]
+        ``Player.sleeper_injury_status`` values treated as unavailable.
+
+    Yields
+    ------
+    int
+        Player ids matching either exclusion set. Players missing status
+        data are never yielded.
+    """
+    excluded_roster_statuses = set(roster_statuses)
+    excluded_injury_statuses = set(injury_statuses)
+    for player in catalog:
+        if _is_excluded(player, excluded_roster_statuses, excluded_injury_statuses):
+            yield player.player_id
 
 
 def _is_excluded(

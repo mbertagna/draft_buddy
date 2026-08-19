@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from draft_buddy.core.entities import PlayerCatalog
-from draft_buddy.data.player_filter import exclude_inactive_players
+from draft_buddy.data.player_filter import exclude_inactive_players, iter_inactive_player_ids
 
 
 def test_exclude_inactive_players_removes_matching_roster_status(player_factory) -> None:
@@ -40,3 +40,21 @@ def test_exclude_inactive_players_keeps_players_missing_status_data(player_facto
     )
 
     assert [player.player_id for player in filtered] == [1]
+
+
+def test_iter_inactive_player_ids_yields_matching_ids(player_factory) -> None:
+    """Verify inactive id iteration matches roster and injury filters."""
+    active = player_factory(1, "RB")
+    inactive = player_factory(2, "RB")
+    injured = player_factory(3, "WR")
+    object.__setattr__(inactive, "sleeper_status", "Inactive")
+    object.__setattr__(injured, "sleeper_injury_status", "IR")
+    catalog = PlayerCatalog([active, inactive, injured])
+
+    inactive_ids = set(
+        iter_inactive_player_ids(
+            catalog, roster_statuses=["Inactive"], injury_statuses=["IR"]
+        )
+    )
+
+    assert inactive_ids == {2, 3}

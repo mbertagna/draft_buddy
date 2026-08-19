@@ -18,6 +18,15 @@
     }
   },
   "training": {
-    "MODEL_PATH_TO_LOAD": "models/12_teams_random_start/v3"
+    "MODEL_PATH_TO_LOAD": "models/12_teams_random_start/v3",
+    "RANDOMIZE_DRAFT_POOL_DURING_TRAINING": true,
+    "ADP_POOL_EXTRA_MIN": 40,
+    "ADP_POOL_EXTRA_MAX": 80,
+    "DRAFT_POOL_REGIMES": [
+      {"id": "full", "weight": 0.2, "prune_inactive": false, "limit_adp": false},
+      {"id": "inactive_only", "weight": 0.3, "prune_inactive": true, "limit_adp": false},
+      {"id": "adp_only", "weight": 0.2, "prune_inactive": false, "limit_adp": true},
+      {"id": "inactive_and_adp", "weight": 0.3, "prune_inactive": true, "limit_adp": true}
+    ]
   }
 }

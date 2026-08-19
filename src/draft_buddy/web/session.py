@@ -244,11 +244,33 @@ class DraftSession:
             "pick_by_player_id": {
                 pick.player_id: pick.pick_number for pick in self.draft_history
             },
+            "shelved_player_ids": sorted(self._state.shelved_player_ids),
+            "shelved_players": [
+                player.to_dict()
+                for player in self._shelved_players_by_adp()
+            ],
         }
         warning = self.consume_state_load_warning()
         if warning:
             payload["state_load_warning"] = warning
         return payload
+
+    def _shelved_players_by_adp(self):
+        """Return shelved players sorted by ascending ADP.
+
+        Returns
+        -------
+        list
+            Player objects with finite ADP first (ascending), then unknown ADP.
+        """
+        players = self.player_catalog.resolve(self._state.shelved_player_ids)
+
+        def adp_sort_key(player):
+            if np.isfinite(player.adp):
+                return (0, float(player.adp), player.name)
+            return (1, float("inf"), player.name)
+
+        return sorted(players, key=adp_sort_key)
 
     def consume_state_load_warning(self) -> Optional[str]:
         """Return and clear a one-shot draft-state load warning.
@@ -304,10 +326,73 @@ class DraftSession:
         )
 
     def reset(self) -> None:
-        """Reset session to a fresh draft."""
+        """Reset session to a fresh draft and optionally auto-shelve inactives."""
         self._controller.reset(
             draft_order=self._generate_snake_draft_order(),
             agent_team_id=self._config.draft.AGENT_START_POSITION,
+        )
+        if self._config.data.AUTO_SHELVE_INACTIVE_ON_NEW_DRAFT:
+            self._controller.shelve_inactive_players(
+                self._config.data.INACTIVE_ROSTER_STATUSES,
+                self._config.data.INACTIVE_INJURY_STATUSES,
+            )
+
+    def shelve_players(self, player_ids: list[int]) -> list[int]:
+        """Shelve available players by id.
+
+        Parameters
+        ----------
+        player_ids : list[int]
+            Player ids to move into the shelved sink.
+
+        Returns
+        -------
+        list of int
+            Player ids that were shelved.
+        """
+        return self._controller.shelve_players(player_ids)
+
+    def unshelve_players(self, player_ids: list[int]) -> list[int]:
+        """Restore shelved players to the available pool.
+
+        Parameters
+        ----------
+        player_ids : list[int]
+            Player ids to restore.
+
+        Returns
+        -------
+        list of int
+            Player ids that were unshelved.
+        """
+        return self._controller.unshelve_players(player_ids)
+
+    def shelve_players_above_adp(self, max_adp: float) -> list[int]:
+        """Shelve available players with finite ADP above a threshold.
+
+        Parameters
+        ----------
+        max_adp : float
+            ADP cutoff; players with finite ``adp > max_adp`` are shelved.
+
+        Returns
+        -------
+        list of int
+            Player ids that were shelved.
+        """
+        return self._controller.shelve_players_above_adp(max_adp)
+
+    def shelve_inactive_players(self) -> list[int]:
+        """Shelve available players matching configured inactive statuses.
+
+        Returns
+        -------
+        list of int
+            Player ids that were shelved.
+        """
+        return self._controller.shelve_inactive_players(
+            self._config.data.INACTIVE_ROSTER_STATUSES,
+            self._config.data.INACTIVE_INJURY_STATUSES,
         )
 
     def draft_player(self, player_id: int) -> None:

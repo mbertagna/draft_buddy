@@ -54,6 +54,16 @@ def parse_args(runtime_defaults: argparse.Namespace) -> argparse.Namespace:
         help="Exclude inactive/injured players from the draftable pool for this run.",
     )
     parser.add_argument(
+        "--limit-adp",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Keep the top N players by ascending ADP, then top up to worst-case "
+            "position floors. Omit for a full draftable pool (aside from prune)."
+        ),
+    )
+    parser.add_argument(
         "--player-csv",
         type=str,
         default=None,
@@ -89,12 +99,20 @@ def main() -> int:
         print("Checkpoint not found.", file=sys.stderr)
         return 1
 
-    if args.prune_inactive:
-        config.data.EXCLUDE_INACTIVE_PLAYERS = True
+    if args.limit_adp is not None and args.limit_adp <= 0:
+        print("--limit-adp must be a positive integer.", file=sys.stderr)
+        return 1
 
+    pool_parts = []
+    if args.prune_inactive:
+        pool_parts.append("prune-inactive")
+    if args.limit_adp is not None:
+        pool_parts.append(f"limit-adp={args.limit_adp}")
+    pool_note = f", pool=[{', '.join(pool_parts)}]" if pool_parts else ""
     print(
         f"Generating position guides for all {args.num_teams} slots "
-        f"({args.simulations} self-play simulations, temperature={args.temperature:g})..."
+        f"({args.simulations} self-play simulations, temperature={args.temperature:g}"
+        f"{pool_note})..."
     )
     simulator = PositionGuideSimulator(
         config=config,
@@ -106,6 +124,8 @@ def main() -> int:
         temperature=args.temperature,
         player_data_csv=player_csv,
         show_progress=not args.no_progress,
+        prune_inactive=args.prune_inactive,
+        limit_adp=args.limit_adp,
     )
     try:
         guides, model_adp = simulator.run()

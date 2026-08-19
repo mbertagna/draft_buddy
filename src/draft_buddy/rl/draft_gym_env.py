@@ -18,6 +18,11 @@ from gym import spaces
 from draft_buddy.config import Config
 from draft_buddy.core import DraftController, DraftState, FantasyRulesEngine, create_bot_gm
 from draft_buddy.data import exclude_inactive_players, load_player_catalog
+from draft_buddy.data.adp_pool import (
+    build_episode_pool_ids,
+    choose_draft_pool_regime,
+    complete_draft_pool_size,
+)
 from draft_buddy.rl.agent_bot import AgentModelBotGM
 from draft_buddy.rl.checkpoint_manager import CheckpointManager
 from draft_buddy.rl.feature_extractor import FeatureExtractor
@@ -132,12 +137,18 @@ class DraftGymEnv(gym.Env):
         self.player_catalog = player_catalog or load_player_catalog(
             config.paths.PLAYER_DATA_CSV, config.draft.MOCK_ADP_CONFIG
         )
-        if config.data.EXCLUDE_INACTIVE_PLAYERS:
+        self._randomize_draft_pool = bool(
+            training and config.training.RANDOMIZE_DRAFT_POOL_DURING_TRAINING
+        )
+        # Keep the full catalog when episode regimes can include a full pool.
+        if config.data.EXCLUDE_INACTIVE_PLAYERS and not self._randomize_draft_pool:
             self.player_catalog = exclude_inactive_players(
                 self.player_catalog,
                 config.data.INACTIVE_ROSTER_STATUSES,
                 config.data.INACTIVE_INJURY_STATUSES,
             )
+        self._last_draft_pool_regime: Optional[str] = None
+        self._last_adp_pool_size: Optional[int] = None
         self.action_to_position = {0: "QB", 1: "RB", 2: "WR", 3: "TE"}
         self.position_to_action = {"QB": 0, "RB": 1, "WR": 2, "TE": 3}
         self.action_space = spaces.Discrete(len(self.action_to_position))
@@ -259,7 +270,16 @@ class DraftGymEnv(gym.Env):
         self._invalidate_sorted_available_cache()
 
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None):
-        """Reset environment state."""
+        """Reset environment state.
+
+        Parameters
+        ----------
+        seed : int, optional
+            RNG seed forwarded to the Gym base reset.
+        options : dict, optional
+            When ``available_player_ids`` is present, that set becomes the
+            episode draftable pool (overrides training pool randomization).
+        """
         super().reset(seed=seed)
         if self.config.draft.RANDOMIZE_AGENT_START_POSITION and self.training:
             agent_team_id = random.randint(1, self.config.draft.NUM_TEAMS)
@@ -270,11 +290,23 @@ class DraftGymEnv(gym.Env):
         )
         if should_randomize_opponents:
             self._randomize_opponent_strategies(agent_team_id)
+        available_player_ids = None
+        self._last_draft_pool_regime = None
+        self._last_adp_pool_size = None
+        options = options or {}
+        if "available_player_ids" in options:
+            available_player_ids = set(options["available_player_ids"])
+            self._last_adp_pool_size = len(available_player_ids)
+        elif self._randomize_draft_pool:
+            available_player_ids, regime_id, adp_pool_size = self._sample_training_pool()
+            self._last_draft_pool_regime = regime_id
+            self._last_adp_pool_size = adp_pool_size
         self._controller.reset(
             draft_order=self._generate_snake_draft_order(
                 self.config.draft.NUM_TEAMS, self.total_roster_size_per_team
             ),
             agent_team_id=agent_team_id,
+            available_player_ids=available_player_ids,
         )
         self._invalidate_sorted_available_cache()
 
@@ -283,12 +315,8 @@ class DraftGymEnv(gym.Env):
                 self.current_pick_index < len(self.draft_order)
                 and self.draft_order[self.current_pick_index] != self.agent_team_id
             ):
-                self._controller.simulate_single_pick(
-                    manual_draft_teams=set(),
-                    build_state_fn=self._build_state_for_team,
-                    get_action_mask_fn=self._get_action_mask_for_team,
-                )
-                self._invalidate_sorted_available_cache()
+                if not self._try_simulate_opponent_pick():
+                    break
 
         perspective_team_id = (
             self.draft_order[self.current_pick_index]
@@ -374,12 +402,11 @@ class DraftGymEnv(gym.Env):
                 self.current_pick_index < len(self.draft_order)
                 and self.draft_order[self.current_pick_index] != self.agent_team_id
             ):
-                self._controller.simulate_single_pick(
-                    manual_draft_teams=set(),
-                    build_state_fn=self._build_state_for_team,
-                    get_action_mask_fn=self._get_action_mask_for_team,
-                )
-                self._invalidate_sorted_available_cache()
+                if not self._try_simulate_opponent_pick():
+                    done = True
+                    info["draft_ended_prematurely"] = True
+                    info["no_valid_opponent_pick"] = True
+                    break
 
         if self.team_rosters[self.agent_team_id].size >= self.total_roster_size_per_team:
             done = True
@@ -408,6 +435,36 @@ class DraftGymEnv(gym.Env):
         )
         info["action_mask"] = self.get_action_mask()
         return observation, reward, done, False, info
+
+    def _try_simulate_opponent_pick(self) -> bool:
+        """Simulate one opponent pick; end gracefully when none is legal.
+
+        Prints a detailed warning so stuck-pool failures stay visible during
+        training without aborting the run.
+
+        Returns
+        -------
+        bool
+            ``True`` when a pick was applied; ``False`` when the on-clock team
+            has no valid selection.
+        """
+        try:
+            self._controller.simulate_single_pick(
+                manual_draft_teams=set(),
+                build_state_fn=self._build_state_for_team,
+                get_action_mask_fn=self._get_action_mask_for_team,
+            )
+        except ValueError as error:
+            regime = self._last_draft_pool_regime or "unknown"
+            pool_size = self._last_adp_pool_size
+            pool_note = f", adp_pool_size={pool_size}" if pool_size is not None else ""
+            print(
+                f"WARNING: Ending draft episode early after opponent pick failure "
+                f"(regime={regime}{pool_note}): {error}"
+            )
+            return False
+        self._invalidate_sorted_available_cache()
+        return True
 
     def draft_player(self, player_id: int) -> None:
         """Manually draft a player for the team on the clock."""
@@ -630,15 +687,52 @@ class DraftGymEnv(gym.Env):
                 draft_order.extend(range(num_teams, 0, -1))
         return draft_order
 
+    def _sample_training_pool(self) -> Tuple[set[int], str, Optional[int]]:
+        """Sample a weighted draft-pool regime and build available player ids.
+
+        Returns
+        -------
+        tuple[set[int], str, int or None]
+            Available player ids, regime id, and ADP pool size when limited.
+        """
+        regimes = self.config.training.DRAFT_POOL_REGIMES
+        if not regimes:
+            return set(self.player_catalog.player_ids), "full", None
+        regime = choose_draft_pool_regime(regimes)
+        min_n = complete_draft_pool_size(
+            self.config.draft.NUM_TEAMS, self.total_roster_size_per_team
+        )
+        pool_ids = build_episode_pool_ids(
+            self.player_catalog,
+            regime,
+            min_n=min_n,
+            default_extra_min=self.config.training.ADP_POOL_EXTRA_MIN,
+            default_extra_max=self.config.training.ADP_POOL_EXTRA_MAX,
+            roster_statuses=self.config.data.INACTIVE_ROSTER_STATUSES,
+            injury_statuses=self.config.data.INACTIVE_INJURY_STATUSES,
+            num_teams=self.config.draft.NUM_TEAMS,
+            roster_structure=self.config.draft.ROSTER_STRUCTURE,
+            bench_maxes=self.config.draft.BENCH_MAXES,
+        )
+        regime_id = str(regime.get("id", "unknown"))
+        adp_pool_size = len(pool_ids) if bool(regime.get("limit_adp", False)) else None
+        return pool_ids, regime_id, adp_pool_size
+
     def _get_info(self) -> Dict[str, object]:
         """Return lightweight info about the current draft state."""
-        return {
+        info: Dict[str, object] = {
             "current_pick_number": self.current_pick_number,
             "current_team_picking": self._controller.team_on_clock,
             "agent_roster_size": self.team_rosters[self.agent_team_id].size,
             "available_players_count": len(self.available_player_ids),
             "manual_draft_teams": list(self.manual_draft_teams),
         }
+        if self._last_draft_pool_regime is not None:
+            info["draft_pool_regime"] = self._last_draft_pool_regime
+        if self._last_adp_pool_size is not None:
+            info["adp_pool_size"] = self._last_adp_pool_size
+        return info
+
 
     def _get_state_for_team(self, team_id: int) -> np.ndarray:
         """Return normalized state from one team's perspective."""

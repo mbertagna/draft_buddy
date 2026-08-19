@@ -18,8 +18,17 @@
     }
   },
   "training": {
-    "RESUME_TRAINING": true,
+    "RESUME_TRAINING": false,
     "TOTAL_EPISODES": 500000,
-    "MODEL_PATH_TO_LOAD": "models/10_teams_random_start/v1/checkpoint_episode_25232.pth"
+    "MODEL_PATH_TO_LOAD": "models/10_teams_random_start/v2/checkpoint_episode_190995.pth",
+    "RANDOMIZE_DRAFT_POOL_DURING_TRAINING": true,
+    "ADP_POOL_EXTRA_MIN": 40,
+    "ADP_POOL_EXTRA_MAX": 80,
+    "DRAFT_POOL_REGIMES": [
+      {"id": "full", "weight": 0.2, "prune_inactive": false, "limit_adp": false},
+      {"id": "inactive_only", "weight": 0.3, "prune_inactive": true, "limit_adp": false},
+      {"id": "adp_only", "weight": 0.2, "prune_inactive": false, "limit_adp": true},
+      {"id": "inactive_and_adp", "weight": 0.3, "prune_inactive": true, "limit_adp": true}
+    ]
   }
 }

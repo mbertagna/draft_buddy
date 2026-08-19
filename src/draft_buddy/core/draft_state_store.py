@@ -140,13 +140,15 @@ def list_archive_paths(saved_states_dir: str) -> List[str]:
     Returns
     -------
     list of str
-        Matching archive paths sorted by modification time descending.
+        Matching archive paths sorted by archive filename descending.
+        Filenames embed ``YYYY-MM-DD_HH-MM-SS`` stamps, so name order is
+        deterministic even when filesystem mtimes collide.
     """
     directory = Path(saved_states_dir)
     if not directory.is_dir():
         return []
     archives = [path for path in directory.glob(ARCHIVE_GLOB) if path.is_file()]
-    archives.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    archives.sort(key=lambda path: path.name, reverse=True)
     return [str(path) for path in archives]
 
 

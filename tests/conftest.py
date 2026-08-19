@@ -63,6 +63,7 @@ def config(tmp_path: Path) -> Config:
     config.draft.TEAM_MANAGER_MAPPING = {1: "Team 1", 2: "Team 2", 3: "Team 3", 4: "Team 4"}
     config.training.MODEL_PATH_TO_LOAD = ""
     config.training.RESUME_TRAINING = False
+    config.training.RANDOMIZE_DRAFT_POOL_DURING_TRAINING = False
     config.reward.ENABLE_SEASON_SIM_REWARD = False
     config.reward.ENABLE_COMPETITIVE_REWARD = False
     config.reward.USE_RANDOM_MATCHUPS = False
@@ -257,6 +258,10 @@ def fake_session(player_catalog: PlayerCatalog):
             "ignore": ignore_player_ids or [],
         },
         save_state=lambda file_path=None: None,
+        shelve_players=lambda player_ids: list(player_ids),
+        unshelve_players=lambda player_ids: list(player_ids),
+        shelve_players_above_adp=lambda max_adp: [],
+        shelve_inactive_players=lambda: [],
         get_positional_baselines=lambda: {"QB": 250.0, "RB": 200.0, "WR": 180.0, "TE": 120.0},
     )
     return session

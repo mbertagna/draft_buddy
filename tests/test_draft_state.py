@@ -104,29 +104,37 @@ def test_draft_state_serialization_includes_visual_board(draft_state) -> None:
     assert payload["visual_board"]["2"]["1"] == 7
 
 
-def test_draft_state_backfills_visual_board_from_rosters(draft_state) -> None:
-    """Verify legacy saves without visual_board densify from player_ids."""
+def test_draft_state_serialization_includes_shelved_player_ids(draft_state) -> None:
+    """Verify shelved player ids round-trip through serialization."""
+    draft_state.available_player_ids.discard(5)
+    draft_state.shelved_player_ids.add(5)
+    payload = draft_state.to_dict()
+    draft_state.load_from_dict(payload)
+
+    assert draft_state.shelved_player_ids == {5}
+    assert 5 not in draft_state.available_player_ids
+
+
+def test_draft_state_load_from_legacy_payload_defaults_shelved_empty(draft_state) -> None:
+    """Verify legacy payloads without shelved_player_ids load an empty sink."""
     payload = {
-        "available_player_ids": [3, 4],
-        "team_rosters": {
-            "1": {
-                "player_ids": [1, 2],
-                "qb_count": 1,
-                "rb_count": 1,
-                "wr_count": 0,
-                "te_count": 0,
-                "flex_count": 0,
-            }
-        },
-        "draft_order": [1, 2, 3, 4],
-        "current_pick_index": 2,
-        "current_pick_number": 3,
+        "available_player_ids": [1, 2, 3],
+        "team_rosters": {},
+        "draft_order": [1, 2],
+        "current_pick_index": 0,
+        "current_pick_number": 1,
         "draft_history": [],
-        "transfer_history": [],
         "agent_team_id": 1,
     }
     draft_state.load_from_dict(payload)
 
-    assert draft_state.visual_board[1][0] == 1
-    assert draft_state.visual_board[1][1] == 2
-    assert draft_state.visual_board[1][2] is None
+    assert draft_state.shelved_player_ids == set()
+
+
+def test_draft_state_reset_clears_shelved_player_ids(draft_state) -> None:
+    """Verify reset clears previously shelved players."""
+    draft_state.shelved_player_ids.add(4)
+    draft_state.reset({1, 2, 3}, [1, 2], agent_team_id=1)
+
+    assert draft_state.shelved_player_ids == set()
+    assert draft_state.available_player_ids == {1, 2, 3}

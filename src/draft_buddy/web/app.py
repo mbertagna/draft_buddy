@@ -152,6 +152,73 @@ def create_app(
         return session.get_ui_state()
 
 
+    @app.post("/api/draft/shelve")
+    async def shelve_players(request: Request, response: Response) -> dict:
+        """Shelve one or more available players from the draftable pool."""
+        payload = await request.json()
+        player_ids = payload.get("player_ids")
+        if not isinstance(player_ids, list) or not player_ids:
+            raise HTTPException(status_code=400, detail="player_ids list is required")
+        session_id = _session_id(request, response)
+        try:
+            resolved_ids = [int(player_id) for player_id in player_ids]
+        except (TypeError, ValueError) as error:
+            raise HTTPException(status_code=400, detail="player_ids must be integers") from error
+        session = runtime_session_manager.run_locked(
+            session_id,
+            lambda active: active.shelve_players(resolved_ids),
+        )
+        return session.get_ui_state()
+
+
+    @app.post("/api/draft/unshelve")
+    async def unshelve_players(request: Request, response: Response) -> dict:
+        """Restore one or more shelved players to the draftable pool."""
+        payload = await request.json()
+        player_ids = payload.get("player_ids")
+        if not isinstance(player_ids, list) or not player_ids:
+            raise HTTPException(status_code=400, detail="player_ids list is required")
+        session_id = _session_id(request, response)
+        try:
+            resolved_ids = [int(player_id) for player_id in player_ids]
+        except (TypeError, ValueError) as error:
+            raise HTTPException(status_code=400, detail="player_ids must be integers") from error
+        session = runtime_session_manager.run_locked(
+            session_id,
+            lambda active: active.unshelve_players(resolved_ids),
+        )
+        return session.get_ui_state()
+
+
+    @app.post("/api/draft/shelve_by_adp")
+    async def shelve_by_adp(request: Request, response: Response) -> dict:
+        """Shelve available players with finite ADP above a threshold."""
+        payload = await request.json()
+        max_adp = payload.get("max_adp")
+        if max_adp is None:
+            raise HTTPException(status_code=400, detail="max_adp is required")
+        try:
+            resolved_max_adp = float(max_adp)
+        except (TypeError, ValueError) as error:
+            raise HTTPException(status_code=400, detail="max_adp must be a number") from error
+        session_id = _session_id(request, response)
+        session = runtime_session_manager.run_locked(
+            session_id,
+            lambda active: active.shelve_players_above_adp(resolved_max_adp),
+        )
+        return session.get_ui_state()
+
+    @app.post("/api/draft/shelve_inactive")
+    async def shelve_inactive(request: Request, response: Response) -> dict:
+        """Shelve available Inactive/IR/PUP/DNR players into the sink."""
+        session_id = _session_id(request, response)
+        session = runtime_session_manager.run_locked(
+            session_id,
+            lambda active: active.shelve_inactive_players(),
+        )
+        return session.get_ui_state()
+
+
     @app.post("/api/draft/transfer")
     async def transfer_player(request: Request, response: Response) -> dict:
         """Transfer one drafted player to another team or visual slot."""

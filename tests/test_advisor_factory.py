@@ -19,6 +19,7 @@ def test_build_advisor_registry_returns_none_without_keys(monkeypatch) -> None:
 def test_advisor_registry_caches_gateways(monkeypatch) -> None:
     """Verify advisor gateways are cached per model id."""
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
     class StubAdvisorGateway(GeminiFlashAdvisorGateway):
         def __init__(self, api_key: str, model: str) -> None:
@@ -39,6 +40,7 @@ def test_advisor_registry_caches_gateways(monkeypatch) -> None:
 def test_advisor_registry_rejects_unavailable_model(monkeypatch) -> None:
     """Verify unavailable models raise a validation error."""
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     registry = build_advisor_registry()
     assert registry is not None
     with pytest.raises(ValueError, match="unavailable"):

@@ -297,6 +297,109 @@ def test_draft_session_create_new_archives_current_state(config, player_catalog)
     assert len(archives) == 1
 
 
+def test_draft_session_reset_does_not_auto_shelve_inactive_by_default(
+    config, player_catalog
+) -> None:
+    """Verify new-draft reset leaves inactive players draftable by default."""
+    inactive = player_catalog.require(2)
+    object.__setattr__(inactive, "sleeper_status", "Inactive")
+    session = DraftSession(config)
+    session.player_catalog = player_catalog
+    session._controller.player_catalog = player_catalog
+
+    session.reset()
+
+    assert 2 not in session._state.shelved_player_ids
+    assert 2 in session.available_player_ids
+
+
+def test_draft_session_auto_shelves_inactive_when_enabled(config, player_catalog) -> None:
+    """Verify new-draft reset shelves inactive players when the flag is on."""
+    config.data.AUTO_SHELVE_INACTIVE_ON_NEW_DRAFT = True
+    inactive = player_catalog.require(2)
+    object.__setattr__(inactive, "sleeper_status", "Inactive")
+    session = DraftSession(config)
+    session.player_catalog = player_catalog
+    session._controller.player_catalog = player_catalog
+
+    session.reset()
+
+    assert 2 in session._state.shelved_player_ids
+    assert 2 not in session.available_player_ids
+
+
+def test_draft_session_shelve_inactive_players_on_demand(config, player_catalog) -> None:
+    """Verify manual inactive shelving moves matching available players."""
+    inactive = player_catalog.require(2)
+    object.__setattr__(inactive, "sleeper_status", "Inactive")
+    object.__setattr__(player_catalog.require(3), "sleeper_injury_status", "PUP")
+    session = DraftSession(config)
+    session.player_catalog = player_catalog
+    session._controller.player_catalog = player_catalog
+
+    shelved = session.shelve_inactive_players()
+
+    assert 2 in shelved and 3 in shelved
+    assert 2 in session._state.shelved_player_ids
+    assert 3 in session._state.shelved_player_ids
+
+
+def test_draft_session_shelve_and_unshelve_round_trip(config, player_catalog) -> None:
+    """Verify shelve removes availability and unshelve restores it."""
+    session = DraftSession(config)
+
+    shelved = session.shelve_players([3])
+    assert shelved == [3]
+    assert 3 not in session.available_player_ids
+    assert "shelved_players" in session.get_ui_state()
+
+    restored = session.unshelve_players([3])
+    assert restored == [3]
+    assert 3 in session.available_player_ids
+
+
+def test_draft_session_shelved_players_sorted_by_adp(config, player_catalog) -> None:
+    """Verify UI shelved_players are ordered by ascending ADP."""
+    session = DraftSession(config)
+    session.shelve_players([12, 5, 8])
+
+    names = [player["player_id"] for player in session.get_ui_state()["shelved_players"]]
+
+    assert names == [5, 8, 12]
+
+
+def test_draft_session_shelve_by_adp_uses_finite_adp(config, player_catalog) -> None:
+    """Verify ADP lop-off shelves only finite ADP above the cutoff."""
+    session = DraftSession(config)
+
+    shelved = session.shelve_players_above_adp(10.0)
+
+    assert 11 in shelved
+    assert 10 not in shelved
+    assert all(player_id not in session.available_player_ids for player_id in shelved)
+
+
+def test_draft_session_load_preserves_unshelved_inactive(config, player_catalog) -> None:
+    """Verify loading a saved draft does not re-shelve previously restored players."""
+    inactive = player_catalog.require(2)
+    object.__setattr__(inactive, "sleeper_status", "Inactive")
+    session = DraftSession(config)
+    session.player_catalog = player_catalog
+    session._controller.player_catalog = player_catalog
+    session.reset()
+    session.shelve_inactive_players()
+    session.unshelve_players([2])
+    session.save_state()
+
+    reloaded = DraftSession(config)
+    reloaded.player_catalog = player_catalog
+    reloaded._controller.player_catalog = player_catalog
+    reloaded.load_state()
+
+    assert 2 in reloaded.available_player_ids
+    assert 2 not in reloaded._state.shelved_player_ids
+
+
 def test_draft_session_manager_run_locked_persists_mutation(config, player_catalog) -> None:
     """Verify locked mutations save the shared draft state."""
     manager = DraftSessionManager(config)

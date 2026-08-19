@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import random
+from collections import Counter
 from typing import Callable, Optional
 
 import numpy as np
@@ -104,9 +105,30 @@ class DraftController:
             return None
         return self.draft_order[self.current_pick_index]
 
-    def reset(self, draft_order: list[int], agent_team_id: int) -> None:
-        """Reset draft state and clear cached bots."""
-        self.state.reset(set(self.player_catalog.player_ids), draft_order, agent_team_id)
+    def reset(
+        self,
+        draft_order: list[int],
+        agent_team_id: int,
+        available_player_ids: Optional[set[int]] = None,
+    ) -> None:
+        """Reset draft state and clear cached bots.
+
+        Parameters
+        ----------
+        draft_order : list[int]
+            Team ids in snake draft order.
+        agent_team_id : int
+            Default agent perspective team id.
+        available_player_ids : set[int], optional
+            Subset of catalog ids that start available. Defaults to the full
+            catalog. Shelved ids are always cleared.
+        """
+        pool_ids = (
+            set(available_player_ids)
+            if available_player_ids is not None
+            else set(self.player_catalog.player_ids)
+        )
+        self.state.reset(pool_ids, draft_order, agent_team_id)
         self._bots = {}
 
     def save_state(self, file_path: str, prev_path: Optional[str] = None) -> None:
@@ -228,6 +250,111 @@ class DraftController:
             is_manual_pick=is_manual_pick,
             previous_override_team_id=self.state.override_team_id,
         )
+
+    def shelve_players(self, player_ids: list[int] | set[int]) -> list[int]:
+        """Move currently available players into the shelved sink.
+
+        Parameters
+        ----------
+        player_ids : list[int] or set[int]
+            Candidate player ids to shelve.
+
+        Returns
+        -------
+        list of int
+            Player ids that were actually shelved.
+        """
+        shelved: list[int] = []
+        for player_id in player_ids:
+            player_id = int(player_id)
+            if player_id not in self.available_player_ids:
+                continue
+            if self.state.find_player_team_id(player_id) is not None:
+                continue
+            self.state.available_player_ids.discard(player_id)
+            self.state.shelved_player_ids.add(player_id)
+            shelved.append(player_id)
+        return shelved
+
+    def unshelve_players(self, player_ids: list[int] | set[int]) -> list[int]:
+        """Restore currently shelved players to the available pool.
+
+        Parameters
+        ----------
+        player_ids : list[int] or set[int]
+            Candidate player ids to unshelve.
+
+        Returns
+        -------
+        list of int
+            Player ids that were actually unshelved.
+        """
+        restored: list[int] = []
+        for player_id in player_ids:
+            player_id = int(player_id)
+            if player_id not in self.state.shelved_player_ids:
+                continue
+            if self.state.find_player_team_id(player_id) is not None:
+                continue
+            self.state.shelved_player_ids.discard(player_id)
+            self.state.available_player_ids.add(player_id)
+            restored.append(player_id)
+        return restored
+
+    def shelve_inactive_players(
+        self,
+        roster_statuses: list[str] | set[str],
+        injury_statuses: list[str] | set[str],
+    ) -> list[int]:
+        """Shelve available players matching inactive roster or injury statuses.
+
+        Parameters
+        ----------
+        roster_statuses : list[str] or set[str]
+            Sleeper roster statuses treated as unavailable.
+        injury_statuses : list[str] or set[str]
+            Sleeper injury designations treated as unavailable.
+
+        Returns
+        -------
+        list of int
+            Player ids that were shelved.
+        """
+        from draft_buddy.data.player_filter import iter_inactive_player_ids
+
+        inactive_ids = [
+            player_id
+            for player_id in iter_inactive_player_ids(
+                self.player_catalog, roster_statuses, injury_statuses
+            )
+            if player_id in self.available_player_ids
+        ]
+        return self.shelve_players(inactive_ids)
+
+    def shelve_players_above_adp(self, max_adp: float) -> list[int]:
+        """Shelve available players with finite ADP strictly above a threshold.
+
+        Parameters
+        ----------
+        max_adp : float
+            Players with finite ``adp > max_adp`` are shelved. Non-finite ADP
+            values are left untouched.
+
+        Returns
+        -------
+        list of int
+            Player ids that were shelved.
+        """
+        to_shelve: list[int] = []
+        for player_id in list(self.available_player_ids):
+            player = self.player_catalog.get(player_id)
+            if player is None:
+                continue
+            if not np.isfinite(player.adp):
+                continue
+            if float(player.adp) > float(max_adp):
+                to_shelve.append(player_id)
+        return self.shelve_players(to_shelve)
 
     def undo_last_pick(self) -> None:
         """Undo the most recent draft action."""
@@ -415,7 +542,7 @@ class DraftController:
             policy_bot=policy_bot,
         )
         if selected_player is None:
-            raise ValueError(f"Team {team_id} could not make a valid pick.")
+            raise ValueError(self._format_no_valid_pick_error(team_id))
         self.apply_pick(team_id=team_id, player_id=selected_player.player_id, is_manual_pick=False)
         return selected_player
 
@@ -553,6 +680,37 @@ class DraftController:
             after = available[min(len(available) - 1, replacement_index + 1)].projected_points
             baselines[position] = (before + current + after) / 3.0
         return baselines
+
+    def _format_no_valid_pick_error(self, team_id: int) -> str:
+        """Build a diagnostic message when no legal simulated pick exists."""
+        roster = self.state.roster_for_team(team_id)
+        available_positions = Counter(
+            self.player_catalog.require(player_id).position
+            for player_id in self.available_player_ids
+            if player_id in self.player_catalog
+        )
+        can_draft = {
+            position: self.can_draft_position(team_id, position, is_manual=False)
+            for position in ("QB", "RB", "WR", "TE")
+        }
+        team_ids = sorted(set(self.draft_order) | set(self.team_rosters.keys()))
+        team_summaries = []
+        for other_team_id in team_ids:
+            other = self.state.roster_for_team(other_team_id)
+            team_summaries.append(
+                f"t{other_team_id}:size={other.size} "
+                f"Q{other.qb_count}R{other.rb_count}W{other.wr_count}"
+                f"T{other.te_count}F{other.flex_count}"
+            )
+        return (
+            f"Team {team_id} could not make a valid pick "
+            f"(pick_index={self.current_pick_index}, "
+            f"roster_size={roster.size}/{self.state.total_roster_size_per_team}, "
+            f"counts=QB:{roster.qb_count} RB:{roster.rb_count} "
+            f"WR:{roster.wr_count} TE:{roster.te_count} FLEX:{roster.flex_count}, "
+            f"available={dict(available_positions)}, can_draft={can_draft}, "
+            f"teams=[{', '.join(team_summaries)}])."
+        )
 
     def _select_simulated_pick(
         self,

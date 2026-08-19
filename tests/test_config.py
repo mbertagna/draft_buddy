@@ -52,3 +52,10 @@ def test_paths_config_post_init_creates_directories(tmp_path: Path) -> None:
 
     assert Path(paths.DATA_DIR).is_dir() and Path(paths.MODELS_DIR).is_dir() and Path(paths.LOGS_DIR).is_dir()
     assert Path(paths.SAVED_STATES_DIR).is_dir()
+
+
+def test_config_from_dict_loads_policy_suggestion_temperature() -> None:
+    """Verify season overlays can override the UI suggestion temperature."""
+    config = Config.from_dict({"training": {"POLICY_SUGGESTION_TEMPERATURE": 2.0}})
+
+    assert config.training.POLICY_SUGGESTION_TEMPERATURE == 2.0

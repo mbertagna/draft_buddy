@@ -205,6 +205,59 @@ def test_self_play_simulator_produces_guides_for_every_slot(
     assert all(0.0 <= entry.draft_rate <= 1.0 for entry in model_adp.players)
 
 
+def test_self_play_simulator_applies_prune_and_limit_adp_pool(
+    config, player_catalog, monkeypatch
+) -> None:
+    """Verify guide pool flags restrict available ids and appear in export metadata."""
+    monkeypatch.setattr(
+        DraftGymEnv, "_load_agent_model", lambda self: setattr(self, "agent_model", _FixedRbPolicy())
+    )
+    monkeypatch.setattr(
+        "draft_buddy.rl.position_guide.simulator.load_player_catalog",
+        lambda *_args, **_kwargs: player_catalog,
+    )
+    inactive = player_catalog.require(2)
+    object.__setattr__(inactive, "sleeper_status", "Inactive")
+    limit_n = max(8, config.draft.NUM_TEAMS * 2)
+
+    captured_pools: list[set[int]] = []
+    original_reset = DraftGymEnv.reset
+
+    def capturing_reset(self, seed=None, options=None):
+        result = original_reset(self, seed=seed, options=options)
+        captured_pools.append(set(self.available_player_ids))
+        return result
+
+    monkeypatch.setattr(DraftGymEnv, "reset", capturing_reset)
+
+    simulator = PositionGuideSimulator(
+        config=config,
+        num_teams=config.draft.NUM_TEAMS,
+        checkpoint_path="unused.pth",
+        draft_year=2026,
+        simulations=1,
+        seed=1,
+        temperature=1.0,
+        player_data_csv=config.paths.PLAYER_DATA_CSV,
+        show_progress=False,
+        prune_inactive=True,
+        limit_adp=limit_n,
+    )
+
+    guides, model_adp = simulator.run()
+
+    assert simulator._draft_pool_ids is not None
+    assert 2 not in simulator._draft_pool_ids
+    assert 2 in player_catalog.player_ids
+    assert len(simulator._draft_pool_ids) >= min(limit_n, len(player_catalog) - 1)
+    assert captured_pools and captured_pools[0] == simulator._draft_pool_ids
+    guide = guides[1]
+    assert guide.prune_inactive is True
+    assert guide.limit_adp == limit_n
+    assert guide.draft_pool_size == len(simulator._draft_pool_ids)
+    assert model_adp.draft_pool_size == guide.draft_pool_size
+
+
 def test_export_position_guide_writes_json_and_html(tmp_path) -> None:
     """Verify position guide export writes both JSON and HTML files."""
     guide = PositionGuideFile(

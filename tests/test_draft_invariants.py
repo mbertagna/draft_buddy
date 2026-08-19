@@ -63,3 +63,26 @@ def test_assert_invariants_accepts_consistent_pick(draft_state, player_catalog) 
     draft_state.place_player_visual(1, 0, 1)
 
     assert_invariants(draft_state)
+
+
+def test_collect_invariant_errors_detects_shelved_available_overlap(draft_state) -> None:
+    """Verify shelved players must not remain available."""
+    draft_state.shelved_player_ids.add(2)
+    draft_state.available_player_ids.add(2)
+
+    errors = collect_invariant_errors(draft_state)
+
+    assert any("Shelved player 2 is still marked available" in error for error in errors)
+
+
+def test_collect_invariant_errors_detects_rostered_shelved_player(
+    draft_state, player_catalog
+) -> None:
+    """Verify rostered players must not remain shelved."""
+    draft_state.add_player_to_roster(1, player_catalog.require(1))
+    draft_state.place_player_visual(1, 0, 1)
+    draft_state.shelved_player_ids.add(1)
+
+    errors = collect_invariant_errors(draft_state)
+
+    assert any("still marked shelved" in error for error in errors)

@@ -34,6 +34,12 @@ def collect_invariant_errors(state: DraftState) -> List[str]:
             rostered_ids.add(player_id)
             if player_id in state.available_player_ids:
                 errors.append(f"Rostered player {player_id} is still marked available.")
+            if player_id in state.shelved_player_ids:
+                errors.append(f"Rostered player {player_id} is still marked shelved.")
+
+    for player_id in state.shelved_player_ids:
+        if player_id in state.available_player_ids:
+            errors.append(f"Shelved player {player_id} is still marked available.")
 
     board_counts: dict[int, int] = {}
     for team_id, rounds in state.visual_board.items():

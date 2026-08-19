@@ -23,6 +23,24 @@ POSITION_BAR_COLORS = {
 }
 
 
+def _pool_meta_suffix(
+    prune_inactive: bool,
+    limit_adp: int | None,
+    draft_pool_size: int | None,
+) -> str:
+    """Return a short HTML meta fragment describing draft-pool restrictions."""
+    parts: list[str] = []
+    if prune_inactive:
+        parts.append("prune-inactive")
+    if limit_adp is not None:
+        parts.append(f"limit-adp={limit_adp}")
+    if draft_pool_size is not None:
+        parts.append(f"pool={draft_pool_size}")
+    if not parts:
+        return ""
+    return " · " + " · ".join(parts)
+
+
 def export_position_guide(
     guide: PositionGuideFile,
     data_root: str,
@@ -95,7 +113,8 @@ def render_position_guide_html(guide: PositionGuideFile) -> str:
         f"Checkpoint episode {guide.checkpoint_episode} · "
         f"{guide.simulations:,} simulations · "
         f"temperature {guide.temperature:g} · "
-        f"{guide.generation_mode} · "
+        f"{guide.generation_mode}"
+        f"{_pool_meta_suffix(guide.prune_inactive, guide.limit_adp, guide.draft_pool_size)} · "
         f"Generated {guide.generated_at.isoformat()}"
     )
     rows_html = "\n".join(_render_pick_row(pick) for pick in guide.picks)
@@ -281,7 +300,8 @@ def render_model_adp_html(model_adp: ModelAdpFile) -> str:
     header_meta = (
         f"Checkpoint episode {model_adp.checkpoint_episode} · "
         f"{model_adp.simulations:,} simulations · "
-        f"temperature {model_adp.temperature:g} · "
+        f"temperature {model_adp.temperature:g}"
+        f"{_pool_meta_suffix(model_adp.prune_inactive, model_adp.limit_adp, model_adp.draft_pool_size)} · "
         f"Generated {model_adp.generated_at.isoformat()}"
     )
     rows_html = "\n".join(

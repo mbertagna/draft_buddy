@@ -89,6 +89,9 @@ class PositionGuideFile(BaseModel):
     total_user_picks: int
     temperature: float = 1.0
     generation_mode: Literal["self_play"] = "self_play"
+    prune_inactive: bool = False
+    limit_adp: Optional[int] = None
+    draft_pool_size: Optional[int] = None
     picks: List[PositionGuidePick] = Field(default_factory=list)
 
 
@@ -140,4 +143,7 @@ class ModelAdpFile(BaseModel):
     checkpoint_episode: int
     player_data_csv: str
     temperature: float = 1.0
+    prune_inactive: bool = False
+    limit_adp: Optional[int] = None
+    draft_pool_size: Optional[int] = None
     players: List[ModelAdpEntry] = Field(default_factory=list)

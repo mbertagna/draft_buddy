@@ -22,6 +22,19 @@ def test_draft_gym_env_reset_returns_observation_and_action_mask(config, player_
     assert isinstance(observation, np.ndarray) and info["action_mask"].shape == (4,)
 
 
+def test_draft_gym_env_reset_honors_available_player_ids_option(
+    config, player_catalog
+) -> None:
+    """Verify reset options can restrict the draftable pool for non-training runs."""
+    env = DraftGymEnv(config, training=False, player_catalog=player_catalog)
+    pool = {1, 2, 3, 4}
+
+    _observation, info = env.reset(options={"available_player_ids": pool})
+
+    assert env.available_player_ids == pool
+    assert info["adp_pool_size"] == len(pool)
+
+
 def test_draft_gym_env_step_updates_agent_roster(config, player_catalog) -> None:
     """Verify one valid action applies a pick through the shared controller."""
     env = DraftGymEnv(config, training=True, player_catalog=player_catalog)
@@ -155,7 +168,7 @@ def test_draft_gym_env_reset_marks_episode_ended_before_agent_pick(config, playe
     """Verify reset reports when the draft is already exhausted before the agent picks."""
     env = DraftGymEnv(config, training=True, player_catalog=player_catalog)
     env._controller.reset(draft_order=[], agent_team_id=1)
-    env._controller.reset = lambda draft_order, agent_team_id: None
+    env._controller.reset = lambda draft_order, agent_team_id, available_player_ids=None: None
     env._state.current_pick_index = 0
     env._state.draft_order = []
 
@@ -414,3 +427,109 @@ def test_draft_gym_env_training_reset_can_change_opponent_strategies(
             break
 
     assert changed is True
+
+
+def test_draft_gym_env_training_pool_regime_full_keeps_catalog(
+    config, player_catalog
+) -> None:
+    """Verify the full regime seeds the entire catalog as available."""
+    config.training.RANDOMIZE_DRAFT_POOL_DURING_TRAINING = True
+    config.training.DRAFT_POOL_REGIMES = [
+        {"id": "full", "weight": 1.0, "prune_inactive": False, "limit_adp": False}
+    ]
+    env = DraftGymEnv(config, training=True, player_catalog=player_catalog)
+
+    _obs, info = env.reset()
+
+    assert info["draft_pool_regime"] == "full"
+    assert len(env.available_player_ids) == len(player_catalog)
+
+
+def test_draft_gym_env_training_pool_regime_inactive_only(
+    config, player_catalog
+) -> None:
+    """Verify inactive-only regime drops matching status players from available."""
+    inactive = player_catalog.require(2)
+    object.__setattr__(inactive, "sleeper_status", "Inactive")
+    config.training.RANDOMIZE_DRAFT_POOL_DURING_TRAINING = True
+    config.training.DRAFT_POOL_REGIMES = [
+        {
+            "id": "inactive_only",
+            "weight": 1.0,
+            "prune_inactive": True,
+            "limit_adp": False,
+        }
+    ]
+    env = DraftGymEnv(config, training=True, player_catalog=player_catalog)
+
+    env.reset()
+
+    assert 2 not in env.available_player_ids
+    assert 2 in env.player_catalog.player_ids
+
+
+def test_draft_gym_env_training_pool_regime_adp_limit_size(
+    config, player_catalog
+) -> None:
+    """Verify ADP-limited regimes keep at least a complete-draft pool."""
+    config.training.RANDOMIZE_DRAFT_POOL_DURING_TRAINING = True
+    config.training.ADP_POOL_EXTRA_MIN = 0
+    config.training.ADP_POOL_EXTRA_MAX = 0
+    config.training.DRAFT_POOL_REGIMES = [
+        {"id": "adp_only", "weight": 1.0, "prune_inactive": False, "limit_adp": True}
+    ]
+    env = DraftGymEnv(config, training=True, player_catalog=player_catalog)
+    min_n = config.draft.NUM_TEAMS * env.total_roster_size_per_team
+    expected_min = min(min_n, len(player_catalog))
+
+    _obs, info = env.reset()
+
+    assert info["draft_pool_regime"] == "adp_only"
+    assert info["adp_pool_size"] >= expected_min
+    assert len(env.available_player_ids) == info["adp_pool_size"]
+    assert len(env.available_player_ids) <= len(player_catalog)
+
+
+def test_draft_gym_env_step_ends_when_opponent_cannot_pick(
+    config, player_catalog, monkeypatch, capsys
+) -> None:
+    """Verify stuck opponent picks end the episode and print diagnostics."""
+    env = DraftGymEnv(config, training=True, player_catalog=player_catalog)
+    _observation, info = env.reset()
+    action = int(np.flatnonzero(info["action_mask"])[0])
+
+    def raise_no_pick(*_args, **_kwargs):
+        raise ValueError(
+            "Team 6 could not make a valid pick "
+            "(pick_index=3, roster_size=2/7, counts=QB:1 RB:1 WR:0 TE:0 FLEX:0, "
+            "available={'RB': 2}, can_draft={'QB': False, 'RB': True, 'WR': False, 'TE': False}, "
+            "teams=[t1:size=1 Q1R0W0T0F0])."
+        )
+
+    monkeypatch.setattr(env._controller, "simulate_single_pick", raise_no_pick)
+
+    _next_observation, _reward, terminated, _truncated, step_info = env.step(action)
+    captured = capsys.readouterr()
+
+    assert terminated is True
+    assert step_info.get("draft_ended_prematurely") is True
+    assert step_info.get("no_valid_opponent_pick") is True
+    assert "WARNING: Ending draft episode early" in captured.out
+    assert "Team 6 could not make a valid pick" in captured.out
+
+
+def test_draft_gym_env_keeps_full_catalog_when_randomizing_with_static_prune(
+    config, player_dataframe
+) -> None:
+    """Verify pool randomization skips static inactive catalog pruning."""
+    player_dataframe.loc[player_dataframe["player_id"] == 2, "sleeper_status"] = "Inactive"
+    player_dataframe.to_csv(config.paths.PLAYER_DATA_CSV, index=False)
+    config.data.EXCLUDE_INACTIVE_PLAYERS = True
+    config.training.RANDOMIZE_DRAFT_POOL_DURING_TRAINING = True
+    config.training.DRAFT_POOL_REGIMES = [
+        {"id": "full", "weight": 1.0, "prune_inactive": False, "limit_adp": False}
+    ]
+
+    env = DraftGymEnv(config, training=True)
+
+    assert 2 in env.player_catalog.player_ids
