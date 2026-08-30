@@ -1,7 +1,25 @@
 {
   "draft": {
     "AGENT_START_POSITION": 5,
-    "RANDOMIZE_AGENT_START_POSITION": false
+    "RANDOMIZE_AGENT_START_POSITION": true,
+    "SLEEPER_SYNC_ENABLED": true,
+    "SLEEPER_DRAFT_ID": "1399774415532638208",
+    "SLEEPER_LEAGUE_ID": "1363697271014690816",
+    "SLEEPER_ROSTER_ID_TO_TEAM_ID": {
+      "1": 10,
+      "2": 4,
+      "3": 8,
+      "4": 2,
+      "5": 11,
+      "6": 3,
+      "7": 12,
+      "8": 9,
+      "9": 7,
+      "10": 1,
+      "11": 5,
+      "12": 6
+    },
+    "SLEEPER_SYNC_POLL_SECONDS": 3
   },
   "season": {
     "season": 2026,
@@ -18,7 +36,7 @@
     }
   },
   "training": {
-    "MODEL_PATH_TO_LOAD": "models/12_teams_random_start/v3",
+    "MODEL_PATH_TO_LOAD": "models/12_teams_random_start/v1",
     "RANDOMIZE_DRAFT_POOL_DURING_TRAINING": true,
     "ADP_POOL_EXTRA_MIN": 40,
     "ADP_POOL_EXTRA_MAX": 80,

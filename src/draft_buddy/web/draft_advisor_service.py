@@ -17,7 +17,7 @@ from draft_buddy.web.draft_advisor_context import (
     format_league_format_blurb,
     position_top_k_map,
 )
-from draft_buddy.web.draft_advisor_filter import exclude_ignored_players
+from draft_buddy.web.draft_advisor_filter import exclude_ignored_players, exclude_incomplete_players
 from draft_buddy.web.draft_advisor_schemas import (
     AdvisorRequest,
     AdvisorResult,
@@ -122,6 +122,7 @@ class DraftAdvisorService:
         available_players = exclude_ignored_players(
             available_players, request.ignore_player_ids
         )
+        available_players = exclude_incomplete_players(available_players)
         filtered_players = filter_available_players(available_players, request.gp_min)
         if not filtered_players:
             raise DraftAdvisorValidationError(

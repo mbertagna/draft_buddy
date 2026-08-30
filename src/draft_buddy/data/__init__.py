@@ -20,14 +20,19 @@ from draft_buddy.data.player_loader import load_player_catalog
 from draft_buddy.data.rookie_projector import RookieProjector
 from draft_buddy.data.sleeper_catalog import SleeperCatalogBuilder
 from draft_buddy.data.sleeper_client import SleeperGateway, SleeperHttpGateway
+from draft_buddy.data.sleeper_draft_sync import SleeperDraftSyncService
+from draft_buddy.data.sleeper_player_resolver import PlayerResolver, encode_sleeper_player_id
 
 __all__ = [
     "FantasyDataProcessor",
     "NflverseCsvDownloader",
     "RookieProjector",
     "SleeperCatalogBuilder",
+    "SleeperDraftSyncService",
     "SleeperGateway",
     "SleeperHttpGateway",
+    "PlayerResolver",
+    "encode_sleeper_player_id",
     "adp_cache_dir",
     "exclude_inactive_players",
     "get_simulation_dfs",

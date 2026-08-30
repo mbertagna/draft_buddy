@@ -19,7 +19,31 @@ from draft_buddy.simulator.service import SeasonSimulationService
 from draft_buddy.web.advisor_factory import AdvisorGatewayRegistry
 from draft_buddy.web.draft_advisor_schemas import AdvisorRequest
 from draft_buddy.web.draft_advisor_service import DraftAdvisorError, DraftAdvisorService
-from draft_buddy.web.session import DraftSessionManager
+from draft_buddy.web.session import DraftSessionManager, SyncReadOnlyError
+
+
+def _json_number(value):
+    """Return a JSON-safe number, preserving strings such as ``\"R\"``.
+
+    Parameters
+    ----------
+    value : Any
+        Raw numeric or string field.
+
+    Returns
+    -------
+    float or str or None
+        Finite number, original string, or ``None`` when non-finite.
+    """
+    if value is None or isinstance(value, str):
+        return value
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(numeric):
+        return None
+    return numeric
 
 
 def create_app(
@@ -79,6 +103,17 @@ def create_app(
             content={"success": False, "message": exc.detail},
         )
 
+    @app.exception_handler(SyncReadOnlyError)
+    async def sync_readonly_exception_handler(
+        request: Request, exc: SyncReadOnlyError
+    ) -> JSONResponse:
+        """Return 409 when a mutation is attempted in Sleeper sync mode."""
+        _ = request
+        return JSONResponse(
+            status_code=409,
+            content={"success": False, "message": str(exc)},
+        )
+
     def _session_id(request: Request, response: Optional[Response] = None) -> str:
         """Resolve session id from cookie or create one."""
         existing = request.cookies.get("draft_session_id")
@@ -117,6 +152,20 @@ def create_app(
     def draft_state(request: Request, response: Response) -> dict:
         """Return current session draft state."""
         session = runtime_session_manager.get_or_create(_session_id(request, response))
+        return session.get_ui_state()
+
+
+    @app.get("/api/draft/sleeper/sync")
+    def sleeper_sync(request: Request, response: Response) -> dict:
+        """Poll Sleeper for new picks and return the mirrored UI state."""
+        session_id = _session_id(request, response)
+        session = runtime_session_manager.get_or_create(session_id)
+        if not hasattr(session, "sync_from_sleeper"):
+            raise HTTPException(status_code=409, detail="Sleeper sync is not enabled")
+        session = runtime_session_manager.run_locked(
+            session_id,
+            lambda active: active.sync_from_sleeper(),
+        )
         return session.get_ui_state()
 
 
@@ -416,7 +465,7 @@ def create_app(
         }
         for pick in session.draft_history:
             player = session.player_catalog.get(pick.player_id)
-            if player:
+            if player and player.position in summary["picks_by_position"]:
                 summary["picks_by_position"][player.position] += 1
         return summary
 
@@ -516,7 +565,11 @@ def create_app(
     ) -> JSONResponse:
         """Return players filtered and sorted for frontend table."""
         session = runtime_session_manager.get_or_create(_session_id(request, response))
-        filtered_players = session.player_catalog.resolve(session.available_player_ids)
+        filtered_players = [
+            player
+            for player_id in session.available_player_ids
+            if (player := session.player_catalog.get(player_id)) is not None
+        ]
 
         if position:
             positions = [value.strip().upper() for value in position.split(",")]
@@ -526,46 +579,60 @@ def create_app(
             filtered_players = [player for player in filtered_players if needle in player.name.lower()]
 
         baselines = session.get_positional_baselines()
-        player_vorp_map = {
-            player.player_id: player.projected_points - baselines.get(player.position, 0.0)
-            for player in filtered_players
-        }
+        player_vorp_map = {}
+        for player in filtered_players:
+            if getattr(player, "data_completeness", "full") != "full":
+                player_vorp_map[player.player_id] = None
+            else:
+                player_vorp_map[player.player_id] = player.projected_points - baselines.get(
+                    player.position, 0.0
+                )
 
         reverse = sort_dir.lower() == "desc"
 
         def sort_key(player) -> tuple:
+            incomplete = getattr(player, "data_completeness", "full") != "full"
             if sort_by == "vorp":
-                value = player_vorp_map.get(player.player_id, 0.0)
+                value = player_vorp_map.get(player.player_id)
+                value = float("-inf") if value is None else value
             elif sort_by == "adp":
                 value = player.adp if np.isfinite(player.adp) else float("inf")
             elif sort_by == "projected_points":
-                value = player.projected_points
+                value = player.projected_points if not incomplete else float("-inf")
             elif sort_by == "name":
                 value = player.name.lower()
             elif sort_by == "position":
                 value = player.position
             else:
-                value = player_vorp_map.get(player.player_id, 0.0)
+                value = player_vorp_map.get(player.player_id)
+                value = float("-inf") if value is None else value
             return (value, player.player_id)
 
         filtered_players.sort(key=sort_key, reverse=reverse)
+        filtered_players.sort(
+            key=lambda player: getattr(player, "data_completeness", "full") != "full"
+        )
         payload = []
         for player in filtered_players:
             insight = insights_by_id.get(player.player_id)
+            completeness = getattr(player, "data_completeness", "full")
             payload.append(
                 {
                     "player_id": player.player_id,
                     "name": player.name,
                     "position": player.position,
-                    "projected_points": player.projected_points,
-                    "vorp": player_vorp_map.get(player.player_id, 0.0),
-                    "games_played_frac": player.games_played_frac,
-                    "adp": None if np.isinf(player.adp) else player.adp,
+                    "projected_points": (
+                        _json_number(player.projected_points) if completeness == "full" else None
+                    ),
+                    "vorp": _json_number(player_vorp_map.get(player.player_id)),
+                    "games_played_frac": _json_number(player.games_played_frac),
+                    "adp": _json_number(player.adp),
                     "bye_week": player.bye_week if player.bye_week and not np.isnan(player.bye_week) else "N/A",
                     "team": player.team,
                     "sleeper_status": player.sleeper_status,
                     "sleeper_injury_status": player.sleeper_injury_status,
                     "sleeper_depth_chart_position": player.sleeper_depth_chart_position,
+                    "data_completeness": completeness,
                     "insight": insight.model_dump(mode="json") if insight else None,
                 }
             )

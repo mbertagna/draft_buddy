@@ -38,6 +38,9 @@ class Player:
         Sleeper injury designation (e.g. "Questionable", "Out").
     sleeper_depth_chart_position : str, optional
         Sleeper depth chart position group (e.g. "WR2").
+    data_completeness : str, optional
+        ``"full"`` for catalog projections, ``"sleeper_only"`` for
+        placeholders materialized during live sync.
     """
 
     player_id: int
@@ -52,6 +55,7 @@ class Player:
     sleeper_status: Optional[str] = None
     sleeper_injury_status: Optional[str] = None
     sleeper_depth_chart_position: Optional[str] = None
+    data_completeness: str = "full"
 
     def to_dict(self) -> dict:
         """Serialize the player to a JSON-friendly dictionary.
@@ -74,6 +78,7 @@ class Player:
             "sleeper_status": self.sleeper_status,
             "sleeper_injury_status": self.sleeper_injury_status,
             "sleeper_depth_chart_position": self.sleeper_depth_chart_position,
+            "data_completeness": self.data_completeness,
         }
 
 
@@ -159,6 +164,24 @@ class PlayerCatalog:
             updated_player if player.player_id == updated_player.player_id else player
             for player in self.players
         )
+
+    def with_added_player(self, player: Player) -> "PlayerCatalog":
+        """Return a new catalog that includes one additional player.
+
+        Parameters
+        ----------
+        player : Player
+            Player to append. When the id already exists, the existing
+            record is replaced.
+
+        Returns
+        -------
+        PlayerCatalog
+            Catalog containing ``player``.
+        """
+        if player.player_id in self._players_by_id:
+            return self.with_updated_player(player)
+        return PlayerCatalog((*self.players, player))
 
     def to_weekly_projections(self) -> dict[int, dict[str, object]]:
         """Build flat weekly projection data from season projections.

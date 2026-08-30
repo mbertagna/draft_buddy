@@ -1,0 +1,16 @@
+[
+  {
+    "pick_no": 1,
+    "player_id": "9999",
+    "roster_id": 10,
+    "draft_slot": 1,
+    "round": 1,
+    "metadata": {
+      "first_name": "Off",
+      "last_name": "Catalog",
+      "position": "RB",
+      "team": "CHI",
+      "injury_status": ""
+    }
+  }
+]

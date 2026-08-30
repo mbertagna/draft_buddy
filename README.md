@@ -212,6 +212,48 @@ The web UI includes an on-demand **LLM draft assistant** alongside the fast RL p
 
 The assistant builds per-position shortlists (top 7 by VORP/ADP for the RL model's top two positions, top 5 for the others) and returns a structured pick recommendation. Min GP Frac from the player table is sent with each request.
 
+### Sleeper live draft sync
+
+Draft Buddy can **mirror a live Sleeper snake draft** instead of running a local mock. You do **not** need a Sleeper API key. The public `https://api.sleeper.app/v1` endpoints used here are unauthenticated. Gemini/OpenRouter keys are still only for the LLM assistant.
+
+This is a companion mode: every pick, including yours, comes from Sleeper. Pick, undo, transfer, swap, clock override, Sim Pick, and Auto Draft are disabled. Advisor, RL chips, the player table, shelve, and the board stay on. Your team is `draft.AGENT_START_POSITION` (slot 5 / Michael for Redraft NBFL).
+
+**Enable it in season JSON**, not `.env`. For Redraft NBFL edit `config/seasons/redraft_nbfl_12_2026.json`:
+
+```json
+"draft": {
+  "AGENT_START_POSITION": 5,
+  "SLEEPER_SYNC_ENABLED": true,
+  "SLEEPER_DRAFT_ID": "your_draft_id",
+  "SLEEPER_LEAGUE_ID": "your_league_id",
+  "SLEEPER_ROSTER_ID_TO_TEAM_ID": {
+    "1": 5,
+    "2": 1
+  },
+  "SLEEPER_SYNC_POLL_SECONDS": 3
+}
+```
+
+`SLEEPER_ROSTER_ID_TO_TEAM_ID` maps each Sleeper `roster_id` onto Draft Buddy team ids `1..NUM_TEAMS` (the same keys as `TEAM_MANAGER_MAPPING`). The example values above are placeholders — paste a full 1:1 map for all 12 teams. Leave `SLEEPER_SYNC_ENABLED` false (and ids empty) for local mocks. ESPN `red_league_10` stays unsynced.
+
+**One-time lookup** (league id is in the Sleeper league URL):
+
+```bash
+curl -s "https://api.sleeper.app/v1/league/{league_id}/drafts"   # copy draft_id
+curl -s "https://api.sleeper.app/v1/league/{league_id}/rosters" # roster_id + owner_id
+curl -s "https://api.sleeper.app/v1/league/{league_id}/users"   # owner_id → display_name
+```
+
+Match each Sleeper owner to `TEAM_MANAGER_MAPPING`, then set `DRAFT_BUDDY_LEAGUE=redraft_nbfl_12` and restart:
+
+```bash
+docker compose up webapp
+```
+
+Startup fails loud if the draft id is missing, the roster map is not 1:1 onto `1..NUM_TEAMS`, or Sleeper `type` is not `snake`. Restart after flipping the flag or changing ids. **New Draft** replays that Sleeper draft from pick 0 (it does not start a local mock).
+
+While syncing, the UI polls Draft Buddy every `SLEEPER_SYNC_POLL_SECONDS` (default 3). Polling pauses when the tab is hidden or Sleeper status is `complete`. Kickers and DST show on extra board rounds with a **No proj** badge and do not count toward skill roster slots, VORP, advisor, or RL. Off-catalog skill players appear as name/position placeholders. If Sleeper drafts a player you shelved locally, Draft Buddy unshelves them and applies the pick.
+
 ### Shelved players
 
 Players can be removed from the draftable pool without drafting them onto a team:

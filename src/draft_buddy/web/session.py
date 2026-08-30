@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import threading
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Protocol, runtime_checkable
 
 import numpy as np
 
@@ -19,6 +19,35 @@ from draft_buddy.core import (
 )
 from draft_buddy.core.draft_state_store import archive_draft_state
 from draft_buddy.data import load_player_catalog
+
+
+@runtime_checkable
+class DraftReadModel(Protocol):
+    """Read surface shared by interactive and Sleeper-synced sessions."""
+
+    player_catalog: Any
+    available_player_ids: set[int]
+
+    def get_ui_state(self) -> Dict[str, Any]:
+        """Return the dashboard payload."""
+
+    def get_positional_baselines(self) -> Dict[str, float]:
+        """Return per-position replacement baselines."""
+
+    def get_ai_suggestion(self) -> Dict[str, Any]:
+        """Return policy probabilities for the team on the clock."""
+
+    def get_ai_suggestion_for_team(
+        self, team_id: int, ignore_player_ids: Optional[List[int]] = None
+    ) -> Dict[str, Any]:
+        """Return policy probabilities for one team."""
+
+    def get_ai_suggestions_all(self) -> Dict[str, Any]:
+        """Return policy probabilities for every team."""
+
+
+class SyncReadOnlyError(RuntimeError):
+    """Raised when a draft mutation is attempted in Sleeper sync mode."""
 
 
 class DraftSession:
@@ -249,6 +278,14 @@ class DraftSession:
                 player.to_dict()
                 for player in self._shelved_players_by_adp()
             ],
+            "sleeper_sync": False,
+            "sleeper_draft_id": "",
+            "sleeper_draft_status": None,
+            "last_synced_pick_no": 0,
+            "visual_round_count": self._state.visual_round_count,
+            "sync_error": None,
+            "sleeper_sync_poll_seconds": 0,
+            "display_picks_by_player_id": {},
         }
         warning = self.consume_state_load_warning()
         if warning:
@@ -589,10 +626,14 @@ class DraftSessionManager:
     """Thread-safe shared draft session for the active draft state file."""
 
     def __init__(
-        self, config: Config, inference_provider: Optional[InferenceProvider] = None
+        self,
+        config: Config,
+        inference_provider: Optional[InferenceProvider] = None,
+        sleeper_gateway=None,
     ) -> None:
         self._config = config
         self._inference_provider = inference_provider
+        self._sleeper_gateway = sleeper_gateway
         self._shared_session: Optional[DraftSession] = None
         self._lock = threading.Lock()
 
@@ -632,9 +673,10 @@ class DraftSessionManager:
                 self._config.paths.DRAFT_STATE_FILE,
                 self._config.paths.SAVED_STATES_DIR,
             )
-            session = DraftSession(self._config, inference_provider=self._inference_provider)
-            session.reset()
-            session.save_state()
+            session = self._build_session()
+            if not self._config.draft.SLEEPER_SYNC_ENABLED:
+                session.reset()
+                session.save_state()
             self._shared_session = session
             return session
 
@@ -664,7 +706,16 @@ class DraftSessionManager:
         if self._shared_session is not None:
             return self._shared_session
 
-        session = DraftSession(self._config, inference_provider=self._inference_provider)
+        if self._config.draft.SLEEPER_SYNC_ENABLED:
+            archive_draft_state(
+                self._config.paths.DRAFT_STATE_FILE,
+                self._config.paths.SAVED_STATES_DIR,
+            )
+            session = self._build_session()
+            self._shared_session = session
+            return session
+
+        session = self._build_session()
         try:
             session.load_state()
         except ValueError as error:
@@ -681,3 +732,15 @@ class DraftSessionManager:
             session.save_state()
         self._shared_session = session
         return session
+
+    def _build_session(self) -> DraftSession:
+        """Construct the interactive or Sleeper-synced session from config."""
+        if self._config.draft.SLEEPER_SYNC_ENABLED:
+            from draft_buddy.web.sleeper_synced_session import SleeperSyncedSession
+
+            return SleeperSyncedSession(
+                self._config,
+                inference_provider=self._inference_provider,
+                sleeper_gateway=self._sleeper_gateway,
+            )
+        return DraftSession(self._config, inference_provider=self._inference_provider)

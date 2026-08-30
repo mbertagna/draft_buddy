@@ -8,6 +8,8 @@ import numpy as np
 import pytest
 
 from draft_buddy.core import BotGM, DraftController
+from draft_buddy.core.draft_invariants import assert_invariants
+from draft_buddy.core.entities import Player
 
 
 class StubBot(BotGM):
@@ -676,3 +678,26 @@ def test_draft_controller_undo_swap_restores_override(draft_controller, draft_st
     draft_controller.undo_last_pick()
 
     assert draft_state.override_team_id == 4
+
+
+def test_apply_display_pick_places_on_board_without_roster_slot(
+    draft_controller, draft_state, player_catalog
+) -> None:
+    """Verify display-only picks skip skill roster counts and size caps."""
+    dst = Player(
+        player_id=9001,
+        name="Detroit Defense",
+        position="DEF",
+        projected_points=0.0,
+        data_completeness="sleeper_only",
+    )
+    draft_controller.player_catalog = player_catalog.with_added_player(dst)
+    roster_size_before = draft_state.roster_for_team(1).size
+
+    draft_controller.apply_display_pick(1, dst.player_id)
+
+    assert dst.player_id in draft_state.display_only_player_ids
+    assert dst.player_id not in draft_state.roster_for_team(1).player_ids
+    assert draft_state.roster_for_team(1).size == roster_size_before
+    assert draft_state.cell_player_id(1, 0) == dst.player_id
+    assert_invariants(draft_state)

@@ -5,7 +5,7 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
-_INT_KEYED_DRAFT_FIELDS = frozenset({"TEAM_MANAGER_MAPPING"})
+_INT_KEYED_DRAFT_FIELDS = frozenset({"TEAM_MANAGER_MAPPING", "SLEEPER_ROSTER_ID_TO_TEAM_ID"})
 _INT_KEYED_OPPONENT_FIELDS = frozenset({"OPPONENT_TEAM_STRATEGIES"})
 
 
@@ -169,6 +169,11 @@ class DraftConfig:
         }
     )
     TEAM_BYE_WEEKS_2024: Dict[int, List[str]] = field(default_factory=dict)
+    SLEEPER_SYNC_ENABLED: bool = False
+    SLEEPER_DRAFT_ID: str = ""
+    SLEEPER_LEAGUE_ID: str = ""
+    SLEEPER_ROSTER_ID_TO_TEAM_ID: Dict[int, int] = field(default_factory=dict)
+    SLEEPER_SYNC_POLL_SECONDS: int = 3
 
 
 @dataclass

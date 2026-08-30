@@ -67,6 +67,16 @@ class DraftState:
         self._shelved_player_ids = set(player_ids)
 
     @property
+    def display_only_player_ids(self) -> set[int]:
+        """Return player ids shown on the board but not counted on skill rosters."""
+        return self._display_only_player_ids
+
+    @display_only_player_ids.setter
+    def display_only_player_ids(self, player_ids: set[int]) -> None:
+        """Replace the set of display-only player ids."""
+        self._display_only_player_ids = set(player_ids)
+
+    @property
     def draft_order(self) -> list[int]:
         """Return the global draft order."""
         return self._draft_order
@@ -212,6 +222,32 @@ class DraftState:
                 if round_index not in self._visual_board[team_id]:
                     self._visual_board[team_id][round_index] = None
 
+    def expand_visual_board_by(self, extra_rounds: int) -> None:
+        """Add empty rounds to every team column.
+
+        Parameters
+        ----------
+        extra_rounds : int
+            Number of additional rounds to append.
+        """
+        if extra_rounds <= 0:
+            return
+        current_rounds = 0
+        for rounds in self._visual_board.values():
+            if rounds:
+                current_rounds = max(current_rounds, max(rounds.keys()) + 1)
+        if current_rounds == 0:
+            current_rounds = self.total_roster_size_per_team
+        self.ensure_visual_board(rounds=current_rounds + extra_rounds)
+
+    @property
+    def visual_round_count(self) -> int:
+        """Return the number of visual-board rounds currently allocated."""
+        counts = [
+            max(rounds.keys()) + 1 for rounds in self._visual_board.values() if rounds
+        ]
+        return max(counts) if counts else self.total_roster_size_per_team
+
     def find_player_cell(self, player_id: int) -> Optional[tuple[int, int]]:
         """Return ``(team_id, round)`` for a player on the visual board.
 
@@ -337,6 +373,7 @@ class DraftState:
         """Reset state to a fresh draft."""
         self._available_player_ids = set(all_player_ids)
         self._shelved_player_ids: set[int] = set()
+        self._display_only_player_ids: set[int] = set()
         self._team_rosters = defaultdict(TeamRoster)
         self._draft_order = list(draft_order)
         self._current_pick_index = 0
@@ -355,6 +392,7 @@ class DraftState:
         return {
             "available_player_ids": sorted(self.available_player_ids),
             "shelved_player_ids": sorted(self.shelved_player_ids),
+            "display_only_player_ids": sorted(self.display_only_player_ids),
             "team_rosters": {
                 str(team_id): roster.to_dict() for team_id, roster in self.team_rosters.items()
             },
@@ -382,6 +420,9 @@ class DraftState:
         }
         self.shelved_player_ids = {
             int(player_id) for player_id in payload.get("shelved_player_ids", [])
+        }
+        self.display_only_player_ids = {
+            int(player_id) for player_id in payload.get("display_only_player_ids", [])
         }
         self._team_rosters = defaultdict(TeamRoster)
         for team_id_str, roster_payload in payload.get("team_rosters", {}).items():

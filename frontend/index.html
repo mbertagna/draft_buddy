@@ -196,6 +196,34 @@
             gap: 14px;
             min-height: 48px;
         }
+        .sleeper-sync-banner {
+            display: inline-flex;
+            align-items: center;
+            max-width: 280px;
+            padding: 2px 8px;
+            border: 1px solid var(--accent);
+            background: var(--accent-soft);
+            color: var(--text-strong);
+            font-size: var(--text-sm);
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sleeper-sync-banner[hidden] { display: none; }
+        body.sleeper-sync-readonly .board-team-header-btn {
+            cursor: default;
+        }
+        body.sleeper-sync-readonly #player-list tbody tr:hover {
+            cursor: default;
+        }
+        .board-cell.no-proj .name::after {
+            content: " No proj";
+            font-size: 0.7em;
+            font-weight: 600;
+            color: var(--text-dim);
+        }
         .intelligence-notice {
             display: flex;
             align-items: center;
@@ -474,6 +502,13 @@
             background: var(--accent-hover);
             border-color: var(--accent-hover);
         }
+        #undo-pick-btn:disabled,
+        #simulate-pick-btn:disabled,
+        #auto-draft-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
         #new-draft-btn {
             background: var(--accent-soft);
             color: var(--accent-hover);
@@ -491,10 +526,6 @@
             font-weight: 700;
         }
         #auto-draft-btn:hover { background: var(--danger-hover); border-color: var(--danger-hover); }
-        #auto-draft-btn:disabled {
-            opacity: 0.65;
-            cursor: wait;
-        }
         #season-sim-container {
             margin-top: var(--space-3);
         }
@@ -1857,7 +1888,7 @@
 <body>
     <header>
         <div class="draft-banner">
-            <div class="draft-clock" id="draft-clock" title="Overall pick">
+            <div id="draft-clock" class="draft-clock" title="Overall pick">
                 <div id="round-pick-display" class="draft-clock-pick">R— · P—</div>
                 <div id="team-on-clock-display" class="draft-clock-team">Team —</div>
             </div>
@@ -2025,6 +2056,7 @@
                         <input type="number" id="gp-frac-min" step="0.01" min="0" max="1" placeholder="0.75" aria-label="Minimum games played fraction">
                     </div>
                     <span id="insights-hint"></span>
+                    <span id="sleeper-sync-banner" class="sleeper-sync-banner" hidden>Sleeper · read only</span>
                 </div>
             </div>
             <div style="flex: 1; overflow-y: auto;">
@@ -2114,6 +2146,7 @@
         const undoPickBtn = document.getElementById('undo-pick-btn');
         const simulatePickBtn = document.getElementById('simulate-pick-btn');
         const autoDraftBtn = document.getElementById('auto-draft-btn');
+        const sleeperSyncBanner = document.getElementById('sleeper-sync-banner');
         const simModeSelect = document.getElementById('sim-mode-select');
         const AUTO_DRAFT_LABEL = 'Auto';
         const bannerSettingsToggle = document.getElementById('banner-settings-toggle');
@@ -2218,6 +2251,9 @@
         let lastAutoAdvisorPickNumber = null;
         let previousPickNumber = null;
         let advisorModelsLoaded = false;
+        let sleeperSyncActive = false;
+        let sleeperSyncPollTimer = null;
+        let sleeperSyncPollInFlight = false;
 
         function populateAdvisorModelSelect(selectElement, models, selectedValue) {
             if (!selectElement) return;
@@ -2668,7 +2704,7 @@
             if (!aiSliverPrimary) return;
             if (playerId != null && Number(playerId) > 0) {
                 aiSliverPrimary.setAttribute('data-player-id', String(playerId));
-                aiSliverPrimary.disabled = false;
+                aiSliverPrimary.disabled = sleeperSyncActive;
             } else {
                 aiSliverPrimary.removeAttribute('data-player-id');
                 aiSliverPrimary.disabled = true;
@@ -2846,6 +2882,67 @@
             }
         }
 
+        function applySleeperSyncMode(state) {
+            const enabled = Boolean(state && state.sleeper_sync);
+            sleeperSyncActive = enabled;
+            document.body.classList.toggle('sleeper-sync-readonly', enabled);
+            if (sleeperSyncBanner) {
+                sleeperSyncBanner.hidden = !enabled;
+                if (enabled) {
+                    const status = state.sleeper_draft_status || 'drafting';
+                    const lastPick = state.last_synced_pick_no || 0;
+                    sleeperSyncBanner.textContent = `Sleeper · read only · pick ${lastPick}`;
+                    sleeperSyncBanner.title = [
+                        'Sleeper sync — local picks disabled',
+                        status,
+                        state.sync_error || '',
+                    ].filter(Boolean).join(' · ');
+                }
+            }
+            if (undoPickBtn) undoPickBtn.disabled = enabled;
+            if (simulatePickBtn) simulatePickBtn.disabled = enabled;
+            if (autoDraftBtn) autoDraftBtn.disabled = enabled;
+            if (aiSliverPrimary && enabled) {
+                aiSliverPrimary.disabled = true;
+            }
+            startOrStopSleeperPoll(state);
+        }
+
+        function startOrStopSleeperPoll(state) {
+            if (sleeperSyncPollTimer) {
+                clearInterval(sleeperSyncPollTimer);
+                sleeperSyncPollTimer = null;
+            }
+            if (!state || !state.sleeper_sync || state.sleeper_draft_status === 'complete') {
+                return;
+            }
+            if (document.visibilityState === 'hidden') {
+                return;
+            }
+            const intervalMs = Math.max(Number(state.sleeper_sync_poll_seconds) || 3, 1) * 1000;
+            sleeperSyncPollTimer = setInterval(pollSleeperSync, intervalMs);
+        }
+
+        async function pollSleeperSync() {
+            if (document.visibilityState === 'hidden' || sleeperSyncPollInFlight) {
+                return;
+            }
+            sleeperSyncPollInFlight = true;
+            try {
+                const response = await fetch('/api/draft/sleeper/sync');
+                if (!response.ok) {
+                    return;
+                }
+                const data = await response.json();
+                renderDraftState(data);
+                fetchPlayers();
+            } catch (error) {
+                console.error('Sleeper sync poll failed:', error);
+            } finally {
+                sleeperSyncPollInFlight = false;
+            }
+        }
+
         const fetchPlayers = async () => {
             const searchInput = playerSearch.value;
             const selectedPositions = Array.from(positionCheckboxes)
@@ -2887,6 +2984,9 @@
             'RB': '#cfe2ff',  // light blue
             'WR': '#e2f7cf',  // light green
             'TE': '#ffe8cc',  // light orange
+            'K': '#ececec',
+            'DEF': '#d9d9d9',
+            'DST': '#d9d9d9',
         };
         const BOARD_POS_ORDER = ['QB', 'RB', 'WR', 'TE'];
 
@@ -3462,12 +3562,22 @@
                 posCell.innerText = player.position;
                 // Projected Points
                 const ptsCell = row.insertCell();
-                const ptsVal = Number(player.projected_points) || 0;
-                ptsCell.innerText = ptsVal.toFixed(1);
+                const ptsVal = numberOrNull(player.projected_points);
+                if (ptsVal == null || player.data_completeness === 'sleeper_only') {
+                    ptsCell.innerText = '—';
+                    ptsCell.classList.add('missing');
+                } else {
+                    ptsCell.innerText = ptsVal.toFixed(1);
+                }
                 // VORP
                 const vorpCell = row.insertCell();
-                const vorpVal = Number(player.vorp) || 0;
-                vorpCell.innerText = vorpVal.toFixed(1);
+                const vorpVal = numberOrNull(player.vorp);
+                if (vorpVal == null || player.data_completeness === 'sleeper_only') {
+                    vorpCell.innerText = '—';
+                    vorpCell.classList.add('missing');
+                } else {
+                    vorpCell.innerText = vorpVal.toFixed(1);
+                }
 
                 // Games Played Fraction
                 const gpCell = row.insertCell();
@@ -3549,8 +3659,8 @@
 
                 // ----- Conditional Coloring -----
                 if (adpValNum !== null) adpCell.style.background = getInvertedMetricColor(adpValNum, adpMin, adpMax);
-                ptsCell.style.background = getStandardMetricColor(ptsVal, ptsMin, ptsMax);
-                vorpCell.style.background = getStandardMetricColor(vorpVal, vorpMin, vorpMax);
+                if (ptsVal != null) ptsCell.style.background = getStandardMetricColor(ptsVal, ptsMin, ptsMax);
+                if (vorpVal != null) vorpCell.style.background = getStandardMetricColor(vorpVal, vorpMin, vorpMax);
 
                 // Position/team hues are surfaced as a subtle accent (left
                 // border + dot, defined in CSS) rather than a full cell fill,
@@ -3564,7 +3674,11 @@
                 applyTeamMarks(teamCell, teamColors);
                 applyTeamMarks(byeCell, teamColors);
 
-                row.addEventListener('click', () => draftPlayer(player.player_id));
+                row.addEventListener('click', () => {
+                    if (!sleeperSyncActive) {
+                        draftPlayer(player.player_id);
+                    }
+                });
             });
             applyAdvisorHighlightsToTable();
         };
@@ -3577,6 +3691,7 @@
         playerSearch.addEventListener('keydown', async (e) => {
             if (e.key !== 'Enter') return;
             e.preventDefault();
+            if (sleeperSyncActive) return;
             if (!lastRenderedPlayers.length) return;
             const topPlayer = lastRenderedPlayers[0];
             playerSearch.value = '';
@@ -3649,6 +3764,11 @@
             loadAdvisorModels();
             loadInsightsMeta();
             loadInitialState();
+            document.addEventListener('visibilitychange', () => {
+                if (currentDraftState) {
+                    startOrStopSleeperPoll(currentDraftState);
+                }
+            });
             if (assistantAutoToggle) {
                 assistantAutoToggle.addEventListener('change', () => {
                     writePreference('autoEnabled', String(assistantAutoToggle.checked));
@@ -3738,6 +3858,7 @@
                         return;
                     }
                     if (action === 'draft-recommended' || action === 'draft-alternate') {
+                        if (sleeperSyncActive) return;
                         const id = Number(target.getAttribute('data-player-id'));
                         if (Number.isFinite(id) && id > 0) draftPlayer(id);
                     }
@@ -3977,6 +4098,7 @@
 
         function renderDraftState(state) {
             surfaceStateLoadWarning(state);
+            applySleeperSyncMode(state);
             if (previousPickNumber != null && state.current_pick_number !== previousPickNumber) {
                 hideAiSliver();
                 if (state.current_pick_number < previousPickNumber) {
@@ -3995,7 +4117,7 @@
             const agentTeamId = state.agent_start_position;
             const teamOnClock = state.current_team_picking;
             const draftOrder = state.draft_order || [];
-            const totalRounds = state.total_roster_size_per_team || 16;
+            const totalRounds = state.visual_round_count || state.total_roster_size_per_team || 16;
 
             const snakePickIdx = state.current_pick_number - 1;
             const snakePickTeam = (snakePickIdx >= 0 && snakePickIdx < draftOrder.length)
@@ -4041,7 +4163,9 @@
                 const th = document.createElement('th');
                 const headerDiv = document.createElement('div');
                 headerDiv.className = 'board-team-header board-team-header-btn';
-                headerDiv.title = 'Click to set this team as picking';
+                headerDiv.title = sleeperSyncActive
+                    ? 'Sleeper sync — read only'
+                    : 'Click to set this team as picking';
                 headerDiv.setAttribute('role', 'button');
                 headerDiv.tabIndex = 0;
 
@@ -4064,13 +4188,15 @@
                     </div>
                 `;
 
-                headerDiv.addEventListener('click', () => overrideTeam(teamId));
-                headerDiv.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        overrideTeam(teamId);
-                    }
-                });
+                if (!sleeperSyncActive) {
+                    headerDiv.addEventListener('click', () => overrideTeam(teamId));
+                    headerDiv.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            overrideTeam(teamId);
+                        }
+                    });
+                }
 
                 th.appendChild(headerDiv);
                 boardHeaders.appendChild(th);
@@ -4086,6 +4212,12 @@
                     }
                 });
             }
+            const displayPicks = state.display_picks_by_player_id || {};
+            Object.values(displayPicks).forEach(player => {
+                if (player && player.player_id != null) {
+                    playerById[player.player_id] = player;
+                }
+            });
             const visualBoard = state.visual_board || {};
             const pickByPlayerId = state.pick_by_player_id || {};
 
@@ -4144,9 +4276,16 @@
                             <span class="name-row">${pickHtml}<span class="name">${player.name}</span></span>
                             <span class="team">${buildTeamAbbrHtml(player.team)}<span class="team-bye"> (B:${formatByeWeek(player.bye_week)})</span></span>
                         `;
-                        cell.title = pickNumber != null
-                            ? `Pick #${pickNumber} — click to select, then click a slot to move or another player to swap`
-                            : 'Click to select, then click a slot to move or another player to swap';
+                        if (player.data_completeness && player.data_completeness !== 'full') {
+                            cell.classList.add('no-proj');
+                            cell.title = pickNumber != null
+                                ? `Pick #${pickNumber} — no projection`
+                                : 'No projection';
+                        } else {
+                            cell.title = pickNumber != null
+                                ? `Pick #${pickNumber} — click to select, then click a slot to move or another player to swap`
+                                : 'Click to select, then click a slot to move or another player to swap';
+                        }
                         cell.dataset.playerId = String(player.player_id);
                     } else {
                         cell.classList.add('empty');
@@ -4206,6 +4345,9 @@
         // Removed bulk prefetch; suggestions are fetched on demand for the team on clock
 
         async function draftPlayer(playerId) {
+            if (sleeperSyncActive) {
+                return;
+            }
             if (!currentDraftState) {
                 showNotification("Please start a new draft before selecting a player.", 'error');
                 return;
@@ -4220,6 +4362,9 @@
         }
 
         async function undoLastPick() {
+            if (sleeperSyncActive) {
+                return;
+            }
             if (!currentDraftState) {
                 showNotification("No draft in progress to undo.", 'error');
                 return;
@@ -4235,6 +4380,9 @@
         }
 
         async function overrideTeam(teamId) {
+            if (sleeperSyncActive) {
+                return;
+            }
             if (!currentDraftState) {
                 showNotification("Please start a new draft first.", 'error');
                 return;
@@ -4255,6 +4403,9 @@
         }
 
         async function handleBoardCellClick(teamId, roundIndex, player) {
+            if (sleeperSyncActive) {
+                return;
+            }
             if (!currentDraftState) {
                 showNotification("Please start a new draft first.", 'error');
                 return;
@@ -4317,6 +4468,9 @@
         });
 
         async function simulateNextPick() {
+            if (sleeperSyncActive) {
+                return;
+            }
             if (!currentDraftState) {
                 showNotification("Please start a new draft first.", 'error');
                 return;
@@ -4331,6 +4485,9 @@
         }
 
         async function autoDraftRest() {
+            if (sleeperSyncActive) {
+                return;
+            }
             const confirmed = await showConfirm({
                 title: 'Auto-draft remaining picks?',
                 message:
@@ -4354,7 +4511,7 @@
                 console.error("Error auto-drafting:", error);
             } finally {
                 autoDraftBtn.textContent = AUTO_DRAFT_LABEL;
-                autoDraftBtn.disabled = false;
+                autoDraftBtn.disabled = sleeperSyncActive;
             }
         }
 

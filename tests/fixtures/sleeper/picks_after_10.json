@@ -1,0 +1,142 @@
+[
+  {
+    "pick_no": 1,
+    "player_id": "1001",
+    "roster_id": 10,
+    "draft_slot": 1,
+    "round": 1,
+    "metadata": {
+      "first_name": "Josh",
+      "last_name": "Allen",
+      "position": "QB",
+      "team": "BUF",
+      "injury_status": ""
+    }
+  },
+  {
+    "pick_no": 2,
+    "player_id": "1002",
+    "roster_id": 20,
+    "draft_slot": 2,
+    "round": 1,
+    "metadata": {
+      "first_name": "Breece",
+      "last_name": "Hall",
+      "position": "RB",
+      "team": "NYJ",
+      "injury_status": ""
+    }
+  },
+  {
+    "pick_no": 3,
+    "player_id": "1003",
+    "roster_id": 30,
+    "draft_slot": 3,
+    "round": 1,
+    "metadata": {
+      "first_name": "CeeDee",
+      "last_name": "Lamb",
+      "position": "WR",
+      "team": "DAL",
+      "injury_status": ""
+    }
+  },
+  {
+    "pick_no": 4,
+    "player_id": "1004",
+    "roster_id": 40,
+    "draft_slot": 4,
+    "round": 1,
+    "metadata": {
+      "first_name": "Travis",
+      "last_name": "Kelce",
+      "position": "TE",
+      "team": "KC",
+      "injury_status": ""
+    }
+  },
+  {
+    "pick_no": 5,
+    "player_id": "1005",
+    "roster_id": 40,
+    "draft_slot": 4,
+    "round": 2,
+    "metadata": {
+      "first_name": "Saquon",
+      "last_name": "Barkley",
+      "position": "RB",
+      "team": "PHI",
+      "injury_status": ""
+    }
+  },
+  {
+    "pick_no": 6,
+    "player_id": "1006",
+    "roster_id": 30,
+    "draft_slot": 3,
+    "round": 2,
+    "metadata": {
+      "first_name": "Amon-Ra",
+      "last_name": "St. Brown",
+      "position": "WR",
+      "team": "DET",
+      "injury_status": ""
+    }
+  },
+  {
+    "pick_no": 7,
+    "player_id": "1007",
+    "roster_id": 20,
+    "draft_slot": 2,
+    "round": 2,
+    "metadata": {
+      "first_name": "Jahmyr",
+      "last_name": "Gibbs",
+      "position": "RB",
+      "team": "DET",
+      "injury_status": ""
+    }
+  },
+  {
+    "pick_no": 8,
+    "player_id": "1008",
+    "roster_id": 10,
+    "draft_slot": 1,
+    "round": 2,
+    "metadata": {
+      "first_name": "Ja'Marr",
+      "last_name": "Chase",
+      "position": "WR",
+      "team": "CIN",
+      "injury_status": ""
+    }
+  },
+  {
+    "pick_no": 9,
+    "player_id": "DET",
+    "roster_id": 10,
+    "draft_slot": 1,
+    "round": 3,
+    "metadata": {
+      "first_name": "Detroit",
+      "last_name": "Defense",
+      "position": "DEF",
+      "team": "DET",
+      "injury_status": ""
+    }
+  },
+  {
+    "pick_no": 10,
+    "player_id": "9999",
+    "roster_id": 20,
+    "draft_slot": 2,
+    "round": 3,
+    "metadata": {
+      "first_name": "Late",
+      "last_name": "Rounder",
+      "position": "RB",
+      "team": "CHI",
+      "injury_status": ""
+    }
+  }
+]

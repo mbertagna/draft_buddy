@@ -202,6 +202,7 @@ def test_policy_network_sample_action_returns_valid_choice() -> None:
 def test_policy_network_temperature_one_matches_default_probabilities() -> None:
     """Verify temperature=1.0 reproduces the model's raw output."""
     network = PolicyNetwork(3, 2, hidden_dim=4)
+    network.eval()
     state = torch.randn(1, 3)
 
     default_probs = network.get_action_probabilities(state)
@@ -213,6 +214,7 @@ def test_policy_network_temperature_one_matches_default_probabilities() -> None:
 def test_policy_network_high_temperature_flattens_distribution() -> None:
     """Verify temperature above 1.0 pulls probabilities toward uniform."""
     network = PolicyNetwork(3, 4, hidden_dim=4)
+    network.eval()
     state = torch.randn(1, 3)
 
     sharp_probs = network.get_action_probabilities(state, temperature=1.0)
@@ -223,7 +225,9 @@ def test_policy_network_high_temperature_flattens_distribution() -> None:
 
 def test_policy_network_temperature_preserves_ranking() -> None:
     """Verify temperature scaling keeps the highest-probability action ranked first."""
+    torch.manual_seed(0)
     network = PolicyNetwork(3, 4, hidden_dim=4)
+    network.eval()
     state = torch.randn(1, 3)
 
     sharp_probs = network.get_action_probabilities(state, temperature=1.0)

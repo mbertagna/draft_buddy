@@ -383,6 +383,38 @@ def test_get_players_formats_nan_bye_week_as_na(config, fake_session) -> None:
     assert response.status_code == 200 and response.json()[0]["bye_week"] == "N/A"
 
 
+def test_get_players_skips_available_ids_missing_from_catalog(config, fake_session) -> None:
+    """Verify unknown available ids do not 500 the player table."""
+    fake_session.available_player_ids.add(4098)
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+
+    response = client.get("/api/players")
+
+    assert response.status_code == 200
+
+
+def test_get_players_omits_non_finite_adp(config, fake_session) -> None:
+    """Verify NaN ADP is serialized as null so the browser can parse JSON."""
+    player = fake_session.player_catalog.get(1)
+    fake_session.player_catalog = fake_session.player_catalog.with_updated_player(
+        player.__class__(
+            player_id=player.player_id,
+            name=player.name,
+            position=player.position,
+            projected_points=player.projected_points,
+            games_played_frac=player.games_played_frac,
+            adp=float("nan"),
+            bye_week=player.bye_week,
+            team=player.team,
+        )
+    )
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+
+    response = client.get("/api/players?search=QB%20One")
+
+    assert response.status_code == 200 and response.json()[0]["adp"] is None
+
+
 def test_get_players_includes_sleeper_fields(config, fake_session) -> None:
     """Verify player payload surfaces Sleeper-derived stats."""
     player = fake_session.player_catalog.get(1)
@@ -494,3 +526,34 @@ def test_get_players_sets_insight_null_when_not_enriched(config, fake_session) -
     payload = response.json()[0]
 
     assert payload["insight"] is None
+
+
+def test_sleeper_sync_endpoint_rejects_interactive_session(config, fake_session) -> None:
+    """Verify polling Sleeper fails when the session is not synced."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.get("/api/draft/sleeper/sync")
+
+    assert response.status_code == 409
+
+
+def test_sleeper_sync_endpoint_returns_ui_state(config, fake_session) -> None:
+    """Verify the sync poll endpoint returns mirrored UI state."""
+    fake_session.sync_from_sleeper = lambda: None
+    fake_session.get_ui_state = lambda: {"sleeper_sync": True, "last_synced_pick_no": 3}
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.get("/api/draft/sleeper/sync")
+
+    assert response.status_code == 200 and response.json()["sleeper_sync"] is True
+
+
+def test_draft_pick_in_sync_mode_returns_409(config, fake_session) -> None:
+    """Verify local picks are rejected while Sleeper sync is active."""
+    from draft_buddy.web.session import SyncReadOnlyError
+
+    fake_session.draft_player = lambda _player_id: (_ for _ in ()).throw(
+        SyncReadOnlyError("Draft is in Sleeper sync mode")
+    )
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+    response = client.post("/api/draft/pick", json={"player_id": 1})
+
+    assert response.status_code == 409 and "Sleeper sync" in response.json()["message"]

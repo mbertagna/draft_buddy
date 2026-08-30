@@ -28,11 +28,11 @@ def test_red_league_profile_matches_espn_settings(monkeypatch: pytest.MonkeyPatc
 
 
 def test_redraft_nbfl_profile_matches_sleeper_settings(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verify Redraft NBFL uses 12 teams, half PPR, and draft slot 5."""
+    """Verify Redraft NBFL uses 12 teams, half PPR, FLEX 3, and draft slot 5."""
     config = load_runtime_config(league_id="redraft_nbfl_12", season=2026)
 
     assert config.draft.NUM_TEAMS == 12
-    assert config.draft.ROSTER_STRUCTURE["FLEX"] == 2
+    assert config.draft.ROSTER_STRUCTURE["FLEX"] == 3
     assert config.draft.AGENT_START_POSITION == 5
     assert config.get_scoring_rules()["receptions"] == 0.5
     assert config.get_scoring_rules()["passing_tds"] == 4
@@ -91,6 +91,10 @@ def test_redraft_nbfl_team_manager_mapping_uses_lottery_order() -> None:
     assert config.draft.TEAM_MANAGER_MAPPING[1] == "Joey"
     assert config.draft.TEAM_MANAGER_MAPPING[5] == "Michael"
     assert config.draft.TEAM_MANAGER_MAPPING[12] == "Frank"
+    assert config.draft.SLEEPER_SYNC_ENABLED is True
+    assert config.draft.SLEEPER_DRAFT_ID == "1398843818501013504"
+    assert config.draft.SLEEPER_ROSTER_ID_TO_TEAM_ID[11] == 5
+    assert config.draft.SLEEPER_SYNC_POLL_SECONDS == 3
 
 
 def test_missing_league_profile_raises_file_not_found() -> None:

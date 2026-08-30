@@ -138,3 +138,11 @@ def test_draft_state_reset_clears_shelved_player_ids(draft_state) -> None:
 
     assert draft_state.shelved_player_ids == set()
     assert draft_state.available_player_ids == {1, 2, 3}
+
+
+def test_draft_state_reset_clears_display_only_player_ids(draft_state) -> None:
+    """Verify reset clears previously display-only players."""
+    draft_state.display_only_player_ids.add(99)
+    draft_state.reset({1, 2, 3}, [1, 2], agent_team_id=1)
+
+    assert draft_state.display_only_player_ids == set()

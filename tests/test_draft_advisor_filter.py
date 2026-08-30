@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 from draft_buddy.core.entities import Player
-from draft_buddy.web.draft_advisor_filter import exclude_ignored_players, passes_gp_filter
+from draft_buddy.web.draft_advisor_filter import (
+    exclude_ignored_players,
+    exclude_incomplete_players,
+    passes_gp_filter,
+)
 
 
 def test_rookie_always_passes_gp_filter() -> None:
@@ -52,5 +56,30 @@ def test_exclude_ignored_players_noop_when_empty() -> None:
     ]
 
     remaining = exclude_ignored_players(players, [])
+
+    assert [player.player_id for player in remaining] == [1]
+
+
+def test_exclude_incomplete_players_drops_placeholders() -> None:
+    """Verify sleeper-only and non-skill players are excluded from advisor pools."""
+    players = [
+        Player(player_id=1, name="A", position="RB", projected_points=100.0),
+        Player(
+            player_id=2,
+            name="B",
+            position="RB",
+            projected_points=0.0,
+            data_completeness="sleeper_only",
+        ),
+        Player(
+            player_id=3,
+            name="DET",
+            position="DEF",
+            projected_points=0.0,
+            data_completeness="sleeper_only",
+        ),
+    ]
+
+    remaining = exclude_incomplete_players(players)
 
     assert [player.player_id for player in remaining] == [1]
