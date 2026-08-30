@@ -3,22 +3,22 @@
     "AGENT_START_POSITION": 5,
     "RANDOMIZE_AGENT_START_POSITION": true,
     "SLEEPER_SYNC_ENABLED": true,
-    "SLEEPER_DRAFT_ID": "1399774415532638208",
+    "SLEEPER_DRAFT_ID": "1363697271027290112",
     "SLEEPER_LEAGUE_ID": "1363697271014690816",
     "SLEEPER_ROSTER_ID_TO_TEAM_ID": {
       "1": 10,
-      "2": 4,
-      "3": 8,
-      "4": 2,
-      "5": 11,
-      "6": 3,
-      "7": 12,
-      "8": 9,
-      "9": 7,
       "10": 1,
       "11": 5,
-      "12": 6
-    },
+      "12": 7,
+      "2": 4,
+      "3": 6,
+      "4": 2,
+      "5": 11,
+      "6": 12,
+      "7": 9,
+      "8": 3,
+      "9": 8
+  },
     "SLEEPER_SYNC_POLL_SECONDS": 3
   },
   "season": {
