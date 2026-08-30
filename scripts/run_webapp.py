@@ -14,6 +14,7 @@ from draft_buddy.rl.agent_bot import AgentModelBotGM
 from draft_buddy.rl.checkpoint_manager import CheckpointManager
 from draft_buddy.rl.feature_extractor import FeatureExtractor
 from draft_buddy.rl.policy_network import PolicyNetwork
+from draft_buddy.rl.run_utils import resolve_checkpoint_path
 from draft_buddy.rl.state_normalizer import StateNormalizer
 from draft_buddy.web.advisor_factory import AdvisorGatewayRegistry, build_advisor_registry
 from draft_buddy.web.app import create_app
@@ -170,20 +171,22 @@ class RlInferenceProvider(InferenceProvider):
         Parameters
         ----------
         model_path : str
-            Filesystem path to a checkpoint file.
+            Path to a checkpoint ``.pth`` file or a directory of checkpoints;
+            when a directory is given, the highest-episode file is used.
 
         Returns
         -------
         Optional[PolicyNetwork]
             Loaded model in eval mode, or ``None`` on failure.
         """
-        if not model_path or not os.path.exists(model_path):
+        resolved_path = resolve_checkpoint_path(model_path)
+        if not resolved_path:
             return None
         input_dim = len(self._config.training.ENABLED_STATE_FEATURES)
         model = PolicyNetwork(input_dim, self._action_space_size, self._config.training.HIDDEN_DIM)
         checkpoint_manager = CheckpointManager(model, value_network=None, optimizer=None)
         try:
-            checkpoint_manager.load_checkpoint(model_path, self._config, is_training=False)
+            checkpoint_manager.load_checkpoint(resolved_path, self._config, is_training=False)
             model.eval()
             return model
         except Exception:
