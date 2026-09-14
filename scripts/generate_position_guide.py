@@ -7,7 +7,12 @@ import os
 import sys
 
 from draft_buddy.config import load_runtime_config
-from draft_buddy.rl.position_guide.exporter import export_model_adp, export_position_guide
+from draft_buddy.rl.position_guide.exporter import (
+    build_model_adp_by_position,
+    export_model_adp,
+    export_model_adp_by_position,
+    export_position_guide,
+)
 from draft_buddy.rl.position_guide.simulator import PositionGuideSimulator
 from draft_buddy.rl.run_utils import resolve_checkpoint_path
 
@@ -139,6 +144,10 @@ def main() -> int:
 
     adp_json_path, adp_html_path = export_model_adp(model_adp, args.data_root)
     print(f"Model ADP: JSON={adp_json_path} HTML={adp_html_path}")
+
+    model_adp_by_position = build_model_adp_by_position(model_adp)
+    position_json_path = export_model_adp_by_position(model_adp_by_position, args.data_root)
+    print(f"Model ADP by position: JSON={position_json_path}")
     return 0
 
 

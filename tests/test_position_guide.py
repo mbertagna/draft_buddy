@@ -2,16 +2,27 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 import pytest
 import torch
 
-from draft_buddy.data.cache_paths import model_adp_output_path, position_guide_output_path
+from draft_buddy.data.cache_paths import (
+    model_adp_by_position_output_path,
+    model_adp_output_path,
+    position_guide_output_path,
+)
 from draft_buddy.rl.draft_gym_env import DraftGymEnv
-from draft_buddy.rl.position_guide.exporter import export_model_adp, export_position_guide
+from draft_buddy.rl.position_guide.exporter import (
+    build_model_adp_by_position,
+    export_model_adp,
+    export_model_adp_by_position,
+    export_position_guide,
+)
 from draft_buddy.rl.position_guide.pick_numbers import overall_pick_number
 from draft_buddy.rl.position_guide.schemas import (
+    ModelAdpByPositionFile,
     ModelAdpEntry,
     ModelAdpFile,
     PositionGuideFile,
@@ -56,6 +67,14 @@ def test_model_adp_output_path_includes_num_teams(tmp_path) -> None:
     path = model_adp_output_path(str(tmp_path), 12, 2026, generated_at, ext="json")
 
     assert "12teams" in path and "model_adp" in path
+
+
+def test_model_adp_by_position_output_path_includes_num_teams(tmp_path) -> None:
+    """Model-ADP-by-position JSON paths include league size in the filename."""
+    generated_at = datetime(2026, 7, 5, 22, 45, tzinfo=timezone.utc)
+    path = model_adp_by_position_output_path(str(tmp_path), 12, 2026, generated_at, ext="json")
+
+    assert "12teams" in path and "model_adp_by_position" in path
 
 
 def test_average_position_probabilities() -> None:
@@ -153,6 +172,86 @@ def test_model_adp_schema_roundtrip() -> None:
     restored = ModelAdpFile.model_validate(model_adp.model_dump(mode="json"))
 
     assert restored.players[0].model_adp == pytest.approx(4.2)
+
+
+def _sample_model_adp_file() -> ModelAdpFile:
+    """Return a small model ADP export for grouping tests."""
+    return ModelAdpFile(
+        generated_at=datetime(2026, 7, 5, tzinfo=timezone.utc),
+        draft_year=2026,
+        num_teams=12,
+        simulations=100,
+        checkpoint_path="models/checkpoint_episode_1.pth",
+        checkpoint_episode=1,
+        player_data_csv="data/generated_player_data.csv",
+        temperature=1.5,
+        players=[
+            ModelAdpEntry(
+                player_id=1,
+                name="QB Two",
+                position="QB",
+                model_adp=24.0,
+                std_dev=2.0,
+                times_drafted=80,
+                draft_rate=0.8,
+                market_adp=12.0,
+            ),
+            ModelAdpEntry(
+                player_id=2,
+                name="QB One",
+                position="QB",
+                model_adp=18.0,
+                std_dev=1.5,
+                times_drafted=90,
+                draft_rate=0.9,
+                market_adp=6.0,
+            ),
+            ModelAdpEntry(
+                player_id=3,
+                name="WR One",
+                position="WR",
+                model_adp=20.0,
+                std_dev=1.8,
+                times_drafted=85,
+                draft_rate=0.85,
+                market_adp=8.0,
+            ),
+            ModelAdpEntry(
+                player_id=4,
+                name="RB One",
+                position="RB",
+                model_adp=10.0,
+                std_dev=1.0,
+                times_drafted=95,
+                draft_rate=0.95,
+                market_adp=4.0,
+            ),
+        ],
+    )
+
+
+def test_build_model_adp_by_position_ranks_within_position() -> None:
+    """Model ADP-by-position ranks players within each position by model ADP."""
+    model_adp_by_position = build_model_adp_by_position(_sample_model_adp_file())
+
+    qb_names = [entry.name for entry in model_adp_by_position.positions["QB"]]
+    wr_names = [entry.name for entry in model_adp_by_position.positions["WR"]]
+
+    assert qb_names == ["QB One", "QB Two"]
+    assert wr_names == ["WR One"]
+    assert model_adp_by_position.positions["RB"][0].name == "RB One"
+    assert model_adp_by_position.positions["TE"] == []
+
+
+def test_build_model_adp_by_position_preserves_model_fields() -> None:
+    """Grouped position entries retain all model ADP fields."""
+    model_adp_by_position = build_model_adp_by_position(_sample_model_adp_file())
+    qb_one = model_adp_by_position.positions["QB"][0]
+
+    assert qb_one.model_adp == pytest.approx(18.0)
+    assert qb_one.market_adp == pytest.approx(6.0)
+    assert qb_one.std_dev == pytest.approx(1.5)
+    assert qb_one.draft_rate == pytest.approx(0.9)
 
 
 class _FixedRbPolicy:
@@ -295,7 +394,7 @@ def test_export_position_guide_writes_json_and_html(tmp_path) -> None:
 
 
 def test_export_model_adp_writes_json_and_html(tmp_path) -> None:
-    """Verify model-ADP export writes both JSON and HTML files."""
+    """Verify model-ADP export writes interactive JSON and HTML files."""
     model_adp = ModelAdpFile(
         generated_at=datetime(2026, 7, 5, tzinfo=timezone.utc),
         draft_year=2026,
@@ -320,6 +419,49 @@ def test_export_model_adp_writes_json_and_html(tmp_path) -> None:
     )
 
     json_path, html_path = export_model_adp(model_adp, str(tmp_path))
+    html = open(html_path, encoding="utf-8").read()
 
-    assert "RB One" in open(html_path, encoding="utf-8").read()
+    assert "RB One" in html
+    assert 'type="checkbox"' in html
+    assert 'id="position-filter"' in html
+    assert 'class="sortable"' in html
+    assert "localStorage" in html
+    assert "@media print" in html
+    assert json_path.endswith(".json")
+
+
+def test_export_model_adp_by_position_writes_json(tmp_path) -> None:
+    """Verify model-ADP-by-position export writes grouped JSON only."""
+    model_adp_by_position = ModelAdpByPositionFile(
+        generated_at=datetime(2026, 7, 5, tzinfo=timezone.utc),
+        draft_year=2026,
+        num_teams=12,
+        simulations=10,
+        checkpoint_path="models/checkpoint_episode_1.pth",
+        checkpoint_episode=1,
+        player_data_csv="data/generated_player_data.csv",
+        temperature=1.5,
+        positions={
+            "QB": [
+                ModelAdpEntry(
+                    player_id=1,
+                    name="QB One",
+                    position="QB",
+                    model_adp=18.0,
+                    std_dev=1.5,
+                    times_drafted=9,
+                    draft_rate=0.9,
+                    market_adp=6.0,
+                )
+            ],
+            "RB": [],
+            "WR": [],
+            "TE": [],
+        },
+    )
+
+    json_path = export_model_adp_by_position(model_adp_by_position, str(tmp_path))
+    payload = json.loads(open(json_path, encoding="utf-8").read())
+
+    assert payload["positions"]["QB"][0]["name"] == "QB One"
     assert json_path.endswith(".json")
