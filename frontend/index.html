@@ -261,6 +261,16 @@
             font-size: var(--text-sm);
             line-height: 1.2;
         }
+        .draft-clock-league {
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--text-dim);
+            line-height: 1.2;
+            max-width: 16rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         .draft-clock-overall {
             font-family: var(--font-mono);
             font-weight: 600;
@@ -1890,6 +1900,7 @@
         <div class="draft-banner">
             <div id="draft-clock" class="draft-clock" title="Overall pick">
                 <div id="round-pick-display" class="draft-clock-pick">R— · P—</div>
+                <div id="league-display" class="draft-clock-league">League —</div>
                 <div id="team-on-clock-display" class="draft-clock-team">Team —</div>
             </div>
             <div class="draft-banner-ai" id="draft-banner-ai">
@@ -2141,6 +2152,7 @@
         const boardRows = document.getElementById('board-rows');
         const roundPickDisplay = document.getElementById('round-pick-display');
         const draftClock = document.getElementById('draft-clock');
+        const leagueDisplay = document.getElementById('league-display');
         const teamOnClockDisplay = document.getElementById('team-on-clock-display');
         const aiSuggestionDisplay = document.getElementById('ai-suggestion-display');
         const undoPickBtn = document.getElementById('undo-pick-btn');
@@ -2604,6 +2616,13 @@
                 roundPickDisplay.textContent = draftComplete
                     ? 'Complete'
                     : formatRoundPickLabel(pickNumber, numTeams);
+            }
+            if (leagueDisplay) {
+                const leagueName = state.league_display_name || state.league_id || '';
+                leagueDisplay.textContent = leagueName || 'League —';
+                leagueDisplay.title = state.league_id
+                    ? `${leagueName} (${state.league_id})`
+                    : leagueName;
             }
             if (draftClock) {
                 if (draftComplete) {

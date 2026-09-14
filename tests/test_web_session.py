@@ -82,6 +82,17 @@ def test_draft_session_builds_ui_state_from_controller_and_catalog(config, playe
     assert ui_state["team_rosters"][1]["players_flat"][0]["player_id"] == 1 and ui_state["current_pick_number"] == 2
 
 
+def test_draft_session_ui_state_includes_league_identity(config, player_catalog) -> None:
+    """Verify dashboard state names the active league profile."""
+    config.league.league_id = "red_league_10"
+    config.league.display_name = "Red League"
+    session = DraftSession(config)
+    ui_state = session.get_ui_state()
+
+    assert ui_state["league_id"] == "red_league_10"
+    assert ui_state["league_display_name"] == "Red League"
+
+
 def test_draft_session_ai_suggestion_uses_inference_provider(config, player_catalog) -> None:
     """Verify team suggestions flow through the injected inference abstraction."""
     session = DraftSession(config, inference_provider=StubInferenceProvider())

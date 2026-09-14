@@ -263,6 +263,8 @@ class DraftSession:
             "team_is_full": team_is_full,
             "team_points_summary": team_points_summary,
             "num_teams": self.num_teams,
+            "league_id": self._config.league.league_id,
+            "league_display_name": self._config.league.display_name,
             "total_roster_size_per_team": self.total_roster_size_per_team,
             "team_bye_weeks": self._aggregate_bye_weeks(),
             "agent_start_position": self.agent_team_id,

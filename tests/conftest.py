@@ -22,7 +22,7 @@ from draft_buddy.data import load_player_catalog
 
 
 @pytest.fixture
-def config(tmp_path: Path) -> Config:
+def config(tmp_path: Path, player_dataframe: pd.DataFrame) -> Config:
     """Return a test configuration rooted in a temporary directory.
 
     Parameters
@@ -67,6 +67,7 @@ def config(tmp_path: Path) -> Config:
     config.reward.ENABLE_SEASON_SIM_REWARD = False
     config.reward.ENABLE_COMPETITIVE_REWARD = False
     config.reward.USE_RANDOM_MATCHUPS = False
+    player_dataframe.to_csv(config.paths.PLAYER_DATA_CSV, index=False)
     return config
 
 
