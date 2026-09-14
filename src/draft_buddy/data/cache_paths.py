@@ -18,17 +18,17 @@ PLAYER_INSIGHTS_EXPORT_PATTERN = re.compile(
 )
 
 POSITION_GUIDE_EXPORT_PATTERN = re.compile(
-    r"^position_guide_(?P<num_teams>\d+)teams_slot(?P<slot>\d+)_"
+    r"^position_guide_(?P<league_id>[A-Za-z0-9_]+)_(?P<num_teams>\d+)teams_slot(?P<slot>\d+)_"
     r"(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.(?P<ext>json|html)$"
 )
 
 MODEL_ADP_EXPORT_PATTERN = re.compile(
-    r"^model_adp_(?P<num_teams>\d+)teams_"
+    r"^model_adp_(?P<league_id>[A-Za-z0-9_]+)_(?P<num_teams>\d+)teams_"
     r"(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.(?P<ext>json|html)$"
 )
 
 MODEL_ADP_BY_POSITION_EXPORT_PATTERN = re.compile(
-    r"^model_adp_by_position_(?P<num_teams>\d+)teams_"
+    r"^model_adp_by_position_(?P<league_id>[A-Za-z0-9_]+)_(?P<num_teams>\d+)teams_"
     r"(?P<year>\d+)_(?P<timestamp>\d{8}T\d{6}Z)\.(?P<ext>json|html)$"
 )
 
@@ -375,6 +375,7 @@ def position_guide_exports_dir(data_root: str) -> str:
 
 def position_guide_output_path(
     data_root: str,
+    league_id: str,
     num_teams: int,
     slot: int,
     year: int,
@@ -387,6 +388,8 @@ def position_guide_output_path(
     ----------
     data_root : str
         Root data directory (e.g. ``./data``).
+    league_id : str
+        League profile id (e.g. ``red_league_10``).
     num_teams : int
         League size (e.g. ``12``).
     slot : int
@@ -401,10 +404,13 @@ def position_guide_output_path(
     Returns
     -------
     str
-        Path to ``position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.{ext}``.
+        Path to
+        ``position_guide_{league_id}_{num_teams}teams_slot{slot}_{year}_{timestamp}.{ext}``.
     """
     timestamp = _format_insights_timestamp(generated_at)
-    filename = f"position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.{ext}"
+    filename = (
+        f"position_guide_{league_id}_{num_teams}teams_slot{slot}_{year}_{timestamp}.{ext}"
+    )
     exports_dir = position_guide_exports_dir(data_root)
     os.makedirs(exports_dir, exist_ok=True)
     return os.path.join(exports_dir, filename)
@@ -412,17 +418,20 @@ def position_guide_output_path(
 
 def resolve_latest_position_guide_path(
     data_root: str,
+    league_id: str,
     num_teams: int,
     slot: int,
     year: int,
     ext: str = "json",
 ) -> str | None:
-    """Return the newest position guide export for league size, slot, and year.
+    """Return the newest position guide export for league, size, slot, and year.
 
     Parameters
     ----------
     data_root : str
         Root data directory (e.g. ``./data``).
+    league_id : str
+        League profile id filter.
     num_teams : int
         League size filter.
     slot : int
@@ -448,7 +457,8 @@ def resolve_latest_position_guide_path(
         if match is None:
             continue
         if (
-            int(match.group("num_teams")) != num_teams
+            match.group("league_id") != league_id
+            or int(match.group("num_teams")) != num_teams
             or int(match.group("slot")) != slot
             or int(match.group("year")) != year
             or match.group("ext") != ext
@@ -464,6 +474,7 @@ def resolve_latest_position_guide_path(
 
 def model_adp_by_position_output_path(
     data_root: str,
+    league_id: str,
     num_teams: int,
     year: int,
     generated_at: datetime,
@@ -475,6 +486,8 @@ def model_adp_by_position_output_path(
     ----------
     data_root : str
         Root data directory (e.g. ``./data``).
+    league_id : str
+        League profile id (e.g. ``red_league_10``).
     num_teams : int
         League size (e.g. ``12``).
     year : int
@@ -487,10 +500,13 @@ def model_adp_by_position_output_path(
     Returns
     -------
     str
-        Path to ``model_adp_by_position_{num_teams}teams_{year}_{timestamp}.{ext}``.
+        Path to
+        ``model_adp_by_position_{league_id}_{num_teams}teams_{year}_{timestamp}.{ext}``.
     """
     timestamp = _format_insights_timestamp(generated_at)
-    filename = f"model_adp_by_position_{num_teams}teams_{year}_{timestamp}.{ext}"
+    filename = (
+        f"model_adp_by_position_{league_id}_{num_teams}teams_{year}_{timestamp}.{ext}"
+    )
     exports_dir = position_guide_exports_dir(data_root)
     os.makedirs(exports_dir, exist_ok=True)
     return os.path.join(exports_dir, filename)
@@ -498,6 +514,7 @@ def model_adp_by_position_output_path(
 
 def model_adp_output_path(
     data_root: str,
+    league_id: str,
     num_teams: int,
     year: int,
     generated_at: datetime,
@@ -509,6 +526,8 @@ def model_adp_output_path(
     ----------
     data_root : str
         Root data directory (e.g. ``./data``).
+    league_id : str
+        League profile id (e.g. ``red_league_10``).
     num_teams : int
         League size (e.g. ``12``).
     year : int
@@ -521,10 +540,10 @@ def model_adp_output_path(
     Returns
     -------
     str
-        Path to ``model_adp_{num_teams}teams_{year}_{timestamp}.{ext}``.
+        Path to ``model_adp_{league_id}_{num_teams}teams_{year}_{timestamp}.{ext}``.
     """
     timestamp = _format_insights_timestamp(generated_at)
-    filename = f"model_adp_{num_teams}teams_{year}_{timestamp}.{ext}"
+    filename = f"model_adp_{league_id}_{num_teams}teams_{year}_{timestamp}.{ext}"
     exports_dir = position_guide_exports_dir(data_root)
     os.makedirs(exports_dir, exist_ok=True)
     return os.path.join(exports_dir, filename)

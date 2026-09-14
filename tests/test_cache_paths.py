@@ -14,11 +14,15 @@ from draft_buddy.data.cache_paths import (
     insights_search_runs_dir,
     insights_synthesis_cache_dir,
     insights_synthesis_runs_dir,
+    model_adp_by_position_output_path,
+    model_adp_output_path,
     new_insights_run_id,
     nflverse_cache_dir,
     player_insights_exports_dir,
     player_insights_output_path,
+    position_guide_output_path,
     resolve_latest_player_insights_path,
+    resolve_latest_position_guide_path,
     sleeper_cache_dir,
 )
 from draft_buddy.data.insights.schemas import (
@@ -149,3 +153,58 @@ def test_resolve_latest_player_insights_path_falls_back_to_legacy_export(
     resolved = resolve_latest_player_insights_path(str(tmp_path))
 
     assert resolved == str(legacy)
+
+
+def test_position_guide_output_path_includes_league_id(tmp_path: Path) -> None:
+    """Verify position-guide filenames include league id and team count."""
+    generated_at = datetime(2026, 7, 5, 22, 45, tzinfo=timezone.utc)
+    path = position_guide_output_path(
+        str(tmp_path),
+        "red_league_10",
+        10,
+        2,
+        2026,
+        generated_at,
+        ext="json",
+    )
+
+    assert Path(path).name.startswith("position_guide_red_league_10_10teams_slot2_")
+
+
+def test_model_adp_output_paths_include_league_id(tmp_path: Path) -> None:
+    """Verify model-ADP filenames include league id so same-size leagues do not collide."""
+    generated_at = datetime(2026, 7, 5, 22, 45, tzinfo=timezone.utc)
+    adp_path = model_adp_output_path(
+        str(tmp_path), "redraft_nbfl_12", 12, 2026, generated_at, ext="json"
+    )
+    by_pos_path = model_adp_by_position_output_path(
+        str(tmp_path), "redraft_nbfl_12", 12, 2026, generated_at, ext="json"
+    )
+
+    assert "redraft_nbfl_12" in Path(adp_path).name
+    assert "redraft_nbfl_12" in Path(by_pos_path).name
+
+
+def test_resolve_latest_position_guide_path_disambiguates_leagues(tmp_path: Path) -> None:
+    """Verify latest-guide lookup is keyed by league id, not only team count."""
+    generated_at = datetime(2026, 7, 5, 22, 45, tzinfo=timezone.utc)
+    red_path = position_guide_output_path(
+        str(tmp_path), "red_league_10", 12, 5, 2026, generated_at, ext="json"
+    )
+    nbfl_path = position_guide_output_path(
+        str(tmp_path),
+        "redraft_nbfl_12",
+        12,
+        5,
+        2026,
+        datetime(2026, 7, 6, 22, 45, tzinfo=timezone.utc),
+        ext="json",
+    )
+    Path(red_path).write_text("{}", encoding="utf-8")
+    Path(nbfl_path).write_text("{}", encoding="utf-8")
+
+    resolved = resolve_latest_position_guide_path(
+        str(tmp_path), "red_league_10", 12, 5, 2026, ext="json"
+    )
+
+    assert resolved == red_path

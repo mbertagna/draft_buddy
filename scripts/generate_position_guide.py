@@ -141,14 +141,20 @@ def main() -> int:
         return 1
 
     for slot in sorted(guides):
-        json_path, html_path = export_position_guide(guides[slot], args.data_root)
+        json_path, html_path = export_position_guide(
+            guides[slot], args.data_root, config.league.league_id
+        )
         print(f"Slot {slot}: JSON={json_path} HTML={html_path}")
 
-    adp_json_path, adp_html_path = export_model_adp(model_adp, args.data_root)
+    adp_json_path, adp_html_path = export_model_adp(
+        model_adp, args.data_root, config.league.league_id
+    )
     print(f"Model ADP: JSON={adp_json_path} HTML={adp_html_path}")
 
     model_adp_by_position = build_model_adp_by_position(model_adp)
-    position_json_path = export_model_adp_by_position(model_adp_by_position, args.data_root)
+    position_json_path = export_model_adp_by_position(
+        model_adp_by_position, args.data_root, config.league.league_id
+    )
     print(f"Model ADP by position: JSON={position_json_path}")
     return 0
 

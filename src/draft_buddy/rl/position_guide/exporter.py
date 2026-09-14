@@ -338,6 +338,7 @@ def build_model_adp_by_position(model_adp: ModelAdpFile) -> ModelAdpByPositionFi
 def export_position_guide(
     guide: PositionGuideFile,
     data_root: str,
+    league_id: str,
 ) -> tuple[str, str]:
     """Write JSON and HTML exports for a position guide.
 
@@ -347,6 +348,8 @@ def export_position_guide(
         Guide content to export.
     data_root : str
         Root data directory for output paths.
+    league_id : str
+        League profile id used in export filenames.
 
     Returns
     -------
@@ -359,6 +362,7 @@ def export_position_guide(
 
     json_path = position_guide_output_path(
         data_root=data_root,
+        league_id=league_id,
         num_teams=guide.num_teams,
         slot=guide.draft_slot,
         year=guide.draft_year,
@@ -367,6 +371,7 @@ def export_position_guide(
     )
     html_path = position_guide_output_path(
         data_root=data_root,
+        league_id=league_id,
         num_teams=guide.num_teams,
         slot=guide.draft_slot,
         year=guide.draft_year,
@@ -537,7 +542,9 @@ def _render_pick_row(pick) -> str:
       </tr>"""
 
 
-def export_model_adp(model_adp: ModelAdpFile, data_root: str) -> tuple[str, str]:
+def export_model_adp(
+    model_adp: ModelAdpFile, data_root: str, league_id: str
+) -> tuple[str, str]:
     """Write JSON and HTML exports for a model-derived ADP ranking.
 
     Parameters
@@ -558,6 +565,7 @@ def export_model_adp(model_adp: ModelAdpFile, data_root: str) -> tuple[str, str]
 
     json_path = model_adp_output_path(
         data_root=data_root,
+        league_id=league_id,
         num_teams=model_adp.num_teams,
         year=model_adp.draft_year,
         generated_at=generated_at,
@@ -565,6 +573,7 @@ def export_model_adp(model_adp: ModelAdpFile, data_root: str) -> tuple[str, str]
     )
     html_path = model_adp_output_path(
         data_root=data_root,
+        league_id=league_id,
         num_teams=model_adp.num_teams,
         year=model_adp.draft_year,
         generated_at=generated_at,
@@ -710,6 +719,7 @@ def _render_model_adp_row(entry, rank: int) -> str:
 def export_model_adp_by_position(
     model_adp_by_position: ModelAdpByPositionFile,
     data_root: str,
+    league_id: str,
 ) -> str:
     """Write a JSON export for model ADP grouped by position.
 
@@ -731,6 +741,7 @@ def export_model_adp_by_position(
 
     json_path = model_adp_by_position_output_path(
         data_root=data_root,
+        league_id=league_id,
         num_teams=model_adp_by_position.num_teams,
         year=model_adp_by_position.draft_year,
         generated_at=generated_at,

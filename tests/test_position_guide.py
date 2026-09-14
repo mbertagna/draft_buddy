@@ -55,8 +55,12 @@ def test_snake_pick_number_10teams_slot5_round1() -> None:
 def test_position_guide_output_path_includes_num_teams(tmp_path) -> None:
     """Export paths include league size in the filename."""
     generated_at = datetime(2026, 7, 5, 22, 45, tzinfo=timezone.utc)
-    path_12 = position_guide_output_path(str(tmp_path), 12, 5, 2026, generated_at, ext="json")
-    path_10 = position_guide_output_path(str(tmp_path), 10, 5, 2026, generated_at, ext="html")
+    path_12 = position_guide_output_path(
+        str(tmp_path), "redraft_nbfl_12", 12, 5, 2026, generated_at, ext="json"
+    )
+    path_10 = position_guide_output_path(
+        str(tmp_path), "red_league_10", 10, 5, 2026, generated_at, ext="html"
+    )
     assert "12teams" in path_12
     assert "10teams" in path_10
 
@@ -64,7 +68,9 @@ def test_position_guide_output_path_includes_num_teams(tmp_path) -> None:
 def test_model_adp_output_path_includes_num_teams(tmp_path) -> None:
     """Model-ADP export paths include league size in the filename."""
     generated_at = datetime(2026, 7, 5, 22, 45, tzinfo=timezone.utc)
-    path = model_adp_output_path(str(tmp_path), 12, 2026, generated_at, ext="json")
+    path = model_adp_output_path(
+        str(tmp_path), "redraft_nbfl_12", 12, 2026, generated_at, ext="json"
+    )
 
     assert "12teams" in path and "model_adp" in path
 
@@ -72,7 +78,9 @@ def test_model_adp_output_path_includes_num_teams(tmp_path) -> None:
 def test_model_adp_by_position_output_path_includes_num_teams(tmp_path) -> None:
     """Model-ADP-by-position JSON paths include league size in the filename."""
     generated_at = datetime(2026, 7, 5, 22, 45, tzinfo=timezone.utc)
-    path = model_adp_by_position_output_path(str(tmp_path), 12, 2026, generated_at, ext="json")
+    path = model_adp_by_position_output_path(
+        str(tmp_path), "redraft_nbfl_12", 12, 2026, generated_at, ext="json"
+    )
 
     assert "12teams" in path and "model_adp_by_position" in path
 
@@ -387,7 +395,7 @@ def test_export_position_guide_writes_json_and_html(tmp_path) -> None:
         ],
     )
 
-    json_path, html_path = export_position_guide(guide, str(tmp_path))
+    json_path, html_path = export_position_guide(guide, str(tmp_path), "red_league_10")
 
     assert "RB One" in open(html_path, encoding="utf-8").read()
     assert json_path.endswith(".json")
@@ -418,7 +426,7 @@ def test_export_model_adp_writes_json_and_html(tmp_path) -> None:
         ],
     )
 
-    json_path, html_path = export_model_adp(model_adp, str(tmp_path))
+    json_path, html_path = export_model_adp(model_adp, str(tmp_path), "red_league_10")
     html = open(html_path, encoding="utf-8").read()
 
     assert "RB One" in html
@@ -460,7 +468,9 @@ def test_export_model_adp_by_position_writes_json(tmp_path) -> None:
         },
     )
 
-    json_path = export_model_adp_by_position(model_adp_by_position, str(tmp_path))
+    json_path = export_model_adp_by_position(
+        model_adp_by_position, str(tmp_path), "redraft_nbfl_12"
+    )
     payload = json.loads(open(json_path, encoding="utf-8").read())
 
     assert payload["positions"]["QB"][0]["name"] == "QB One"
