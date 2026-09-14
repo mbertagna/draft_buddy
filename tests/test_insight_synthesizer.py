@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from draft_buddy.data.insights.cse_gateway import SearchCacheStore, SearchSnippet
+from draft_buddy.data.insights.search_gateway import SearchCacheStore, SearchSnippet
 from draft_buddy.data.insights.gemini_gateway import GeminiGateway
 from draft_buddy.data.insights.player_context import InsightPlayerContext
 from draft_buddy.data.insights.query_builder import InsightQuery, QueryKind
@@ -99,7 +99,7 @@ def test_synthesizer_uses_synthesis_cache(tmp_path: Path) -> None:
     synthesis_store = SynthesisCacheStore(str(synthesis_root))
     player = _player()
     query = InsightQuery(kind=QueryKind.OUTLOOK, text="outlook query")
-    search_store.save_query_result(player, query, {"items": []}, [], provider="google")
+    search_store.save_query_result(player, query, {"results": []}, [])
 
     cached_insight = _insight("https://espn.com/a")
     synthesis_store.save(player.sleeper_id, cached_insight)
@@ -126,7 +126,7 @@ def test_synthesizer_filters_bullets_to_allowed_urls(tmp_path: Path) -> None:
         domain="espn.com",
     )
     query = InsightQuery(kind=QueryKind.OUTLOOK, text="outlook query")
-    search_store.save_query_result(player, query, {"items": []}, [snippet], provider="valyu")
+    search_store.save_query_result(player, query, {"results": []}, [snippet])
 
     gateway = StubGeminiGateway(_insight("https://blocked.com/x"))
     synthesizer = InsightSynthesizer(gateway, search_store, synthesis_store)

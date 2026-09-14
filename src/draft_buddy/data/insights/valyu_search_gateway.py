@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Optional
 from urllib.parse import urlparse
 
 import httpx
 
-from draft_buddy.data.insights.cse_gateway import (
+from draft_buddy.data.insights.search_gateway import (
     DEFAULT_RESULT_COUNT,
     QuotaExceededError,
     SearchGateway,
@@ -27,6 +28,25 @@ DEFAULT_INCLUDED_SOURCES = (
     "yahoo.com",
     "cbssports.com",
 )
+
+
+def build_valyu_search_gateway() -> ValyuSearchGateway:
+    """Build a Valyu search gateway from environment configuration.
+
+    Returns
+    -------
+    ValyuSearchGateway
+        Configured Valyu search gateway.
+
+    Raises
+    ------
+    ValueError
+        When ``VALYU_API_KEY`` is not set.
+    """
+    api_key = os.environ.get("VALYU_API_KEY")
+    if not api_key:
+        raise ValueError("VALYU_API_KEY environment variable is required.")
+    return ValyuSearchGateway(api_key=api_key, relevance_threshold=DEFAULT_RELEVANCE_THRESHOLD)
 
 
 class ValyuSearchGateway(SearchGateway):

@@ -10,6 +10,7 @@ import pytest
 from draft_buddy.data.insights.valyu_search_gateway import (
     MAX_SNIPPET_CHARS,
     ValyuSearchGateway,
+    build_valyu_search_gateway,
 )
 
 
@@ -164,3 +165,20 @@ def test_search_raw_raises_on_http_error(monkeypatch) -> None:
 
     with pytest.raises(httpx.HTTPStatusError):
         gateway.search_raw("test query")
+
+
+def test_build_valyu_search_gateway_uses_api_key(monkeypatch) -> None:
+    """Verify build_valyu_search_gateway reads VALYU_API_KEY from the environment."""
+    monkeypatch.setenv("VALYU_API_KEY", "test-key")
+
+    gateway = build_valyu_search_gateway()
+
+    assert isinstance(gateway, ValyuSearchGateway)
+
+
+def test_build_valyu_search_gateway_requires_api_key(monkeypatch) -> None:
+    """Verify missing VALYU_API_KEY raises a clear error."""
+    monkeypatch.delenv("VALYU_API_KEY", raising=False)
+
+    with pytest.raises(ValueError, match="VALYU_API_KEY"):
+        build_valyu_search_gateway()

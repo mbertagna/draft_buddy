@@ -25,7 +25,7 @@ class InsightQuery:
 
 
 class InsightQueryBuilder:
-    """Build Google CSE queries for a player insight context."""
+    """Build insight search queries for a player context."""
 
     def build_queries(self, player: InsightPlayerContext) -> list[InsightQuery]:
         """Return all search queries to run for one player.

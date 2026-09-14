@@ -8,7 +8,7 @@ import os
 from datetime import datetime, timezone
 from typing import Iterable
 
-from draft_buddy.data.insights.cse_gateway import SearchCacheStore, SearchSnippet
+from draft_buddy.data.insights.search_gateway import SearchCacheStore, SearchSnippet
 from draft_buddy.data.insights.gemini_gateway import InsightSynthesisGateway
 from draft_buddy.data.insights.player_context import InsightPlayerContext
 from draft_buddy.data.insights.query_builder import InsightQueryBuilder
@@ -86,7 +86,7 @@ class InsightSynthesizer:
         gemini_gateway : InsightSynthesisGateway
             LLM gateway for structured synthesis.
         search_cache : SearchCacheStore
-            Cached CSE search results.
+            Cached search results.
         synthesis_cache : SynthesisCacheStore
             Per-player synthesis cache.
         """

@@ -18,7 +18,7 @@ from draft_buddy.data.cache_paths import (
     player_insights_exports_dir,
     player_insights_output_path,
 )
-from draft_buddy.data.insights.cse_gateway import SearchCacheStore
+from draft_buddy.data.insights.search_gateway import SearchCacheStore
 from draft_buddy.data.insights.player_selector import InsightPlayerSelector
 from draft_buddy.data.insights.run_store import resolve_or_create_run_root
 from draft_buddy.data.insights.schemas import PlayerInsight

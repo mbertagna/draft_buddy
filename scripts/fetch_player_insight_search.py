@@ -10,38 +10,27 @@ from tqdm import tqdm
 
 from draft_buddy.config import load_runtime_config
 from draft_buddy.data.cache_paths import insights_search_cache_dir
-from draft_buddy.data.insights.cse_gateway import (
+from draft_buddy.data.insights.player_selector import InsightPlayerSelector
+from draft_buddy.data.insights.query_builder import InsightQueryBuilder
+from draft_buddy.data.insights.run_store import resolve_or_create_run_root
+from draft_buddy.data.insights.search_gateway import (
     QuotaExceededError,
     SearchCacheStore,
     SearchGateway,
     execute_search_with_cache,
     sleep_between_batches,
 )
-from draft_buddy.data.insights.player_selector import InsightPlayerSelector
-from draft_buddy.data.insights.query_builder import InsightQueryBuilder
-from draft_buddy.data.insights.run_store import resolve_or_create_run_root
-from draft_buddy.data.insights.search_factory import (
-    SUPPORTED_SEARCH_PROVIDERS,
-    build_search_gateway,
-    resolve_search_provider,
-)
+from draft_buddy.data.insights.valyu_search_gateway import build_valyu_search_gateway
 
 
 def parse_args(argv=None, default_year: int = 2026) -> argparse.Namespace:
     """Parse CLI arguments for the search fetch script."""
     parser = argparse.ArgumentParser(
-        description="Fetch web search results for top ADP players (Valyu or Google CSE)."
+        description="Fetch web search results for top ADP players via Valyu."
     )
     parser.add_argument("--year", type=int, default=default_year, help="Draft year for queries.")
     parser.add_argument("--top-n", type=int, default=150, help="Number of top ADP players.")
     parser.add_argument("--data-root", type=str, default="./data", help="Data root directory.")
-    parser.add_argument(
-        "--search-provider",
-        type=str,
-        default=None,
-        choices=SUPPORTED_SEARCH_PROVIDERS,
-        help="Search provider (default: INSIGHTS_SEARCH_PROVIDER env or valyu).",
-    )
     parser.add_argument("--concurrency", type=int, default=5, help="Parallel player workers.")
     parser.add_argument("--delay-ms", type=int, default=200, help="Delay between player batches.")
     parser.add_argument("--start-index", type=int, default=0, help="Start index into ADP list.")
@@ -60,7 +49,6 @@ def _fetch_player_searches(
     cache_store: SearchCacheStore,
     query_builder: InsightQueryBuilder,
     force: bool,
-    provider: str,
 ) -> tuple[str, str]:
     """Fetch all queries for one player.
 
@@ -69,12 +57,12 @@ def _fetch_player_searches(
     tuple[str, str]
         Status label and sleeper id.
     """
-    if cache_store.has_cached_provider(player.sleeper_id, provider) and not force:
+    if cache_store.has_manifest(player.sleeper_id) and not force:
         return ("skipped", player.sleeper_id)
 
     queries = query_builder.build_queries(player)
     for query in queries:
-        execute_search_with_cache(gateway, cache_store, player, query, provider=provider)
+        execute_search_with_cache(gateway, cache_store, player, query)
     return ("fetched", player.sleeper_id)
 
 
@@ -83,8 +71,7 @@ def main() -> int:
     config = load_runtime_config()
     args = parse_args(default_year=config.season.season)
     try:
-        provider = resolve_search_provider(args.search_provider)
-        gateway = build_search_gateway(provider)
+        gateway = build_valyu_search_gateway()
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1
@@ -112,7 +99,6 @@ def main() -> int:
                 cache_store,
                 query_builder,
                 args.force,
-                provider,
             ): player
             for player in players
         }
@@ -122,7 +108,7 @@ def main() -> int:
                 counts[status] = counts.get(status, 0) + 1
             except QuotaExceededError:
                 counts["quota"] += 1
-                print("\nQuota exceeded. Re-run later or check provider billing.", file=sys.stderr)
+                print("\nQuota exceeded. Re-run later or check Valyu billing.", file=sys.stderr)
                 break
             except Exception as error:
                 counts["failed"] += 1
@@ -132,7 +118,7 @@ def main() -> int:
 
     run_label = run_root.run_id if run_root.run_id is not None else "legacy"
     print(
-        f"Done. provider={provider} run_id={run_label} fetched={counts['fetched']} "
+        f"Done. run_id={run_label} fetched={counts['fetched']} "
         f"skipped={counts['skipped']} failed={counts['failed']} quota_errors={counts['quota']}"
     )
     return 0 if counts["failed"] == 0 and counts["quota"] == 0 else 1

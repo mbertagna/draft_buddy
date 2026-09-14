@@ -73,7 +73,7 @@ Common output locations on the host:
 | `test` | Run the test suite | `python -m pytest tests/` |
 | `test-cov` | Run tests with coverage outputs | `python -m pytest tests/ --cov=src/draft_buddy ...` |
 | `data` | Generate player projections and merged draft data | `python scripts/generate_projections.py --year 2026` |
-| `insights-search` | Fetch web search snippets for top 150 ADP players (Valyu default) | `python scripts/fetch_player_insight_search.py --year 2026 --top-n 150 --search-provider valyu` |
+| `insights-search` | Fetch web search snippets for top 150 ADP players (Valyu) | `python scripts/fetch_player_insight_search.py --year 2026 --top-n 150` |
 | `insights-synthesize` | Synthesize Gemini Flash player insights from cached search | `python scripts/synthesize_player_insights.py --year 2026 --top-n 150` |
 | `position-guide` | Generate static RL position probability cheat sheet | `python scripts/generate_position_guide.py --simulations 5000` |
 
@@ -146,9 +146,8 @@ Offline player insight enrichment is a **manual, two-step** pipeline that prepar
 **Prerequisites:**
 
 1. Copy `.env.example` to `.env` and set:
-   - `VALYU_API_KEY` from [Valyu](https://platform.valyu.ai/) (default search provider)
+   - `VALYU_API_KEY` from [Valyu](https://platform.valyu.ai/)
    - `GEMINI_API_KEY` from [Google AI Studio](https://ai.google.dev/) and/or `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/)
-2. Optional: for Google CSE instead, set `INSIGHTS_SEARCH_PROVIDER=google`, `GOOGLE_CSE_API_KEY`, and `GOOGLE_CSE_ID` (note: CSE is closed to new customers and sunsets Jan 2027).
 
 **Run order:**
 
@@ -156,7 +155,7 @@ Offline player insight enrichment is a **manual, two-step** pipeline that prepar
 # 1. Generate player projections (if not already done)
 docker compose run --rm data
 
-# 2. Fetch and cache search snippets (Valyu default; date-filtered + relevance >= 0.7)
+# 2. Fetch and cache search snippets (Valyu; date-filtered + relevance >= 0.7)
 docker compose run --rm insights-search
 
 # 3. Synthesize structured insights (Gemini or OpenRouter)
@@ -201,7 +200,6 @@ To restore an older UI insights snapshot, keep or restore the desired file as th
 ```bash
 docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --max-players 20 --start-index 0
 docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --force
-docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --search-provider google --force
 docker compose run --rm insights-synthesize python scripts/synthesize_player_insights.py --force
 ```
 

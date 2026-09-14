@@ -1,4 +1,4 @@
-"""Google Custom Search JSON API gateway for player insight enrichment."""
+"""Shared search gateway interface and cache for player insight enrichment."""
 
 from __future__ import annotations
 
@@ -21,15 +21,13 @@ from draft_buddy.data.insights.search_windows import (
     valyu_instructions_for_query_kind,
 )
 
-
-CSE_BASE_URL = "https://customsearch.googleapis.com/customsearch/v1"
 DEFAULT_RESULT_COUNT = 8
 RECENCY_BOOST_MAX = 0.15
 
 
 @dataclass(frozen=True, slots=True)
 class SearchSnippet:
-    """Normalized search result snippet from a search provider."""
+    """Normalized search result snippet from Valyu search."""
 
     title: str
     snippet: str
@@ -61,11 +59,11 @@ class SearchGateway(ABC):
         num_results : int, optional
             Maximum number of results to return.
         start_date : str, optional
-            Inclusive publication start date (``YYYY-MM-DD``). Ignored by CSE.
+            Inclusive publication start date (``YYYY-MM-DD``).
         end_date : str, optional
-            Inclusive publication end date (``YYYY-MM-DD``). Ignored by CSE.
+            Inclusive publication end date (``YYYY-MM-DD``).
         instructions : str, optional
-            Provider ranking instructions. Ignored by CSE.
+            Natural-language ranking instructions for the search API.
 
         Returns
         -------
@@ -92,131 +90,6 @@ class SearchGateway(ABC):
         return snippets
 
 
-class GoogleCseGateway(SearchGateway):
-    """Fetches search results from Google Custom Search JSON API."""
-
-    def __init__(
-        self,
-        api_key: str,
-        search_engine_id: str,
-        timeout_seconds: float = 30.0,
-    ) -> None:
-        """
-        Parameters
-        ----------
-        api_key : str
-            Google API key with Custom Search enabled.
-        search_engine_id : str
-            Programmable Search Engine ID (``cx``).
-        timeout_seconds : float, optional
-            HTTP request timeout.
-        """
-        self._api_key = api_key
-        self._search_engine_id = search_engine_id
-        self._timeout_seconds = timeout_seconds
-
-    def search(self, query: str, num_results: int = DEFAULT_RESULT_COUNT) -> list[SearchSnippet]:
-        """Execute a CSE query and normalize the response.
-
-        Parameters
-        ----------
-        query : str
-            Search query text.
-        num_results : int, optional
-            Maximum number of results (CSE max is 10).
-
-        Returns
-        -------
-        list[SearchSnippet]
-            Parsed snippets from the API response.
-        """
-        return super().search(query, num_results=num_results)
-
-    def search_raw(
-        self,
-        query: str,
-        num_results: int = DEFAULT_RESULT_COUNT,
-        *,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        instructions: Optional[str] = None,
-    ) -> tuple[list[SearchSnippet], dict[str, Any]]:
-        """Execute a CSE query and return snippets plus the raw payload.
-
-        Parameters
-        ----------
-        query : str
-            Search query text.
-        num_results : int, optional
-            Maximum number of results (CSE max is 10).
-        start_date : str, optional
-            Ignored; CSE has no publication-date filter.
-        end_date : str, optional
-            Ignored; CSE has no publication-date filter.
-        instructions : str, optional
-            Ignored; CSE has no ranking-instructions parameter.
-
-        Returns
-        -------
-        tuple[list[SearchSnippet], dict]
-            Parsed snippets and raw API JSON.
-        """
-        _ = (start_date, end_date, instructions)
-        params = {
-            "key": self._api_key,
-            "cx": self._search_engine_id,
-            "q": query,
-            "num": min(num_results, 10),
-        }
-        with httpx.Client(timeout=self._timeout_seconds) as client:
-            response = client.get(CSE_BASE_URL, params=params)
-            if response.status_code == 429:
-                raise QuotaExceededError("Google CSE daily quota exceeded.")
-            response.raise_for_status()
-            payload = response.json()
-        return self._parse_response(payload), payload
-
-    @staticmethod
-    def _parse_response(payload: dict[str, Any]) -> list[SearchSnippet]:
-        """Parse a CSE JSON response into normalized snippets.
-
-        Parameters
-        ----------
-        payload : dict
-            Raw API response.
-
-        Returns
-        -------
-        list[SearchSnippet]
-            Parsed snippets.
-        """
-        items = payload.get("items", [])
-        snippets: list[SearchSnippet] = []
-        for item in items:
-            published_date = GoogleCseGateway._extract_published_date(item)
-            snippets.append(
-                SearchSnippet(
-                    title=str(item.get("title", "")),
-                    snippet=str(item.get("snippet", "")),
-                    url=str(item.get("link", "")),
-                    domain=str(item.get("displayLink", "")),
-                    published_date=published_date,
-                )
-            )
-        return snippets
-
-    @staticmethod
-    def _extract_published_date(item: dict[str, Any]) -> Optional[str]:
-        """Extract a published date from pagemap metatags when available."""
-        pagemap = item.get("pagemap", {})
-        metatags = pagemap.get("metatags", [])
-        for tag in metatags:
-            for key in ("article:published_time", "og:updated_time", "date", "pubdate"):
-                if key in tag and tag[key]:
-                    return str(tag[key])[:10]
-        return None
-
-
 @dataclass(frozen=True, slots=True)
 class SearchCacheManifest:
     """Manifest describing cached search results for one player."""
@@ -226,7 +99,6 @@ class SearchCacheManifest:
     draft_year: int
     queries: list[str]
     fetched_at: str
-    provider: str = "google"
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize manifest to a JSON-friendly dictionary."""
@@ -236,7 +108,6 @@ class SearchCacheManifest:
             "draft_year": self.draft_year,
             "queries": self.queries,
             "fetched_at": self.fetched_at,
-            "provider": self.provider,
         }
 
     @classmethod
@@ -248,7 +119,6 @@ class SearchCacheManifest:
             draft_year=int(payload["draft_year"]),
             queries=[str(value) for value in payload.get("queries", [])],
             fetched_at=str(payload["fetched_at"]),
-            provider=str(payload.get("provider", "google")),
         )
 
 
@@ -282,32 +152,12 @@ class SearchCacheStore:
         with open(self.manifest_path(sleeper_id), encoding="utf-8") as handle:
             return SearchCacheManifest.from_dict(json.load(handle))
 
-    def has_cached_provider(self, sleeper_id: str, provider: str) -> bool:
-        """Return whether a manifest exists for the player and provider.
-
-        Parameters
-        ----------
-        sleeper_id : str
-            Sleeper player id.
-        provider : str
-            Search provider name.
-
-        Returns
-        -------
-        bool
-            True when cache exists for the same provider.
-        """
-        if not self.has_manifest(sleeper_id):
-            return False
-        return self.load_manifest(sleeper_id).provider == provider
-
     def save_query_result(
         self,
         player: InsightPlayerContext,
         query: InsightQuery,
         raw_response: dict[str, Any],
         snippets: list[SearchSnippet],
-        provider: str,
     ) -> SearchCacheManifest:
         """Persist one query result and update the player manifest.
 
@@ -321,8 +171,6 @@ class SearchCacheStore:
             Raw search API response.
         snippets : list[SearchSnippet]
             Parsed snippets for convenience.
-        provider : str
-            Search provider name (``valyu`` or ``google``).
 
         Returns
         -------
@@ -364,7 +212,6 @@ class SearchCacheStore:
             draft_year=player.draft_year,
             queries=queries_run,
             fetched_at=datetime.now(timezone.utc).isoformat(),
-            provider=provider,
         )
         with open(self.manifest_path(player.sleeper_id), "w", encoding="utf-8") as handle:
             json.dump(manifest.to_dict(), handle, indent=2)
@@ -505,7 +352,7 @@ class SearchCacheStore:
 
 
 class QuotaExceededError(RuntimeError):
-    """Raised when a search provider API quota is exceeded."""
+    """Raised when the Valyu search API quota is exceeded."""
 
 
 def _query_kind_from_filename(filename: str) -> Optional[QueryKind]:
@@ -583,7 +430,6 @@ def execute_search_with_cache(
     cache_store: SearchCacheStore,
     player: InsightPlayerContext,
     query: InsightQuery,
-    provider: str,
 ) -> list[SearchSnippet]:
     """Execute a search and persist the raw response to cache.
 
@@ -597,8 +443,6 @@ def execute_search_with_cache(
         Player context.
     query : InsightQuery
         Query to execute.
-    provider : str
-        Search provider name stored in the manifest.
 
     Returns
     -------
@@ -623,7 +467,7 @@ def execute_search_with_cache(
             raise QuotaExceededError("Search API quota exceeded.") from error
         raise
 
-    cache_store.save_query_result(player, query, raw_payload, snippets, provider=provider)
+    cache_store.save_query_result(player, query, raw_payload, snippets)
     return snippets
 
 

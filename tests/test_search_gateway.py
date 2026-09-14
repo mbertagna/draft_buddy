@@ -1,4 +1,4 @@
-"""Tests for Google CSE gateway and search cache."""
+"""Tests for search gateway cache and execute_search_with_cache."""
 
 from __future__ import annotations
 
@@ -7,17 +7,17 @@ from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 
-import httpx
 import pytest
 
-from draft_buddy.data.insights.cse_gateway import (
-    GoogleCseGateway,
-    QuotaExceededError,
-    SearchCacheStore,
-    execute_search_with_cache,
-)
 from draft_buddy.data.insights.player_context import InsightPlayerContext
 from draft_buddy.data.insights.query_builder import InsightQuery, QueryKind
+from draft_buddy.data.insights.search_gateway import (
+    QuotaExceededError,
+    SearchCacheStore,
+    SearchGateway,
+    SearchSnippet,
+    execute_search_with_cache,
+)
 
 
 def _player() -> InsightPlayerContext:
@@ -34,38 +34,12 @@ def _player() -> InsightPlayerContext:
     )
 
 
-def _fake_response(payload: dict, status_code: int = 200) -> SimpleNamespace:
-    """Build a fake httpx response."""
-    response = SimpleNamespace()
-    response.status_code = status_code
-    response.json = lambda: payload
-    response.raise_for_status = lambda: None
-    if status_code >= 400:
-        response.raise_for_status = lambda: (_ for _ in ()).throw(
-            httpx.HTTPStatusError("error", request=SimpleNamespace(), response=response)
-        )
-    return response
+class StubSearchGateway(SearchGateway):
+    """Minimal search gateway stub for cache tests."""
 
-
-def test_parse_response_extracts_snippets() -> None:
-    """Verify CSE response parsing produces normalized snippets."""
-    payload = {
-        "items": [
-            {
-                "title": "McCaffrey outlook",
-                "snippet": "Expected workhorse role.",
-                "link": "https://espn.com/mccaffrey",
-                "displayLink": "espn.com",
-                "pagemap": {"metatags": [{"article:published_time": "2026-06-15T12:00:00Z"}]},
-            }
-        ]
-    }
-
-    snippets = GoogleCseGateway._parse_response(payload)
-
-    assert len(snippets) == 1
-    assert snippets[0].domain == "espn.com"
-    assert snippets[0].published_date == "2026-06-15"
+    def search_raw(self, query: str, num_results: int = 8, **kwargs):
+        """Return empty snippets and a minimal raw payload."""
+        return [], {"results": []}
 
 
 def test_search_cache_store_writes_manifest_and_query_files(tmp_path: Path) -> None:
@@ -73,9 +47,9 @@ def test_search_cache_store_writes_manifest_and_query_files(tmp_path: Path) -> N
     store = SearchCacheStore(str(tmp_path))
     player = _player()
     query = InsightQuery(kind=QueryKind.OUTLOOK, text="test query")
-    raw_response = {"items": []}
+    raw_response = {"results": []}
 
-    store.save_query_result(player, query, raw_response, [], provider="google")
+    store.save_query_result(player, query, raw_response, [])
 
     manifest_path = tmp_path / "4034" / "manifest.json"
     outlook_path = tmp_path / "4034" / "outlook.json"
@@ -83,18 +57,18 @@ def test_search_cache_store_writes_manifest_and_query_files(tmp_path: Path) -> N
     assert outlook_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["queries"] == ["outlook"]
-    assert manifest["provider"] == "google"
+    assert "provider" not in manifest
 
 
-def test_has_cached_provider_requires_matching_provider(tmp_path: Path) -> None:
-    """Verify cache skip only applies when manifest provider matches."""
+def test_has_manifest_reports_cached_player(tmp_path: Path) -> None:
+    """Verify has_manifest returns true after a query is cached."""
     store = SearchCacheStore(str(tmp_path))
     player = _player()
     query = InsightQuery(kind=QueryKind.OUTLOOK, text="test query")
-    store.save_query_result(player, query, {"items": []}, [], provider="valyu")
+    store.save_query_result(player, query, {"results": []}, [])
 
-    assert store.has_cached_provider("4034", "valyu") is True
-    assert store.has_cached_provider("4034", "google") is False
+    assert store.has_manifest("4034") is True
+    assert store.has_manifest("9999") is False
 
 
 def test_load_snippets_deduplicates_urls(tmp_path: Path) -> None:
@@ -110,7 +84,7 @@ def test_load_snippets_deduplicates_urls(tmp_path: Path) -> None:
         "published_date": "2026-06-01",
         "relevance_score": 0.8,
     }
-    store.save_query_result(player, query, {"items": []}, [], provider="google")
+    store.save_query_result(player, query, {"results": []}, [])
     outlook_path = tmp_path / "4034" / "outlook.json"
     payload = json.loads(outlook_path.read_text(encoding="utf-8"))
     payload["snippets"] = [duplicate_snippet, duplicate_snippet]
@@ -128,7 +102,7 @@ def test_load_snippets_drops_stale_outlook_dates_and_ranks_by_score(
     store = SearchCacheStore(str(tmp_path))
     player = _player()
     query = InsightQuery(kind=QueryKind.OUTLOOK, text="q1")
-    store.save_query_result(player, query, {"items": []}, [], provider="google")
+    store.save_query_result(player, query, {"results": []}, [])
     outlook_path = tmp_path / "4034" / "outlook.json"
     payload = json.loads(outlook_path.read_text(encoding="utf-8"))
     payload["snippets"] = [
@@ -216,7 +190,6 @@ def test_rebuild_snippets_from_raw_prefers_valyu_content(tmp_path: Path) -> None
                 "draft_year": 2026,
                 "queries": ["outlook"],
                 "fetched_at": "2026-08-06T00:00:00+00:00",
-                "provider": "valyu",
             }
         ),
         encoding="utf-8",
@@ -230,17 +203,41 @@ def test_rebuild_snippets_from_raw_prefers_valyu_content(tmp_path: Path) -> None
     assert "Cloudy" not in payload["snippets"][0]["snippet"]
 
 
-def test_execute_search_with_cache_raises_on_quota(monkeypatch, tmp_path: Path) -> None:
+def test_execute_search_with_cache_raises_on_quota(tmp_path: Path) -> None:
     """Verify quota errors are surfaced as QuotaExceededError."""
-    gateway = GoogleCseGateway(api_key="key", search_engine_id="cx")
+    gateway = StubSearchGateway()
 
     def _raise_quota(_query: str, num_results: int = 8, **_kwargs):
-        raise QuotaExceededError("Google CSE daily quota exceeded.")
+        raise QuotaExceededError("Valyu API quota exceeded.")
 
-    monkeypatch.setattr(gateway, "search_raw", _raise_quota)
+    gateway.search_raw = _raise_quota  # type: ignore[method-assign]
     store = SearchCacheStore(str(tmp_path))
     player = _player()
     query = InsightQuery(kind=QueryKind.OUTLOOK, text="query")
 
     with pytest.raises(QuotaExceededError):
-        execute_search_with_cache(gateway, store, player, query, provider="google")
+        execute_search_with_cache(gateway, store, player, query)
+
+
+def test_execute_search_with_cache_persists_results(tmp_path: Path) -> None:
+    """Verify execute_search_with_cache writes snippets to the cache store."""
+    gateway = StubSearchGateway()
+    snippet = SearchSnippet(
+        title="Outlook",
+        snippet="Workhorse role expected.",
+        url="https://espn.com/a",
+        domain="espn.com",
+    )
+
+    def _return_snippet(_query: str, num_results: int = 8, **_kwargs):
+        return [snippet], {"results": [{"url": "https://espn.com/a"}]}
+
+    gateway.search_raw = _return_snippet  # type: ignore[method-assign]
+    store = SearchCacheStore(str(tmp_path))
+    player = _player()
+    query = InsightQuery(kind=QueryKind.OUTLOOK, text="query")
+
+    result = execute_search_with_cache(gateway, store, player, query)
+
+    assert len(result) == 1
+    assert store.has_manifest(player.sleeper_id)

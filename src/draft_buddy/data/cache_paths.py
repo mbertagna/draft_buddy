@@ -85,7 +85,7 @@ def adp_cache_dir(data_root: str) -> str:
 
 
 def insights_search_cache_dir(data_root: str) -> str:
-    """Return the Google CSE search cache directory for player insights.
+    """Return the insights search cache directory for player insights.
 
     Parameters
     ----------
