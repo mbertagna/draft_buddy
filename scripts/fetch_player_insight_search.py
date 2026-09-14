@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -20,13 +21,16 @@ from draft_buddy.data.insights.search_gateway import (
     execute_search_with_cache,
     sleep_between_batches,
 )
-from draft_buddy.data.insights.valyu_search_gateway import build_valyu_search_gateway
+from draft_buddy.data.insights.search_factory import (
+    DEFAULT_SEARCH_PROVIDER,
+    build_search_gateway,
+)
 
 
 def parse_args(argv=None, default_year: int = 2026) -> argparse.Namespace:
     """Parse CLI arguments for the search fetch script."""
     parser = argparse.ArgumentParser(
-        description="Fetch web search results for top ADP players via Valyu."
+        description="Fetch web search results for top ADP players (Tavily default, Valyu backup)."
     )
     parser.add_argument("--year", type=int, default=default_year, help="Draft year for queries.")
     parser.add_argument("--top-n", type=int, default=150, help="Number of top ADP players.")
@@ -35,6 +39,14 @@ def parse_args(argv=None, default_year: int = 2026) -> argparse.Namespace:
     parser.add_argument("--delay-ms", type=int, default=200, help="Delay between player batches.")
     parser.add_argument("--start-index", type=int, default=0, help="Start index into ADP list.")
     parser.add_argument("--max-players", type=int, default=None, help="Optional player cap.")
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default=(
+            os.environ.get("INSIGHTS_SEARCH_PROVIDER") or DEFAULT_SEARCH_PROVIDER.value
+        ),
+        help="Search provider: tavily (default) or valyu.",
+    )
     parser.add_argument(
         "--force",
         action="store_true",
@@ -71,7 +83,7 @@ def main() -> int:
     config = load_runtime_config()
     args = parse_args(default_year=config.season.season)
     try:
-        gateway = build_valyu_search_gateway()
+        gateway = build_search_gateway(args.provider)
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1

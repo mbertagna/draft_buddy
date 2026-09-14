@@ -16,6 +16,25 @@ def test_insights_search_defaults_year_from_season() -> None:
     assert args.year == 2026
 
 
+def test_insights_search_defaults_provider_to_tavily(monkeypatch) -> None:
+    """Verify insight search defaults --provider to Tavily."""
+    monkeypatch.delenv("INSIGHTS_SEARCH_PROVIDER", raising=False)
+    args = fetch_player_insight_search.parse_args([], default_year=2026)
+
+    assert args.provider == "tavily"
+
+
+def test_insights_search_cli_provider_overrides_env(monkeypatch) -> None:
+    """Verify --provider valyu overrides INSIGHTS_SEARCH_PROVIDER."""
+    monkeypatch.setenv("INSIGHTS_SEARCH_PROVIDER", "tavily")
+    args = fetch_player_insight_search.parse_args(
+        ["--provider", "valyu"],
+        default_year=2026,
+    )
+
+    assert args.provider == "valyu"
+
+
 def test_insights_synthesize_defaults_year_from_season() -> None:
     """Verify insight synthesis uses the overlay year when --year is omitted."""
     args = synthesize_player_insights.parse_args([], default_year=2026)
