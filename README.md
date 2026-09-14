@@ -36,7 +36,15 @@ To switch to Redraft NBFL (12-team Sleeper, half PPR) later:
 DRAFT_BUDDY_LEAGUE=redraft_nbfl_12
 ```
 
-Each league uses its own generated player CSV under `data/leagues/{league_id}/generated/{year}/`. Run `docker compose run --rm data` after switching leagues so projections match that league's scoring.
+Then recreate the webapp so Compose reloads `.env`:
+
+```bash
+docker compose up webapp
+```
+
+Each league keeps its own generated CSV, draft board, and saved states under `data/leagues/{league_id}/`. Run `docker compose run --rm data` **once per league** (first time, or after scoring/ADP/stats change). After that, flipping `DRAFT_BUDDY_LEAGUE` is enough for training, the UI, the data pipeline default year, and static guides. Insights search/synthesis caches stay shared across leagues.
+
+If the generated CSV is missing, loaders fail instead of inventing dummy players. Pipeline scripts default `--year` from `DRAFT_BUDDY_SEASON`.
 
 Build the image used by every service:
 
@@ -48,8 +56,9 @@ Each service bind-mounts the repository into `/app` and runs with `PYTHONPATH=/a
 
 Common output locations on the host:
 
-- `data/`: generated player data and draft state files
-- `data/leagues/{league_id}/generated/{year}/pipeline_report.html`: data-pipeline diagnostics report
+- `data/leagues/{league_id}/generated/{year}/`: player projections and pipeline report
+- `data/leagues/{league_id}/runtime/{year}/`: live `draft_state.json` for that league/season
+- `data/leagues/{league_id}/saved_states/`: archived draft boards
 - `logs/`: training metrics, dashboards, and run logs
 - `models/`: checkpoints and trained model artifacts
 - `coverage.xml`: XML coverage report from `test-cov`
@@ -291,8 +300,8 @@ Offline Monte Carlo simulation produces **static position probability guides for
 
 ```bash
 docker compose run --rm position-guide
-open data/guides/exports/position_guide_*teams_slot*_*_*.html
-open data/guides/exports/model_adp_*teams_*_*.html
+open data/guides/exports/position_guide_*_*teams_slot*_*_*.html
+open data/guides/exports/model_adp_*_*teams_*_*.html
 ```
 
 **Override league temporarily:**
@@ -316,12 +325,12 @@ docker compose run --rm position-guide python scripts/generate_position_guide.py
 
 **Outputs:**
 
-- Per-slot guide JSON: `data/guides/exports/position_guide_{num_teams}teams_slot{slot}_{year}_{timestamp}.json`
+- Per-slot guide JSON: `data/guides/exports/position_guide_{league_id}_{num_teams}teams_slot{slot}_{year}_{timestamp}.json`
 - Per-slot guide HTML: same basename with `.html` (printable cheat sheet, with top-5 actually-drafted players shown under each position bar)
-- Model ADP JSON: `data/guides/exports/model_adp_{num_teams}teams_{year}_{timestamp}.json`
+- Model ADP JSON: `data/guides/exports/model_adp_{league_id}_{num_teams}teams_{year}_{timestamp}.json`
 - Model ADP HTML: same basename with `.html` (players ranked by mean simulated overall pick number, alongside market ADP)
 
-Each run writes new timestamped exports for every slot plus one model-ADP export. Filenames include league size so 10-team and 12-team guides do not collide.
+Each run writes new timestamped exports for every slot plus one model-ADP export. Filenames include league id and league size so 10-team and 12-team (or two same-size leagues) guides do not collide.
 
 ### League profiles and season rollover
 
