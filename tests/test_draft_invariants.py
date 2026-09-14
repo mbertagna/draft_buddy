@@ -65,6 +65,16 @@ def test_assert_invariants_accepts_consistent_pick(draft_state, player_catalog) 
     assert_invariants(draft_state)
 
 
+def test_collect_invariant_errors_allows_display_only_board_player(draft_state) -> None:
+    """Verify K/DST display picks may sit on the board without a roster slot."""
+    draft_state.display_only_player_ids.add(99)
+    draft_state.place_player_visual(1, 0, 99)
+
+    errors = collect_invariant_errors(draft_state)
+
+    assert errors == []
+
+
 def test_collect_invariant_errors_detects_shelved_available_overlap(draft_state) -> None:
     """Verify shelved players must not remain available."""
     draft_state.shelved_player_ids.add(2)

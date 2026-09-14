@@ -51,6 +51,46 @@ def test_player_to_dict_includes_populated_sleeper_fields() -> None:
     assert player.to_dict()["sleeper_injury_status"] == "Questionable"
 
 
+def test_player_to_dict_defaults_data_completeness_to_full() -> None:
+    """Verify catalog players serialize as fully projected."""
+    player = Player(player_id=1, name="A", position="QB", projected_points=100.0)
+
+    assert player.to_dict()["data_completeness"] == "full"
+
+
+def test_player_catalog_with_added_player_appends_new_id(player_catalog) -> None:
+    """Verify a new player is appended without replacing existing rows."""
+    extra = Player(
+        player_id=999,
+        name="Extra",
+        position="RB",
+        projected_points=0.0,
+        data_completeness="sleeper_only",
+    )
+
+    updated = player_catalog.with_added_player(extra)
+
+    assert extra.player_id in updated
+    assert extra.player_id not in player_catalog
+    assert len(updated) == len(player_catalog) + 1
+
+
+def test_player_catalog_with_added_player_replaces_existing_id(player_catalog) -> None:
+    """Verify adding an existing id replaces that record."""
+    original = player_catalog.require(1)
+    replacement = Player(
+        player_id=original.player_id,
+        name="Replaced",
+        position=original.position,
+        projected_points=1.0,
+    )
+
+    updated = player_catalog.with_added_player(replacement)
+
+    assert updated.require(original.player_id).name == "Replaced"
+    assert len(updated) == len(player_catalog)
+
+
 def test_pick_round_trips_through_dict() -> None:
     """Verify typed pick serialization is lossless."""
     pick = Pick(

@@ -1,0 +1,22 @@
+{
+  "type": "snake",
+  "status": "drafting",
+  "draft_id": "draft123",
+  "league_id": "league123",
+  "draft_order": {
+    "user_a": 1,
+    "user_b": 2,
+    "user_c": 3,
+    "user_d": 4
+  },
+  "slot_to_roster_id": {
+    "1": 10,
+    "2": 20,
+    "3": 30,
+    "4": 40
+  },
+  "settings": {
+    "rounds": 16,
+    "teams": 4
+  }
+}

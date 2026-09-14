@@ -31,6 +31,19 @@ PLAYER_DATAFRAME_COLUMNS = [
     "search_rank",
 ]
 
+DRAFT_PICK_DATAFRAME_COLUMNS = [
+    "pick_no",
+    "player_id",
+    "roster_id",
+    "draft_slot",
+    "round",
+    "first_name",
+    "last_name",
+    "position",
+    "team",
+    "injury_status",
+]
+
 
 class SleeperGateway(ABC):
     """Abstract interface for fetching Sleeper player and roster data."""
@@ -60,6 +73,39 @@ class SleeperGateway(ABC):
         pd.DataFrame
             One row per rostered player with columns ``roster_id`` and
             ``sleeper_id``.
+        """
+
+    @abstractmethod
+    def fetch_draft(self, draft_id: str) -> dict:
+        """Fetch metadata for one Sleeper draft.
+
+        Parameters
+        ----------
+        draft_id : str
+            Sleeper draft identifier.
+
+        Returns
+        -------
+        dict
+            Raw draft payload including ``type``, ``status``, ``draft_order``,
+            ``slot_to_roster_id``, and ``settings``.
+        """
+
+    @abstractmethod
+    def fetch_draft_picks(self, draft_id: str) -> pd.DataFrame:
+        """Fetch all picks recorded for one Sleeper draft.
+
+        Parameters
+        ----------
+        draft_id : str
+            Sleeper draft identifier.
+
+        Returns
+        -------
+        pd.DataFrame
+            One row per pick with columns matching
+            ``DRAFT_PICK_DATAFRAME_COLUMNS``. ``player_id`` is a string so
+            DST abbreviations such as ``\"DET\"`` are preserved.
         """
 
 
@@ -103,6 +149,48 @@ class SleeperHttpGateway(SleeperGateway):
             for player_id in (roster.get("players") or [])
         ]
         return pd.DataFrame(rows, columns=["roster_id", "sleeper_id"])
+
+    def fetch_draft(self, draft_id: str) -> dict:
+        """Fetch metadata for one Sleeper draft."""
+        return self._get_json(f"{self._BASE_URL}/draft/{draft_id}")
+
+    def fetch_draft_picks(self, draft_id: str) -> pd.DataFrame:
+        """Fetch all picks recorded for one Sleeper draft."""
+        raw_picks = self._get_json(f"{self._BASE_URL}/draft/{draft_id}/picks")
+        return self._to_draft_picks_dataframe(raw_picks)
+
+    @staticmethod
+    def _to_draft_picks_dataframe(raw_picks) -> pd.DataFrame:
+        """Flatten a Sleeper picks payload into a DataFrame.
+
+        Parameters
+        ----------
+        raw_picks : list
+            Raw JSON list of pick objects.
+
+        Returns
+        -------
+        pd.DataFrame
+            One row per pick with ``DRAFT_PICK_DATAFRAME_COLUMNS``.
+        """
+        rows = []
+        for pick in raw_picks or []:
+            metadata = pick.get("metadata") or {}
+            rows.append(
+                {
+                    "pick_no": pick.get("pick_no"),
+                    "player_id": None if pick.get("player_id") is None else str(pick.get("player_id")),
+                    "roster_id": pick.get("roster_id"),
+                    "draft_slot": pick.get("draft_slot"),
+                    "round": pick.get("round"),
+                    "first_name": metadata.get("first_name"),
+                    "last_name": metadata.get("last_name"),
+                    "position": metadata.get("position"),
+                    "team": metadata.get("team"),
+                    "injury_status": metadata.get("injury_status"),
+                }
+            )
+        return pd.DataFrame(rows, columns=DRAFT_PICK_DATAFRAME_COLUMNS)
 
     def _get_json(self, url: str):
         """Issue a GET request and return the parsed JSON body."""

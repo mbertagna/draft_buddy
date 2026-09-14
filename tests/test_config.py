@@ -59,3 +59,12 @@ def test_config_from_dict_loads_policy_suggestion_temperature() -> None:
     config = Config.from_dict({"training": {"POLICY_SUGGESTION_TEMPERATURE": 2.0}})
 
     assert config.training.POLICY_SUGGESTION_TEMPERATURE == 2.0
+
+
+def test_config_from_dict_coerces_sleeper_roster_id_map_keys() -> None:
+    """Verify Sleeper roster id mapping JSON keys become integers."""
+    config = Config.from_dict(
+        {"draft": {"SLEEPER_ROSTER_ID_TO_TEAM_ID": {"10": 1, "20": 2}}}
+    )
+
+    assert config.draft.SLEEPER_ROSTER_ID_TO_TEAM_ID == {10: 1, 20: 2}

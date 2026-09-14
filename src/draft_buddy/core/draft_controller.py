@@ -652,6 +652,44 @@ class DraftController:
         self.state.advance_pick()
         self.state.override_team_id = None
 
+    def apply_display_pick(self, team_id: int, player_id: int) -> None:
+        """Place a non-skill pick on the board without counting roster slots.
+
+        Parameters
+        ----------
+        team_id : int
+            Team receiving the display-only pick.
+        player_id : int
+            Placeholder or kicker/DST player id.
+        """
+        self.player_catalog.require(player_id)
+        target_round = self.state.first_empty_round(team_id)
+        if target_round is None:
+            self.state.expand_visual_board_by(1)
+            target_round = self.state.first_empty_round(team_id)
+        if target_round is None:
+            raise ValueError(f"Team {team_id} has no empty visual board slots.")
+
+        self.state.append_pick(
+            Pick(
+                pick_number=self.current_pick_number,
+                team_id=team_id,
+                player_id=player_id,
+                is_manual_pick=False,
+                previous_pick_index=self.current_pick_index,
+                previous_override_team_id=self.state.override_team_id,
+            )
+        )
+        self.state.append_action(
+            DraftAction(action_type="pick", history_index=len(self.state.draft_history) - 1)
+        )
+        self.state.available_player_ids.discard(player_id)
+        self.state.shelved_player_ids.discard(player_id)
+        self.state.display_only_player_ids.add(player_id)
+        self.state.place_player_visual(team_id, target_round, player_id)
+        self.state.advance_pick()
+        self.state.override_team_id = None
+
     def get_positional_baselines(self) -> dict[str, float]:
         """Return smoothed replacement baselines by position."""
         baselines: dict[str, float] = {}

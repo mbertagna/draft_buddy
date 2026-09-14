@@ -147,3 +147,21 @@ class ModelAdpFile(BaseModel):
     limit_adp: Optional[int] = None
     draft_pool_size: Optional[int] = None
     players: List[ModelAdpEntry] = Field(default_factory=list)
+
+
+class ModelAdpByPositionFile(BaseModel):
+    """Top-level export for model-derived ADP ranked within each position."""
+
+    schema_version: int = 1
+    generated_at: datetime
+    draft_year: int
+    num_teams: int
+    simulations: int
+    checkpoint_path: str
+    checkpoint_episode: int
+    player_data_csv: str
+    temperature: float = 1.0
+    prune_inactive: bool = False
+    limit_adp: Optional[int] = None
+    draft_pool_size: Optional[int] = None
+    positions: Dict[str, List[ModelAdpEntry]] = Field(default_factory=dict)

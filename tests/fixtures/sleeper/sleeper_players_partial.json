@@ -1,0 +1,46 @@
+{
+  "1001": {
+    "full_name": "Josh Allen",
+    "position": "QB",
+    "team": "BUF",
+    "status": "Active",
+    "injury_status": "",
+    "depth_chart_position": "QB",
+    "gsis_id": "00-0034857",
+    "years_exp": 7,
+    "search_rank": 1
+  },
+  "1002": {
+    "full_name": "Breece Hall",
+    "position": "RB",
+    "team": "NYJ",
+    "status": "Active",
+    "injury_status": "",
+    "depth_chart_position": "RB",
+    "gsis_id": "00-0038124",
+    "years_exp": 3,
+    "search_rank": 5
+  },
+  "8888": {
+    "full_name": "Directory Only",
+    "position": "WR",
+    "team": "SEA",
+    "status": "Active",
+    "injury_status": "",
+    "depth_chart_position": "WR",
+    "gsis_id": "00-0000000",
+    "years_exp": 1,
+    "search_rank": 200
+  },
+  "DET": {
+    "full_name": "Detroit Defense",
+    "position": "DEF",
+    "team": "DET",
+    "status": "Active",
+    "injury_status": "",
+    "depth_chart_position": null,
+    "gsis_id": null,
+    "years_exp": 0,
+    "search_rank": 999
+  }
+}

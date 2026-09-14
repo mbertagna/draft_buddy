@@ -80,3 +80,82 @@ def test_fetch_league_rosters_flattens_roster_player_ids(monkeypatch, tmp_path: 
 
     assert list(rosters_df["sleeper_id"]) == ["100", "101", "200"]
     assert list(rosters_df["roster_id"]) == [1, 1, 2]
+
+
+def test_fetch_draft_returns_raw_metadata(monkeypatch, tmp_path: Path) -> None:
+    """Verify draft metadata is returned without reshaping."""
+    gateway = SleeperHttpGateway(cache_dir=str(tmp_path))
+    payload = {
+        "type": "snake",
+        "status": "drafting",
+        "slot_to_roster_id": {"1": 10, "2": 20},
+        "settings": {"rounds": 16},
+    }
+    monkeypatch.setattr("requests.get", lambda _url: _fake_response(payload))
+
+    draft = gateway.fetch_draft("draft123")
+
+    assert draft["type"] == "snake"
+    assert draft["slot_to_roster_id"]["1"] == 10
+
+
+def test_fetch_draft_picks_preserves_string_player_ids(monkeypatch, tmp_path: Path) -> None:
+    """Verify picks flatten metadata and keep DST string ids."""
+    gateway = SleeperHttpGateway(cache_dir=str(tmp_path))
+    payload = [
+        {
+            "pick_no": 1,
+            "player_id": "1001",
+            "roster_id": 10,
+            "draft_slot": 1,
+            "round": 1,
+            "metadata": {
+                "first_name": "Josh",
+                "last_name": "Allen",
+                "position": "QB",
+                "team": "BUF",
+            },
+        },
+        {
+            "pick_no": 2,
+            "player_id": "DET",
+            "roster_id": 20,
+            "draft_slot": 2,
+            "round": 1,
+            "metadata": {
+                "first_name": "Detroit",
+                "last_name": "Defense",
+                "position": "DEF",
+                "team": "DET",
+            },
+        },
+    ]
+    monkeypatch.setattr("requests.get", lambda _url: _fake_response(payload))
+
+    picks_df = gateway.fetch_draft_picks("draft123")
+
+    assert list(picks_df["player_id"]) == ["1001", "DET"]
+    assert list(picks_df["position"]) == ["QB", "DEF"]
+    assert picks_df.iloc[0]["first_name"] == "Josh"
+
+
+def test_fetch_draft_picks_empty_payload_returns_empty_frame(monkeypatch, tmp_path: Path) -> None:
+    """Verify an empty picks list still has the expected columns."""
+    gateway = SleeperHttpGateway(cache_dir=str(tmp_path))
+    monkeypatch.setattr("requests.get", lambda _url: _fake_response([]))
+
+    picks_df = gateway.fetch_draft_picks("draft123")
+
+    assert list(picks_df.columns) == [
+        "pick_no",
+        "player_id",
+        "roster_id",
+        "draft_slot",
+        "round",
+        "first_name",
+        "last_name",
+        "position",
+        "team",
+        "injury_status",
+    ]
+    assert picks_df.empty

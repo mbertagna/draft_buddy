@@ -59,3 +59,24 @@ def exclude_ignored_players(
         return list(players)
     ignore_set = set(ignore_player_ids)
     return [player for player in players if player.player_id not in ignore_set]
+
+
+def exclude_incomplete_players(players: Sequence[Player]) -> list[Player]:
+    """Remove Sleeper-only placeholders from recommendation pools.
+
+    Parameters
+    ----------
+    players : Sequence[Player]
+        Available players before completeness filtering.
+
+    Returns
+    -------
+    list[Player]
+        Players with full catalog projections.
+    """
+    return [
+        player
+        for player in players
+        if getattr(player, "data_completeness", "full") == "full"
+        and player.position in {"QB", "RB", "WR", "TE"}
+    ]

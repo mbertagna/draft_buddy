@@ -5,7 +5,7 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
-_INT_KEYED_DRAFT_FIELDS = frozenset({"TEAM_MANAGER_MAPPING"})
+_INT_KEYED_DRAFT_FIELDS = frozenset({"TEAM_MANAGER_MAPPING", "SLEEPER_ROSTER_ID_TO_TEAM_ID"})
 _INT_KEYED_OPPONENT_FIELDS = frozenset({"OPPONENT_TEAM_STRATEGIES"})
 
 
@@ -169,6 +169,11 @@ class DraftConfig:
         }
     )
     TEAM_BYE_WEEKS_2024: Dict[int, List[str]] = field(default_factory=dict)
+    SLEEPER_SYNC_ENABLED: bool = False
+    SLEEPER_DRAFT_ID: str = ""
+    SLEEPER_LEAGUE_ID: str = ""
+    SLEEPER_ROSTER_ID_TO_TEAM_ID: Dict[int, int] = field(default_factory=dict)
+    SLEEPER_SYNC_POLL_SECONDS: int = 3
 
 
 @dataclass
@@ -186,7 +191,7 @@ class TrainingConfig:
     VALUE_LR_MULTIPLIER: float = 2.0
     LOG_SAVE_INTERVAL_EPISODES: int = 128
     HIDDEN_DIM: int = 64
-    MODEL_PATH_TO_LOAD: str = os.path.join("models/12_teams_pos_5/v1/checkpoint_episode_498.pth")
+    MODEL_PATH_TO_LOAD: str = os.path.join("models/12_teams_random_start/v1/checkpoint_episode_418709.pth")
     POLICY_SUGGESTION_TEMPERATURE: float = 1.5
     NUM_SIMULATION_RUNS: int = 10
     STATE_NORMALIZATION_METHOD: str = "min_max"

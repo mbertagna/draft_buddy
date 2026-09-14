@@ -49,6 +49,8 @@ def collect_invariant_errors(state: DraftState) -> List[str]:
             if player_id is None:
                 continue
             board_counts[player_id] = board_counts.get(player_id, 0) + 1
+            if player_id in state.display_only_player_ids:
+                continue
             if player_id not in roster_ids:
                 errors.append(
                     f"Visual board cell ({team_id}, {round_index}) has player "
