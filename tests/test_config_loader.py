@@ -4,8 +4,16 @@ from __future__ import annotations
 
 import pytest
 
+from pathlib import Path
+
 from draft_buddy.config import Config, load_runtime_config
+from draft_buddy.config import loader as config_loader
 from draft_buddy.config.loader import LEAGUE_ENV_VAR, SEASON_ENV_VAR
+
+
+def _posix(path: str) -> str:
+    """Normalize a filesystem path to POSIX separators for assertions."""
+    return path.replace("\\", "/")
 
 
 def test_red_league_profile_matches_espn_settings(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -112,3 +120,55 @@ def test_config_to_dict_includes_league_and_scoring() -> None:
     assert "scoring" in payload
     assert "season" in payload
     assert payload["scoring"]["rules"]["receptions"] == 1.0
+
+
+def test_runtime_paths_are_scoped_per_league_and_season() -> None:
+    """Verify generated data and draft state live under distinct league year dirs."""
+    red = load_runtime_config(league_id="red_league_10", season=2026)
+    nbfl = load_runtime_config(league_id="redraft_nbfl_12", season=2026)
+
+    assert _posix(red.paths.PLAYER_DATA_CSV).endswith(
+        "data/leagues/red_league_10/generated/2026/generated_player_data.csv"
+    )
+    assert _posix(nbfl.paths.PLAYER_DATA_CSV).endswith(
+        "data/leagues/redraft_nbfl_12/generated/2026/generated_player_data.csv"
+    )
+    assert _posix(red.paths.DRAFT_STATE_FILE).endswith(
+        "data/leagues/red_league_10/runtime/2026/draft_state.json"
+    )
+    assert _posix(nbfl.paths.DRAFT_STATE_FILE).endswith(
+        "data/leagues/redraft_nbfl_12/runtime/2026/draft_state.json"
+    )
+    assert _posix(red.paths.DRAFT_STATE_PREV_FILE).endswith(
+        "data/leagues/red_league_10/runtime/2026/draft_state.prev.json"
+    )
+    assert _posix(nbfl.paths.DRAFT_STATE_PREV_FILE).endswith(
+        "data/leagues/redraft_nbfl_12/runtime/2026/draft_state.prev.json"
+    )
+    assert _posix(red.paths.SAVED_STATES_DIR).endswith("data/leagues/red_league_10/saved_states")
+    assert _posix(nbfl.paths.SAVED_STATES_DIR).endswith(
+        "data/leagues/redraft_nbfl_12/saved_states"
+    )
+    assert red.paths.DRAFT_STATE_FILE != nbfl.paths.DRAFT_STATE_FILE
+    assert red.paths.SAVED_STATES_DIR != nbfl.paths.SAVED_STATES_DIR
+
+
+def test_player_csv_derives_league_layout_when_template_omitted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify missing player_data_template still uses the league-year CSV layout."""
+    original_load = config_loader._load_json
+
+    def load_without_template(path: Path) -> dict:
+        payload = original_load(path)
+        if path.parent.name == "leagues":
+            payload = dict(payload)
+            payload.pop("paths", None)
+        return payload
+
+    monkeypatch.setattr(config_loader, "_load_json", load_without_template)
+    config = load_runtime_config(league_id="red_league_10", season=2026)
+
+    assert _posix(config.paths.PLAYER_DATA_CSV).endswith(
+        "data/leagues/red_league_10/generated/2026/generated_player_data.csv"
+    )

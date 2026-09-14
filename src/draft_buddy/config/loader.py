@@ -38,13 +38,55 @@ def _load_json(path: Path) -> Dict[str, Any]:
         return json.load(file_obj)
 
 
-def _resolve_player_data_csv(paths_config: Dict[str, Any], season: int, base_dir: Path) -> str:
+def _league_data_root(base_dir: Path, league_id: str) -> Path:
+    """Return the on-disk root for a league's generated and runtime files."""
+    return base_dir / "data" / "leagues" / league_id
+
+
+def _default_player_data_csv(base_dir: Path, league_id: str, season: int) -> str:
+    """Return the default generated player CSV path for a league season."""
+    return str(
+        _league_data_root(base_dir, league_id)
+        / "generated"
+        / str(season)
+        / "generated_player_data.csv"
+    )
+
+
+def _resolve_player_data_csv(
+    paths_config: Dict[str, Any],
+    league_id: str,
+    season: int,
+    base_dir: Path,
+) -> str:
     """Resolve the league-scoped player CSV path for a season."""
     template = paths_config.get("player_data_template")
     if not template:
-        return str(base_dir / "data" / "generated_player_data.csv")
+        return _default_player_data_csv(base_dir, league_id, season)
     relative_path = template.format(year=season)
     return str(base_dir / relative_path)
+
+
+def _apply_league_runtime_paths(
+    config: Config,
+    league_id: str,
+    season: int,
+    player_csv: str,
+) -> None:
+    """Set generated CSV, draft-state, and saved-states paths for a league."""
+    base_dir = Path(config.paths.BASE_DIR)
+    league_root = _league_data_root(base_dir, league_id)
+    runtime_dir = league_root / "runtime" / str(season)
+    saved_states_dir = league_root / "saved_states"
+
+    config.paths.PLAYER_DATA_CSV = player_csv
+    config.paths.DRAFT_STATE_FILE = str(runtime_dir / "draft_state.json")
+    config.paths.DRAFT_STATE_PREV_FILE = str(runtime_dir / "draft_state.prev.json")
+    config.paths.SAVED_STATES_DIR = str(saved_states_dir)
+
+    os.makedirs(os.path.dirname(player_csv), exist_ok=True)
+    os.makedirs(runtime_dir, exist_ok=True)
+    os.makedirs(saved_states_dir, exist_ok=True)
 
 
 def load_runtime_config(
@@ -88,9 +130,10 @@ def load_runtime_config(
 
     base_dir = Path(config.paths.BASE_DIR)
     paths_dict = payload.get("paths", {})
-    player_csv = _resolve_player_data_csv(paths_dict, resolved_season, base_dir)
+    player_csv = _resolve_player_data_csv(
+        paths_dict, resolved_league_id, resolved_season, base_dir
+    )
     config.paths.PLAYER_DATA_TEMPLATE = paths_dict.get("player_data_template", "")
-    config.paths.PLAYER_DATA_CSV = player_csv
-    os.makedirs(os.path.dirname(player_csv), exist_ok=True)
+    _apply_league_runtime_paths(config, resolved_league_id, resolved_season, player_csv)
 
     return config
