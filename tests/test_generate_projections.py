@@ -100,3 +100,42 @@ def test_check_sleeper_roster_coverage_skips_write_when_fully_covered(tmp_path: 
     )
 
     assert list(tmp_path.iterdir()) == []
+
+
+def test_parse_cli_args_defaults_year_from_season() -> None:
+    """Verify the projections CLI year defaults to the active season overlay."""
+    args = generate_projections.parse_cli_args([], default_year=2026)
+
+    assert args.year == 2026
+    assert args.sleeper_league_id is None
+
+
+def test_resolve_sleeper_league_id_uses_overlay_when_cli_omitted() -> None:
+    """Verify Sleeper roster coverage uses the season overlay league id."""
+    from draft_buddy.config import load_runtime_config
+
+    config = load_runtime_config(league_id="redraft_nbfl_12", season=2026)
+    resolved = generate_projections.resolve_sleeper_league_id(None, config)
+
+    assert resolved == config.draft.SLEEPER_LEAGUE_ID
+    assert resolved
+
+
+def test_resolve_sleeper_league_id_prefers_cli_over_overlay() -> None:
+    """Verify an explicit CLI Sleeper league id wins over the overlay."""
+    from draft_buddy.config import load_runtime_config
+
+    config = load_runtime_config(league_id="redraft_nbfl_12", season=2026)
+    resolved = generate_projections.resolve_sleeper_league_id("cli-league", config)
+
+    assert resolved == "cli-league"
+
+
+def test_resolve_sleeper_league_id_skips_empty_overlay() -> None:
+    """Verify leagues without Sleeper sync do not enable roster coverage."""
+    from draft_buddy.config import load_runtime_config
+
+    config = load_runtime_config(league_id="red_league_10", season=2026)
+    resolved = generate_projections.resolve_sleeper_league_id(None, config)
+
+    assert resolved is None

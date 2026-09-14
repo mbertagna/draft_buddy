@@ -27,12 +27,12 @@ from draft_buddy.data.insights.synthesizer import InsightSynthesizer, SynthesisC
 from draft_buddy.llm.model_registry import resolve_synthesis_provider
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv=None, default_year: int = 2026) -> argparse.Namespace:
     """Parse CLI arguments for the synthesis script."""
     parser = argparse.ArgumentParser(
         description="Synthesize structured player insights from cached search results."
     )
-    parser.add_argument("--year", type=int, default=2026, help="Draft year.")
+    parser.add_argument("--year", type=int, default=default_year, help="Draft year.")
     parser.add_argument("--top-n", type=int, default=150, help="Number of top ADP players.")
     parser.add_argument("--data-root", type=str, default="./data", help="Data root directory.")
     parser.add_argument("--concurrency", type=int, default=10, help="Parallel synthesis workers.")
@@ -63,13 +63,14 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="LLM model id (defaults to INSIGHTS_LLM_MODEL or gemini-2.5-flash).",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def main() -> int:
     """Run the synthesis pipeline."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    args = parse_args()
+    config = load_runtime_config()
+    args = parse_args(default_year=config.season.season)
     provider = args.provider.strip() if args.provider else None
     try:
         model = resolve_synthesis_model(args.model)
@@ -80,7 +81,6 @@ def main() -> int:
         print(str(error), file=sys.stderr)
         return 1
 
-    config = load_runtime_config()
     selector = InsightPlayerSelector(config.paths.PLAYER_DATA_CSV, draft_year=args.year)
     players = selector.select(
         top_n=args.top_n,

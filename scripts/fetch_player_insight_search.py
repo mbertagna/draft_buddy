@@ -27,12 +27,12 @@ from draft_buddy.data.insights.search_factory import (
 )
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv=None, default_year: int = 2026) -> argparse.Namespace:
     """Parse CLI arguments for the search fetch script."""
     parser = argparse.ArgumentParser(
         description="Fetch web search results for top ADP players (Valyu or Google CSE)."
     )
-    parser.add_argument("--year", type=int, default=2026, help="Draft year for queries.")
+    parser.add_argument("--year", type=int, default=default_year, help="Draft year for queries.")
     parser.add_argument("--top-n", type=int, default=150, help="Number of top ADP players.")
     parser.add_argument("--data-root", type=str, default="./data", help="Data root directory.")
     parser.add_argument(
@@ -51,7 +51,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Create a new empty cache run and re-fetch selected players.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def _fetch_player_searches(
@@ -80,7 +80,8 @@ def _fetch_player_searches(
 
 def main() -> int:
     """Run the search fetch pipeline."""
-    args = parse_args()
+    config = load_runtime_config()
+    args = parse_args(default_year=config.season.season)
     try:
         provider = resolve_search_provider(args.search_provider)
         gateway = build_search_gateway(provider)
@@ -88,7 +89,6 @@ def main() -> int:
         print(str(error), file=sys.stderr)
         return 1
 
-    config = load_runtime_config()
     selector = InsightPlayerSelector(config.paths.PLAYER_DATA_CSV, draft_year=args.year)
     players = selector.select(
         top_n=args.top_n,

@@ -37,15 +37,15 @@ services:
 
   data:
     <<: *app-base
-    command: python scripts/generate_projections.py --year 2026
+    command: python scripts/generate_projections.py
 
   insights-search:
     <<: *app-base
-    command: python scripts/fetch_player_insight_search.py --year 2026 --top-n 10 --search-provider valyu
+    command: python scripts/fetch_player_insight_search.py --top-n 10 --search-provider valyu
 
   insights-synthesize:
     <<: *app-base
-    command: python scripts/synthesize_player_insights.py --year 2026 --top-n 10
+    command: python scripts/synthesize_player_insights.py --top-n 10
 
   position-guide:
     <<: *app-base

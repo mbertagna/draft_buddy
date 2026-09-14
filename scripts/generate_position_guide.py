@@ -17,7 +17,9 @@ from draft_buddy.rl.position_guide.simulator import PositionGuideSimulator
 from draft_buddy.rl.run_utils import resolve_checkpoint_path
 
 
-def parse_args(runtime_defaults: argparse.Namespace) -> argparse.Namespace:
+def parse_args(
+    runtime_defaults: argparse.Namespace, argv: list[str] | None = None
+) -> argparse.Namespace:
     """Parse CLI arguments for position guide generation."""
     parser = argparse.ArgumentParser(
         description=(
@@ -81,7 +83,7 @@ def parse_args(runtime_defaults: argparse.Namespace) -> argparse.Namespace:
         action="store_true",
         help="Disable the simulation progress bar.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def main() -> int:

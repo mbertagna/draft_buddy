@@ -217,30 +217,79 @@ def main(
         print(f"\n✅ Saved borderline cases to '{borderline_path}'")
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Process fantasy football data for a given year.')
-    parser.add_argument('--year', type=int, default=2025, help='The draft year to process data for.')
-    parser.add_argument('--sleeper_league_id', type=str, default=None,
-                        help='Optional Sleeper league id to verify the base-catalog filter did not exclude a rostered player.')
+def parse_cli_args(argv=None, default_year=2026):
+    """Parse projection-generation CLI arguments.
+
+    Parameters
+    ----------
+    argv : list of str, optional
+        Argument vector excluding the program name.
+    default_year : int, optional
+        Draft year used when ``--year`` is omitted.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed CLI arguments.
+    """
+    parser = argparse.ArgumentParser(description="Process fantasy football data for a given year.")
     parser.add_argument(
-        '--lookback-seasons',
+        "--year",
+        type=int,
+        default=default_year,
+        help="The draft year to process data for.",
+    )
+    parser.add_argument(
+        "--sleeper_league_id",
+        type=str,
+        default=None,
+        help=(
+            "Optional Sleeper league id to verify the base-catalog filter did not "
+            "exclude a rostered player. Defaults to the season overlay when set."
+        ),
+    )
+    parser.add_argument(
+        "--lookback-seasons",
         type=int,
         default=None,
         help=(
-            'Number of completed seasons before --year to load from nflverse for '
-            'veteran projections. Default: Config.data.LEGACY_STATS_LOOKBACK_SEASONS (2).'
+            "Number of completed seasons before --year to load from nflverse for "
+            "veteran projections. Default: Config.data.LEGACY_STATS_LOOKBACK_SEASONS (2)."
         ),
     )
+    return parser.parse_args(argv)
 
-    args = parser.parse_args()
 
+def resolve_sleeper_league_id(cli_league_id, runtime_config):
+    """Return the Sleeper league id for optional roster-coverage checks.
+
+    Parameters
+    ----------
+    cli_league_id : str or None
+        Explicit CLI value.
+    runtime_config
+        Loaded runtime configuration.
+
+    Returns
+    -------
+    str or None
+        CLI id, overlay id when non-empty, or None.
+    """
+    if cli_league_id:
+        return cli_league_id
+    overlay_id = getattr(runtime_config.draft, "SLEEPER_LEAGUE_ID", "") or ""
+    return overlay_id or None
+
+
+if __name__ == "__main__":
     config = load_runtime_config()
+    args = parse_cli_args(default_year=config.season.season)
     output_file_path = config.paths.PLAYER_DATA_CSV
 
     main(
         output_path=output_file_path,
         draft_year=args.year,
         runtime_config=config,
-        sleeper_league_id=args.sleeper_league_id,
+        sleeper_league_id=resolve_sleeper_league_id(args.sleeper_league_id, config),
         lookback_seasons=args.lookback_seasons,
     )
