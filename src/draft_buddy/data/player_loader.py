@@ -27,11 +27,12 @@ def load_player_catalog(filepath: str, adp_config: Dict) -> PlayerCatalog:
     PlayerCatalog
         Loaded catalog sorted by ADP.
     """
-    try:
-        dataframe = pd.read_csv(filepath)
-    except FileNotFoundError:
-        _create_dummy_csv(filepath)
-        dataframe = pd.read_csv(filepath)
+    if not os.path.isfile(filepath):
+        raise FileNotFoundError(
+            f"Generated player data not found: {filepath}. "
+            "Run `docker compose run --rm data` for the active league."
+        )
+    dataframe = pd.read_csv(filepath)
 
     required_columns = ["player_id", "name", "position", "projected_points"]
     for column_name in required_columns:
@@ -146,26 +147,3 @@ def _generate_mock_adp(players: list[Player], adp_config: Dict) -> list[Player]:
         replace(player, adp=player_id_to_adp.get(player.player_id, np.inf))
         for player in players
     ]
-
-
-def _create_dummy_csv(filepath: str) -> None:
-    """Create a fallback dummy player CSV when source data is missing.
-
-    Parameters
-    ----------
-    filepath : str
-        Destination path for generated CSV.
-    """
-    dummy_data = """player_id,name,position,projected_points,adp,games_played_frac
-1001,Patrick Mahomes,QB,378.5,15.2,1.0
-1002,Josh Allen,QB,350.1,25.5,1.0
-1003,Christian McCaffrey,RB,320.0,1.1,0.9
-1004,Austin Ekeler,RB,290.5,5.8,1.0
-1005,Justin Jefferson,WR,310.0,3.2,1.0
-1006,Ja'Marr Chase,WR,295.5,7.5,1.0
-1007,Travis Kelce,TE,280.0,10.0,1.0
-1008,Mark Andrews,TE,250.0,20.1,0.85
-"""
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, "w", encoding="utf-8") as file_obj:
-        file_obj.write(dummy_data)

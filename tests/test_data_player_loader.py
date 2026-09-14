@@ -32,13 +32,15 @@ def test_load_player_catalog_generates_mock_adp_when_missing(config) -> None:
     assert all(math.isfinite(player.adp) for player in catalog)
 
 
-def test_load_player_catalog_creates_dummy_csv_when_file_is_missing(config, tmp_path: Path) -> None:
-    """Verify loading a missing file creates and loads the fallback CSV."""
+def test_load_player_catalog_raises_when_file_is_missing(config, tmp_path: Path) -> None:
+    """Verify a missing generated CSV fails instead of writing dummy players."""
     missing_path = tmp_path / "nested" / "players.csv"
 
-    catalog = load_player_catalog(str(missing_path), config.draft.MOCK_ADP_CONFIG)
+    with pytest.raises(FileNotFoundError, match="docker compose run --rm data") as error:
+        load_player_catalog(str(missing_path), config.draft.MOCK_ADP_CONFIG)
 
-    assert missing_path.exists() and len(catalog) == 8
+    assert str(missing_path) in str(error.value)
+    assert not missing_path.exists()
 
 
 def test_load_player_catalog_rejects_missing_required_columns(config) -> None:
