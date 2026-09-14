@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import httpx
 
 from draft_buddy.data.insights.search_gateway import (
+    DEFAULT_INCLUDED_SOURCES,
     DEFAULT_RESULT_COUNT,
     QuotaExceededError,
     SearchGateway,
@@ -18,16 +19,6 @@ from draft_buddy.data.insights.search_gateway import (
 VALYU_SEARCH_URL = "https://api.valyu.ai/v1/search"
 MAX_SNIPPET_CHARS = 1200
 DEFAULT_RELEVANCE_THRESHOLD = 0.7
-
-DEFAULT_INCLUDED_SOURCES = (
-    "fantasypros.com",
-    "rotowire.com",
-    "espn.com",
-    "nfl.com",
-    "ourlads.com",
-    "yahoo.com",
-    "cbssports.com",
-)
 
 
 def build_valyu_search_gateway() -> ValyuSearchGateway:
@@ -88,6 +79,7 @@ class ValyuSearchGateway(SearchGateway):
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         instructions: Optional[str] = None,
+        topic: Optional[str] = None,
     ) -> tuple[list[SearchSnippet], dict[str, Any]]:
         """Execute a Valyu search and return snippets plus the raw payload.
 
@@ -103,6 +95,8 @@ class ValyuSearchGateway(SearchGateway):
             Inclusive publication end date (``YYYY-MM-DD``).
         instructions : str, optional
             Natural-language ranking instructions for Valyu.
+        topic : str, optional
+            Unused; accepted for ``SearchGateway`` compatibility.
 
         Returns
         -------

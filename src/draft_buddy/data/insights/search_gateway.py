@@ -23,11 +23,20 @@ from draft_buddy.data.insights.search_windows import (
 
 DEFAULT_RESULT_COUNT = 8
 RECENCY_BOOST_MAX = 0.15
+DEFAULT_INCLUDED_SOURCES = (
+    "fantasypros.com",
+    "rotowire.com",
+    "espn.com",
+    "nfl.com",
+    "ourlads.com",
+    "yahoo.com",
+    "cbssports.com",
+)
 
 
 @dataclass(frozen=True, slots=True)
 class SearchSnippet:
-    """Normalized search result snippet from Valyu search."""
+    """Normalized search result snippet from an insight search provider."""
 
     title: str
     snippet: str
@@ -49,6 +58,7 @@ class SearchGateway(ABC):
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         instructions: Optional[str] = None,
+        topic: Optional[str] = None,
     ) -> tuple[list[SearchSnippet], dict[str, Any]]:
         """Execute a search query and return snippets plus raw API JSON.
 
@@ -64,6 +74,8 @@ class SearchGateway(ABC):
             Inclusive publication end date (``YYYY-MM-DD``).
         instructions : str, optional
             Natural-language ranking instructions for the search API.
+        topic : str, optional
+            Provider topic hint (used by Tavily; ignored by Valyu).
 
         Returns
         -------
