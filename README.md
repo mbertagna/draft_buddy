@@ -73,7 +73,7 @@ Common output locations on the host:
 | `test` | Run the test suite | `python -m pytest tests/` |
 | `test-cov` | Run tests with coverage outputs | `python -m pytest tests/ --cov=src/draft_buddy ...` |
 | `data` | Generate player projections and merged draft data | `python scripts/generate_projections.py --year 2026` |
-| `insights-search` | Fetch web search snippets for top 150 ADP players (Valyu) | `python scripts/fetch_player_insight_search.py --year 2026 --top-n 150` |
+| `insights-search` | Fetch web search snippets for top 150 ADP players (Tavily default) | `python scripts/fetch_player_insight_search.py --year 2026 --top-n 150` |
 | `insights-synthesize` | Synthesize Gemini Flash player insights from cached search | `python scripts/synthesize_player_insights.py --year 2026 --top-n 150` |
 | `position-guide` | Generate static RL position probability cheat sheet | `python scripts/generate_position_guide.py --simulations 5000` |
 
@@ -146,7 +146,8 @@ Offline player insight enrichment is a **manual, two-step** pipeline that prepar
 **Prerequisites:**
 
 1. Copy `.env.example` to `.env` and set:
-   - `VALYU_API_KEY` from [Valyu](https://platform.valyu.ai/)
+   - `TAVILY_API_KEY` from [Tavily](https://www.tavily.com/) (default search provider; 1,000 free credits/month, basic search)
+   - Optional `VALYU_API_KEY` from [Valyu](https://platform.valyu.ai/) if you want the Valyu backup
    - `GEMINI_API_KEY` from [Google AI Studio](https://ai.google.dev/) and/or `OPENROUTER_API_KEY` from [OpenRouter](https://openrouter.ai/)
 
 **Run order:**
@@ -155,14 +156,22 @@ Offline player insight enrichment is a **manual, two-step** pipeline that prepar
 # 1. Generate player projections (if not already done)
 docker compose run --rm data
 
-# 2. Fetch and cache search snippets (Valyu; date-filtered + relevance >= 0.7)
+# 2. Fetch and cache search snippets (Tavily; date-filtered + relevance >= 0.7)
 docker compose run --rm insights-search
 
 # 3. Synthesize structured insights (Gemini or OpenRouter)
 docker compose run --rm insights-synthesize
 ```
 
-Valyu search applies publication date windows (`outlook`/`role`: March 1 of the draft year; `injury_recovery`: last 90 days) and a `0.7` relevance threshold. Synthesis then re-ranks cached snippets by relevance and recency before calling the LLM.
+Tavily is the default search provider (`INSIGHTS_SEARCH_PROVIDER=tavily`). Search uses Tavily basic depth (1 credit per query), publication date windows (`outlook`/`role`: March 1 of the draft year; `injury_recovery`: last 90 days), and a `0.7` relevance threshold. Injury queries use Tavily `topic=news`; outlook/role use `general`. Synthesis then re-ranks cached snippets by relevance and recency before calling the LLM.
+
+To use Valyu instead:
+
+```bash
+docker compose run --rm insights-search python scripts/fetch_player_insight_search.py --provider valyu
+```
+
+Or set `INSIGHTS_SEARCH_PROVIDER=valyu` in `.env`.
 
 After upgrading the insights pipeline, **re-fetch search caches** so results include relevance scores and date windows:
 
