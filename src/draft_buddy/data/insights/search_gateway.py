@@ -310,7 +310,7 @@ class SearchCacheStore:
         return snippets[:max_snippets]
 
     def rebuild_snippets_from_raw(self, sleeper_id: str) -> int:
-        """Rewrite stored snippets from Valyu ``raw_response`` using current parsing.
+        """Rewrite stored snippets from cached ``raw_response`` using current parsing.
 
         Parameters
         ----------
@@ -322,7 +322,8 @@ class SearchCacheStore:
         int
             Number of query cache files whose snippets were rewritten.
         """
-        # Lazy import avoids a circular dependency with valyu_search_gateway.
+        # Lazy imports avoid circular dependencies with provider gateways.
+        from draft_buddy.data.insights.tavily_search_gateway import TavilySearchGateway
         from draft_buddy.data.insights.valyu_search_gateway import ValyuSearchGateway
 
         player_dir = self.player_cache_dir(sleeper_id)
@@ -337,9 +338,12 @@ class SearchCacheStore:
             with open(query_path, encoding="utf-8") as handle:
                 payload = json.load(handle)
             raw_response = payload.get("raw_response")
-            if not _raw_response_looks_like_valyu(raw_response):
+            if _raw_response_looks_like_tavily(raw_response):
+                snippets = TavilySearchGateway._parse_response(raw_response)
+            elif _raw_response_looks_like_valyu(raw_response):
+                snippets = ValyuSearchGateway._parse_response(raw_response)
+            else:
                 continue
-            snippets = ValyuSearchGateway._parse_response(raw_response)
             payload["snippets"] = [
                 {
                     "title": snippet.title,
@@ -376,6 +380,51 @@ def _query_kind_from_filename(filename: str) -> Optional[QueryKind]:
         return None
 
 
+def _first_search_result(raw_response: object) -> dict[str, Any] | None:
+    """Return the first result dict from a cached search payload when present.
+
+    Parameters
+    ----------
+    raw_response : object
+        Cached provider response.
+
+    Returns
+    -------
+    dict or None
+        First result object, or ``None`` when the payload is unusable.
+    """
+    if not isinstance(raw_response, dict):
+        return None
+    results = raw_response.get("results")
+    if results is None and isinstance(raw_response.get("data"), dict):
+        results = raw_response["data"].get("results")
+    if not isinstance(results, list) or not results:
+        return None
+    first = results[0]
+    if not isinstance(first, dict):
+        return None
+    return first
+
+
+def _raw_response_looks_like_tavily(raw_response: object) -> bool:
+    """Return whether ``raw_response`` is a Tavily-style search payload.
+
+    Parameters
+    ----------
+    raw_response : object
+        Cached provider response.
+
+    Returns
+    -------
+    bool
+        True when the first result has Tavily's ``score`` field.
+    """
+    first = _first_search_result(raw_response)
+    if first is None:
+        return False
+    return "score" in first
+
+
 def _raw_response_looks_like_valyu(raw_response: object) -> bool:
     """Return whether ``raw_response`` is a Valyu-style search payload.
 
@@ -389,15 +438,10 @@ def _raw_response_looks_like_valyu(raw_response: object) -> bool:
     bool
         True when the payload has a ``results`` list suitable for Valyu parsing.
     """
-    if not isinstance(raw_response, dict):
+    first = _first_search_result(raw_response)
+    if first is None:
         return False
-    results = raw_response.get("results")
-    if results is None and isinstance(raw_response.get("data"), dict):
-        results = raw_response["data"].get("results")
-    if not isinstance(results, list) or not results:
-        return False
-    first = results[0]
-    if not isinstance(first, dict):
+    if "score" in first:
         return False
     return any(key in first for key in ("content", "description", "text", "snippet"))
 

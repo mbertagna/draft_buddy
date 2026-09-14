@@ -203,6 +203,92 @@ def test_rebuild_snippets_from_raw_prefers_valyu_content(tmp_path: Path) -> None
     assert "Cloudy" not in payload["snippets"][0]["snippet"]
 
 
+def test_rebuild_snippets_from_raw_parses_tavily_score(tmp_path: Path) -> None:
+    """Verify rebuild maps Tavily score and published_date onto snippets."""
+    store = SearchCacheStore(str(tmp_path))
+    player = _player()
+    player_dir = Path(store.player_cache_dir(player.sleeper_id))
+    player_dir.mkdir(parents=True)
+    outlook_path = player_dir / "outlook.json"
+    outlook_path.write_text(
+        json.dumps(
+            {
+                "query": "outlook",
+                "kind": "outlook",
+                "fetched_at": "2026-08-06T00:00:00+00:00",
+                "raw_response": {
+                    "results": [
+                        {
+                            "title": "McCaffrey outlook",
+                            "url": "https://www.espn.com/fantasy/mccaffrey",
+                            "content": "Expected workhorse role in 2026.",
+                            "published_date": "2026-06-15T12:00:00Z",
+                            "score": 0.91,
+                        }
+                    ]
+                },
+                "snippets": [
+                    {
+                        "title": "McCaffrey outlook",
+                        "snippet": "stale",
+                        "url": "https://www.espn.com/fantasy/mccaffrey",
+                        "domain": "www.espn.com",
+                        "published_date": None,
+                        "relevance_score": None,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (player_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "sleeper_id": player.sleeper_id,
+                "name": player.name,
+                "draft_year": 2026,
+                "queries": ["outlook"],
+                "fetched_at": "2026-08-06T00:00:00+00:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rewritten = store.rebuild_snippets_from_raw(player.sleeper_id)
+    payload = json.loads(outlook_path.read_text(encoding="utf-8"))
+    snippet = payload["snippets"][0]
+
+    assert rewritten == 1
+    assert snippet["relevance_score"] == pytest.approx(0.91)
+    assert snippet["published_date"] == "2026-06-15"
+    assert "workhorse" in snippet["snippet"]
+
+
+def test_rebuild_snippets_from_raw_skips_unrecognized_payloads(tmp_path: Path) -> None:
+    """Verify unrecognized raw_response payloads are left unchanged."""
+    store = SearchCacheStore(str(tmp_path))
+    player = _player()
+    player_dir = Path(store.player_cache_dir(player.sleeper_id))
+    player_dir.mkdir(parents=True)
+    outlook_path = player_dir / "outlook.json"
+    outlook_path.write_text(
+        json.dumps(
+            {
+                "query": "outlook",
+                "kind": "outlook",
+                "fetched_at": "2026-08-06T00:00:00+00:00",
+                "raw_response": {"organic": [{"link": "https://example.com"}]},
+                "snippets": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rewritten = store.rebuild_snippets_from_raw(player.sleeper_id)
+
+    assert rewritten == 0
+
+
 def test_execute_search_with_cache_raises_on_quota(tmp_path: Path) -> None:
     """Verify quota errors are surfaced as QuotaExceededError."""
     gateway = StubSearchGateway()
