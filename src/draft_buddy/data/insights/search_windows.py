@@ -92,3 +92,21 @@ def valyu_instructions_for_query_kind(query_kind: QueryKind) -> str | None:
     if query_kind in (QueryKind.OUTLOOK, QueryKind.ROLE):
         return VALYU_OUTLOOK_INSTRUCTIONS
     return None
+
+
+def tavily_topic_for_query_kind(query_kind: QueryKind) -> str:
+    """Return the Tavily ``topic`` for a query kind.
+
+    Parameters
+    ----------
+    query_kind : QueryKind
+        Search query kind.
+
+    Returns
+    -------
+    str
+        ``news`` for injury recovery, otherwise ``general``.
+    """
+    if query_kind == QueryKind.INJURY_RECOVERY:
+        return "news"
+    return "general"

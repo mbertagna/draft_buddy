@@ -327,3 +327,39 @@ def test_execute_search_with_cache_persists_results(tmp_path: Path) -> None:
 
     assert len(result) == 1
     assert store.has_manifest(player.sleeper_id)
+
+
+def test_execute_search_with_cache_forwards_tavily_topic(tmp_path: Path) -> None:
+    """Verify execute_search_with_cache passes news topic for injury queries."""
+    captured: dict = {}
+    gateway = StubSearchGateway()
+
+    def _capture(_query: str, num_results: int = 8, **kwargs):
+        captured.update(kwargs)
+        return [], {"results": []}
+
+    gateway.search_raw = _capture  # type: ignore[method-assign]
+    store = SearchCacheStore(str(tmp_path))
+    query = InsightQuery(kind=QueryKind.INJURY_RECOVERY, text="injury query")
+
+    execute_search_with_cache(gateway, store, _player(), query)
+
+    assert captured.get("topic") == "news"
+
+
+def test_execute_search_with_cache_forwards_valyu_instructions(tmp_path: Path) -> None:
+    """Verify execute_search_with_cache still forwards Valyu ranking instructions."""
+    captured: dict = {}
+    gateway = StubSearchGateway()
+
+    def _capture(_query: str, num_results: int = 8, **kwargs):
+        captured.update(kwargs)
+        return [], {"results": []}
+
+    gateway.search_raw = _capture  # type: ignore[method-assign]
+    store = SearchCacheStore(str(tmp_path))
+    query = InsightQuery(kind=QueryKind.OUTLOOK, text="outlook query")
+
+    execute_search_with_cache(gateway, store, _player(), query)
+
+    assert captured.get("instructions") is not None

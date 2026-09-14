@@ -18,6 +18,7 @@ from draft_buddy.data.insights.search_windows import (
     injury_window_start,
     outlook_window_start,
     start_date_for_query_kind,
+    tavily_topic_for_query_kind,
     valyu_instructions_for_query_kind,
 )
 
@@ -512,11 +513,13 @@ def execute_search_with_cache(
     """
     start_date = start_date_for_query_kind(query.kind, player.draft_year)
     instructions = valyu_instructions_for_query_kind(query.kind)
+    topic = tavily_topic_for_query_kind(query.kind)
     try:
         snippets, raw_payload = gateway.search_raw(
             query.text,
             start_date=start_date,
             instructions=instructions,
+            topic=topic,
         )
     except httpx.HTTPStatusError as error:
         if error.response.status_code == 429:
