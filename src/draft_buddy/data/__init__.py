@@ -2,6 +2,7 @@
 
 from draft_buddy.data.cache_paths import (
     adp_cache_dir,
+    fantasypros_cache_dir,
     insights_search_cache_dir,
     insights_synthesis_cache_dir,
     model_adp_output_path,
@@ -13,6 +14,13 @@ from draft_buddy.data.cache_paths import (
 )
 from draft_buddy.data.data_processor import FantasyDataProcessor
 from draft_buddy.data.insights import LoadedPlayerInsights, load_latest_player_insights, load_player_insights
+from draft_buddy.data.market_data import (
+    FantasyProsGateway,
+    MarketDataUnavailable,
+    MarketRankingRequest,
+    consensus_adp_from_sources,
+    rankings_payload_to_dataframe,
+)
 from draft_buddy.data.nflverse_client import NflverseCsvDownloader
 from draft_buddy.data.player_data_utils import get_simulation_dfs
 from draft_buddy.data.player_filter import exclude_inactive_players
@@ -35,6 +43,8 @@ __all__ = [
     "encode_sleeper_player_id",
     "adp_cache_dir",
     "exclude_inactive_players",
+    "fantasypros_cache_dir",
+    "FantasyProsGateway",
     "get_simulation_dfs",
     "LoadedPlayerInsights",
     "insights_search_cache_dir",
@@ -42,10 +52,14 @@ __all__ = [
     "load_latest_player_insights",
     "load_player_catalog",
     "load_player_insights",
+    "MarketDataUnavailable",
+    "MarketRankingRequest",
     "model_adp_output_path",
     "nflverse_cache_dir",
     "player_insights_exports_dir",
     "player_insights_output_path",
     "resolve_latest_player_insights_path",
+    "rankings_payload_to_dataframe",
     "sleeper_cache_dir",
+    "consensus_adp_from_sources",
 ]

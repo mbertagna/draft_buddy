@@ -80,7 +80,7 @@ def test_model_path_to_load_from_season_overlay() -> None:
     """Verify the checkpoint path is season-scoped via training config."""
     config = load_runtime_config(league_id="redraft_nbfl_12", season=2026)
 
-    assert config.training.MODEL_PATH_TO_LOAD == "models/12_teams_random_start/v3"
+    assert config.training.MODEL_PATH_TO_LOAD == "models/12_teams_random_start/v1"
 
 
 def test_team_manager_mapping_uses_integer_keys() -> None:
@@ -100,7 +100,7 @@ def test_redraft_nbfl_team_manager_mapping_uses_lottery_order() -> None:
     assert config.draft.TEAM_MANAGER_MAPPING[5] == "Michael"
     assert config.draft.TEAM_MANAGER_MAPPING[12] == "Frank"
     assert config.draft.SLEEPER_SYNC_ENABLED is True
-    assert config.draft.SLEEPER_DRAFT_ID == "1398843818501013504"
+    assert config.draft.SLEEPER_DRAFT_ID == "1363697271027290112"
     assert config.draft.SLEEPER_ROSTER_ID_TO_TEAM_ID[11] == 5
     assert config.draft.SLEEPER_SYNC_POLL_SECONDS == 3
 
@@ -120,6 +120,14 @@ def test_config_to_dict_includes_league_and_scoring() -> None:
     assert "scoring" in payload
     assert "season" in payload
     assert payload["scoring"]["rules"]["receptions"] == 1.0
+
+
+def test_config_includes_fantasypros_market_data_defaults() -> None:
+    """Verify FantasyPros market-data defaults are available from data config."""
+    config = load_runtime_config(league_id="red_league_10", season=2026)
+
+    assert config.data.FANTASYPROS_API_ENABLED is True
+    assert config.data.FANTASYPROS_API_KEY_ENV == "FANTASYPROS_API_KEY"
 
 
 def test_runtime_paths_are_scoped_per_league_and_season() -> None:

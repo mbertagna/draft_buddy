@@ -318,6 +318,11 @@ class DataConfig:
     LEGACY_STATS_LOOKBACK_SEASONS: int = 2
     NFLVERSE_STATS_RELEASE: str = "stats_player"
     NFLVERSE_WEEK_STATS_TEMPLATE: str = "stats_player_week_{season}.csv"
+    FANTASYPROS_API_ENABLED: bool = True
+    FANTASYPROS_API_KEY_ENV: str = "FANTASYPROS_API_KEY"
+    FANTASYPROS_SCORING_BY_RECEPTION_VALUE: Dict[str, str] = field(
+        default_factory=lambda: {"0": "STD", "0.5": "HALF", "1": "PPR"}
+    )
     EXCLUDE_INACTIVE_PLAYERS: bool = False
     INACTIVE_ROSTER_STATUSES: List[str] = field(default_factory=lambda: ["Inactive"])
     INACTIVE_INJURY_STATUSES: List[str] = field(default_factory=lambda: ["IR", "PUP", "DNR"])

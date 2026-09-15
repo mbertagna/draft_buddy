@@ -8,6 +8,7 @@ from pathlib import Path
 
 from draft_buddy.data.cache_paths import (
     adp_cache_dir,
+    fantasypros_cache_dir,
     insights_run_current_path,
     insights_runs_dir,
     insights_search_cache_dir,
@@ -63,6 +64,11 @@ def test_sleeper_cache_dir_is_nested_under_data_root() -> None:
 def test_adp_cache_dir_is_nested_under_data_root() -> None:
     """Verify the ADP cache path is scoped under a 'cache/adp' subdirectory."""
     assert adp_cache_dir("./data") == "./data/cache/adp"
+
+
+def test_fantasypros_cache_dir_is_nested_under_data_root() -> None:
+    """Verify FantasyPros API responses are cached in their own directory."""
+    assert fantasypros_cache_dir("./data") == "./data/cache/fantasypros"
 
 
 def test_insights_search_cache_dir_is_nested_under_data_root() -> None:

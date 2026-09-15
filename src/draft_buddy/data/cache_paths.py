@@ -84,6 +84,22 @@ def adp_cache_dir(data_root: str) -> str:
     return os.path.join(data_root, "cache", "adp")
 
 
+def fantasypros_cache_dir(data_root: str) -> str:
+    """Return the FantasyPros API raw-data cache directory.
+
+    Parameters
+    ----------
+    data_root : str
+        Root data directory (e.g. ``./data``).
+
+    Returns
+    -------
+    str
+        Path to the FantasyPros API cache directory.
+    """
+    return os.path.join(data_root, "cache", "fantasypros")
+
+
 def insights_search_cache_dir(data_root: str) -> str:
     """Return the insights search cache directory for player insights.
 
