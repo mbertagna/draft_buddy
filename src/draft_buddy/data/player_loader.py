@@ -72,15 +72,16 @@ def load_player_catalog(filepath: str, adp_config: Dict) -> PlayerCatalog:
         team = str(row[team_column]) if team_column and pd.notna(row[team_column]) else None
         players.append(
             Player(
-                player_id,
-                name,
-                position,
-                projected_points,
-                games_played_fraction,
-                adp,
-                bye_week,
-                team,
+                player_id=player_id,
+                name=name,
+                position=position,
+                projected_points=projected_points,
+                games_played_frac=games_played_fraction,
+                adp=adp,
+                bye_week=bye_week,
+                team=team,
                 **_read_sleeper_fields(row, sleeper_columns),
+                **_read_valuation_fields(row),
             )
         )
 
@@ -110,6 +111,58 @@ def _read_sleeper_fields(row: pd.Series, sleeper_columns: Dict[str, bool]) -> Di
         field_name: (str(row[field_name]) if has_column and pd.notna(row[field_name]) else None)
         for field_name, has_column in sleeper_columns.items()
     }
+
+
+def _read_valuation_fields(row: pd.Series) -> Dict[str, Optional[float] | Optional[str]]:
+    """Read optional static valuation fields from a CSV row.
+
+    Parameters
+    ----------
+    row : pandas.Series
+        Source CSV row.
+
+    Returns
+    -------
+    Dict[str, Optional[float] | Optional[str]]
+        Optional valuation values keyed by ``Player`` constructor fields.
+    """
+    float_fields = [
+        "historical_weekly_median",
+        "projected_points_p20",
+        "projected_points_p50",
+        "projected_points_p80",
+        "effective_sample_size",
+        "data_confidence",
+        "market_implied_points",
+        "projection_edge_points",
+        "market_premium_points",
+        "projection_edge_z",
+        "agreement_score",
+        "stability_score",
+    ]
+    text_fields = ["projection_basis", "risk_tier", "player_archetype"]
+    values: Dict[str, Optional[float] | Optional[str]] = {}
+    for field_name in float_fields:
+        values[field_name] = _optional_float(row.get(field_name))
+    for field_name in text_fields:
+        values[field_name] = _optional_string(row.get(field_name))
+    return values
+
+
+def _optional_float(value) -> Optional[float]:
+    """Return a finite float value or ``None``."""
+    if value is None or pd.isna(value):
+        return None
+    numeric = float(value)
+    return numeric if np.isfinite(numeric) else None
+
+
+def _optional_string(value) -> Optional[str]:
+    """Return a non-empty string or ``None``."""
+    if value is None or pd.isna(value):
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _generate_mock_adp(players: list[Player], adp_config: Dict) -> list[Player]:

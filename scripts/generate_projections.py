@@ -15,6 +15,7 @@ from draft_buddy.data import (
     FantasyDataProcessor,
     SleeperCatalogBuilder,
     SleeperHttpGateway,
+    add_static_player_value_metrics,
     adp_cache_dir,
     sleeper_cache_dir,
 )
@@ -177,6 +178,7 @@ def main(
     merged_df = merged_df.rename(columns={'player_display_name': 'name', 'total_pts': 'projected_points'})
     unmatched_df = unmatched_df.rename(columns={'player_display_name': 'name', 'total_pts': 'projected_points'})
     borderline_df = borderline_df.rename(columns={'player_display_name': 'name', 'total_pts': 'projected_points'})
+    merged_df = add_static_player_value_metrics(merged_df)
 
     matched_adp_count = len(merged_df)
     total_adp_players = matched_adp_count + len(unmatched_df)

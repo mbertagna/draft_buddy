@@ -25,6 +25,7 @@ from draft_buddy.data.nflverse_client import NflverseCsvDownloader
 from draft_buddy.data.player_data_utils import get_simulation_dfs
 from draft_buddy.data.player_filter import exclude_inactive_players
 from draft_buddy.data.player_loader import load_player_catalog
+from draft_buddy.data.player_valuation import add_static_player_value_metrics
 from draft_buddy.data.rookie_projector import RookieProjector
 from draft_buddy.data.sleeper_catalog import SleeperCatalogBuilder
 from draft_buddy.data.sleeper_client import SleeperGateway, SleeperHttpGateway
@@ -42,6 +43,7 @@ __all__ = [
     "PlayerResolver",
     "encode_sleeper_player_id",
     "adp_cache_dir",
+    "add_static_player_value_metrics",
     "exclude_inactive_players",
     "fantasypros_cache_dir",
     "FantasyProsGateway",

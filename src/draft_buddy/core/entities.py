@@ -41,6 +41,9 @@ class Player:
     data_completeness : str, optional
         ``"full"`` for catalog projections, ``"sleeper_only"`` for
         placeholders materialized during live sync.
+    valuation fields : optional
+        Static market/history valuation metrics used by UI, advisor, and RL
+        candidate selection.
     """
 
     player_id: int
@@ -56,6 +59,21 @@ class Player:
     sleeper_injury_status: Optional[str] = None
     sleeper_depth_chart_position: Optional[str] = None
     data_completeness: str = "full"
+    historical_weekly_median: Optional[float] = None
+    projected_points_p20: Optional[float] = None
+    projected_points_p50: Optional[float] = None
+    projected_points_p80: Optional[float] = None
+    effective_sample_size: Optional[float] = None
+    data_confidence: Optional[float] = None
+    market_implied_points: Optional[float] = None
+    projection_edge_points: Optional[float] = None
+    market_premium_points: Optional[float] = None
+    projection_edge_z: Optional[float] = None
+    agreement_score: Optional[float] = None
+    projection_basis: Optional[str] = None
+    stability_score: Optional[float] = None
+    risk_tier: Optional[str] = None
+    player_archetype: Optional[str] = None
 
     def to_dict(self) -> dict:
         """Serialize the player to a JSON-friendly dictionary.
@@ -79,6 +97,21 @@ class Player:
             "sleeper_injury_status": self.sleeper_injury_status,
             "sleeper_depth_chart_position": self.sleeper_depth_chart_position,
             "data_completeness": self.data_completeness,
+            "historical_weekly_median": self.historical_weekly_median,
+            "projected_points_p20": self.projected_points_p20,
+            "projected_points_p50": self.projected_points_p50,
+            "projected_points_p80": self.projected_points_p80,
+            "effective_sample_size": self.effective_sample_size,
+            "data_confidence": self.data_confidence,
+            "market_implied_points": self.market_implied_points,
+            "projection_edge_points": self.projection_edge_points,
+            "market_premium_points": self.market_premium_points,
+            "projection_edge_z": self.projection_edge_z,
+            "agreement_score": self.agreement_score,
+            "projection_basis": self.projection_basis,
+            "stability_score": self.stability_score,
+            "risk_tier": self.risk_tier,
+            "player_archetype": self.player_archetype,
         }
 
 

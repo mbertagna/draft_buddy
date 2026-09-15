@@ -108,6 +108,33 @@ def test_load_player_catalog_defaults_sleeper_fields_when_columns_absent(config,
     assert catalog.require(1).sleeper_id is None
 
 
+def test_load_player_catalog_reads_static_valuation_columns(config) -> None:
+    """Verify optional valuation columns populate Player fields."""
+    pd.DataFrame(
+        [
+            {
+                "player_id": 1,
+                "name": "A",
+                "position": "QB",
+                "projected_points": 100.0,
+                "adp": 1.0,
+                "data_confidence": 0.8,
+                "market_premium_points": 2.5,
+                "agreement_score": 90.0,
+                "projection_basis": "blended",
+                "risk_tier": "low",
+                "player_archetype": "proven_consensus",
+            }
+        ]
+    ).to_csv(config.paths.PLAYER_DATA_CSV, index=False)
+
+    catalog = load_player_catalog(config.paths.PLAYER_DATA_CSV, config.draft.MOCK_ADP_CONFIG)
+    player = catalog.require(1)
+
+    assert player.data_confidence == 0.8
+    assert player.to_dict()["player_archetype"] == "proven_consensus"
+
+
 def test_load_player_catalog_raises_when_mock_adp_generation_is_disabled(config) -> None:
     """Verify missing ADP data fails when synthetic ADP generation is disabled."""
     pd.DataFrame(
