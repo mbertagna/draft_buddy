@@ -19,6 +19,7 @@ from draft_buddy.core.draft_state_store import (
 )
 from draft_buddy.core.entities import DraftAction, Pick, Player, PlayerCatalog, Swap, Transfer
 from draft_buddy.core.rules_engine import RulesEngine
+from draft_buddy.core.value_service import get_flex_aware_positional_baselines
 
 
 class DraftController:
@@ -692,32 +693,11 @@ class DraftController:
 
     def get_positional_baselines(self) -> dict[str, float]:
         """Return smoothed replacement baselines by position."""
-        baselines: dict[str, float] = {}
-        team_ids = sorted(set(self.draft_order) | set(self.team_rosters.keys()))
-        for position in self.action_to_position.values():
-            available = sorted(
-                [
-                    self.player_catalog.require(player_id)
-                    for player_id in self.available_player_ids
-                    if self.player_catalog.require(player_id).position == position
-                ],
-                key=lambda player: player.projected_points,
-                reverse=True,
-            )
-            if not available:
-                baselines[position] = 0.0
-                continue
-            needed_starters = 0
-            required = self.state.roster_structure.get(position, 0)
-            for team_id in team_ids:
-                roster = self.state.roster_for_team(team_id)
-                needed_starters += max(0, required - roster.position_count(position))
-            replacement_index = min(max(0, needed_starters + 1), len(available) - 1)
-            before = available[max(0, replacement_index - 1)].projected_points
-            current = available[replacement_index].projected_points
-            after = available[min(len(available) - 1, replacement_index + 1)].projected_points
-            baselines[position] = (before + current + after) / 3.0
-        return baselines
+        return get_flex_aware_positional_baselines(
+            self.state,
+            self.player_catalog,
+            positions=tuple(self.action_to_position.values()),
+        )
 
     def _format_no_valid_pick_error(self, team_id: int) -> str:
         """Build a diagnostic message when no legal simulated pick exists."""

@@ -6,6 +6,7 @@ from typing import Dict, List
 
 import numpy as np
 
+from draft_buddy.core.value_service import calculate_replacement_demand, smoothed_replacement_baseline
 from draft_buddy.core.draft_state import DraftState
 from draft_buddy.core.entities import PlayerCatalog, TeamRoster
 from draft_buddy.core.stacking import calculate_stack_count
@@ -178,16 +179,14 @@ class FeatureExtractor:
         players = sorted_by_position[position]
         if not players:
             return 0.0
-        needed_starters = 0
-        required = self._config.draft.ROSTER_STRUCTURE.get(position, 0)
-        for team_id in range(1, self._config.draft.NUM_TEAMS + 1):
-            missing = max(0, required - draft_state.roster_for_team(team_id).position_count(position))
-            needed_starters += missing
-        replacement_index = min(max(0, needed_starters + 1), len(players) - 1)
-        score_before = float(players[max(0, replacement_index - 1)].projected_points)
-        replacement_score = float(players[replacement_index].projected_points)
-        score_after = float(players[min(len(players) - 1, replacement_index + 1)].projected_points)
-        baseline = (score_before + replacement_score + score_after) / 3.0
+        team_ids = sorted(set(draft_state.draft_order) | set(draft_state.team_rosters.keys()))
+        team_rosters = {team_id: draft_state.roster_for_team(team_id) for team_id in team_ids}
+        replacement_demand = calculate_replacement_demand(
+            team_rosters,
+            self._config.draft.ROSTER_STRUCTURE,
+            sorted_by_position,
+        )
+        baseline = smoothed_replacement_baseline(players, replacement_demand.get(position, 0))
         return float(players[0].projected_points) - baseline
 
     def _add_roster_count_features(

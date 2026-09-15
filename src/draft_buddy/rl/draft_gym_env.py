@@ -17,6 +17,7 @@ from gym import spaces
 
 from draft_buddy.config import Config
 from draft_buddy.core import DraftController, DraftState, FantasyRulesEngine, create_bot_gm
+from draft_buddy.core.value_service import calculate_player_vorp, get_flex_aware_positional_baselines
 from draft_buddy.data import exclude_inactive_players, load_player_catalog
 from draft_buddy.data.adp_pool import (
     build_episode_pool_ids,
@@ -795,38 +796,24 @@ class DraftGymEnv(gym.Env):
 
     def _get_dynamic_baseline_for_position(self, position: str, available_for_pos: List[object]) -> float:
         """Calculate smoothed replacement baseline for a sorted positional list."""
-        if not available_for_pos:
-            return 0.0
-        num_starters_needed = 0
-        required_starters = self.config.draft.ROSTER_STRUCTURE.get(position, 0)
-        for team_id in range(1, self.config.draft.NUM_TEAMS + 1):
-            roster = self.team_rosters[team_id]
-            num_starters_needed += max(0, required_starters - roster.position_count(position))
-        replacement_rank = num_starters_needed + 2
-        last_index = len(available_for_pos) - 1
-        replacement_index = min(replacement_rank - 1, last_index)
-        score_at = available_for_pos[replacement_index].projected_points
-        score_before = available_for_pos[max(0, replacement_index - 1)].projected_points
-        score_after = available_for_pos[min(last_index, replacement_index + 1)].projected_points
-        return (score_before + score_at + score_after) / 3.0
+        _ = available_for_pos
+        return self.get_positional_baselines().get(position, 0.0)
 
     def _calculate_vorp(self, position: str) -> float:
         """Calculate VORP for the best available player at a position."""
         available_for_pos = self._get_sorted_available_for_position(position)
         if not available_for_pos:
             return 0.0
-        baseline = self._get_dynamic_baseline_for_position(position, available_for_pos)
-        return available_for_pos[0].projected_points - baseline
+        return calculate_player_vorp(available_for_pos[0], self.get_positional_baselines())
 
     def get_positional_baselines(self) -> Dict[str, float]:
         """Return dynamic baselines by position."""
         self._build_sorted_available_cache()
-        return {
-            position: self._get_dynamic_baseline_for_position(
-                position, self._get_sorted_available_for_position(position)
-            )
-            for position in self.action_to_position.values()
-        }
+        return get_flex_aware_positional_baselines(
+            self._state,
+            self.player_catalog,
+            positions=tuple(self.action_to_position.values()),
+        )
 
     def _get_kth_best_available_player_by_pos(self, position: str, k: int):
         """Return the k-th best available player at a position."""
