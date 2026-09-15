@@ -168,7 +168,7 @@ def classify_player_archetype(row: pd.Series) -> str:
 
 def _market_implied_points(df: pd.DataFrame) -> pd.Series:
     """Infer market-implied weekly points from position ADP rank."""
-    implied = pd.Series(df["historical_weekly_median"], index=df.index, dtype=float)
+    implied = df["historical_weekly_median"].astype(float).copy()
     if "adp" not in df.columns:
         return implied
 
