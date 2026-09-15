@@ -31,6 +31,14 @@ from draft_buddy.data.sleeper_catalog import SleeperCatalogBuilder
 from draft_buddy.data.sleeper_client import SleeperGateway, SleeperHttpGateway
 from draft_buddy.data.sleeper_draft_sync import SleeperDraftSyncService
 from draft_buddy.data.sleeper_player_resolver import PlayerResolver, encode_sleeper_player_id
+from draft_buddy.data.valuation_calibration import (
+    apply_blend_weights,
+    build_rolling_origin_splits,
+    calculate_realized_player_values,
+    evaluate_forecast_columns,
+    fit_blend_weights,
+    write_validation_report,
+)
 
 __all__ = [
     "FantasyDataProcessor",
@@ -44,9 +52,15 @@ __all__ = [
     "encode_sleeper_player_id",
     "adp_cache_dir",
     "add_static_player_value_metrics",
+    "apply_blend_weights",
+    "build_rolling_origin_splits",
+    "calculate_realized_player_values",
+    "consensus_adp_from_sources",
+    "evaluate_forecast_columns",
     "exclude_inactive_players",
     "fantasypros_cache_dir",
     "FantasyProsGateway",
+    "fit_blend_weights",
     "get_simulation_dfs",
     "LoadedPlayerInsights",
     "insights_search_cache_dir",
@@ -63,5 +77,5 @@ __all__ = [
     "resolve_latest_player_insights_path",
     "rankings_payload_to_dataframe",
     "sleeper_cache_dir",
-    "consensus_adp_from_sources",
+    "write_validation_report",
 ]
