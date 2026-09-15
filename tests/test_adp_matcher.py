@@ -132,6 +132,30 @@ def test_merge_adp_data_returns_empty_frames_when_file_load_fails(tmp_path) -> N
     assert merged_df.empty and unmatched_df.empty and borderline_df.empty
 
 
+def test_merge_adp_data_accepts_api_dataframe_input() -> None:
+    """Verify API-provided ADP frames reuse the standard matching logic."""
+    computed_df = pd.DataFrame(
+        [
+            {
+                "player_id": 1,
+                "player_display_name": "Josh Allen",
+                "position": "QB",
+                "recent_team": "BUF",
+                "total_pts": 25.0,
+            }
+        ]
+    )
+    adp_df = pd.DataFrame(
+        [{"Rank": 1, "Player": "Josh Allen", "Team": "BUF", "POS": "QB1", "AVG": 1.0}]
+    )
+
+    merged_df, unmatched_df, borderline_df = AdpMatcher().merge_adp_data(computed_df, adp_df)
+
+    assert merged_df.iloc[0]["matched_player_id"] == 1
+    assert unmatched_df.empty
+    assert borderline_df.empty
+
+
 def test_merge_adp_data_matches_exact_single_candidate(tmp_path) -> None:
     """Verify exact standardized-name matches attach the computed player id."""
     adp_path = tmp_path / "adp.html"

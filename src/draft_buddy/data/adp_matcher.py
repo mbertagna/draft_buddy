@@ -153,7 +153,7 @@ class AdpMatcher:
     def merge_adp_data(
         self,
         computed_df: pd.DataFrame,
-        adp_filepath: str,
+        adp_filepath: str | pd.DataFrame,
         match_threshold: int = 85,
         adp_col_map: Optional[dict] = None,
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -164,8 +164,9 @@ class AdpMatcher:
         ----------
         computed_df : pd.DataFrame
             Player roster with columns player_id, player_display_name, position, recent_team, etc.
-        adp_filepath : str
-            Path to the FantasyPros ADP HTML table snapshot.
+        adp_filepath : str or pandas.DataFrame
+            Path to the FantasyPros ADP HTML table snapshot, or an already
+            normalized ADP DataFrame.
         match_threshold : int, optional
             Minimum fuzzy match score (0-100) to accept a match. Default 85.
         adp_col_map : dict, optional
@@ -179,12 +180,16 @@ class AdpMatcher:
         if adp_col_map is None:
             adp_col_map = {"Player": "Player", "Team": "Team", "POS": "POS"}
 
-        print(f"Loading ADP data from {adp_filepath}...")
-        try:
-            adp_df = self._load_adp_dataframe(adp_filepath)
-        except Exception as e:
-            print(f"Error loading ADP file: {e}")
-            return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        if isinstance(adp_filepath, pd.DataFrame):
+            print("Loading ADP data from API dataframe...")
+            adp_df = adp_filepath.copy()
+        else:
+            print(f"Loading ADP data from {adp_filepath}...")
+            try:
+                adp_df = self._load_adp_dataframe(adp_filepath)
+            except Exception as e:
+                print(f"Error loading ADP file: {e}")
+                return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
         if adp_col_map["Team"] in adp_df.columns:
             adp_df.rename(columns={adp_col_map["Team"]: "Team"}, inplace=True)

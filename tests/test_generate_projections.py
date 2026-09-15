@@ -110,6 +110,94 @@ def test_parse_cli_args_defaults_year_from_season() -> None:
     assert args.sleeper_league_id is None
 
 
+def test_fantasypros_scoring_code_maps_reception_scoring() -> None:
+    """Verify league reception scoring maps to FantasyPros scoring codes."""
+    from draft_buddy.config import load_runtime_config
+
+    ppr = load_runtime_config(league_id="red_league_10", season=2026)
+    half = load_runtime_config(league_id="redraft_nbfl_12", season=2026)
+
+    assert generate_projections.fantasypros_scoring_code(ppr) == "PPR"
+    assert generate_projections.fantasypros_scoring_code(half) == "HALF"
+
+
+def test_fantasypros_rankings_to_adp_dataframe_shapes_matcher_input() -> None:
+    """Verify normalized FantasyPros API rows convert to ADP matcher columns."""
+    rankings_df = pd.DataFrame(
+        [
+            {
+                "player_name": "Player A",
+                "team": "BUF",
+                "position": "RB",
+                "adp": 12.5,
+                "rank_std": 2.0,
+                "rank_min": 10.0,
+                "rank_max": 20.0,
+                "source": "fantasypros_adp",
+                "fetched_at": "2026-08-01T00:00:00+00:00",
+            }
+        ]
+    )
+
+    adp_df = generate_projections.fantasypros_rankings_to_adp_dataframe(rankings_df)
+
+    assert adp_df.iloc[0]["Player"] == "Player A"
+    assert adp_df.iloc[0]["AVG"] == 12.5
+    assert adp_df.iloc[0]["market_source"] == "fantasypros_adp"
+
+
+def test_resolve_adp_input_uses_fantasypros_api_when_available(monkeypatch, config) -> None:
+    """Verify projection generation prefers API ADP rows when available."""
+
+    class FakeFantasyProsGateway:
+        """Gateway returning deterministic rankings."""
+
+        def __init__(self, cache_dir: str) -> None:
+            self.cache_dir = cache_dir
+
+        def fetch_consensus_rankings(self, request, allow_stale_cache: bool = True):
+            """Return normalized ranking rows."""
+            _ = (request, allow_stale_cache)
+            return pd.DataFrame(
+                [
+                    {
+                        "player_name": "Player A",
+                        "team": "BUF",
+                        "position": "RB",
+                        "adp": 12.5,
+                        "source": "fantasypros_adp",
+                        "fetched_at": "2026-08-01T00:00:00+00:00",
+                    }
+                ]
+            )
+
+    monkeypatch.setattr(generate_projections, "FantasyProsGateway", FakeFantasyProsGateway)
+
+    adp_input = generate_projections.resolve_adp_input(config, 2026, "fallback.html")
+
+    assert isinstance(adp_input, pd.DataFrame)
+    assert adp_input.iloc[0]["AVG"] == 12.5
+
+
+def test_resolve_adp_input_falls_back_to_html_when_api_unavailable(monkeypatch, config) -> None:
+    """Verify projection generation keeps the HTML fallback on API failure."""
+
+    class FakeFantasyProsGateway:
+        """Gateway raising a market-data failure."""
+
+        def __init__(self, cache_dir: str) -> None:
+            self.cache_dir = cache_dir
+
+        def fetch_consensus_rankings(self, request, allow_stale_cache: bool = True):
+            """Raise an unavailable error."""
+            _ = (request, allow_stale_cache)
+            raise generate_projections.MarketDataUnavailable("no data")
+
+    monkeypatch.setattr(generate_projections, "FantasyProsGateway", FakeFantasyProsGateway)
+
+    assert generate_projections.resolve_adp_input(config, 2026, "fallback.html") == "fallback.html"
+
+
 def test_resolve_sleeper_league_id_uses_overlay_when_cli_omitted() -> None:
     """Verify Sleeper roster coverage uses the season overlay league id."""
     from draft_buddy.config import load_runtime_config

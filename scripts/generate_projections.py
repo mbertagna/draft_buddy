@@ -13,10 +13,14 @@ import pandas as pd
 from draft_buddy.config import load_runtime_config
 from draft_buddy.data import (
     FantasyDataProcessor,
+    FantasyProsGateway,
+    MarketDataUnavailable,
+    MarketRankingRequest,
     SleeperCatalogBuilder,
     SleeperHttpGateway,
     add_static_player_value_metrics,
     adp_cache_dir,
+    fantasypros_cache_dir,
     sleeper_cache_dir,
 )
 from draft_buddy.data.pipeline_diagnostics import build_pipeline_diagnostics
@@ -105,6 +109,97 @@ def check_sleeper_roster_coverage(cache_dir: str, sleeper_league_id: str, output
     )
 
 
+def fantasypros_scoring_code(runtime_config) -> str:
+    """Return FantasyPros scoring code for the active league rules.
+
+    Parameters
+    ----------
+    runtime_config
+        Loaded runtime configuration.
+
+    Returns
+    -------
+    str
+        FantasyPros scoring code: ``STD``, ``HALF``, or ``PPR``.
+    """
+    receptions = runtime_config.get_scoring_rules().get("receptions", 0)
+    mapping = runtime_config.data.FANTASYPROS_SCORING_BY_RECEPTION_VALUE
+    numeric_receptions = float(receptions or 0)
+    normalized = str(int(numeric_receptions)) if numeric_receptions.is_integer() else str(numeric_receptions)
+    return mapping.get(normalized, "STD")
+
+
+def fantasypros_rankings_to_adp_dataframe(rankings_df: pd.DataFrame) -> pd.DataFrame:
+    """Convert normalized FantasyPros API rankings into matcher input columns.
+
+    Parameters
+    ----------
+    rankings_df : pandas.DataFrame
+        Normalized rows from ``FantasyProsGateway``.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame shaped like the existing FantasyPros HTML parser output.
+    """
+    if rankings_df.empty:
+        return pd.DataFrame()
+    adp_df = pd.DataFrame(
+        {
+            "Rank": rankings_df["adp"],
+            "Player": rankings_df["player_name"],
+            "Team": rankings_df["team"],
+            "Bye": pd.NA,
+            "POS": rankings_df["position"],
+            "AVG": rankings_df["adp"],
+            "rank_std": rankings_df.get("rank_std"),
+            "rank_min": rankings_df.get("rank_min"),
+            "rank_max": rankings_df.get("rank_max"),
+            "market_source": rankings_df["source"],
+            "market_fetched_at": rankings_df["fetched_at"],
+        }
+    )
+    return adp_df[adp_df["AVG"].notna()].reset_index(drop=True)
+
+
+def resolve_adp_input(runtime_config, draft_year: int, fallback_html_path: str):
+    """Return API ADP data when available, otherwise the HTML fallback path.
+
+    Parameters
+    ----------
+    runtime_config
+        Loaded runtime configuration.
+    draft_year : int
+        Draft season year.
+    fallback_html_path : str
+        Existing manual FantasyPros HTML snapshot path.
+
+    Returns
+    -------
+    str or pandas.DataFrame
+        Matcher input for ADP merge.
+    """
+    if not runtime_config.data.FANTASYPROS_API_ENABLED:
+        return fallback_html_path
+    gateway = FantasyProsGateway(cache_dir=fantasypros_cache_dir(DATA_ROOT))
+    request = MarketRankingRequest(
+        season=draft_year,
+        scoring=fantasypros_scoring_code(runtime_config),
+        ranking_type="ADP",
+    )
+    try:
+        rankings_df = gateway.fetch_consensus_rankings(request, allow_stale_cache=True)
+    except MarketDataUnavailable as error:
+        print(f"FantasyPros API ADP unavailable; using HTML fallback. Reason: {error}")
+        return fallback_html_path
+    api_adp_df = fantasypros_rankings_to_adp_dataframe(rankings_df)
+    if api_adp_df.empty:
+        print("FantasyPros API ADP returned no rows; using HTML fallback.")
+        return fallback_html_path
+    print(f"Loaded {len(api_adp_df)} FantasyPros API ADP rows.")
+    return api_adp_df
+
+
 def main(
     output_path,
     draft_year,
@@ -160,9 +255,11 @@ def main(
             cache_dir=sleeper_cache_dir(DATA_ROOT), sleeper_league_id=sleeper_league_id, output_dir=output_dir
         )
 
+    adp_input = resolve_adp_input(runtime_config, draft_year, adp_file)
+
     merged_df, unmatched_df, borderline_df = processor.merge_adp_data(
         computed_df=computed_players_df,
-        adp_filepath=adp_file,
+        adp_filepath=adp_input,
         match_threshold=85
     )
 

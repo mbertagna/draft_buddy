@@ -418,7 +418,7 @@ class FantasyDataProcessor:
 
     def merge_adp_data(self,
                        computed_df: pd.DataFrame,
-                       adp_filepath: str,
+                       adp_filepath: str | pd.DataFrame,
                        match_threshold: int = 85,
                        adp_col_map: dict = None) -> tuple:
         """
