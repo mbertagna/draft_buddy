@@ -246,7 +246,7 @@ def test_render_candidate_table_omits_insight_columns_when_empty() -> None:
 
     assert "outlook" not in table
     assert "summary" not in table
-    assert "| vorp | adp | gp_frac | proj | bye |" in table
+    assert "| vorp | adp | gp_frac | proj | conf | archetype | edge | premium | bye |" in table
 
 
 def test_picks_until_next_turn_counts_from_current_index() -> None:

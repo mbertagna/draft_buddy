@@ -7,9 +7,9 @@ import json
 import numpy as np
 import pytest
 
-from draft_buddy.core import BotGM, DraftController
+from draft_buddy.core import BotGM, DraftController, DraftState
 from draft_buddy.core.draft_invariants import assert_invariants
-from draft_buddy.core.entities import Player
+from draft_buddy.core.entities import Player, PlayerCatalog
 
 
 class StubBot(BotGM):
@@ -176,6 +176,65 @@ def test_draft_controller_simulates_policy_bot_pick(config, draft_state, player_
     )
 
     assert drafted_player.position == "QB"
+
+
+def test_try_select_player_uses_contextual_value_within_position(config, rules_engine) -> None:
+    """Verify same-position selection uses contextual value instead of raw points only."""
+    catalog = PlayerCatalog(
+        [
+            Player(
+                player_id=1,
+                name="Raw Points",
+                position="RB",
+                projected_points=20.0,
+                adp=30.0,
+                stability_score=80.0,
+            ),
+            Player(
+                player_id=2,
+                name="Market Upside",
+                position="RB",
+                projected_points=19.0,
+                adp=2.0,
+                market_premium_points=20.0,
+                stability_score=80.0,
+            ),
+            Player(
+                player_id=3,
+                name="Replacement",
+                position="RB",
+                projected_points=10.0,
+                adp=80.0,
+                stability_score=80.0,
+            ),
+            Player(
+                player_id=4,
+                name="Starter",
+                position="RB",
+                projected_points=25.0,
+                adp=1.0,
+                stability_score=90.0,
+            ),
+        ]
+    )
+    state = DraftState(
+        all_player_ids=set(catalog.player_ids),
+        draft_order=[1],
+        roster_structure={"QB": 0, "RB": 1, "WR": 0, "TE": 0, "FLEX": 0},
+        bench_maxes={"QB": 0, "RB": 0, "WR": 0, "TE": 0},
+        total_roster_size_per_team=3,
+    )
+    state.add_player_to_roster(1, catalog.require(4))
+    controller = DraftController(
+        state=state,
+        player_catalog=catalog,
+        rules_engine=rules_engine,
+        action_to_position={0: "RB"},
+    )
+
+    is_valid, player = controller.try_select_player_for_team(1, "RB")
+
+    assert is_valid is True and player.player_id == 2
 
 
 def test_draft_controller_action_mask_is_boolean_vector(draft_controller) -> None:

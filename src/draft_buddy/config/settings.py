@@ -436,6 +436,7 @@ def _default_state_features() -> List[str]:
         "bye_week_14_count",
         "current_stack_count",
         "stack_target_available_flag",
+        *_candidate_value_state_features(),
     ]
 
 
@@ -450,7 +451,27 @@ def _default_enabled_state_features() -> List[str]:
             "rb_available_flag",
             "wr_available_flag",
             "te_available_flag",
+            *_candidate_value_state_features(),
         }
+    ]
+
+
+def _candidate_value_state_features() -> List[str]:
+    """Return opt-in RL candidate-value feature names."""
+    metric_names = [
+        "draft_now_score",
+        "data_confidence",
+        "market_premium",
+        "p20",
+        "p50",
+        "p80",
+        "survival",
+        "dropoff",
+    ]
+    return [
+        f"top_candidate_{position}_{metric}"
+        for position in ["qb", "rb", "wr", "te"]
+        for metric in metric_names
     ]
 
 

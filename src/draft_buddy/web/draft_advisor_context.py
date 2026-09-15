@@ -257,6 +257,17 @@ def _format_gp_frac(value: Any) -> str:
     return f"{numeric:.2f}"
 
 
+def _format_optional_metric(value: Any, digits: int = 1) -> str:
+    """Format an optional numeric metric for markdown tables."""
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "N/A"
+    if not math.isfinite(numeric):
+        return "N/A"
+    return f"{numeric:.{digits}f}"
+
+
 def _format_bye_week(bye_week: Optional[int]) -> str:
     """Format bye week for markdown tables."""
     if bye_week is None or (isinstance(bye_week, float) and np.isnan(bye_week)):
@@ -343,20 +354,21 @@ def _render_candidate_table(
     if include_insights:
         header = (
             "| player_id | name | nfl | status | injury | depth | vorp | adp | gp_frac | "
-            "proj | bye | outlook | summary | depth_role | playing_time | injury_risk | "
+            "proj | conf | archetype | edge | premium | bye | outlook | summary | depth_role | playing_time | injury_risk | "
             "floor | upside | draft_lean | handcuff | recovery | evidence_as_of | tags | "
             "confidence | fields_unknown |"
         )
         divider = (
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
-            "--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+            "--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
+            "--- | --- | --- | --- |"
         )
     else:
         header = (
             "| player_id | name | nfl | status | injury | depth | vorp | adp | "
-            "gp_frac | proj | bye |"
+            "gp_frac | proj | conf | archetype | edge | premium | bye |"
         )
-        divider = "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+        divider = "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
 
     lines = [f"### {title}", "", header, divider]
     for row in rows:
@@ -373,6 +385,10 @@ def _render_candidate_table(
             _format_adp(player.adp),
             _format_gp_frac(player.games_played_frac),
             f"{player.projected_points:.1f}",
+            _format_optional_metric(player.stability_score, 0),
+            _optional_player_field(player.player_archetype),
+            _format_optional_metric(player.projection_edge_points),
+            _format_optional_metric(player.market_premium_points),
             _format_bye_week(player.bye_week),
         ]
         if include_insights:
@@ -896,6 +912,12 @@ def build_advisor_context(
         "- **gp_frac**: Fraction of games played last season; R = rookie (no NFL sample). "
         "Low gp_frac may reflect a past injury or free-agency transition — check status and "
         "insights before ruling the player out.",
+        "- **conf**: Stability score from data confidence, projection/market agreement, and "
+        "market dispersion when available.",
+        "- **archetype**: Transparent value label such as proven_consensus, market_backed_upside, "
+        "model_backed_value, uncertain_upside, or confirmed_risk.",
+        "- **edge / premium**: History above market-implied points / market above history. "
+        "Premium flags players the market expects to improve beyond recent production.",
         "- **nfl / status / injury / depth**: NFL team and Sleeper roster/injury/depth metadata when known.",
         "- **outlook_phrase**: Short research summary (offline, may be missing).",
         "- **summary**: Longer offline research blurb (up to two sentences; may be missing).",

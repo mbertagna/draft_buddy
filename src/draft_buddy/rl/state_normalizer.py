@@ -73,6 +73,19 @@ class StateNormalizer:
             "current_stack_count": 10.0,
             "stack_target_available_flag": 1.0,
         }
+        for position in ["qb", "rb", "wr", "te"]:
+            self._feature_max_bounds.update(
+                {
+                    f"top_candidate_{position}_draft_now_score": 150.0,
+                    f"top_candidate_{position}_data_confidence": 1.0,
+                    f"top_candidate_{position}_market_premium": 25.0,
+                    f"top_candidate_{position}_p20": 400.0,
+                    f"top_candidate_{position}_p50": 400.0,
+                    f"top_candidate_{position}_p80": 400.0,
+                    f"top_candidate_{position}_survival": 1.0,
+                    f"top_candidate_{position}_dropoff": 100.0,
+                }
+            )
 
     def normalize(self, state_values_map: Dict[str, float]) -> np.ndarray:
         """

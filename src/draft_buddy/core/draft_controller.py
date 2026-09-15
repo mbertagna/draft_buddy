@@ -19,7 +19,10 @@ from draft_buddy.core.draft_state_store import (
 )
 from draft_buddy.core.entities import DraftAction, Pick, Player, PlayerCatalog, Swap, Transfer
 from draft_buddy.core.rules_engine import RulesEngine
-from draft_buddy.core.value_service import get_flex_aware_positional_baselines
+from draft_buddy.core.value_service import (
+    calculate_dynamic_player_value,
+    get_flex_aware_positional_baselines,
+)
 
 
 class DraftController:
@@ -231,7 +234,22 @@ class DraftController:
             return False, None
         if not self.can_draft_position(team_id, position_choice, is_manual=False):
             return False, None
-        return True, max(eligible_players, key=lambda player: player.projected_points)
+        baselines = self.get_positional_baselines()
+        return True, max(
+            eligible_players,
+            key=lambda player: (
+                calculate_dynamic_player_value(
+                    player=player,
+                    draft_state=self.state,
+                    player_catalog=self.player_catalog,
+                    team_id=team_id,
+                    baselines=baselines,
+                ).draft_now_score,
+                player.projected_points,
+                -player.adp if np.isfinite(player.adp) else float("-inf"),
+                -player.player_id,
+            ),
+        )
 
     def draft_player(self, player_id: int, is_manual_pick: bool = True) -> None:
         """Apply a pick for the team currently on the clock."""

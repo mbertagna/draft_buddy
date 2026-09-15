@@ -361,6 +361,19 @@ def test_get_players_uses_default_vorp_sort_for_unknown_key(config, fake_session
     assert response.status_code == 200 and payload[0]["player_id"] == 4
 
 
+def test_get_players_includes_dynamic_value_fields(config, fake_session) -> None:
+    """Verify player table payload exposes value, confidence, and wait metrics."""
+    client = TestClient(create_app(config=config, session_manager=FakeSessionManager(fake_session)))
+
+    response = client.get("/api/players?sort_by=draft_now_score&sort_dir=desc")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload[0]["draft_now_score"] is not None
+    assert "wait_loss_points" in payload[0]
+    assert "stability_score" in payload[0]
+
+
 def test_get_players_formats_nan_bye_week_as_na(config, fake_session) -> None:
     """Verify player payload uses N/A when bye_week is NaN."""
     player = fake_session.player_catalog.get(1)

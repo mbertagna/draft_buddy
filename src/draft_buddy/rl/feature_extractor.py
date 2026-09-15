@@ -6,10 +6,15 @@ from typing import Dict, List
 
 import numpy as np
 
-from draft_buddy.core.value_service import calculate_replacement_demand, smoothed_replacement_baseline
 from draft_buddy.core.draft_state import DraftState
 from draft_buddy.core.entities import PlayerCatalog, TeamRoster
 from draft_buddy.core.stacking import calculate_stack_count
+from draft_buddy.core.value_service import (
+    calculate_dynamic_player_value,
+    calculate_replacement_demand,
+    get_flex_aware_positional_baselines,
+    smoothed_replacement_baseline,
+)
 
 
 class FeatureExtractor:
@@ -78,6 +83,14 @@ class FeatureExtractor:
                 key = f"top_3_{position.lower()}_points_{rank}"
                 if key in enabled:
                     global_features[key] = self._kth_points(sorted_by_position, position, rank)
+
+        self._add_candidate_value_features(
+            global_features,
+            draft_state,
+            player_catalog,
+            sorted_by_position,
+            enabled,
+        )
 
         return global_features
 
@@ -168,6 +181,55 @@ class FeatureExtractor:
         if len(players) < rank:
             return 0.0
         return float(players[rank - 1].projected_points)
+
+    def _add_candidate_value_features(
+        self,
+        global_features: Dict[str, float],
+        draft_state: DraftState,
+        player_catalog: PlayerCatalog,
+        sorted_by_position: Dict[str, List[object]],
+        enabled: set,
+    ) -> None:
+        """Add opt-in top candidate value features by position."""
+        baselines = get_flex_aware_positional_baselines(draft_state, player_catalog)
+        for position in ["QB", "RB", "WR", "TE"]:
+            prefix = f"top_candidate_{position.lower()}"
+            if not any(feature.startswith(prefix) for feature in enabled):
+                continue
+            values = [
+                calculate_dynamic_player_value(
+                    player=player,
+                    draft_state=draft_state,
+                    player_catalog=player_catalog,
+                    team_id=draft_state.agent_team_id,
+                    baselines=baselines,
+                )
+                for player in sorted_by_position[position]
+            ]
+            values.sort(key=lambda value: value.draft_now_score, reverse=True)
+            top_value = values[0] if values else None
+            next_value = values[1] if len(values) > 1 else None
+            player = player_catalog.get(top_value.player_id) if top_value else None
+            metric_values = {
+                "draft_now_score": top_value.draft_now_score if top_value else 0.0,
+                "data_confidence": getattr(player, "data_confidence", 0.0) if player else 0.0,
+                "market_premium": getattr(player, "market_premium_points", 0.0) if player else 0.0,
+                "p20": getattr(player, "projected_points_p20", 0.0) if player else 0.0,
+                "p50": getattr(player, "projected_points_p50", None) if player else 0.0,
+                "p80": getattr(player, "projected_points_p80", 0.0) if player else 0.0,
+                "survival": top_value.survival_probability if top_value else 0.0,
+                "dropoff": (
+                    top_value.draft_now_score - next_value.draft_now_score
+                    if top_value and next_value
+                    else 0.0
+                ),
+            }
+            if player and metric_values["p50"] is None:
+                metric_values["p50"] = player.projected_points
+            for metric, value in metric_values.items():
+                key = f"{prefix}_{metric}"
+                if key in enabled:
+                    global_features[key] = float(value or 0.0)
 
     def _calculate_vorp(
         self,

@@ -179,6 +179,11 @@ class DraftSession:
         return self._state.available_player_ids
 
     @property
+    def draft_state(self):
+        """Return the underlying draft state for read-only value calculations."""
+        return self._state
+
+    @property
     def draft_history(self):
         """Return typed draft history."""
         return self._state.draft_history

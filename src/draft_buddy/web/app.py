@@ -14,6 +14,7 @@ from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 
 from draft_buddy.config import Config
+from draft_buddy.core.value_service import calculate_dynamic_player_value
 from draft_buddy.data.insights.loader import LoadedPlayerInsights
 from draft_buddy.simulator.service import SeasonSimulationService
 from draft_buddy.web.advisor_factory import AdvisorGatewayRegistry
@@ -580,12 +581,21 @@ def create_app(
 
         baselines = session.get_positional_baselines()
         player_vorp_map = {}
+        dynamic_value_map = {}
         for player in filtered_players:
             if getattr(player, "data_completeness", "full") != "full":
                 player_vorp_map[player.player_id] = None
+                dynamic_value_map[player.player_id] = None
             else:
                 player_vorp_map[player.player_id] = player.projected_points - baselines.get(
                     player.position, 0.0
+                )
+                dynamic_value_map[player.player_id] = calculate_dynamic_player_value(
+                    player=player,
+                    draft_state=session.draft_state,
+                    player_catalog=session.player_catalog,
+                    team_id=session.current_team_picking or session.agent_team_id,
+                    baselines=baselines,
                 )
 
         reverse = sort_dir.lower() == "desc"
@@ -599,6 +609,15 @@ def create_app(
                 value = player.adp if np.isfinite(player.adp) else float("inf")
             elif sort_by == "projected_points":
                 value = player.projected_points if not incomplete else float("-inf")
+            elif sort_by == "draft_now_score":
+                dynamic_value = dynamic_value_map.get(player.player_id)
+                value = float("-inf") if dynamic_value is None else dynamic_value.draft_now_score
+            elif sort_by == "wait_loss_points":
+                dynamic_value = dynamic_value_map.get(player.player_id)
+                value = float("-inf") if dynamic_value is None else dynamic_value.wait_loss_points
+            elif sort_by == "stability_score":
+                value = getattr(player, "stability_score", None)
+                value = float("-inf") if value is None else value
             elif sort_by == "name":
                 value = player.name.lower()
             elif sort_by == "position":
@@ -616,6 +635,7 @@ def create_app(
         for player in filtered_players:
             insight = insights_by_id.get(player.player_id)
             completeness = getattr(player, "data_completeness", "full")
+            dynamic_value = dynamic_value_map.get(player.player_id)
             payload.append(
                 {
                     "player_id": player.player_id,
@@ -625,8 +645,32 @@ def create_app(
                         _json_number(player.projected_points) if completeness == "full" else None
                     ),
                     "vorp": _json_number(player_vorp_map.get(player.player_id)),
+                    "draft_now_score": _json_number(
+                        dynamic_value.draft_now_score if dynamic_value is not None else None
+                    ),
+                    "wait_loss_points": _json_number(
+                        dynamic_value.wait_loss_points if dynamic_value is not None else None
+                    ),
+                    "survival_probability": _json_number(
+                        dynamic_value.survival_probability if dynamic_value is not None else None
+                    ),
+                    "risk_penalty_points": _json_number(
+                        dynamic_value.risk_penalty_points if dynamic_value is not None else None
+                    ),
                     "games_played_frac": _json_number(player.games_played_frac),
                     "adp": _json_number(player.adp),
+                    "data_confidence": _json_number(player.data_confidence),
+                    "market_implied_points": _json_number(player.market_implied_points),
+                    "projection_edge_points": _json_number(player.projection_edge_points),
+                    "market_premium_points": _json_number(player.market_premium_points),
+                    "agreement_score": _json_number(player.agreement_score),
+                    "stability_score": _json_number(player.stability_score),
+                    "projection_basis": player.projection_basis,
+                    "risk_tier": player.risk_tier,
+                    "player_archetype": player.player_archetype,
+                    "projected_points_p20": _json_number(player.projected_points_p20),
+                    "projected_points_p50": _json_number(player.projected_points_p50),
+                    "projected_points_p80": _json_number(player.projected_points_p80),
                     "bye_week": player.bye_week if player.bye_week and not np.isnan(player.bye_week) else "N/A",
                     "team": player.team,
                     "sleeper_status": player.sleeper_status,

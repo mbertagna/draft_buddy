@@ -44,3 +44,21 @@ def test_available_slot_features_clamp_to_remaining_roster_room(
     assert feature_map["available_roster_slots_rb"] == 1.0
     assert feature_map["available_roster_slots_wr"] == 1.0
     assert feature_map["available_roster_slots_te"] == 1.0
+
+
+def test_candidate_value_features_are_available_when_enabled(
+    config, draft_state, player_catalog
+) -> None:
+    """Verify opt-in candidate value features populate the state map."""
+    config.training.ENABLED_STATE_FEATURES = [
+        "top_candidate_rb_draft_now_score",
+        "top_candidate_rb_data_confidence",
+        "top_candidate_rb_survival",
+        "top_candidate_rb_dropoff",
+    ]
+
+    extractor = FeatureExtractor(config, StateNormalizer(config))
+    feature_map = extractor.compute_global_state_features(draft_state, player_catalog)
+
+    assert feature_map["top_candidate_rb_draft_now_score"] != 0.0
+    assert "top_candidate_rb_survival" in feature_map

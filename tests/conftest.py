@@ -235,13 +235,23 @@ def player_factory():
 def fake_session(player_catalog: PlayerCatalog):
     """Return a lightweight fake session for web route tests."""
     pick = Pick(pick_number=1, team_id=1, player_id=1)
-    state = SimpleNamespace()
+    state = DraftState(
+        all_player_ids=set(player_catalog.player_ids),
+        draft_order=[1, 2, 3, 4, 4, 3, 2, 1],
+        roster_structure={"QB": 1, "RB": 1, "WR": 1, "TE": 1, "FLEX": 1},
+        bench_maxes={"QB": 0, "RB": 1, "WR": 1, "TE": 0},
+        total_roster_size_per_team=7,
+        agent_team_id=1,
+    )
     session = SimpleNamespace(
         current_pick_number=2,
+        current_team_picking=1,
+        agent_team_id=1,
         draft_history=[pick],
         player_catalog=player_catalog,
         available_player_ids=set(player_catalog.player_ids),
         _state=state,
+        draft_state=state,
         weekly_projections=player_catalog.to_weekly_projections(),
         team_manager_mapping={1: "Team 1", 2: "Team 2", 3: "Team 3", 4: "Team 4"},
         get_ui_state=lambda: {"ok": True},

@@ -2081,6 +2081,9 @@
                             <th class="outlook-col" id="outlook-col-header" title="Research outlook from offline insights">Outlook</th>
                             <th data-sort-key="position">Position</th>
                             <th data-sort-key="projected_points">Proj. Pts</th>
+                            <th data-sort-key="draft_now_score" title="Current-pick value: VORP plus urgency, edge, upside, and risk">Value</th>
+                            <th data-sort-key="stability_score" title="Agreement and data-confidence score">Conf</th>
+                            <th data-sort-key="wait_loss_points" title="Expected points lost if this player does not survive to your next pick">Wait</th>
                             <th data-sort-key="vorp">VORP</th>
                             <th data-sort-key="games_played_frac">GP Frac</th>
                             <th data-sort-key="team">Team</th>
@@ -3478,7 +3481,7 @@
             if (players.length === 0) {
                 const row = playerTbody.insertRow();
                 const cell = row.insertCell();
-                cell.colSpan = 13;
+                cell.colSpan = 16;
                 cell.innerText = 'No players found with current filters.';
                 return;
             }
@@ -3486,6 +3489,10 @@
             // ----- Compute dynamic ranges from currently visible players -----
             const numberOrNull = (v) => (v === null || v === undefined || Number.isNaN(Number(v))) ? null : Number(v);
             const finiteNumber = (v) => (typeof v === 'number' && isFinite(v));
+            const formatMetric = (v, digits = 1) => {
+                const numeric = numberOrNull(v);
+                return (numeric === null || !isFinite(numeric)) ? 'N/A' : numeric.toFixed(digits);
+            };
 
             const adpValues = players
                 .map(p => numberOrNull(p.adp))
@@ -3496,6 +3503,15 @@
             const vorpValues = players
                 .map(p => numberOrNull(p.vorp))
                 .filter(v => v !== null && isFinite(v));
+            const valueValues = players
+                .map(p => numberOrNull(p.draft_now_score))
+                .filter(v => v !== null && isFinite(v));
+            const stabilityValues = players
+                .map(p => numberOrNull(p.stability_score))
+                .filter(v => v !== null && isFinite(v));
+            const waitValues = players
+                .map(p => numberOrNull(p.wait_loss_points))
+                .filter(v => v !== null && isFinite(v));
             const gpValues = players
                 .map(p => (p.games_played_frac === 'R' ? null : numberOrNull(p.games_played_frac)))
                 .filter(v => v !== null && isFinite(v));
@@ -3504,6 +3520,9 @@
             const [adpMin, adpMax] = minMax(adpValues);
             const [ptsMin, ptsMax] = minMax(ptsValues);
             const [vorpMin, vorpMax] = minMax(vorpValues);
+            const [valueMin, valueMax] = minMax(valueValues);
+            const [stabilityMin, stabilityMax] = minMax(stabilityValues);
+            const [waitMin, waitMax] = minMax(waitValues);
             const [gpMin, gpMax] = minMax(gpValues);
 
             players.forEach(player => {
@@ -3587,6 +3606,50 @@
                     ptsCell.classList.add('missing');
                 } else {
                     ptsCell.innerText = ptsVal.toFixed(1);
+                }
+                // Current-pick Value
+                const valueCell = row.insertCell();
+                const valueVal = numberOrNull(player.draft_now_score);
+                if (valueVal == null || player.data_completeness === 'sleeper_only') {
+                    valueCell.innerText = '—';
+                    valueCell.classList.add('missing');
+                } else {
+                    valueCell.innerText = valueVal.toFixed(1);
+                    valueCell.title = [
+                        `VORP: ${formatMetric(player.vorp)}`,
+                        `Edge: ${formatMetric(player.projection_edge_points)}`,
+                        `Premium: ${formatMetric(player.market_premium_points)}`,
+                        `Risk: ${formatMetric(player.risk_penalty_points)}`,
+                    ].join(' | ');
+                }
+                // Confidence
+                const confCell = row.insertCell();
+                const stabilityVal = numberOrNull(player.stability_score);
+                if (stabilityVal == null || player.data_completeness === 'sleeper_only') {
+                    confCell.innerText = '—';
+                    confCell.classList.add('missing');
+                } else {
+                    confCell.innerText = stabilityVal.toFixed(0);
+                    confCell.title = [
+                        player.player_archetype || 'unclassified',
+                        player.projection_basis || 'unknown basis',
+                        `agreement ${formatMetric(player.agreement_score, 0)}`,
+                        `data ${formatMetric(player.data_confidence, 2)}`,
+                        player.risk_tier ? `risk ${player.risk_tier}` : null,
+                    ].filter(Boolean).join(' | ');
+                }
+                // Wait Loss
+                const waitCell = row.insertCell();
+                const waitVal = numberOrNull(player.wait_loss_points);
+                const survivalVal = numberOrNull(player.survival_probability);
+                if (waitVal == null || player.data_completeness === 'sleeper_only') {
+                    waitCell.innerText = '—';
+                    waitCell.classList.add('missing');
+                } else {
+                    waitCell.innerText = waitVal.toFixed(1);
+                    waitCell.title = (survivalVal == null)
+                        ? 'Next-pick availability unknown'
+                        : `Survival to next pick: ${(survivalVal * 100).toFixed(0)}%`;
                 }
                 // VORP
                 const vorpCell = row.insertCell();
@@ -3679,6 +3742,9 @@
                 // ----- Conditional Coloring -----
                 if (adpValNum !== null) adpCell.style.background = getInvertedMetricColor(adpValNum, adpMin, adpMax);
                 if (ptsVal != null) ptsCell.style.background = getStandardMetricColor(ptsVal, ptsMin, ptsMax);
+                if (valueVal != null) valueCell.style.background = getStandardMetricColor(valueVal, valueMin, valueMax);
+                if (stabilityVal != null) confCell.style.background = getStandardMetricColor(stabilityVal, stabilityMin, stabilityMax);
+                if (waitVal != null) waitCell.style.background = getStandardMetricColor(waitVal, waitMin, waitMax);
                 if (vorpVal != null) vorpCell.style.background = getStandardMetricColor(vorpVal, vorpMin, vorpMax);
 
                 // Position/team hues are surfaced as a subtle accent (left
