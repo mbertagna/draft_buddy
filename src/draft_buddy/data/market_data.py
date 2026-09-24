@@ -175,6 +175,7 @@ class FantasyProsGateway:
         fetched_at = datetime.now(timezone.utc).isoformat()
         try:
             payload = self._fetch_json(request)
+            assert_rankings_payload_complete(payload)
             self._write_cache(request, payload, fetched_at)
         except Exception as error:
             if not allow_stale_cache:
@@ -192,6 +193,7 @@ class FantasyProsGateway:
             "type": request.ranking_type,
             "position": request.position.upper(),
             "week": request.week,
+            "limit": 500,
         }
         headers = {"x-api-key": self._api_key}
         last_error: Exception | None = None
@@ -244,7 +246,40 @@ class FantasyProsGateway:
         payload = envelope.get("payload")
         if not isinstance(payload, dict):
             raise MarketDataUnavailable(f"Invalid FantasyPros cache: {latest_path}") from original_error
+        try:
+            assert_rankings_payload_complete(payload)
+        except MarketDataUnavailable as error:
+            raise MarketDataUnavailable(str(error)) from original_error
         return payload, str(envelope.get("fetched_at", ""))
+
+
+def assert_rankings_payload_complete(payload: Dict[str, Any]) -> None:
+    """Reject FantasyPros payloads that are truncated by the public API cap.
+
+    Parameters
+    ----------
+    payload : dict
+        Raw consensus-rankings response body.
+
+    Raises
+    ------
+    MarketDataUnavailable
+        If the payload is marked limited or returns fewer players than ``count``.
+    """
+    players = payload.get("players")
+    player_count = len(players) if isinstance(players, list) else 0
+    reported_count = payload.get("count")
+    try:
+        reported_total = int(reported_count) if reported_count is not None else None
+    except (TypeError, ValueError):
+        reported_total = None
+    limited = bool(payload.get("public_api_limited"))
+    if limited or (reported_total is not None and reported_total > player_count):
+        raise MarketDataUnavailable(
+            "FantasyPros rankings are truncated "
+            f"(players={player_count}, count={reported_total}, "
+            f"limit={payload.get('limit')}, public_api_limited={limited})."
+        )
 
 
 def rankings_payload_to_dataframe(

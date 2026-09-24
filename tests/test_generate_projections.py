@@ -179,7 +179,23 @@ def test_resolve_adp_input_uses_fantasypros_api_when_available(monkeypatch, conf
     assert adp_input.iloc[0]["AVG"] == 12.5
 
 
-def test_resolve_adp_input_falls_back_to_html_when_api_unavailable(monkeypatch, config) -> None:
+def test_resolve_adp_input_falls_back_to_html_when_api_truncated(monkeypatch, config) -> None:
+    """Verify a truncated FantasyPros ADP board uses the HTML snapshot instead."""
+
+    class FakeFantasyProsGateway:
+        """Gateway reporting a public-API ranking cap."""
+
+        def __init__(self, cache_dir: str) -> None:
+            self.cache_dir = cache_dir
+
+        def fetch_consensus_rankings(self, request, allow_stale_cache: bool = True):
+            """Raise because the live board is truncated."""
+            _ = (request, allow_stale_cache)
+            raise generate_projections.MarketDataUnavailable("truncated")
+
+    monkeypatch.setattr(generate_projections, "FantasyProsGateway", FakeFantasyProsGateway)
+
+    assert generate_projections.resolve_adp_input(config, 2026, "fallback.html") == "fallback.html"
     """Verify projection generation keeps the HTML fallback on API failure."""
 
     class FakeFantasyProsGateway:

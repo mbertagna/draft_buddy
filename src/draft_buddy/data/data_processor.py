@@ -273,7 +273,7 @@ class FantasyDataProcessor:
             allowlist = self._nflverse_player_id_allowlist(resolved_catalog_df)
 
             print("Fetching player pool and historical data...")
-            legacy_raw_df, _draft_year_stats_df = self._downloader.fetch_legacy_stats(
+            legacy_raw_df, draft_year_stats_df = self._downloader.fetch_legacy_stats(
                 draft_year=draft_year,
                 start_year=self.start_year,
                 end_year=draft_year,
@@ -285,6 +285,11 @@ class FantasyDataProcessor:
             )
             draft_players_df = self._attach_legacy_stats_to_catalog(
                 resolved_catalog_df, legacy_stats_df
+            )
+            scored_current = self._scoring_service.apply_scoring(draft_year_stats_df)
+            current_stats_df = self._scoring_service.aggregate_current_season_stats(scored_current)
+            draft_players_df = self._scoring_service.attach_current_season_stats(
+                draft_players_df, current_stats_df
             )
             search_rank_report = self._build_search_rank_nflverse_coverage(
                 all_sleeper_players_df, draft_players_df

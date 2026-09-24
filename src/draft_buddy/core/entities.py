@@ -74,6 +74,13 @@ class Player:
     stability_score: Optional[float] = None
     risk_tier: Optional[str] = None
     player_archetype: Optional[str] = None
+    weekly_points_mean: Optional[float] = None
+    weekly_points_median: Optional[float] = None
+    weekly_points_floor: Optional[float] = None
+    weekly_points_ceiling: Optional[float] = None
+    current_season_ppg: Optional[float] = None
+    current_season_games: int = 0
+    sleeper_depth_chart_order: Optional[int] = None
 
     def to_dict(self) -> dict:
         """Serialize the player to a JSON-friendly dictionary.
@@ -112,6 +119,13 @@ class Player:
             "stability_score": self.stability_score,
             "risk_tier": self.risk_tier,
             "player_archetype": self.player_archetype,
+            "weekly_points_mean": self.weekly_points_mean,
+            "weekly_points_median": self.weekly_points_median,
+            "weekly_points_floor": self.weekly_points_floor,
+            "weekly_points_ceiling": self.weekly_points_ceiling,
+            "current_season_ppg": self.current_season_ppg,
+            "current_season_games": self.current_season_games,
+            "sleeper_depth_chart_order": self.sleeper_depth_chart_order,
         }
 
 
@@ -217,17 +231,29 @@ class PlayerCatalog:
         return PlayerCatalog((*self.players, player))
 
     def to_weekly_projections(self) -> dict[int, dict[str, object]]:
-        """Build flat weekly projection data from season projections.
+        """Build weekly projection data from season projections.
+
+        Bye weeks are zeroed. Other weeks repeat ``projected_points``.
 
         Returns
         -------
         dict[int, dict[str, object]]
-            Mapping of player id to position and 18 repeated point values.
+            Mapping of player id to position and 18 weekly point values.
         """
-        return {
-            player.player_id: {"pts": [player.projected_points] * 18, "pos": player.position}
-            for player in self.players
-        }
+        weekly: dict[int, dict[str, object]] = {}
+        for player in self.players:
+            points = [float(player.projected_points)] * 18
+            bye_week = player.bye_week
+            if bye_week is not None:
+                try:
+                    bye = int(bye_week)
+                except (TypeError, ValueError):
+                    bye = None
+                else:
+                    if 1 <= bye <= 18:
+                        points[bye - 1] = 0.0
+            weekly[player.player_id] = {"pts": points, "pos": player.position}
+        return weekly
 
 
 @dataclass(frozen=True, slots=True)

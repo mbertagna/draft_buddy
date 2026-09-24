@@ -154,6 +154,23 @@ def test_attach_legacy_stats_by_player_id_preserves_sleeper_player_id() -> None:
     assert bool(result.iloc[0]["is_rookie_original"]) is False
 
 
+def test_aggregate_legacy_stats_records_weekly_floor() -> None:
+    """Verify the weekly floor is the historical 10th percentile, not noise."""
+    historical = pd.DataFrame(
+        [
+            {"player_id": 1, "total_pts": 10.0, "season": 2024, "player_display_name": "A", "position": "WR", "recent_team": "BUF", "week": 1},
+            {"player_id": 1, "total_pts": 10.0, "season": 2024, "player_display_name": "A", "position": "WR", "recent_team": "BUF", "week": 2},
+            {"player_id": 1, "total_pts": 10.0, "season": 2024, "player_display_name": "A", "position": "WR", "recent_team": "BUF", "week": 3},
+            {"player_id": 1, "total_pts": 10.0, "season": 2025, "player_display_name": "A", "position": "WR", "recent_team": "BUF", "week": 1},
+            {"player_id": 1, "total_pts": 20.0, "season": 2025, "player_display_name": "A", "position": "WR", "recent_team": "BUF", "week": 2},
+        ]
+    )
+
+    result = ScoringService().aggregate_legacy_stats(historical)
+
+    assert float(result.iloc[0]["weekly_points_floor"]) == pytest.approx(10.0)
+
+
 def test_aggregate_legacy_stats_uses_mean_when_requested() -> None:
     """Verify legacy aggregation switches to mean when requested."""
     historical = pd.DataFrame(
@@ -179,7 +196,7 @@ def test_aggregate_legacy_stats_tolerates_missing_metadata_columns() -> None:
 
     result = ScoringService().aggregate_legacy_stats(historical)
 
-    assert list(result.columns) == ["player_id", "total_pts", "games_played_frac"]
+    assert float(result.iloc[0]["total_pts"]) == 11.0
 
 
 def test_apply_rookie_metadata_marks_rookies_with_r() -> None:

@@ -149,9 +149,29 @@ class ScoringService:
             player_display_name, position, recent_team.
         """
         agg_func = "median" if measure_of_center == "median" else "mean"
-        legacy_stats_df = scored_historical_df.groupby("player_id").agg(
-            total_pts=("total_pts", agg_func)
+        if scored_historical_df.empty or "player_id" not in scored_historical_df.columns:
+            return pd.DataFrame(
+                columns=[
+                    "player_id",
+                    "total_pts",
+                    "games_played_frac",
+                    "weekly_points_mean",
+                    "weekly_points_median",
+                    "weekly_points_floor",
+                    "weekly_points_ceiling",
+                    "historical_games",
+                ]
+            )
+        grouped = scored_historical_df.groupby("player_id")["total_pts"]
+        legacy_stats_df = grouped.agg(total_pts=agg_func).reset_index()
+        distribution = grouped.agg(
+            weekly_points_mean="mean",
+            weekly_points_median="median",
+            weekly_points_floor=lambda values: float(values.quantile(0.10)),
+            weekly_points_ceiling=lambda values: float(values.quantile(0.90)),
+            historical_games="count",
         ).reset_index()
+        legacy_stats_df = legacy_stats_df.merge(distribution, on="player_id", how="left")
 
         fraction_df = self.calculate_games_played_frac(scored_historical_df)
         legacy_stats_df = legacy_stats_df.merge(
@@ -176,6 +196,75 @@ class ScoringService:
             pass
 
         return legacy_stats_df
+
+    def aggregate_current_season_stats(self, scored_current_df: pd.DataFrame) -> pd.DataFrame:
+        """Aggregate completed current-season weeks into PPG and games played.
+
+        Parameters
+        ----------
+        scored_current_df : pd.DataFrame
+            Scored draft-year weekly rows with ``player_id`` and ``total_pts``.
+
+        Returns
+        -------
+        pd.DataFrame
+            One row per player with ``current_season_ppg`` and
+            ``current_season_games``.
+        """
+        columns = ["player_id", "current_season_ppg", "current_season_games"]
+        if scored_current_df.empty or "player_id" not in scored_current_df.columns:
+            return pd.DataFrame(columns=columns)
+        return (
+            scored_current_df.groupby("player_id")["total_pts"]
+            .agg(current_season_ppg="mean", current_season_games="count")
+            .reset_index()
+        )
+
+    def attach_current_season_stats(
+        self,
+        catalog_df: pd.DataFrame,
+        current_stats_df: pd.DataFrame,
+        *,
+        nflverse_player_id_col: str = "nflverse_player_id",
+    ) -> pd.DataFrame:
+        """Attach current-season PPG without inventing games for unmatched players.
+
+        Parameters
+        ----------
+        catalog_df : pd.DataFrame
+            Catalog with a stable ``player_id`` and nflverse id column.
+        current_stats_df : pd.DataFrame
+            Rows keyed by nflverse ``player_id``.
+        nflverse_player_id_col : str, optional
+            Join column on ``catalog_df``.
+
+        Returns
+        -------
+        pd.DataFrame
+            Catalog with ``current_season_ppg`` and ``current_season_games``.
+            Players with no current-season rows get ``0`` games.
+        """
+        merged = catalog_df.copy()
+        if (
+            not current_stats_df.empty
+            and nflverse_player_id_col in merged.columns
+            and "player_id" in current_stats_df.columns
+        ):
+            stats = current_stats_df.rename(columns={"player_id": nflverse_player_id_col})
+            merged = merged.merge(
+                stats[[nflverse_player_id_col, "current_season_ppg", "current_season_games"]],
+                on=nflverse_player_id_col,
+                how="left",
+            )
+        if "current_season_games" not in merged.columns:
+            merged["current_season_games"] = 0
+        else:
+            merged["current_season_games"] = (
+                pd.to_numeric(merged["current_season_games"], errors="coerce").fillna(0).astype(int)
+            )
+        if "current_season_ppg" not in merged.columns:
+            merged["current_season_ppg"] = pd.NA
+        return merged
 
     def merge_roster_with_legacy(
         self,
@@ -359,9 +448,16 @@ class ScoringService:
             Catalog with ``total_pts``, ``games_played_frac``, and
             ``is_rookie_original`` added. Sleeper ``player_id`` is preserved.
         """
+        extra_legacy_cols = [
+            "weekly_points_mean",
+            "weekly_points_median",
+            "weekly_points_floor",
+            "weekly_points_ceiling",
+            "historical_games",
+        ]
         legacy_cols = [
             column
-            for column in ["player_id", "total_pts", "games_played_frac"]
+            for column in ["player_id", "total_pts", "games_played_frac", *extra_legacy_cols]
             if column in legacy_stats_df.columns
         ]
         if legacy_cols:
@@ -449,6 +545,14 @@ class ScoringService:
             "sleeper_status",
             "sleeper_injury_status",
             "sleeper_depth_chart_position",
+            "depth_chart_order",
+            "weekly_points_mean",
+            "weekly_points_median",
+            "weekly_points_floor",
+            "weekly_points_ceiling",
+            "historical_games",
+            "current_season_ppg",
+            "current_season_games",
         ]
         cols_exist = [c for c in final_cols if c in draft_players_df.columns]
         return (

@@ -82,6 +82,7 @@ def load_player_catalog(filepath: str, adp_config: Dict) -> PlayerCatalog:
                 team=team,
                 **_read_sleeper_fields(row, sleeper_columns),
                 **_read_valuation_fields(row),
+                **_read_form_fields(row),
             )
         )
 
@@ -147,6 +148,34 @@ def _read_valuation_fields(row: pd.Series) -> Dict[str, Optional[float] | Option
     for field_name in text_fields:
         values[field_name] = _optional_string(row.get(field_name))
     return values
+
+
+def _read_form_fields(row: pd.Series) -> Dict[str, Optional[float] | Optional[int]]:
+    """Read weekly distribution and current-season scoring columns.
+
+    Parameters
+    ----------
+    row : pandas.Series
+        Source CSV row.
+
+    Returns
+    -------
+    dict
+        Optional form fields for ``Player``.
+    """
+    games = _optional_float(row.get("current_season_games"))
+    order = _optional_float(row.get("depth_chart_order"))
+    if order is None:
+        order = _optional_float(row.get("sleeper_depth_chart_order"))
+    return {
+        "weekly_points_mean": _optional_float(row.get("weekly_points_mean")),
+        "weekly_points_median": _optional_float(row.get("weekly_points_median")),
+        "weekly_points_floor": _optional_float(row.get("weekly_points_floor")),
+        "weekly_points_ceiling": _optional_float(row.get("weekly_points_ceiling")),
+        "current_season_ppg": _optional_float(row.get("current_season_ppg")),
+        "current_season_games": int(games or 0),
+        "sleeper_depth_chart_order": None if order is None else int(order),
+    }
 
 
 def _optional_float(value) -> Optional[float]:

@@ -14,6 +14,7 @@ from draft_buddy.data.market_data import (
     FantasyProsGateway,
     MarketDataUnavailable,
     MarketRankingRequest,
+    assert_rankings_payload_complete,
     consensus_adp_from_sources,
     rankings_payload_to_dataframe,
 )
@@ -72,7 +73,36 @@ class FakeSession:
         return next_response
 
 
-def test_rankings_payload_to_dataframe_normalizes_adp_rows() -> None:
+def test_assert_rankings_payload_complete_rejects_public_api_cap() -> None:
+    """Verify a free-tier 10-player ADP payload is treated as unavailable."""
+    payload = {
+        "count": 366,
+        "limit": 10,
+        "public_api_limited": True,
+        "players": [{"player_name": "Jahmyr Gibbs"}] * 10,
+    }
+
+    with pytest.raises(MarketDataUnavailable, match="truncated"):
+        assert_rankings_payload_complete(payload)
+
+
+def test_fantasypros_gateway_does_not_cache_truncated_payload(tmp_path: Path) -> None:
+    """Verify truncated live responses are not stored as the latest ranking cache."""
+    payload = {
+        "count": 366,
+        "limit": 10,
+        "public_api_limited": True,
+        "players": [{"player_name": "Jahmyr Gibbs", "player_position_id": "RB"}] * 10,
+    }
+    session = FakeSession([_fake_response(payload)])
+    gateway = FantasyProsGateway(cache_dir=str(tmp_path), api_key="key", session=session)
+    request = MarketRankingRequest(season=2026, scoring="HALF")
+    try:
+        gateway.fetch_consensus_rankings(request)
+    except MarketDataUnavailable:
+        pass
+
+    assert not (tmp_path / "2026_half_adp_all_0_latest.json").exists()
     """Verify FantasyPros ADP rows normalize with provenance and dispersion."""
     frame = rankings_payload_to_dataframe(_ranking_payload(), "ADP", "2026-08-01T00:00:00+00:00")
 

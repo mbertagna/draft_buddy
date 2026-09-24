@@ -117,6 +117,21 @@ class FakeScoringService:
             ]
         )
 
+    def attach_current_season_stats(self, catalog_df: pd.DataFrame, current_stats_df: pd.DataFrame, **kwargs):
+        """Pass the catalog through and record the call."""
+        _ = (current_stats_df, kwargs)
+        self.calls.append("attach_current_season_stats")
+        result = catalog_df.copy()
+        result["current_season_games"] = 0
+        result["current_season_ppg"] = pd.NA
+        return result
+
+    def aggregate_current_season_stats(self, scored_df: pd.DataFrame) -> pd.DataFrame:
+        """Return an empty current-season frame and record the call."""
+        self.calls.append("aggregate_current_season_stats")
+        _ = scored_df
+        return pd.DataFrame(columns=["player_id", "current_season_ppg", "current_season_games"])
+
     def merge_draft_year_with_legacy(self, draft_year_scored_df: pd.DataFrame, legacy_stats_df: pd.DataFrame) -> pd.DataFrame:
         self.calls.append("merge_draft_year_with_legacy")
         return draft_year_scored_df.assign(games_played_frac=1.0)
