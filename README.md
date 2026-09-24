@@ -70,6 +70,7 @@ Common output locations on the host:
 | --- | --- | --- |
 | `webapp` | Run the FastAPI web application | `python scripts/run_webapp.py` |
 | `train` | Run RL training | `python scripts/train.py` |
+| `trades` | In-season trade intelligence CLI | `python scripts/inseason_trades.py --help` |
 | `test` | Run the test suite | `python -m pytest tests/` |
 | `test-cov` | Run tests with coverage outputs | `python -m pytest tests/ --cov=src/draft_buddy ...` |
 | `data` | Generate player projections and merged draft data | `python scripts/generate_projections.py --year 2026` |
@@ -92,6 +93,82 @@ Run training:
 ```bash
 docker compose run --rm train
 ```
+
+### In-season trades
+
+Trade points are scored NFL weeks, not ADP. The two-year median, mean, floor, and ceiling come from 2024–2025 weekly fantasy points. `2026` points per game come from games already played this season. Rest-of-season totals blend those two. ADP is used when the catalog is built: rookies with no history get points by interpolating nearby veterans, and draft rankings use ADP. A veteran who already has weekly stats is not moved by ADP in trade search.
+
+Run the steps in this order. `DRAFT_BUDDY_LEAGUE` picks the league. NBFL (`redraft_nbfl_12`) has a Sleeper id, so it pulls live rosters. Red League (`red_league_10`) does not, so you load a JSON snapshot. `config/inseason/manual_snapshot.example.json` is the shape to hand a chatbot when converting a screenshot. `--user` and `--partner` accept a team id or a manager name. `--send` and `--receive` accept a player id or a name.
+
+With Docker Compose, pass the league with `-e` (or set it in `.env`). A shell prefix like `DRAFT_BUDDY_LEAGUE=red_league_10 docker compose run ...` does **not** override `.env` inside the container.
+
+1. Build the player catalog. Repeat this when you want a new week of stats in the floor, median, mean, and ceiling.
+
+```bash
+docker compose run --rm -e DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 data
+```
+
+2. Load who owns whom. Sleeper leagues:
+
+```bash
+docker compose run --rm -e DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 trades snapshot
+```
+
+Leagues without a Sleeper id:
+
+```bash
+docker compose run --rm -e DRAFT_BUDDY_LEAGUE=red_league_10 trades load --file config/inseason/red_league_10_snapshot.json
+```
+
+3. Turn the catalog into remaining-season weekly points for the current rosters.
+
+```bash
+docker compose run --rm -e DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 trades projections
+```
+
+4. Search every other team for your best offers. The list is sorted by your playoff-odds gain. Each player line shows this year's points per game plus the two-year median, mean, floor, and ceiling.
+
+```bash
+docker compose run --rm -e DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 trades search --user Michael --csv data/leagues/redraft_nbfl_12/runtime/2026/trade_search.csv
+```
+
+Add `--partner "Erol"` to score deals with only that manager. Omit it to search every other team.
+
+A schedule file is optional. Sleeper `snapshot` downloads the remaining slate and fills only weeks the API does not return. Other leagues keep a generated round-robin until you add a `matchups` list to the snapshot or run `schedule --file`. Home and away are a manager name or a team id. Weeks you leave out stay generated.
+
+```bash
+docker compose run --rm -e DRAFT_BUDDY_LEAGUE=red_league_10 trades schedule --file config/inseason/red_league_10_schedule.json
+```
+
+`--csv` writes every ranked trade to a file. Open that file when the terminal scrollback cuts the list off. The terminal still prints the same ranking. `send_1_*` is the first player you give up, `send_2_*` the second. `receive_1_*` and `receive_2_*` are the players you get. A blank slot means that side of the deal has only one player.
+
+| Column | Meaning |
+| --- | --- |
+| `rank` | Order in the file. 1 is the best trade for you. |
+| `partner` / `partner_team_id` | The other manager's name and team id. |
+| `you_playoff_pp` / `them_playoff_pp` | Change in playoff odds, in percentage points, averaged over the season sims. `2.0` means 2 points more likely to make the playoffs, not 2% of the previous chance. |
+| `you_expected_wins_delta` / `them_expected_wins_delta` | Change in expected season wins, including the record already locked. |
+| `you_starter_ros_delta` / `them_starter_ros_delta` | Change in projected points from the best lineup over the rest of the regular season. This is calculated before the season sims. |
+| `*_player_id` / `*_position` / `*_name` | Who is in that slot. |
+| `*_2026_ppg` | Points per game already scored this season. Blank when they have no 2026 games. |
+| `*_median` / `*_mean` | Typical and average weekly points from the 2024–2025 seasons. |
+| `*_floor` / `*_ceiling` | A bad week and a big week from those two seasons (10th and 90th percentile), in points per game. |
+
+A trade is good for you when `you_playoff_pp` is at least 2 and `you_expected_wins_delta` is above 0. It is good for both managers when all four `you_*` and `them_*` playoff and wins columns are above 0. Both can gain when the deal helps you pass teams who are not part of the trade.
+
+Add `--exhaustive` to score every 1-for-1, 2-for-1, 1-for-2, and 2-for-2 deal between your skill players and each other roster. That mode skips the top-player pool and the candidate cap, then sorts by your playoff gain. Every offer still uses 200 season sims. Those sims run on every CPU by default; `--workers 4` sets the process count and `--workers 1` stays on one process. The terminal prints the first 20; the CSV has the rest.
+
+```bash
+docker compose run --rm -e DRAFT_BUDDY_LEAGUE=red_league_10 trades search --user "California Fourskin" --exhaustive --csv data/leagues/red_league_10/runtime/2026/trade_search.csv
+```
+
+5. Score one deal you already have in mind.
+
+```bash
+docker compose run --rm -e DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 trades evaluate --user Michael --partner Erol --send "Drake London" --receive "Ja'Marr Chase"
+```
+
+A full search explores all nine opponents, but only the top 60 heuristic candidates get Monte Carlo simulation (`trade.max_monte_carlo_candidates` in the league JSON). When one matchup dominates that pre-filter — for example, sell-high QBs on your bench against a team with elite WR/RB starters — every printed offer can be with the same partner. Use `evaluate --partner <name>` to score a specific deal with someone else. Each surviving offer is simulated at 200 runs, plus one baseline season, about 12,200 remaining-season sims total. Every simulated deal is kept and sorted by your playoff-odds gain, including ones where the partner loses. `show` prints the current snapshot and rest-of-season totals without searching. Add `--json` to `search` or `evaluate` for the same numbers as JSON.
 
 Generate training plots from the latest CSV metrics without training:
 
@@ -314,7 +391,7 @@ open data/guides/exports/model_adp_*_*teams_*_*.html
 **Override league temporarily:**
 
 ```bash
-DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 docker compose run --rm position-guide
+docker compose run --rm -e DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 position-guide
 ```
 
 **Useful flags:**
@@ -403,6 +480,7 @@ behave consistently across services.
 
 - `scripts/run_webapp.py`
 - `scripts/train.py`
+- `scripts/inseason_trades.py`
 - `scripts/generate_projections.py`
 - `scripts/fetch_player_insight_search.py`
 - `scripts/synthesize_player_insights.py`

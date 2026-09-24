@@ -1,5 +1,6 @@
 x-app-base: &app-base
   build: .
+  image: draft_buddy:latest
   working_dir: /app
   volumes:
     - .:/app
@@ -20,6 +21,11 @@ services:
   train:
     <<: *app-base
     command: python scripts/train.py
+
+  trades:
+    <<: *app-base
+    entrypoint: ["python", "scripts/inseason_trades.py"]
+    command: ["--help"]
 
   test:
     <<: *app-base

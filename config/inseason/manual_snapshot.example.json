@@ -1,0 +1,21 @@
+{
+  "current_week": 4,
+  "teams": [
+    {
+      "team": "SKOL!",
+      "wins": 3,
+      "losses": 0,
+      "ties": 0,
+      "player_names": ["Jahmyr Gibbs", "Ja'Marr Chase", "Brock Bowers", "A.J. Brown"]
+    },
+    {
+      "team": "California Fourskin",
+      "wins": 2,
+      "losses": 1,
+      "player_names": ["Bijan Robinson", "Puka Nacua", "Saquon Barkley", "Drake London"]
+    }
+  ],
+  "matchups": [
+    {"week": 4, "home": "California Fourskin", "away": "Huckleberry"}
+  ]
+}

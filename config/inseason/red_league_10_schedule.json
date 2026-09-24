@@ -1,0 +1,87 @@
+{
+  "matchups": [
+    {"week": 1, "away": "Huckleberry", "home": "Sean"},
+    {"week": 1, "away": "richryans47", "home": "SKOL!"},
+    {"week": 1, "away": "Club 33", "home": "Paul's Dawgs"},
+    {"week": 1, "away": "Field Goals Only", "home": "Team Sully LLC"},
+    {"week": 1, "away": "California Fourskin", "home": "Team X"},
+
+    {"week": 2, "away": "richryans47", "home": "Huckleberry"},
+    {"week": 2, "away": "Sean", "home": "Club 33"},
+    {"week": 2, "away": "SKOL!", "home": "Field Goals Only"},
+    {"week": 2, "away": "Paul's Dawgs", "home": "California Fourskin"},
+    {"week": 2, "away": "Team Sully LLC", "home": "Team X"},
+
+    {"week": 3, "away": "Huckleberry", "home": "Club 33"},
+    {"week": 3, "away": "Field Goals Only", "home": "richryans47"},
+    {"week": 3, "away": "California Fourskin", "home": "Sean"},
+    {"week": 3, "away": "Team X", "home": "SKOL!"},
+    {"week": 3, "away": "Team Sully LLC", "home": "Paul's Dawgs"},
+
+    {"week": 4, "away": "Field Goals Only", "home": "Huckleberry"},
+    {"week": 4, "away": "Club 33", "home": "California Fourskin"},
+    {"week": 4, "away": "richryans47", "home": "Team X"},
+    {"week": 4, "away": "Sean", "home": "Team Sully LLC"},
+    {"week": 4, "away": "SKOL!", "home": "Paul's Dawgs"},
+
+    {"week": 5, "away": "Team Sully LLC", "home": "Club 33"},
+    {"week": 5, "away": "SKOL!", "home": "Field Goals Only"},
+    {"week": 5, "away": "Paul's Dawgs", "home": "Huckleberry"},
+    {"week": 5, "away": "Sean", "home": "richryans47"},
+    {"week": 5, "away": "Team X", "home": "California Fourskin"},
+
+    {"week": 6, "away": "Team X", "home": "Huckleberry"},
+    {"week": 6, "away": "California Fourskin", "home": "Team Sully LLC"},
+    {"week": 6, "away": "Field Goals Only", "home": "Paul's Dawgs"},
+    {"week": 6, "away": "Club 33", "home": "SKOL!"},
+    {"week": 6, "away": "richryans47", "home": "Sean"},
+
+    {"week": 7, "away": "Huckleberry", "home": "Team Sully LLC"},
+    {"week": 7, "away": "Paul's Dawgs", "home": "Team X"},
+    {"week": 7, "away": "SKOL!", "home": "California Fourskin"},
+    {"week": 7, "away": "Sean", "home": "Field Goals Only"},
+    {"week": 7, "away": "richryans47", "home": "Club 33"},
+
+    {"week": 8, "away": "Paul's Dawgs", "home": "Huckleberry"},
+    {"week": 8, "away": "Team Sully LLC", "home": "SKOL!"},
+    {"week": 8, "away": "Team X", "home": "Sean"},
+    {"week": 8, "away": "California Fourskin", "home": "richryans47"},
+    {"week": 8, "away": "Field Goals Only", "home": "Club 33"},
+
+    {"week": 9, "away": "Huckleberry", "home": "SKOL!"},
+    {"week": 9, "away": "Sean", "home": "Paul's Dawgs"},
+    {"week": 9, "away": "richryans47", "home": "Team Sully LLC"},
+    {"week": 9, "away": "Club 33", "home": "Team X"},
+    {"week": 9, "away": "Field Goals Only", "home": "California Fourskin"},
+
+    {"week": 10, "away": "Sean", "home": "Huckleberry"},
+    {"week": 10, "away": "SKOL!", "home": "richryans47"},
+    {"week": 10, "away": "Paul's Dawgs", "home": "Club 33"},
+    {"week": 10, "away": "Team Sully LLC", "home": "Field Goals Only"},
+    {"week": 10, "away": "Team X", "home": "California Fourskin"},
+
+    {"week": 11, "away": "Huckleberry", "home": "richryans47"},
+    {"week": 11, "away": "Club 33", "home": "Sean"},
+    {"week": 11, "away": "Field Goals Only", "home": "SKOL!"},
+    {"week": 11, "away": "Paul's Dawgs", "home": "Team Sully LLC"},
+    {"week": 11, "away": "California Fourskin", "home": "Team X"},
+
+    {"week": 12, "away": "Club 33", "home": "Huckleberry"},
+    {"week": 12, "away": "richryans47", "home": "Field Goals Only"},
+    {"week": 12, "away": "Sean", "home": "California Fourskin"},
+    {"week": 12, "away": "SKOL!", "home": "Team X"},
+    {"week": 12, "away": "Paul's Dawgs", "home": "Team Sully LLC"},
+
+    {"week": 13, "away": "Huckleberry", "home": "Field Goals Only"},
+    {"week": 13, "away": "California Fourskin", "home": "Club 33"},
+    {"week": 13, "away": "Team X", "home": "richryans47"},
+    {"week": 13, "away": "Team Sully LLC", "home": "Sean"},
+    {"week": 13, "away": "Paul's Dawgs", "home": "SKOL!"},
+
+    {"week": 14, "away": "California Fourskin", "home": "Huckleberry"},
+    {"week": 14, "away": "Field Goals Only", "home": "Team X"},
+    {"week": 14, "away": "Club 33", "home": "Team Sully LLC"},
+    {"week": 14, "away": "richryans47", "home": "Paul's Dawgs"},
+    {"week": 14, "away": "Sean", "home": "SKOL!"}
+  ]
+}
