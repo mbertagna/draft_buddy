@@ -116,7 +116,7 @@ def calculate_roster_scores(
         if temp_pos_counts[player.position] < position_limit:
             temp_pos_counts[player.position] += 1
         else:
-            logger.warning(
+            logger.debug(
                 "Player %s (%s) could not be optimally assigned; kept on bench.",
                 getattr(player, "name", player),
                 player.position,

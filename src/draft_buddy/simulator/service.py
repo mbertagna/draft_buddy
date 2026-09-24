@@ -72,7 +72,14 @@ class SeasonSimulationService:
         num_playoff_teams = int(self._config.reward.REGULAR_SEASON_REWARD.get("NUM_PLAYOFF_TEAMS", 6))
         regular_results, regular_records, playoff_results_df, playoffs_tree, winner = (
             simulate_season_fast(
-                weekly_projections, matchups_df, rosters, 2025, "", False, num_playoff_teams
+                weekly_projections,
+                matchups_df,
+                rosters,
+                2025,
+                "",
+                False,
+                num_playoff_teams,
+                roster_structure=dict(self._config.draft.ROSTER_STRUCTURE),
             )
         )
         winner_label = str(winner) if winner is not None else None

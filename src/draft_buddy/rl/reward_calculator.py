@@ -161,6 +161,7 @@ class RewardCalculator:
                     "",
                     False,
                     num_playoff_teams,
+                    roster_structure=dict(config.draft.ROSTER_STRUCTURE),
                 )
                 agent_team_key = team_label(agent_team_id)
                 sim_reward = 0.0

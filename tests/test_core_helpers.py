@@ -171,13 +171,13 @@ def test_categorize_roster_by_slots_assigns_best_remaining_flex(player_factory) 
 
 
 def test_calculate_roster_scores_logs_unassignable_bench_player(caplog, player_factory) -> None:
-    """Verify an over-limit bench player emits the warning branch."""
+    """Verify an over-limit bench player is logged and kept on the bench."""
     roster = [
         player_factory(1, "QB", 20.0),
         player_factory(2, "QB", 10.0),
         player_factory(3, "QB", 5.0),
     ]
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.DEBUG):
         scores = calculate_roster_scores(
             roster,
             {"QB": 1, "RB": 0, "WR": 0, "TE": 0, "FLEX": 0},

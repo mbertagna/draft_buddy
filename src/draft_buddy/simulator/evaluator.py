@@ -2,27 +2,74 @@
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
+DEFAULT_ROSTER_STRUCTURE = {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 3}
 REQUIRED_STARTERS = {"QB": 1, "RB": 2, "WR": 2, "TE": 1}
 FLEX_ELIGIBLE = {"RB", "WR", "TE"}
-FLEX_MAX = 1
+FLEX_MAX = 3
 
 
-def _optimal_lineup_points(pos_points_for_week: Dict[str, List[float]]) -> float:
+def _starter_requirements(roster_structure: Optional[Dict[str, int]] = None) -> Dict[str, int]:
+    """Return dedicated starter counts by position.
+
+    Parameters
+    ----------
+    roster_structure : dict of str to int, optional
+        League roster slots including FLEX.
+
+    Returns
+    -------
+    dict of str to int
+        Required starters for QB/RB/WR/TE.
+    """
+    structure = roster_structure or DEFAULT_ROSTER_STRUCTURE
+    return {
+        "QB": int(structure.get("QB", 0)),
+        "RB": int(structure.get("RB", 0)),
+        "WR": int(structure.get("WR", 0)),
+        "TE": int(structure.get("TE", 0)),
+    }
+
+
+def _flex_slots(roster_structure: Optional[Dict[str, int]] = None) -> int:
+    """Return the number of FLEX starter slots.
+
+    Parameters
+    ----------
+    roster_structure : dict of str to int, optional
+        League roster slots including FLEX.
+
+    Returns
+    -------
+    int
+        FLEX count.
+    """
+    structure = roster_structure or DEFAULT_ROSTER_STRUCTURE
+    return int(structure.get("FLEX", 0))
+
+
+def _optimal_lineup_points(
+    pos_points_for_week: Dict[str, List[float]],
+    roster_structure: Optional[Dict[str, int]] = None,
+) -> float:
     """Compute optimal single-week lineup points from positional lists.
 
     Parameters
     ----------
     pos_points_for_week : Dict[str, List[float]]
         Mapping of position to sorted weekly points.
+    roster_structure : dict of str to int, optional
+        League starter slots. Defaults to QB/RB/WR/TE plus three FLEX.
 
     Returns
     -------
     float
         Optimal lineup points for the week.
     """
+    required = _starter_requirements(roster_structure)
+    flex_max = _flex_slots(roster_structure)
     by_pos_points: Dict[str, List[float]] = {
         "QB": list(pos_points_for_week.get("QB", [])),
         "RB": list(pos_points_for_week.get("RB", [])),
@@ -30,22 +77,24 @@ def _optimal_lineup_points(pos_points_for_week: Dict[str, List[float]]) -> float
         "TE": list(pos_points_for_week.get("TE", [])),
     }
     total_points = 0.0
-    for position, needed in REQUIRED_STARTERS.items():
+    for position, needed in required.items():
         candidates = by_pos_points.get(position, [])
         for index in range(min(needed, len(candidates))):
             total_points += candidates[index]
     flex_candidates: List[float] = []
     for position in FLEX_ELIGIBLE:
-        starter_count = REQUIRED_STARTERS.get(position, 0)
+        starter_count = required.get(position, 0)
         flex_candidates.extend(by_pos_points.get(position, [])[starter_count:])
     flex_candidates.sort(reverse=True)
-    for index in range(min(FLEX_MAX, len(flex_candidates))):
+    for index in range(min(flex_max, len(flex_candidates))):
         total_points += flex_candidates[index]
     return float(total_points)
 
 
 def _solve_matchups_single_thread(
-    precomputed_pos_points: Dict[str, List[Dict[str, List[float]]]], matchups_df: pd.DataFrame
+    precomputed_pos_points: Dict[str, List[Dict[str, List[float]]]],
+    matchups_df: pd.DataFrame,
+    roster_structure: Optional[Dict[str, int]] = None,
 ) -> pd.DataFrame:
     """Resolve all matchup scores for one schedule table."""
     out_rows = []
@@ -59,10 +108,14 @@ def _solve_matchups_single_thread(
         home_week_points = precomputed_pos_points.get(str(home_team), [])
         away_week_points = precomputed_pos_points.get(str(away_team), [])
         home_score = (
-            _optimal_lineup_points(home_week_points[week - 1]) if len(home_week_points) >= week else 0.0
+            _optimal_lineup_points(home_week_points[week - 1], roster_structure)
+            if len(home_week_points) >= week
+            else 0.0
         )
         away_score = (
-            _optimal_lineup_points(away_week_points[week - 1]) if len(away_week_points) >= week else 0.0
+            _optimal_lineup_points(away_week_points[week - 1], roster_structure)
+            if len(away_week_points) >= week
+            else 0.0
         )
         row = row.copy()
         row["Away Score"] = away_score
@@ -218,6 +271,7 @@ def generate_and_resolve_playoffs(
     regular_records: list,
     num_playoff_teams: int,
     start_week: int,
+    roster_structure: Optional[Dict[str, int]] = None,
 ) -> pd.DataFrame:
     """Generate and resolve playoff bracket rounds."""
     all_seeds = [record[0] for record in regular_records]
@@ -253,7 +307,9 @@ def generate_and_resolve_playoffs(
         for home_team, away_team in pairs:
             rows["Away Manager(s)"].append(away_team)
             rows["Home Manager(s)"].append(home_team)
-        round_dataframe = _solve_matchups_single_thread(precomputed_pos_points, pd.DataFrame(rows))
+        round_dataframe = _solve_matchups_single_thread(
+            precomputed_pos_points, pd.DataFrame(rows), roster_structure
+        )
         winners = []
         for _, result_row in round_dataframe.iterrows():
             if float(result_row["Home Score"]) >= float(result_row["Away Score"]):
@@ -361,6 +417,55 @@ def _precompute_manager_weekly_points(
     return managers_map
 
 
+def _empty_record() -> Dict[str, object]:
+    """Return a zeroed W/L/T/pts record."""
+    return {"W": 0, "L": 0, "T": 0, "pts": 0.0}
+
+
+def _apply_starting_records(
+    simulated_records: list,
+    starting_records: Optional[Dict[str, Dict[str, object]]],
+    rosters: Dict[str, List[int]],
+) -> list:
+    """Add locked W-L-T onto remaining-week simulation records.
+
+    Parameters
+    ----------
+    simulated_records : list
+        Sorted ``(label, record)`` pairs from remaining matchups.
+    starting_records : dict, optional
+        Locked records keyed by team label.
+    rosters : dict
+        Rosters used to ensure every team appears.
+
+    Returns
+    -------
+    list
+        Combined records sorted by wins, ties, then points.
+    """
+    combined: Dict[str, Dict[str, object]] = {
+        str(label): _empty_record() for label in rosters
+    }
+    if starting_records:
+        for label, record in starting_records.items():
+            combined[str(label)] = {
+                "W": int(record.get("W", 0)),
+                "L": int(record.get("L", 0)),
+                "T": int(record.get("T", 0)),
+                "pts": float(record.get("pts", 0.0)),
+            }
+    for name, record in simulated_records:
+        entry = combined.setdefault(str(name), _empty_record())
+        entry["W"] = int(entry["W"]) + int(record.get("W", 0))
+        entry["L"] = int(entry["L"]) + int(record.get("L", 0))
+        entry["T"] = int(entry["T"]) + int(record.get("T", 0))
+        entry["pts"] = round(float(entry["pts"]) + float(record.get("pts", 0.0)), 2)
+    return sorted(
+        combined.items(),
+        key=lambda item: (-item[1]["W"], -item[1]["T"], -item[1]["pts"]),
+    )
+
+
 def simulate_season_fast(
     weekly_projections: Dict[int, dict],
     matchups: pd.DataFrame,
@@ -369,6 +474,9 @@ def simulate_season_fast(
     output_file_prefix: str = "",
     save_data: bool = False,
     num_playoff_teams: int = 6,
+    start_week: int = 1,
+    starting_records: Optional[Dict[str, Dict[str, object]]] = None,
+    roster_structure: Optional[Dict[str, int]] = None,
 ):
     """Run full regular season and playoffs with optimal weekly lineups.
 
@@ -388,20 +496,38 @@ def simulate_season_fast(
         Whether to write simulation CSV files.
     num_playoff_teams : int, optional
         Number of playoff teams.
+    start_week : int, optional
+        First week to simulate. Earlier matchups are ignored.
+    starting_records : dict, optional
+        Locked W/L/T/pts keyed by team label.
+    roster_structure : dict of str to int, optional
+        Starter slots including FLEX.
 
     Returns
     -------
     tuple
         Regular results, regular records, playoff results, playoff tree, winner.
     """
+    working = matchups
+    if not matchups.empty and int(start_week) > 1:
+        working = matchups.loc[matchups["Week"] >= int(start_week)].copy()
     regular_max_week = int(matchups["Week"].max()) if not matchups.empty else 14
     playoff_rounds = max(1, int(np.ceil(np.log2(max(2, int(num_playoff_teams))))))
     max_week_needed = min(18, regular_max_week + playoff_rounds + 1)
     precomputed = _precompute_manager_weekly_points(weekly_projections, rosters, max_week_needed)
-    regular_results = _solve_matchups_single_thread(precomputed, matchups)
-    regular_records = _get_records_from_matchups_results_df(regular_results)
+    if working.empty:
+        regular_results = working
+        simulated_records = []
+    else:
+        regular_results = _solve_matchups_single_thread(precomputed, working, roster_structure)
+        simulated_records = _get_records_from_matchups_results_df(regular_results)
+    regular_records = _apply_starting_records(simulated_records, starting_records, rosters)
     playoff_results = generate_and_resolve_playoffs(
-        precomputed, regular_records, int(num_playoff_teams), start_week=regular_max_week + 1
+        precomputed,
+        regular_records,
+        int(num_playoff_teams),
+        start_week=regular_max_week + 1,
+        roster_structure=roster_structure,
     )
     playoffs_tree, winner = _get_playoffs_tree(playoff_results)
     if save_data and output_file_prefix:

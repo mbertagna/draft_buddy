@@ -108,6 +108,49 @@ class SleeperGateway(ABC):
             DST abbreviations such as ``\"DET\"`` are preserved.
         """
 
+    @abstractmethod
+    def fetch_nfl_state(self) -> dict:
+        """Fetch the current NFL season state from Sleeper.
+
+        Returns
+        -------
+        dict
+            Payload including ``week`` and ``season_type``.
+        """
+
+    @abstractmethod
+    def fetch_league_roster_payloads(self, league_id: str) -> list:
+        """Fetch raw Sleeper roster objects for a league.
+
+        Parameters
+        ----------
+        league_id : str
+            Sleeper league identifier.
+
+        Returns
+        -------
+        list
+            Raw roster dicts including ``players``, ``reserve``, and
+            ``settings``.
+        """
+
+    @abstractmethod
+    def fetch_league_matchups(self, league_id: str, week: int) -> list:
+        """Fetch Sleeper matchup rows for one week.
+
+        Parameters
+        ----------
+        league_id : str
+            Sleeper league identifier.
+        week : int
+            NFL week number.
+
+        Returns
+        -------
+        list
+            Raw matchup dicts including ``roster_id`` and ``matchup_id``.
+        """
+
 
 class SleeperHttpGateway(SleeperGateway):
     """Fetches Sleeper data over HTTP with a daily-refreshed local cache."""
@@ -158,6 +201,18 @@ class SleeperHttpGateway(SleeperGateway):
         """Fetch all picks recorded for one Sleeper draft."""
         raw_picks = self._get_json(f"{self._BASE_URL}/draft/{draft_id}/picks")
         return self._to_draft_picks_dataframe(raw_picks)
+
+    def fetch_nfl_state(self) -> dict:
+        """Fetch the current NFL season state from Sleeper."""
+        return self._get_json(f"{self._BASE_URL}/state/nfl")
+
+    def fetch_league_roster_payloads(self, league_id: str) -> list:
+        """Fetch raw Sleeper roster objects for a league."""
+        return self._get_json(f"{self._BASE_URL}/league/{league_id}/rosters")
+
+    def fetch_league_matchups(self, league_id: str, week: int) -> list:
+        """Fetch Sleeper matchup rows for one week."""
+        return self._get_json(f"{self._BASE_URL}/league/{league_id}/matchups/{week}")
 
     @staticmethod
     def _to_draft_picks_dataframe(raw_picks) -> pd.DataFrame:

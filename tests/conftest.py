@@ -50,6 +50,8 @@ def config(tmp_path: Path, player_dataframe: pd.DataFrame) -> Config:
     config.paths.DRAFT_STATE_FILE = str(data_dir / "draft_state.json")
     config.paths.DRAFT_STATE_PREV_FILE = str(data_dir / "draft_state.prev.json")
     config.paths.SAVED_STATES_DIR = str(tmp_path / "saved_states")
+    config.paths.INSEASON_STATE_FILE = str(data_dir / "inseason_state.json")
+    config.paths.INSEASON_PROJECTIONS_FILE = str(data_dir / "inseason_projections.json")
     Path(config.paths.SAVED_STATES_DIR).mkdir(exist_ok=True)
 
     config.draft.NUM_TEAMS = 4
@@ -67,6 +69,10 @@ def config(tmp_path: Path, player_dataframe: pd.DataFrame) -> Config:
     config.reward.ENABLE_SEASON_SIM_REWARD = False
     config.reward.ENABLE_COMPETITIVE_REWARD = False
     config.reward.USE_RANDOM_MATCHUPS = False
+    config.inseason.monte_carlo_runs_eval = 2
+    config.inseason.monte_carlo_runs_search = 2
+    config.trade.max_monte_carlo_candidates = 4
+    config.trade.ros_point_floor = 0.0
     player_dataframe.to_csv(config.paths.PLAYER_DATA_CSV, index=False)
     return config
 

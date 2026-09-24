@@ -28,7 +28,7 @@ def test_season_simulation_service_passes_id_rosters_and_fallback_projections(
     draft_state.append_pick(Pick(pick_number=2, team_id=1, player_id=2))
     captured = {}
 
-    def fake_simulate(weekly_projections, matchups_df, rosters, *_args):
+    def fake_simulate(weekly_projections, matchups_df, rosters, *_args, **_kwargs):
         captured["weekly_projections"] = weekly_projections
         captured["matchups"] = matchups_df
         captured["rosters"] = rosters
@@ -106,7 +106,7 @@ def test_season_simulation_service_translates_matchup_manager_names(
     draft_state.add_player_to_roster(1, player_catalog.require(1))
     captured = {}
 
-    def fake_simulate(_weekly_projections, matchups_df, rosters, *_args):
+    def fake_simulate(_weekly_projections, matchups_df, rosters, *_args, **_kwargs):
         captured["matchups"] = matchups_df
         captured["rosters"] = rosters
         return pd.DataFrame(), [], pd.DataFrame(), "", "Team 1"
@@ -148,7 +148,7 @@ def test_season_simulation_service_uses_random_matchups_with_team_labels(
     draft_state.add_player_to_roster(2, player_catalog.require(2))
     captured = {}
 
-    def fake_simulate(_weekly_projections, matchups_df, rosters, *_args):
+    def fake_simulate(_weekly_projections, matchups_df, rosters, *_args, **_kwargs):
         captured["matchups"] = matchups_df
         captured["rosters"] = rosters
         return pd.DataFrame(), [], pd.DataFrame(), "", "Team 1"
@@ -200,7 +200,7 @@ def test_season_simulation_service_uses_explicit_weekly_projections(
     captured = {}
     explicit_projections = {1: {"pos": "QB", "pts": [99.0]}}
 
-    def fake_simulate(weekly_projections, matchups_df, rosters, *_args):
+    def fake_simulate(weekly_projections, matchups_df, rosters, *_args, **_kwargs):
         captured["weekly_projections"] = weekly_projections
         _ = (matchups_df, rosters)
         return pd.DataFrame(), [], pd.DataFrame(), "", "Team 1"
@@ -264,7 +264,7 @@ def test_season_simulation_keeps_compute_keys_when_display_names_differ(
     draft_state.add_player_to_roster(1, player_catalog.require(1))
     captured = {}
 
-    def fake_simulate(_weekly_projections, matchups_df, rosters, *_args):
+    def fake_simulate(_weekly_projections, matchups_df, rosters, *_args, **_kwargs):
         captured["matchups"] = matchups_df
         captured["rosters"] = rosters
         regular_results = pd.DataFrame(

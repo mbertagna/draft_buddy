@@ -67,6 +67,16 @@ def test_fetch_all_players_redownloads_when_cache_is_stale(monkeypatch, tmp_path
     assert players_df.iloc[0]["full_name"] == "New Player"
 
 
+def test_fetch_nfl_state_returns_payload(monkeypatch, tmp_path: Path) -> None:
+    """Verify NFL state is fetched from the Sleeper state endpoint."""
+    gateway = SleeperHttpGateway(cache_dir=str(tmp_path))
+    monkeypatch.setattr("requests.get", lambda _url: _fake_response({"week": 4, "season_type": "regular"}))
+
+    state = gateway.fetch_nfl_state()
+
+    assert state["week"] == 4
+
+
 def test_fetch_league_rosters_flattens_roster_player_ids(monkeypatch, tmp_path: Path) -> None:
     """Verify league rosters are flattened into one row per rostered player."""
     gateway = SleeperHttpGateway(cache_dir=str(tmp_path))
