@@ -43,6 +43,58 @@ class SeasonRuntimeConfig:
     bye_weeks: Dict[int, List[str]] = field(default_factory=dict)
 
 
+def _default_sliding_scale_weights() -> List[Dict[str, float]]:
+    """Return week-range historical vs current-season blend weights."""
+    return [
+        {"min_week": 1, "max_week": 3, "w_hist": 0.70, "w_curr": 0.30},
+        {"min_week": 4, "max_week": 6, "w_hist": 0.40, "w_curr": 0.60},
+        {"min_week": 7, "max_week": 99, "w_hist": 0.10, "w_curr": 0.90},
+    ]
+
+
+def _default_outbound_shapes() -> List[List[int]]:
+    """Return allowed outbound trade shapes as [user_count, partner_count]."""
+    return [[1, 1], [2, 1], [1, 2], [2, 2]]
+
+
+@dataclass
+class InSeasonConfig:
+    """Monte Carlo settings for remaining-week trade simulation."""
+
+    monte_carlo_runs_eval: int = 400
+    monte_carlo_runs_search: int = 200
+    monte_carlo_noise_sigma: float = 0.30
+
+
+@dataclass
+class TradeConfig:
+    """Outbound search, drop, and verdict thresholds."""
+
+    max_players_per_side_outbound: int = 2
+    outbound_shapes: List[List[int]] = field(default_factory=_default_outbound_shapes)
+    max_monte_carlo_candidates: int = 60
+    smart_drop_variations_count: int = 3
+    partner_playoff_delta_floor: float = -0.05
+    partner_expected_wins_floor: float = -0.05
+    partner_starter_delta_epsilon: float = -8.0
+    player_pool_top_n: int = 8
+    ros_point_floor: float = 20.0
+    accept_playoff_delta: float = 0.02
+    counter_playoff_delta: float = -0.01
+
+
+@dataclass
+class ProjectionConfig:
+    """Sliding-scale rest-of-season projection blend rules."""
+
+    sliding_scale_weights: List[Dict[str, float]] = field(
+        default_factory=_default_sliding_scale_weights
+    )
+    min_current_games_for_full_weight: int = 3
+    depth_chart_curr_weight_cap: float = 0.70
+    depth_chart_starter_games: int = 3
+
+
 @dataclass
 class PathsConfig:
     """Configuration for project directory and file paths."""
@@ -56,6 +108,8 @@ class PathsConfig:
     DRAFT_STATE_FILE: str = field(init=False)
     DRAFT_STATE_PREV_FILE: str = field(init=False)
     SAVED_STATES_DIR: str = field(init=False)
+    INSEASON_STATE_FILE: str = field(init=False)
+    INSEASON_PROJECTIONS_FILE: str = field(init=False)
 
     def __post_init__(self) -> None:
         """Derive standard paths from the repository base directory."""
@@ -67,6 +121,8 @@ class PathsConfig:
         self.DRAFT_STATE_FILE = os.path.join(self.DATA_DIR, "draft_state.json")
         self.DRAFT_STATE_PREV_FILE = os.path.join(self.DATA_DIR, "draft_state.prev.json")
         self.SAVED_STATES_DIR = os.path.join(self.BASE_DIR, "saved_states")
+        self.INSEASON_STATE_FILE = os.path.join(self.DATA_DIR, "inseason_state.json")
+        self.INSEASON_PROJECTIONS_FILE = os.path.join(self.DATA_DIR, "inseason_projections.json")
 
         os.makedirs(self.DATA_DIR, exist_ok=True)
         os.makedirs(self.MODELS_DIR, exist_ok=True)
@@ -595,6 +651,9 @@ class Config:
         self.opponent = OpponentConfig()
         self.scoring = ScoringConfig()
         self.season = SeasonRuntimeConfig()
+        self.inseason = InSeasonConfig()
+        self.trade = TradeConfig()
+        self.projections = ProjectionConfig()
         if not self.opponent.OPPONENT_TEAM_STRATEGIES:
             self.opponent.OPPONENT_TEAM_STRATEGIES = _default_opponent_team_strategies()
         if not self.opponent.OPPONENT_STRATEGY_TEMPLATES:
@@ -616,6 +675,9 @@ class Config:
             "opponent": asdict(self.opponent),
             "scoring": asdict(self.scoring),
             "season": asdict(self.season),
+            "inseason": asdict(self.inseason),
+            "trade": asdict(self.trade),
+            "projections": asdict(self.projections),
         }
 
     def save(self, filepath: str) -> None:

@@ -68,7 +68,23 @@ def test_default_league_is_red_league_10(monkeypatch: pytest.MonkeyPatch) -> Non
     assert config.draft.NUM_TEAMS == 10
 
 
-def test_season_overlay_sets_bye_weeks(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_league_profile_loads_inseason_trade_defaults() -> None:
+    """Verify Red League exposes v1 outbound trade shape limits."""
+    config = load_runtime_config(league_id="red_league_10", season=2026)
+
+    assert config.trade.max_players_per_side_outbound == 2
+
+
+def test_league_runtime_path_includes_inseason_state_file() -> None:
+    """Verify in-season snapshot path is league- and season-scoped."""
+    config = load_runtime_config(league_id="red_league_10", season=2026)
+
+    assert config.paths.INSEASON_STATE_FILE.replace("\\", "/").endswith(
+        "data/leagues/red_league_10/runtime/2026/inseason_state.json"
+    )
+
+
+def test_season_overlay_sets_bye_weeks() -> None:
     """Verify bye weeks are loaded from the season overlay."""
     config = load_runtime_config(league_id="red_league_10", season=2026)
 

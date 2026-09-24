@@ -83,6 +83,8 @@ def _apply_league_runtime_paths(
     config.paths.DRAFT_STATE_FILE = str(runtime_dir / "draft_state.json")
     config.paths.DRAFT_STATE_PREV_FILE = str(runtime_dir / "draft_state.prev.json")
     config.paths.SAVED_STATES_DIR = str(saved_states_dir)
+    config.paths.INSEASON_STATE_FILE = str(runtime_dir / "inseason_state.json")
+    config.paths.INSEASON_PROJECTIONS_FILE = str(runtime_dir / "inseason_projections.json")
 
     os.makedirs(os.path.dirname(player_csv), exist_ok=True)
     os.makedirs(runtime_dir, exist_ok=True)

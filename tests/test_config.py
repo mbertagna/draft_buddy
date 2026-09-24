@@ -22,6 +22,9 @@ def test_config_to_dict_contains_expected_sections() -> None:
         "opponent",
         "scoring",
         "season",
+        "inseason",
+        "trade",
+        "projections",
     }
 
 
