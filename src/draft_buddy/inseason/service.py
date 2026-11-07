@@ -10,7 +10,8 @@ from draft_buddy.inseason.advisor import TradeAdvisorWriter
 from draft_buddy.inseason.drops import SmartDropEvaluator
 from draft_buddy.inseason.espn_adapter import EspnSnapshotAdapter, matchups_from_rows
 from draft_buddy.inseason.schedule import overlay_matchups
-from draft_buddy.inseason.exceptions import SnapshotNotFoundError
+from draft_buddy.inseason.exceptions import SnapshotNotFoundError, TradeValidationError
+from draft_buddy.inseason.needs import complement_rankings, team_needs_profile
 from draft_buddy.inseason.probability import RemainingWeekMonteCarlo
 from draft_buddy.inseason.projections import (
     SlidingScaleProjectionEngine,
@@ -20,7 +21,7 @@ from draft_buddy.inseason.projections import (
 from draft_buddy.inseason.sleeper_adapter import SleeperSnapshotAdapter
 from draft_buddy.inseason.state import LeagueSnapshot, roster_cap
 from draft_buddy.inseason.store import InSeasonStore
-from draft_buddy.inseason.trades import InboundTradeService, TradeFinderService
+from draft_buddy.inseason.trades import InboundTradeService, SearchConstraints, TradeFinderService
 
 
 class InSeasonService:
@@ -260,6 +261,7 @@ class InSeasonService:
         players_sending: Sequence[int],
         players_receiving: Sequence[int],
         include_writeup: bool = False,
+        current_season: bool = False,
     ) -> Dict[str, Any]:
         """Evaluate an inbound trade against the stored snapshot.
 
@@ -275,6 +277,8 @@ class InSeasonService:
             Players the user receives.
         include_writeup : bool, optional
             Request an LLM writeup after the numbers.
+        current_season : bool, optional
+            When true, add a second Monte Carlo pass on this year's rates.
 
         Returns
         -------
@@ -283,6 +287,10 @@ class InSeasonService:
         """
         snapshot = self.get_snapshot()
         weekly = self.weekly_projections(snapshot)
+        current_weekly = None
+        fallback_ids: list = []
+        if current_season:
+            current_weekly, fallback_ids = self._current_season_weekly(snapshot)
         result = self._inbound.evaluate(
             snapshot,
             weekly,
@@ -291,8 +299,12 @@ class InSeasonService:
             players_sending,
             players_receiving,
             include_writeup=include_writeup,
+            current_weekly=current_weekly,
         )
-        return result.to_dict()
+        payload = result.to_dict()
+        payload["current_season"] = current_season
+        payload["historical_fallback_player_ids"] = fallback_ids
+        return payload
 
     def search_trades(
         self,
@@ -302,6 +314,10 @@ class InSeasonService:
         progress: Optional[Callable[[int, int], None]] = None,
         workers: int = 1,
         partner_team_id: Optional[int] = None,
+        constraints: Optional[SearchConstraints] = None,
+        dry_run: bool = False,
+        current_season: bool = False,
+        preview_report: Optional[Callable[[Mapping[str, Any]], None]] = None,
     ) -> Dict[str, Any]:
         """Search outbound trades for one manager.
 
@@ -319,28 +335,117 @@ class InSeasonService:
             Process count for season sims.
         partner_team_id : int, optional
             When set, only this opponent is searched.
+        constraints : SearchConstraints, optional
+            Pool gates and per-run overrides.
+        dry_run : bool, optional
+            When true, return the preview and skip season sims.
+        current_season : bool, optional
+            When true, score the same survivors on this year's rates.
+        preview_report : callable, optional
+            Called with the preview mapping before season sims.
 
         Returns
         -------
         dict
-            Ranked proposals.
+            Ranked proposals and the search preview.
+
+        Raises
+        ------
+        TradeValidationError
+            If filters leave nothing to simulate.
         """
         snapshot = self.get_snapshot()
         weekly = self.weekly_projections(snapshot)
-        proposals = self._finder.search(
+        current_weekly = None
+        fallback_ids: list = []
+        if current_season:
+            current_weekly, fallback_ids = self._current_season_weekly(snapshot)
+        preview = self._finder.preview(
             snapshot,
             weekly,
             user_team_id,
-            include_writeup=include_writeup,
             exhaustive=exhaustive,
+            partner_team_id=partner_team_id,
+            constraints=constraints,
+            historical_fallback_ids=fallback_ids,
+            current_season=current_season,
+        )
+        if preview_report is not None:
+            preview_report(preview.to_dict())
+        if preview.blocking_reason:
+            raise TradeValidationError(preview.blocking_reason)
+        if dry_run:
+            return {
+                "proposals": [],
+                "exhaustive": exhaustive,
+                "dry_run": True,
+                "current_season": current_season,
+                "preview": preview.to_dict(),
+            }
+        proposals = self._finder.score(
+            preview,
+            snapshot,
+            weekly,
+            include_writeup=include_writeup,
             progress=progress,
             workers=workers,
-            partner_team_id=partner_team_id,
+            current_weekly=current_weekly,
         )
         return {
             "proposals": [proposal.to_dict() for proposal in proposals],
             "exhaustive": exhaustive,
+            "dry_run": False,
+            "current_season": current_season,
+            "preview": preview.to_dict(),
         }
+
+    def needs_report(self, user_team_id: Optional[int] = None) -> Dict[str, Any]:
+        """Return positional holes, bench surplus, and optional complement order.
+
+        Parameters
+        ----------
+        user_team_id : int, optional
+            When set, rank the other teams by complement score.
+
+        Returns
+        -------
+        dict
+            Team profiles and, when requested, complement rankings.
+        """
+        snapshot = self.get_snapshot()
+        weekly = self.weekly_projections(snapshot)
+        ros_totals = ros_totals_from_weekly(
+            weekly, snapshot.current_week, int(self._config.reward.NUM_REGULAR_SEASON_WEEKS)
+        )
+        profiles = [
+            team_needs_profile(
+                team,
+                self._catalog,
+                ros_totals,
+                self._config.draft.ROSTER_STRUCTURE,
+                self._config.draft.BENCH_MAXES,
+            )
+            for team in snapshot.teams.values()
+        ]
+        payload: Dict[str, Any] = {"teams": [profile.to_dict() for profile in profiles]}
+        if user_team_id is not None:
+            try:
+                snapshot.team(int(user_team_id))
+            except KeyError as error:
+                raise TradeValidationError(str(error)) from error
+            payload["complements"] = complement_rankings(profiles, int(user_team_id))
+        return payload
+
+    def _current_season_weekly(self, snapshot) -> tuple:
+        """Return current-season vectors and rostered players who used history."""
+        inputs = inputs_from_catalog(self._catalog, snapshot.current_week)
+        weekly, fallback_ids = self._engine.project_current_season(inputs, snapshot.current_week)
+        roster_ids = {
+            int(player_id)
+            for team in snapshot.teams.values()
+            for player_id in team.player_ids
+        }
+        return weekly, [player_id for player_id in fallback_ids if player_id in roster_ids]
 
     def state_payload(self) -> Dict[str, Any]:
         """Return snapshot plus ROS totals for CLI show.

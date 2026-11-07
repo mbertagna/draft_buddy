@@ -18,6 +18,9 @@ from draft_buddy.inseason.exceptions import InSeasonError
 from draft_buddy.inseason.schedule import schedule_summary
 from draft_buddy.inseason.service import InSeasonService
 from draft_buddy.inseason.store import InSeasonStore
+from draft_buddy.inseason.trades import SearchConstraints
+
+SKILL_POSITIONS = ("QB", "RB", "WR", "TE")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,7 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     Returns
     -------
     argparse.ArgumentParser
-        Parser with snapshot, load, schedule, projections, show, evaluate, and search.
+        Parser with snapshot, load, schedule, projections, show, needs, evaluate, and search.
     """
     shared = argparse.ArgumentParser(add_help=False)
     shared.add_argument(
@@ -70,6 +73,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("show", parents=[shared], help="Print the stored snapshot.")
 
+    needs = subparsers.add_parser(
+        "needs",
+        parents=[shared],
+        help="Print starter holes and bench surplus for every team.",
+    )
+    needs.add_argument(
+        "--user",
+        default=None,
+        help="Also rank other teams by how their surplus fits this manager.",
+    )
+
     evaluate = subparsers.add_parser(
         "evaluate",
         parents=[shared],
@@ -90,6 +104,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Players you receive (ids or names).",
     )
     evaluate.add_argument("--writeup", action="store_true", help="Request an LLM writeup.")
+    evaluate.add_argument(
+        "--current-season",
+        action="store_true",
+        help="Also score the deal on this year's points per game.",
+    )
 
     search = subparsers.add_parser(
         "search",
@@ -119,6 +138,71 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=0,
         help="Process count for season sims. 0 uses every CPU. 1 stays on one process.",
+    )
+    search.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print how many trades and season sims would run, then stop.",
+    )
+    search.add_argument(
+        "--keep",
+        nargs="+",
+        default=None,
+        help="Players you will not send (ids or names).",
+    )
+    search.add_argument(
+        "--exclude",
+        nargs="+",
+        default=None,
+        help="Players who cannot appear on either side (ids or names).",
+    )
+    search.add_argument(
+        "--target",
+        nargs="+",
+        default=None,
+        help="Each offer must receive at least one of these players.",
+    )
+    search.add_argument(
+        "--starters-only",
+        action="store_true",
+        help="Only players who currently fill a starter or flex slot.",
+    )
+    search.add_argument(
+        "--send-pos",
+        nargs="+",
+        choices=SKILL_POSITIONS,
+        default=None,
+        help="Limit players you send to these positions.",
+    )
+    search.add_argument(
+        "--receive-pos",
+        nargs="+",
+        choices=SKILL_POSITIONS,
+        default=None,
+        help="Limit players you receive to these positions.",
+    )
+    search.add_argument(
+        "--pool",
+        type=int,
+        default=None,
+        help="Override the top-N ROS pool for this run.",
+    )
+    search.add_argument(
+        "--ros-floor",
+        type=float,
+        default=None,
+        help="Override the minimum rest-of-season points for the pool.",
+    )
+    search.add_argument(
+        "--max-candidates",
+        type=int,
+        default=None,
+        help="Override how many heuristic survivors are simulated.",
+    )
+    search.add_argument(
+        "--current-season",
+        action="store_true",
+        help="Also score survivors on this year's points per game.",
     )
     return parser
 
@@ -174,7 +258,7 @@ def main(
     except (InSeasonError, OSError, json.JSONDecodeError, ValueError) as error:
         print(str(error), file=err)
         return 2
-    if args.command == "search" and getattr(args, "csv_path", None):
+    if args.command == "search" and getattr(args, "csv_path", None) and not payload.get("dry_run"):
         count = write_proposals_csv(
             args.csv_path,
             payload.get("proposals") or [],
@@ -247,7 +331,13 @@ def _dispatch(
         return {"player_count": len(weekly)}
     if args.command == "show":
         return service.state_payload()
+    if args.command == "needs":
+        user_id = None
+        if args.user:
+            user_id = resolve_team_id(args.user, config.draft.TEAM_MANAGER_MAPPING)
+        return service.needs_report(user_id)
     team_names = config.draft.TEAM_MANAGER_MAPPING
+    _report_league_inputs(service, stderr)
     user_id = resolve_team_id(args.user, team_names)
     if args.command == "evaluate":
         partner_id = resolve_team_id(args.partner, team_names)
@@ -257,13 +347,18 @@ def _dispatch(
             resolve_player_tokens(args.send, catalog),
             resolve_player_tokens(args.receive, catalog),
             include_writeup=args.writeup,
+            current_season=args.current_season,
         )
     if args.command == "search":
         workers = _worker_count(args.workers)
         progress = _search_progress(stderr) if stderr is not None else None
-        if workers > 1 and stderr is not None:
+        if workers > 1 and stderr is not None and not args.dry_run:
             print(f"Scoring trades on {workers} processes.", file=stderr)
         partner_id = resolve_team_id(args.partner, team_names) if args.partner else None
+
+        def report_preview(preview: Mapping[str, Any]) -> None:
+            format_search_preview(preview, stderr or sys.stderr, catalog, team_names)
+
         return service.search_trades(
             user_id,
             include_writeup=args.writeup,
@@ -271,6 +366,10 @@ def _dispatch(
             progress=progress,
             workers=workers,
             partner_team_id=partner_id,
+            constraints=_search_constraints(args, catalog),
+            dry_run=args.dry_run,
+            current_season=args.current_season,
+            preview_report=report_preview,
         )
     raise InSeasonError(f"Unknown command: {args.command}")
 
@@ -402,22 +501,43 @@ def _print_result(
         print(f"Wrote {payload['player_count']} ROS vectors.", file=stdout)
         return
     if command == "show":
-        _print_state(payload, stdout)
+        format_league_inputs(payload, stdout)
+        return
+    if command == "needs":
+        _print_needs(payload, stdout)
         return
     if command == "evaluate":
-        _print_evaluation(payload, stdout)
+        _print_evaluation(payload, stdout, catalog)
+        return
+    if command == "search" and payload.get("dry_run"):
+        format_search_preview(payload.get("preview") or {}, stdout, catalog, team_names or {})
         return
     if command == "search":
         _print_proposals(payload, stdout, catalog, team_names or {})
 
 
-def _print_state(state: Mapping[str, Any], stdout: TextIO) -> None:
-    """Print week, records, and roster names."""
+def format_league_inputs(state: Mapping[str, Any], stdout: TextIO) -> None:
+    """Print locked records, rosters, and the remaining week-by-week slate.
+
+    Parameters
+    ----------
+    state : mapping
+        Snapshot payload with teams and remaining matchups.
+    stdout : text IO
+        Output stream.
+    """
     print(
         f"{state.get('platform')} · week {state.get('current_week')}",
         file=stdout,
     )
-    print(f"Schedule: {schedule_summary(state.get('remaining_matchups') or [])}", file=stdout)
+    matchups = list(state.get("remaining_matchups") or [])
+    print(f"Schedule: {schedule_summary(matchups)}", file=stdout)
+    names = {
+        int(team.get("team_id")): str(team.get("display_name") or team.get("team_id"))
+        for team in state.get("teams") or []
+    }
+    for line in format_matchup_lines(matchups, names):
+        print(line, file=stdout)
     for team in state.get("teams") or []:
         record = f"{team.get('wins', 0)}-{team.get('losses', 0)}"
         if team.get("ties"):
@@ -430,7 +550,146 @@ def _print_state(state: Mapping[str, Any], stdout: TextIO) -> None:
             )
 
 
-def _print_evaluation(evaluation: Mapping[str, Any], stdout: TextIO) -> None:
+def format_matchup_lines(
+    matchups: Sequence[Mapping[str, Any]],
+    team_names: Mapping[int, str],
+) -> list[str]:
+    """Format remaining games as ``week N: Away at Home (source)``.
+
+    Parameters
+    ----------
+    matchups : sequence of mapping
+        Serialized schedule rows.
+    team_names : mapping of int to str
+        Manager names keyed by team id.
+
+    Returns
+    -------
+    list of str
+        One line per game, ordered by week.
+    """
+    ordered = sorted(
+        matchups,
+        key=lambda item: (int(item.get("week") or 0), int(item.get("home_team_id") or 0)),
+    )
+    lines = []
+    for item in ordered:
+        away_id = int(item.get("away_team_id") or 0)
+        home_id = int(item.get("home_team_id") or 0)
+        away = team_names.get(away_id) or str(away_id)
+        home = team_names.get(home_id) or str(home_id)
+        source = str(item.get("source") or "round_robin").replace("_", " ")
+        lines.append(f"week {int(item.get('week') or 0)}: {away} at {home} ({source})")
+    return lines
+
+
+def format_search_preview(
+    preview: Mapping[str, Any],
+    stdout: TextIO,
+    catalog: Optional[PlayerCatalog],
+    team_names: Mapping[int, str],
+) -> None:
+    """Print pool sizes and how many season sims a search will run.
+
+    Parameters
+    ----------
+    preview : mapping
+        Search preview counts.
+    stdout : text IO
+        Output stream.
+    catalog : PlayerCatalog or None
+        Name lookup for historical-rate fallbacks.
+    team_names : mapping of int to str
+        Manager names keyed by team id.
+    """
+    print("Search preview", file=stdout)
+    for row in preview.get("partner_pools") or []:
+        partner_id = int(row.get("partner_team_id") or 0)
+        partner = team_names.get(partner_id) or str(partner_id)
+        you_size = row.get("user_pool_size", 0)
+        partner_size = row.get("partner_pool_size", 0)
+        print(f"  vs {partner}: you {you_size}, them {partner_size}", file=stdout)
+    print(f"Combinations after pool filters: {preview.get('combination_count', 0)}", file=stdout)
+    print(
+        f"Deals passing the starter heuristic: {preview.get('heuristic_survivor_count', 0)}",
+        file=stdout,
+    )
+    print(f"Deals that will be simulated: {preview.get('simulated_count', 0)}", file=stdout)
+    print(f"Season sims: {preview.get('season_sim_count', 0)}", file=stdout)
+    current_sims = int(preview.get("current_season_sim_count") or 0)
+    if current_sims:
+        print(f"Current-season sims: {current_sims}", file=stdout)
+    fallback_ids = list(preview.get("historical_fallback_player_ids") or [])
+    if fallback_ids:
+        names = ", ".join(_player_label(int(player_id), catalog) for player_id in fallback_ids)
+        print(f"Historical fallback: {names}", file=stdout)
+
+
+def _report_league_inputs(service: InSeasonService, stderr: Optional[TextIO]) -> None:
+    """Print the snapshot a search or evaluation is about to use."""
+    if stderr is None:
+        return
+    format_league_inputs(service.state_payload(), stderr)
+
+
+def _search_constraints(args: argparse.Namespace, catalog: PlayerCatalog) -> SearchConstraints:
+    """Build pool gates from search flags."""
+    return SearchConstraints(
+        keep_ids=_constraint_ids(getattr(args, "keep", None), catalog),
+        exclude_ids=_constraint_ids(getattr(args, "exclude", None), catalog),
+        target_ids=_constraint_ids(getattr(args, "target", None), catalog),
+        starters_only=bool(args.starters_only),
+        send_positions=frozenset(args.send_pos or []),
+        receive_positions=frozenset(args.receive_pos or []),
+        pool_top_n=args.pool,
+        ros_point_floor=args.ros_floor,
+        max_candidates=args.max_candidates,
+    )
+
+
+def _constraint_ids(tokens: Optional[Sequence[str]], catalog: PlayerCatalog):
+    """Resolve optional player tokens into a frozenset of ids."""
+    if not tokens:
+        return frozenset()
+    return frozenset(resolve_player_tokens(tokens, catalog))
+
+
+def _print_needs(payload: Mapping[str, Any], stdout: TextIO) -> None:
+    """Print holes, surplus, and optional complement order."""
+    for team in payload.get("teams") or []:
+        record = f"{team.get('wins', 0)}-{team.get('losses', 0)}"
+        if team.get("ties"):
+            record = f"{record}-{team['ties']}"
+        print(f"#{team.get('team_id')} {team.get('display_name')} {record}", file=stdout)
+        print(f"  Holes: {_format_holes(team.get('hole_slots') or {})}", file=stdout)
+        print(f"  Surplus: {_format_surplus(team.get('bench_ros') or {})}", file=stdout)
+    complements = list(payload.get("complements") or [])
+    if not complements:
+        return
+    print("Complements:", file=stdout)
+    for row in complements:
+        print(f"  {row.get('display_name')} {float(row.get('score') or 0.0):.1f}", file=stdout)
+
+
+def _format_holes(holes: Mapping[str, Any]) -> str:
+    """Format short starter slots."""
+    if not holes:
+        return "none"
+    return ", ".join(f"{position} short {int(slots)}" for position, slots in holes.items())
+
+
+def _format_surplus(surplus: Mapping[str, Any]) -> str:
+    """Format bench rest-of-season points by position."""
+    if not surplus:
+        return "none"
+    return ", ".join(f"{position} {float(points):.1f}" for position, points in surplus.items())
+
+
+def _print_evaluation(
+    evaluation: Mapping[str, Any],
+    stdout: TextIO,
+    catalog: Optional[PlayerCatalog] = None,
+) -> None:
     """Print inbound verdict and drop suggestion."""
     delta = float(evaluation.get("win_probability_delta") or 0.0)
     wins = float(evaluation.get("expected_wins_delta") or 0.0)
@@ -438,6 +697,17 @@ def _print_evaluation(evaluation: Mapping[str, Any], stdout: TextIO) -> None:
         f"{evaluation.get('verdict')} · playoff {_format_playoff_delta(delta)} · wins {wins:+.2f}",
         file=stdout,
     )
+    if "win_probability_delta_2026" in evaluation:
+        current_delta = float(evaluation.get("win_probability_delta_2026") or 0.0)
+        current_wins = float(evaluation.get("expected_wins_delta_2026") or 0.0)
+        print(
+            f"2026 · playoff {_format_playoff_delta(current_delta)} · wins {current_wins:+.2f}",
+            file=stdout,
+        )
+    fallback_ids = list(evaluation.get("historical_fallback_player_ids") or [])
+    if fallback_ids:
+        names = ", ".join(_player_label(int(player_id), catalog) for player_id in fallback_ids)
+        print(f"Historical fallback: {names}", file=stdout)
     drops = evaluation.get("optimal_bench_drops") or {}
     names = drops.get("dropped_player_names") or []
     if names:
@@ -556,41 +826,70 @@ def write_proposals_csv(
     """
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    player_fields = ("player_id", "position", "name", "2026_ppg", "median", "mean", "floor", "ceiling")
-    fieldnames = [
-        "rank",
-        "partner",
-        "partner_team_id",
-        "you_playoff_pp",
-        "them_playoff_pp",
-        "you_expected_wins_delta",
-        "them_expected_wins_delta",
-        "you_starter_ros_delta",
-        "them_starter_ros_delta",
-    ]
-    for side in ("send", "receive"):
-        for slot in (1, 2):
-            fieldnames.extend(f"{side}_{slot}_{field}" for field in player_fields)
+    include_current = any("user_win_prob_delta_2026" in proposal for proposal in proposals)
+    fieldnames = _proposal_fieldnames(include_current)
     with destination.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for rank, proposal in enumerate(proposals, start=1):
             partner_id = int(proposal.get("partner_team_id") or 0)
             row = {
-                "rank": rank,
-                "partner": team_names.get(partner_id) or str(partner_id),
-                "partner_team_id": partner_id,
                 "you_playoff_pp": _playoff_pp(proposal.get("user_win_prob_delta")),
                 "them_playoff_pp": _playoff_pp(proposal.get("partner_win_prob_delta")),
                 "you_expected_wins_delta": _plain_number(proposal.get("user_expected_wins_delta")),
                 "them_expected_wins_delta": _plain_number(proposal.get("partner_expected_wins_delta")),
+                "rank": rank,
+                "partner": team_names.get(partner_id) or str(partner_id),
+                "partner_team_id": partner_id,
                 "you_starter_ros_delta": _plain_number(proposal.get("user_starter_points_delta")),
                 "them_starter_ros_delta": _plain_number(proposal.get("partner_starter_points_delta")),
             }
+            if include_current:
+                row.update(
+                    {
+                        "you_playoff_pp_2026": _playoff_pp(proposal.get("user_win_prob_delta_2026")),
+                        "them_playoff_pp_2026": _playoff_pp(proposal.get("partner_win_prob_delta_2026")),
+                        "you_expected_wins_delta_2026": _plain_number(
+                            proposal.get("user_expected_wins_delta_2026")
+                        ),
+                        "them_expected_wins_delta_2026": _plain_number(
+                            proposal.get("partner_expected_wins_delta_2026")
+                        ),
+                    }
+                )
             row.update(_player_slot_fields("send", proposal.get("user_sends_player_ids") or [], catalog))
             row.update(_player_slot_fields("receive", proposal.get("partner_sends_player_ids") or [], catalog))
             writer.writerow(row)
     return len(proposals)
+
+
+def _proposal_fieldnames(include_current: bool) -> list[str]:
+    """Return CSV columns with scan fields before ids and starter deltas."""
+    names = [
+        "you_playoff_pp",
+        "them_playoff_pp",
+        "you_expected_wins_delta",
+        "them_expected_wins_delta",
+    ]
+    if include_current:
+        names.extend(
+            [
+                "you_playoff_pp_2026",
+                "them_playoff_pp_2026",
+                "you_expected_wins_delta_2026",
+                "them_expected_wins_delta_2026",
+            ]
+        )
+    scan_fields = ("name", "position", "2026_ppg", "median", "mean", "floor", "ceiling")
+    for side in ("send", "receive"):
+        for slot in (1, 2):
+            names.extend(f"{side}_{slot}_{field}" for field in scan_fields)
+    names.extend(["rank", "partner", "partner_team_id"])
+    for side in ("send", "receive"):
+        for slot in (1, 2):
+            names.append(f"{side}_{slot}_player_id")
+    names.extend(["you_starter_ros_delta", "them_starter_ros_delta"])
+    return names
 
 
 def _player_slot_fields(

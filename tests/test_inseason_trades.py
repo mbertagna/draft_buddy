@@ -11,6 +11,7 @@ from draft_buddy.inseason.state import LeagueSnapshot, TeamRecord, TeamSnapshot
 from draft_buddy.core.entities import Player, PlayerCatalog
 from draft_buddy.inseason.trades import (
     InboundTradeService,
+    SearchConstraints,
     TradeFinderService,
     is_buy_low,
     is_sell_high,
@@ -426,3 +427,171 @@ def test_search_partner_limits_results_to_that_team() -> None:
 def test_partner_six_point_loss_and_wins_drop_is_removed() -> None:
     """Verify a deal past both partner floors is dropped."""
     assert partner_within_fairness(-0.06, -0.1, -0.05, -0.05) is False
+
+
+class _ExplodingMonteCarlo(RemainingWeekMonteCarlo):
+    """Monte Carlo stand-in that fails if a season sim starts."""
+
+    def evaluate(self, *args, **kwargs):
+        """Refuse to simulate."""
+        raise AssertionError("season sim should not run during preview")
+
+
+def _two_team_finder(monte_carlo=None) -> tuple:
+    """Return a two-team snapshot, weekly vectors, and a 1-for-1 finder."""
+    catalog = PlayerCatalog(
+        [
+            Player(player_id=1, name="User QB", position="QB", projected_points=20.0),
+            Player(player_id=2, name="User RB", position="RB", projected_points=10.0),
+            Player(player_id=3, name="Partner QB", position="QB", projected_points=12.0),
+            Player(player_id=4, name="Partner RB", position="RB", projected_points=8.0),
+        ]
+    )
+    snapshot = LeagueSnapshot(
+        league_id="test",
+        platform="espn",
+        current_week=14,
+        teams={
+            1: TeamSnapshot(1, "A", [1, 2], record=TeamRecord(7, 6)),
+            2: TeamSnapshot(2, "B", [3, 4], record=TeamRecord(6, 7)),
+        },
+    )
+    weekly = {
+        1: _weekly(1, "QB", 20.0),
+        2: _weekly(2, "RB", 10.0),
+        3: _weekly(3, "QB", 12.0),
+        4: _weekly(4, "RB", 8.0),
+    }
+    structure = {"QB": 1, "RB": 1, "WR": 0, "TE": 0, "FLEX": 0}
+    simulator = monte_carlo or _ExplodingMonteCarlo(
+        roster_structure=structure,
+        num_playoff_teams=1,
+        rng=np.random.default_rng(5),
+    )
+    drops = SmartDropEvaluator(
+        catalog=catalog,
+        roster_structure=structure,
+        bench_maxes={"QB": 1, "RB": 1, "WR": 0, "TE": 0},
+        roster_cap=4,
+        variations_count=1,
+        monte_carlo=simulator,
+    )
+    finder = TradeFinderService(
+        catalog=catalog,
+        roster_structure=structure,
+        bench_maxes={"QB": 1, "RB": 1, "WR": 0, "TE": 0},
+        drop_evaluator=drops,
+        monte_carlo=simulator,
+        n_runs=1,
+        last_regular_week=14,
+        max_candidates=1,
+        player_pool_top_n=1,
+        ros_point_floor=9999.0,
+        partner_starter_epsilon=0.0,
+        partner_playoff_floor=0.0,
+        partner_wins_floor=0.0,
+        outbound_shapes=[[1, 1]],
+    )
+    return snapshot, weekly, finder
+
+
+def test_preview_counts_deals_without_a_season_sim() -> None:
+    """Verify preview reports the exhaustive combination count and does not simulate."""
+    snapshot, weekly, finder = _two_team_finder()
+
+    preview = finder.preview(snapshot, weekly, user_team_id=1, exhaustive=True)
+
+    assert preview.combination_count == 4
+    assert preview.simulated_count == 4
+    assert preview.season_sim_count == 5
+    assert preview.blocking_reason is None
+
+
+def test_keep_and_target_shrink_an_exhaustive_pool() -> None:
+    """Verify keep and target still apply when the pool and cap are skipped."""
+    snapshot, weekly, finder = _two_team_finder()
+    constraints = SearchConstraints(keep_ids=frozenset({1}), target_ids=frozenset({4}))
+
+    preview = finder.preview(
+        snapshot, weekly, user_team_id=1, exhaustive=True, constraints=constraints
+    )
+    sent = {proposal.user_sends_player_ids[0] for proposal, _rosters in preview.survivors}
+    received = {proposal.partner_sends_player_ids[0] for proposal, _rosters in preview.survivors}
+
+    assert sent == {2}
+    assert received == {4}
+    assert preview.combination_count == 1
+
+
+def test_exclude_and_position_gates_shrink_the_pool() -> None:
+    """Verify exclude and position gates reduce the send and receive pools."""
+    snapshot, weekly, finder = _two_team_finder()
+    excluded = finder.preview(
+        snapshot,
+        weekly,
+        user_team_id=1,
+        exhaustive=True,
+        constraints=SearchConstraints(exclude_ids=frozenset({4})),
+    )
+    positions = finder.preview(
+        snapshot,
+        weekly,
+        user_team_id=1,
+        exhaustive=True,
+        constraints=SearchConstraints(
+            send_positions=frozenset({"QB"}),
+            receive_positions=frozenset({"RB"}),
+        ),
+    )
+
+    assert excluded.combination_count == 2
+    assert positions.combination_count == 1
+    proposal = positions.survivors[0][0]
+    assert proposal.user_sends_player_ids == [1]
+    assert proposal.partner_sends_player_ids == [4]
+
+
+def test_starters_only_drops_the_bench_running_back() -> None:
+    """Verify starters-only leaves out a second RB who does not fill a starter slot."""
+    snapshot, weekly, finder = _two_team_finder()
+    finder._catalog = PlayerCatalog(
+        [
+            Player(player_id=1, name="User QB", position="QB", projected_points=20.0),
+            Player(player_id=2, name="User RB", position="RB", projected_points=10.0),
+            Player(player_id=5, name="Bench RB", position="RB", projected_points=1.0),
+            Player(player_id=3, name="Partner QB", position="QB", projected_points=12.0),
+            Player(player_id=4, name="Partner RB", position="RB", projected_points=8.0),
+        ]
+    )
+    snapshot.team(1).player_ids = [1, 2, 5]
+    weekly[5] = _weekly(5, "RB", 1.0)
+
+    open_pool = finder.preview(snapshot, weekly, user_team_id=1, exhaustive=True)
+    starters = finder.preview(
+        snapshot,
+        weekly,
+        user_team_id=1,
+        exhaustive=True,
+        constraints=SearchConstraints(starters_only=True),
+    )
+    sent = {proposal.user_sends_player_ids[0] for proposal, _rosters in starters.survivors}
+
+    assert open_pool.combination_count == 6
+    assert 5 not in sent
+    assert starters.combination_count == 4
+
+
+def test_empty_keep_blocks_before_simulation() -> None:
+    """Verify keeping the whole roster reports a blocking reason and no survivors."""
+    snapshot, weekly, finder = _two_team_finder()
+
+    preview = finder.preview(
+        snapshot,
+        weekly,
+        user_team_id=1,
+        exhaustive=True,
+        constraints=SearchConstraints(keep_ids=frozenset({1, 2})),
+    )
+
+    assert preview.blocking_reason == "No players left to send after filters."
+    assert preview.survivors == []

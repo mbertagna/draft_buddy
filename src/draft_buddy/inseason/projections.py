@@ -124,6 +124,37 @@ class SlidingScaleProjectionEngine:
             for player in players
         }
 
+    def project_current_season(
+        self,
+        players: Iterable[PlayerProjectionInput],
+        current_week: int,
+    ) -> Tuple[Dict[int, Dict[str, object]], List[int]]:
+        """Project remaining weeks from this season only.
+
+        Players with a current-season rate use that rate. Players without one
+        keep the historical rate and are listed as fallbacks.
+
+        Parameters
+        ----------
+        players : iterable of PlayerProjectionInput
+            Blend inputs.
+        current_week : int
+            First remaining NFL week.
+
+        Returns
+        -------
+        tuple
+            Weekly projections, then player ids that used the historical rate.
+        """
+        weekly: Dict[int, Dict[str, object]] = {}
+        fallback_ids: List[int] = []
+        for player in players:
+            points, used_history = _current_season_points(player, current_week)
+            weekly[player.player_id] = {"pos": player.position, "pts": points}
+            if used_history:
+                fallback_ids.append(int(player.player_id))
+        return weekly, fallback_ids
+
     def effective_weights(
         self,
         player: PlayerProjectionInput,
@@ -283,6 +314,29 @@ def inputs_from_catalog(
             )
         )
     return inputs
+
+
+def _current_season_points(
+    player: PlayerProjectionInput,
+    current_week: int,
+) -> Tuple[List[float], bool]:
+    """Return a weekly vector and whether it fell back to history.
+
+    Parameters
+    ----------
+    player : PlayerProjectionInput
+        Blend inputs for one player.
+    current_week : int
+        First remaining NFL week.
+
+    Returns
+    -------
+    tuple
+        Eighteen weekly points, and True when the historical rate was used.
+    """
+    if player.current_ppg is None or int(player.current_games_played) <= 0:
+        return _weekly_points(float(player.historical_ppg), player.bye_week, current_week), True
+    return _weekly_points(float(player.current_ppg), player.bye_week, current_week), False
 
 
 def _weekly_points(

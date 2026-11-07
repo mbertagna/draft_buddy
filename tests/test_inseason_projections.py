@@ -153,3 +153,37 @@ def test_inputs_from_catalog_uses_current_season_ppg() -> None:
     inputs = inputs_from_catalog(catalog, current_week=8)
 
     assert inputs[0].current_ppg == 18.0
+
+
+def test_current_season_projection_uses_this_year_when_games_exist() -> None:
+    """Verify a current-season vector ignores the historical rate when 2026 PPG exists."""
+    engine = SlidingScaleProjectionEngine(WEIGHTS)
+    player = PlayerProjectionInput(
+        player_id=1,
+        position="WR",
+        historical_ppg=10.0,
+        current_ppg=18.0,
+        current_games_played=5,
+    )
+
+    weekly, fallback = engine.project_current_season([player], current_week=8)
+
+    assert fallback == []
+    assert weekly[1]["pts"][7] == 18.0
+
+
+def test_current_season_projection_keeps_history_without_2026_games() -> None:
+    """Verify a player with no 2026 games keeps the historical weekly rate."""
+    engine = SlidingScaleProjectionEngine(WEIGHTS)
+    player = PlayerProjectionInput(
+        player_id=4,
+        position="RB",
+        historical_ppg=12.0,
+        current_ppg=None,
+        current_games_played=0,
+    )
+
+    weekly, fallback = engine.project_current_season([player], current_week=8)
+
+    assert fallback == [4]
+    assert weekly[4]["pts"][7] == 12.0

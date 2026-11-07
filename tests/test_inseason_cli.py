@@ -107,8 +107,12 @@ def test_write_proposals_csv_includes_player_name(tmp_path) -> None:
     )
 
     text = destination.read_text(encoding="utf-8")
+    header = text.splitlines()[0].split(",")
 
-    assert "send_1_position" in text and "send_1_name" in text and "QB One" in text
+    assert header[0] == "you_playoff_pp"
+    assert header.index("send_1_name") < header.index("send_1_player_id")
+    assert header.index("you_expected_wins_delta") < header.index("send_1_name")
+    assert "QB One" in text
 
 
 def test_format_player_list_uses_catalog_names(player_catalog) -> None:
@@ -242,7 +246,9 @@ def test_cli_evaluate_returns_verdict(config, player_catalog, tmp_path: Path) ->
 def test_cli_search_returns_proposals_key(config, player_catalog, tmp_path: Path) -> None:
     """Verify outbound search JSON includes a proposals list."""
     snapshot_path = tmp_path / "paste.json"
-    snapshot_path.write_text(json.dumps(_four_team_payload()), encoding="utf-8")
+    payload = _four_team_payload()
+    payload["teams"][0]["player_ids"] = [1]
+    snapshot_path.write_text(json.dumps(payload), encoding="utf-8")
     store = _store(config)
     main(
         ["load", "--file", str(snapshot_path)],
@@ -263,3 +269,129 @@ def test_cli_search_returns_proposals_key(config, player_catalog, tmp_path: Path
     )
 
     assert "proposals" in json.loads(stdout.getvalue())
+
+
+def test_cli_show_prints_week_and_source(config, player_catalog, tmp_path: Path) -> None:
+    """Verify show prints a remaining week and where that slate came from."""
+    snapshot_path = tmp_path / "paste.json"
+    snapshot_path.write_text(json.dumps(_four_team_payload()), encoding="utf-8")
+    store = _store(config)
+    main(
+        ["load", "--file", str(snapshot_path)],
+        config=config,
+        catalog=player_catalog,
+        store=store,
+        stdout=StringIO(),
+        stderr=StringIO(),
+    )
+    stdout = StringIO()
+    code = main(
+        ["show"],
+        config=config,
+        catalog=player_catalog,
+        store=store,
+        stdout=stdout,
+        stderr=StringIO(),
+    )
+    text = stdout.getvalue()
+
+    assert code == 0
+    assert "week 14:" in text
+    assert "round robin" in text
+
+
+def test_cli_dry_run_prints_simulated_deal_count(config, player_catalog, tmp_path: Path) -> None:
+    """Verify dry-run stops after printing how many deals would be simulated."""
+    snapshot_path = tmp_path / "paste.json"
+    payload = _four_team_payload()
+    payload["teams"][0]["player_ids"] = [1]
+    snapshot_path.write_text(json.dumps(payload), encoding="utf-8")
+    store = _store(config)
+    main(
+        ["load", "--file", str(snapshot_path)],
+        config=config,
+        catalog=player_catalog,
+        store=store,
+        stdout=StringIO(),
+        stderr=StringIO(),
+    )
+    stdout = StringIO()
+    code = main(
+        ["search", "--user", "1", "--dry-run"],
+        config=config,
+        catalog=player_catalog,
+        store=store,
+        stdout=stdout,
+        stderr=StringIO(),
+    )
+
+    assert code == 0
+    assert "Deals that will be simulated:" in stdout.getvalue()
+
+
+def test_cli_search_rejects_an_empty_send_pool(config, player_catalog, tmp_path: Path) -> None:
+    """Verify keeping every player exits before season sims."""
+    snapshot_path = tmp_path / "paste.json"
+    snapshot_path.write_text(json.dumps(_four_team_payload()), encoding="utf-8")
+    store = _store(config)
+    main(
+        ["load", "--file", str(snapshot_path)],
+        config=config,
+        catalog=player_catalog,
+        store=store,
+        stdout=StringIO(),
+        stderr=StringIO(),
+    )
+    stderr = StringIO()
+    code = main(
+        ["search", "--user", "1", "--keep", "1", "2", "3", "4"],
+        config=config,
+        catalog=player_catalog,
+        store=store,
+        stdout=StringIO(),
+        stderr=stderr,
+    )
+
+    assert code == 2
+    assert "No players left to send" in stderr.getvalue()
+
+
+def test_cli_needs_ranks_a_complementary_team_first(config, player_catalog, tmp_path: Path) -> None:
+    """Verify needs --user lists the team with matching bench surplus first."""
+    snapshot_path = tmp_path / "paste.json"
+    snapshot_path.write_text(
+        json.dumps(
+            {
+                "current_week": 14,
+                "teams": [
+                    {"team_id": 1, "wins": 7, "losses": 6, "player_ids": [1, 2]},
+                    {"team_id": 2, "wins": 6, "losses": 7, "player_ids": [5, 7, 11, 15]},
+                    {"team_id": 3, "wins": 5, "losses": 8, "player_ids": [9, 10]},
+                    {"team_id": 4, "wins": 4, "losses": 9, "player_ids": [13, 14]},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    store = _store(config)
+    main(
+        ["load", "--file", str(snapshot_path)],
+        config=config,
+        catalog=player_catalog,
+        store=store,
+        stdout=StringIO(),
+        stderr=StringIO(),
+    )
+    stdout = StringIO()
+    code = main(
+        ["needs", "--user", "1"],
+        config=config,
+        catalog=player_catalog,
+        store=store,
+        stdout=stdout,
+        stderr=StringIO(),
+    )
+    complements = stdout.getvalue().split("Complements:", 1)[1]
+
+    assert code == 0
+    assert complements.strip().splitlines()[0].startswith("Team 2")

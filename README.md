@@ -134,13 +134,26 @@ docker compose run --rm -e DRAFT_BUDDY_LEAGUE=redraft_nbfl_12 trades search --us
 
 Add `--partner "Erol"` to score deals with only that manager. Omit it to search every other team.
 
+`search` and `evaluate` print the locked records, rosters, and remaining weeks before any season sim. Each week is `week N: Away at Home (source)`. `round robin` weeks were filled in because the snapshot had no game that week. `show` prints the same block. `search --dry-run` prints how many combinations survive the pool filters, how many pass the starter heuristic, how many will be simulated after the candidate cap, and the season-sim count `(1 + simulated deals) * monte_carlo_runs_search`, then stops.
+
+Narrow a search before it starts:
+
+- `--keep` never sends those players. `--exclude` keeps them off both sides. `--target` requires each offer to receive at least one of them.
+- `--starters-only` keeps players who currently fill a starter or flex slot.
+- `--send-pos WR` and `--receive-pos RB` limit each side. Repeat the flag value to allow more than one position.
+- `--pool`, `--ros-floor`, and `--max-candidates` override the league JSON for that run. `--exhaustive` still ignores pool size, the ROS floor, the starter-point filters, and the candidate cap. It still honors keep, exclude, target, starters-only, and position limits.
+
+`needs` prints every team's starter holes and bench rest-of-season surplus. `needs --user Michael` also ranks the other managers by how their surplus lines up with your holes. That report does not change search ranking.
+
+`--current-season` on `search` or `evaluate` runs a second set of season sims from this year's points per game. Ranking and verdicts stay on the blended projection. Players with no 2026 games keep their historical rate, and the preview names them. The extra CSV columns are `you_playoff_pp_2026`, `them_playoff_pp_2026`, `you_expected_wins_delta_2026`, and `them_expected_wins_delta_2026`.
+
 A schedule file is optional. Sleeper `snapshot` downloads the remaining slate and fills only weeks the API does not return. Other leagues keep a generated round-robin until you add a `matchups` list to the snapshot or run `schedule --file`. Home and away are a manager name or a team id. Weeks you leave out stay generated.
 
 ```bash
 docker compose run --rm -e DRAFT_BUDDY_LEAGUE=red_league_10 trades schedule --file config/inseason/red_league_10_schedule.json
 ```
 
-`--csv` writes every ranked trade to a file. Open that file when the terminal scrollback cuts the list off. The terminal still prints the same ranking. `send_1_*` is the first player you give up, `send_2_*` the second. `receive_1_*` and `receive_2_*` are the players you get. A blank slot means that side of the deal has only one player.
+`--csv` writes every ranked trade to a file. Open that file when the terminal scrollback cuts the list off. The terminal still prints the same ranking. The first columns are your and their playoff and wins changes, then each player's name, position, and point distribution. Rank, partner id, player ids, and starter-point changes follow those. `send_1_*` is the first player you give up, `send_2_*` the second. `receive_1_*` and `receive_2_*` are the players you get. A blank slot means that side of the deal has only one player.
 
 | Column | Meaning |
 | --- | --- |
